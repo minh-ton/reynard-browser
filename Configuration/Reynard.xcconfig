@@ -1,0 +1,20 @@
+IPHONEOS_DEPLOYMENT_TARGET = 15.0
+ARCHS = arm64
+VALID_ARCHS = arm64
+
+ENABLE_BITCODE = NO
+
+GECKO_DIST = $(SRCROOT)/truefox/obj-aarch64-apple-ios/dist
+
+HEADER_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/include $(GECKO_DIST)/include/GeckoView
+LIBRARY_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/bin
+FRAMEWORK_SEARCH_PATHS = $(inherited) $(BUILT_PRODUCTS_DIR)
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks
+
+OTHER_LDFLAGS = $(inherited) $(GECKO_DIST)/bin/XUL -lmozglue -lnss3 -lfreebl3 -lsoftokn3 -llgpllibs -lmozavcodec -lmozavutil -lgkcodecs
+
+SWIFT_OBJC_BRIDGING_HEADER = $(SRCROOT)/Reynard/Reynard-Bridging-Header.h
+
+CODE_SIGN_IDENTITY = Apple Development
+CODE_SIGNING_REQUIRED = YES
+CODE_SIGN_STYLE = Automatic
