@@ -30,7 +30,7 @@ public class GeckoSession {
         id = windowId ?? UUID().uuidString.replacingOccurrences(of: "-", with: "")
 
         let settings: [String: Any?] = [
-            "chromeUri": "about:mozilla",       // Doing this to test the dynamic URL loading...
+            "chromeUri": nil,
             "screenId": 0,
             "useTrackingProtection": false,
             "userAgentMode": 0,
@@ -51,6 +51,7 @@ public class GeckoSession {
             })
 
         window = GeckoViewOpenWindow(id, dispatcher, ["settings": settings, "modules": modules], false)
+        dispatcher.activate()
     }
 
     public func isOpen() -> Bool { window != nil }
@@ -62,6 +63,10 @@ public class GeckoSession {
     }
 
     public func load(_ url: String) {
+        dispatchLoad(url)
+    }
+
+    private func dispatchLoad(_ url: String) {
         dispatcher.dispatch(
             type: "GeckoView:LoadUri",
             message: [
