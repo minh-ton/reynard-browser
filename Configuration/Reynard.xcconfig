@@ -6,7 +6,7 @@ ENABLE_BITCODE = NO
 
 GECKO_DIST = $(SRCROOT)/truefox/obj-aarch64-apple-ios/dist
 
-HEADER_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/include $(GECKO_DIST)/include/GeckoView
+HEADER_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/include $(GECKO_DIST)/include/GeckoView $(SRCROOT)/GeckoWrapper
 LIBRARY_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/bin
 FRAMEWORK_SEARCH_PATHS = $(inherited) $(BUILT_PRODUCTS_DIR)
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks
@@ -16,5 +16,8 @@ OTHER_LDFLAGS = $(inherited) $(GECKO_DIST)/bin/XUL -lmozglue -lnss3 -lfreebl3 -l
 SWIFT_OBJC_BRIDGING_HEADER = $(SRCROOT)/Reynard/Reynard-Bridging-Header.h
 
 CODE_SIGN_IDENTITY = Apple Development
-CODE_SIGNING_REQUIRED = YES
-CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = Apple Development
+CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Development
+CODE_SIGNING_ALLOWED = NO
+CODE_SIGNING_REQUIRED = NO
+CODE_SIGN_STYLE = Manual

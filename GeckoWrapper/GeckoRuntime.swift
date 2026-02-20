@@ -21,11 +21,17 @@ class GeckoRuntimeImpl: NSObject, SwiftGeckoViewRuntime {
 public class GeckoRuntime {
     static let runtime = GeckoRuntimeImpl()
 
-    // From GeckoTestBrowser in truefox/mobile/ios
     public static func main(
         argc: Int32,
         argv: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>
     ) {
         MainProcessInit(argc, argv, runtime)
+    }
+
+    public static func childMain(
+        xpcConnection: xpc_connection_t,
+        process: GeckoProcessExtension
+    ) {
+        ChildProcessInit(xpcConnection, process, runtime)
     }
 }

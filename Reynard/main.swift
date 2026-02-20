@@ -17,9 +17,6 @@ let defaultArgs = CommandLine.arguments
 let debugArgs = [
     // Debug logging
     "-pref", "geckoview.logging=Debug",
-    
-    // Disable multi-process
-    "-pref", "browser.tabs.remote.force-enable=true",
 ]
 let allArgs = defaultArgs + debugArgs
 

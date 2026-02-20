@@ -10,5 +10,6 @@
 
 #import <GeckoView/IOSBootstrap.h>
 #import <GeckoView/GeckoViewSwiftSupport.h>
+#import "ExtensionBridge.h"
 
 #endif /* Reynard_Bridging_Header_h */

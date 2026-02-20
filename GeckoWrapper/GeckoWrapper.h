@@ -16,5 +16,6 @@ FOUNDATION_EXPORT const unsigned char GeckoWrapperVersionString[];
 
 #import <GeckoView/IOSBootstrap.h>
 #import <GeckoView/GeckoViewSwiftSupport.h>
+#import "ReynardExtensionBridge.h"
 
 #endif /* GeckoWrapper_h */
