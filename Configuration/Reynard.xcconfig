@@ -1,10 +1,14 @@
+CURRENT_VERSION = 0.0.1
+CURRENT_BUILD = 2026FEB20
+
 IPHONEOS_DEPLOYMENT_TARGET = 15.0
 ARCHS = arm64
 VALID_ARCHS = arm64
 
 ENABLE_BITCODE = NO
 
-GECKO_DIST = $(SRCROOT)/truefox/obj-aarch64-apple-ios/dist
+GECKO_DIST[sdk=iphoneos*] = $(SRCROOT)/truefox/obj-aarch64-apple-ios/dist
+GECKO_DIST[sdk=iphonesimulator*] = $(SRCROOT)/truefox/obj-aarch64-apple-ios-sim/dist
 
 HEADER_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/include $(GECKO_DIST)/include/GeckoView $(SRCROOT)/GeckoWrapper
 LIBRARY_SEARCH_PATHS = $(inherited) $(GECKO_DIST)/bin

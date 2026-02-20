@@ -602,7 +602,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/Reynard/Entitlements/Reynard.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Reynard/Resources/Info.plist;
@@ -617,7 +617,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -643,7 +643,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "$(SRCROOT)/Reynard/Entitlements/Reynard.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Reynard/Resources/Info.plist;
@@ -658,7 +658,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -887,7 +887,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -900,7 +900,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
@@ -924,7 +924,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Processes/NetworkingProcess/Info.plist;
@@ -936,7 +936,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
@@ -960,7 +960,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -973,7 +973,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
@@ -997,7 +997,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260204;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Processes/RenderingProcess/Info.plist;
@@ -1009,7 +1009,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
@@ -1033,7 +1033,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260220;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1046,7 +1046,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
@@ -1070,7 +1070,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20260220;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Processes/WebContentProcess/Info.plist;
@@ -1082,7 +1082,7 @@
 					"@executable_path/../../Frameworks/GeckoView.framework",
 					"@loader_path/../../Frameworks/GeckoView.framework",
 				);
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",

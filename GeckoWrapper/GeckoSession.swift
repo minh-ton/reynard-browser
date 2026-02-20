@@ -18,8 +18,6 @@ public class GeckoSession {
     var window: GeckoViewWindow?
     var id: String?
 
-    lazy var sessionHandlers: [GeckoSessionHandlerCommon] = []
-
     public init() {}
 
     public func open(windowId: String? = nil) {
@@ -45,13 +43,7 @@ public class GeckoSession {
             "unsafeSessionContextId": nil,
         ]
 
-        let modules: [String: Bool] = Dictionary(
-            uniqueKeysWithValues: sessionHandlers.map {
-                ($0.moduleName, $0.enabled)
-            })
-
-        window = GeckoViewOpenWindow(id, dispatcher, ["settings": settings, "modules": modules], false)
-        dispatcher.activate()
+        window = GeckoViewOpenWindow(id, dispatcher, ["settings": settings, "modules": [String: Bool]()], false)
     }
 
     public func isOpen() -> Bool { window != nil }
