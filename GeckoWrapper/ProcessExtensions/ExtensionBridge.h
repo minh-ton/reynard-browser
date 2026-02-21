@@ -1,6 +1,8 @@
 //
-//  ReynardExtensionBridge.h
+//  ExtensionBridge.h
 //  Reynard
+//
+//  Created by Minh Ton on 20/2/26.
 //
 
 #ifndef ReynardExtensionBridge_h

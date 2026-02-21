@@ -12,15 +12,9 @@
 		0111EC302F48432200490C82 /* GeckoWrapper.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */; };
 		01GECKO0012F2F289C001F0001 /* GeckoWrapper.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */; };
 		01GECKO0022F2F289C001F0001 /* GeckoWrapper.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		02NNPBF12F3000000000001 /* NetworkingProcess.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02NNPAPP2F3000000000001 /* NetworkingProcess.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		02RNPBF12F3000000000001 /* RenderingProcess.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02RNPAPP2F3000000000001 /* RenderingProcess.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		02WCPBF12F3000000000001 /* WebContentProcess.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02WCPAPP2F3000000000001 /* WebContentProcess.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		11B1A1A12F50000000000001 /* Processes/NetworkingProcess/main.m in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A12F50000000000001 /* Processes/NetworkingProcess/main.m */; };
-		11B1A1A22F50000000000001 /* Processes/NetworkingProcess/NetworkingProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A22F50000000000001 /* Processes/NetworkingProcess/NetworkingProcess.swift */; };
-		11B1A1A32F50000000000001 /* Processes/RenderingProcess/main.m in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A32F50000000000001 /* Processes/RenderingProcess/main.m */; };
-		11B1A1A42F50000000000001 /* Processes/RenderingProcess/RenderingProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A42F50000000000001 /* Processes/RenderingProcess/RenderingProcess.swift */; };
-		11B1A1A52F50000000000001 /* Processes/WebContentProcess/main.m in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A52F50000000000001 /* Processes/WebContentProcess/main.m */; };
-		11B1A1A62F50000000000001 /* Processes/WebContentProcess/WebContentProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1A1A62F50000000000001 /* Processes/WebContentProcess/WebContentProcess.swift */; };
+		02NNPBF12F3000000000001 /* Networking.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02NNPAPP2F3000000000001 /* Networking.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		02RNPBF12F3000000000001 /* Rendering.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02RNPAPP2F3000000000001 /* Rendering.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		02WCPBF12F3000000000001 /* WebContent.appex in Embed Process Extensions */ = {isa = PBXBuildFile; fileRef = 02WCPAPP2F3000000000001 /* WebContent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -93,9 +87,9 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				02WCPBF12F3000000000001 /* WebContentProcess.appex in Embed Process Extensions */,
-				02RNPBF12F3000000000001 /* RenderingProcess.appex in Embed Process Extensions */,
-				02NNPBF12F3000000000001 /* NetworkingProcess.appex in Embed Process Extensions */,
+				02WCPBF12F3000000000001 /* WebContent.appex in Embed Process Extensions */,
+				02RNPBF12F3000000000001 /* Rendering.appex in Embed Process Extensions */,
+				02NNPBF12F3000000000001 /* Networking.appex in Embed Process Extensions */,
 			);
 			name = "Embed Process Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -106,9 +100,9 @@
 		018C679E2F2F289C001F0BBB /* Reynard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reynard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = GeckoWrapper.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		01GECKO0052F2F289C001F0001 /* Configuration/Reynard.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Reynard.xcconfig; sourceTree = "<group>"; };
-		02NNPAPP2F3000000000001 /* NetworkingProcess.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NetworkingProcess.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		02RNPAPP2F3000000000001 /* RenderingProcess.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RenderingProcess.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		02WCPAPP2F3000000000001 /* WebContentProcess.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WebContentProcess.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		02NNPAPP2F3000000000001 /* Networking.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Networking.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		02RNPAPP2F3000000000001 /* Rendering.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Rendering.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		02WCPAPP2F3000000000001 /* WebContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WebContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A1A1A12F50000000000001 /* Processes/NetworkingProcess/main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Processes/NetworkingProcess/main.m; sourceTree = "<group>"; };
 		11A1A1A22F50000000000001 /* Processes/NetworkingProcess/NetworkingProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Processes/NetworkingProcess/NetworkingProcess.swift; sourceTree = "<group>"; };
 		11A1A1A32F50000000000001 /* Processes/RenderingProcess/main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Processes/RenderingProcess/main.m; sourceTree = "<group>"; };
@@ -118,20 +112,44 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		0111EB0E2F48374500490C82 /* Exceptions for "Processes" folder in "GeckoWrapper" target */ = {
+		0111ED022F4A19FD00490C82 /* Exceptions for "Processes" folder in "GeckoWrapper" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				NetworkingProcess/Info.plist,
-				NetworkingProcess/main.m,
-				NetworkingProcess/NetworkingProcess.swift,
-				RenderingProcess/Info.plist,
-				RenderingProcess/main.m,
-				RenderingProcess/RenderingProcess.swift,
-				WebContentProcess/Info.plist,
-				WebContentProcess/main.m,
-				WebContentProcess/WebContentProcess.swift,
+				Networking/Info.plist,
+				Networking/main.m,
+				Networking/Networking.swift,
+				Rendering/Info.plist,
+				Rendering/main.m,
+				Rendering/Rendering.swift,
+				WebContent/Info.plist,
+				WebContent/main.m,
+				WebContent/WebContent.swift,
 			);
 			target = 01GECKO0012F2F289C001F0002 /* GeckoWrapper */;
+		};
+		0111ED052F4A1A5900490C82 /* Exceptions for "Processes" folder in "WebContent" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				WebContent/main.m,
+				WebContent/WebContent.swift,
+			);
+			target = 02WCPTGT2F3000000000001 /* WebContent */;
+		};
+		0111ED082F4A1A6000490C82 /* Exceptions for "Processes" folder in "Rendering" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Rendering/main.m,
+				Rendering/Rendering.swift,
+			);
+			target = 02RNPTGT2F3000000000001 /* Rendering */;
+		};
+		0111ED0B2F4A1A6900490C82 /* Exceptions for "Processes" folder in "Networking" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Networking/main.m,
+				Networking/Networking.swift,
+			);
+			target = 02NNPTGT2F3000000000001 /* Networking */;
 		};
 		018C67B02F2F289E001F0BBB /* Exceptions for "Reynard" folder in "Reynard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -160,7 +178,10 @@
 		0111EABD2F48369400490C82 /* Processes */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				0111EB0E2F48374500490C82 /* Exceptions for "Processes" folder in "GeckoWrapper" target */,
+				0111ED022F4A19FD00490C82 /* Exceptions for "Processes" folder in "GeckoWrapper" target */,
+				0111ED052F4A1A5900490C82 /* Exceptions for "Processes" folder in "WebContent" target */,
+				0111ED082F4A1A6000490C82 /* Exceptions for "Processes" folder in "Rendering" target */,
+				0111ED0B2F4A1A6900490C82 /* Exceptions for "Processes" folder in "Networking" target */,
 			);
 			path = Processes;
 			sourceTree = "<group>";
@@ -259,9 +280,9 @@
 			children = (
 				018C679E2F2F289C001F0BBB /* Reynard.app */,
 				01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */,
-				02WCPAPP2F3000000000001 /* WebContentProcess.appex */,
-				02RNPAPP2F3000000000001 /* RenderingProcess.appex */,
-				02NNPAPP2F3000000000001 /* NetworkingProcess.appex */,
+				02WCPAPP2F3000000000001 /* WebContent.appex */,
+				02RNPAPP2F3000000000001 /* Rendering.appex */,
+				02NNPAPP2F3000000000001 /* Networking.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -345,9 +366,9 @@
 			productReference = 01GECKO0002F2F289C001F0001 /* GeckoWrapper.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		02NNPTGT2F3000000000001 /* NetworkingProcess */ = {
+		02NNPTGT2F3000000000001 /* Networking */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 02NNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "NetworkingProcess" */;
+			buildConfigurationList = 02NNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "Networking" */;
 			buildPhases = (
 				02NNPSRC2F3000000000001 /* Sources */,
 				02NNPFRM2F3000000000001 /* Frameworks */,
@@ -358,16 +379,16 @@
 			dependencies = (
 				0111EC332F48432200490C82 /* PBXTargetDependency */,
 			);
-			name = NetworkingProcess;
+			name = Networking;
 			packageProductDependencies = (
 			);
 			productName = NetworkingProcess;
-			productReference = 02NNPAPP2F3000000000001 /* NetworkingProcess.appex */;
+			productReference = 02NNPAPP2F3000000000001 /* Networking.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		02RNPTGT2F3000000000001 /* RenderingProcess */ = {
+		02RNPTGT2F3000000000001 /* Rendering */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 02RNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "RenderingProcess" */;
+			buildConfigurationList = 02RNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "Rendering" */;
 			buildPhases = (
 				02RNPSRC2F3000000000001 /* Sources */,
 				02RNPFRM2F3000000000001 /* Frameworks */,
@@ -378,16 +399,16 @@
 			dependencies = (
 				0111EC2E2F48431D00490C82 /* PBXTargetDependency */,
 			);
-			name = RenderingProcess;
+			name = Rendering;
 			packageProductDependencies = (
 			);
 			productName = RenderingProcess;
-			productReference = 02RNPAPP2F3000000000001 /* RenderingProcess.appex */;
+			productReference = 02RNPAPP2F3000000000001 /* Rendering.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		02WCPTGT2F3000000000001 /* WebContentProcess */ = {
+		02WCPTGT2F3000000000001 /* WebContent */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 02WCPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "WebContentProcess" */;
+			buildConfigurationList = 02WCPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "WebContent" */;
 			buildPhases = (
 				02WCPSRC2F3000000000001 /* Sources */,
 				02WCPFRM2F3000000000001 /* Frameworks */,
@@ -398,11 +419,11 @@
 			dependencies = (
 				0111EC292F48431600490C82 /* PBXTargetDependency */,
 			);
-			name = WebContentProcess;
+			name = WebContent;
 			packageProductDependencies = (
 			);
 			productName = WebContentProcess;
-			productReference = 02WCPAPP2F3000000000001 /* WebContentProcess.appex */;
+			productReference = 02WCPAPP2F3000000000001 /* WebContent.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -448,9 +469,9 @@
 			targets = (
 				018C679D2F2F289C001F0BBB /* Reynard */,
 				01GECKO0012F2F289C001F0002 /* GeckoWrapper */,
-				02WCPTGT2F3000000000001 /* WebContentProcess */,
-				02RNPTGT2F3000000000001 /* RenderingProcess */,
-				02NNPTGT2F3000000000001 /* NetworkingProcess */,
+				02WCPTGT2F3000000000001 /* WebContent */,
+				02RNPTGT2F3000000000001 /* Rendering */,
+				02NNPTGT2F3000000000001 /* Networking */,
 			);
 		};
 /* End PBXProject section */
@@ -530,8 +551,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11B1A1A12F50000000000001 /* Processes/NetworkingProcess/main.m in Sources */,
-				11B1A1A22F50000000000001 /* Processes/NetworkingProcess/NetworkingProcess.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -539,8 +558,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11B1A1A32F50000000000001 /* Processes/RenderingProcess/main.m in Sources */,
-				11B1A1A42F50000000000001 /* Processes/RenderingProcess/RenderingProcess.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,8 +565,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11B1A1A52F50000000000001 /* Processes/WebContentProcess/main.m in Sources */,
-				11B1A1A62F50000000000001 /* Processes/WebContentProcess/WebContentProcess.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -578,17 +593,17 @@
 		};
 		02NNPDEP2F3000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 02NNPTGT2F3000000000001 /* NetworkingProcess */;
+			target = 02NNPTGT2F3000000000001 /* Networking */;
 			targetProxy = 02NNPPRX2F3000000000001 /* PBXContainerItemProxy */;
 		};
 		02RNPDEP2F3000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 02RNPTGT2F3000000000001 /* RenderingProcess */;
+			target = 02RNPTGT2F3000000000001 /* Rendering */;
 			targetProxy = 02RNPPRX2F3000000000001 /* PBXContainerItemProxy */;
 		};
 		02WCPDEP2F3000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 02WCPTGT2F3000000000001 /* WebContentProcess */;
+			target = 02WCPTGT2F3000000000001 /* WebContent */;
 			targetProxy = 02WCPPRX2F3000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -891,7 +906,7 @@
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/NetworkingProcess/Info.plist;
+				INFOPLIST_FILE = Processes/Networking/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -905,7 +920,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.NetworkingProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Networking";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -927,7 +942,7 @@
 				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/NetworkingProcess/Info.plist;
+				INFOPLIST_FILE = Processes/Networking/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -941,7 +956,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.NetworkingProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Networking";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -964,7 +979,7 @@
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/RenderingProcess/Info.plist;
+				INFOPLIST_FILE = Processes/Rendering/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -978,7 +993,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.RenderingProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Rendering";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1000,7 +1015,7 @@
 				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/RenderingProcess/Info.plist;
+				INFOPLIST_FILE = Processes/Rendering/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1014,7 +1029,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.RenderingProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Rendering";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1037,7 +1052,7 @@
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/WebContentProcess/Info.plist;
+				INFOPLIST_FILE = Processes/WebContent/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1051,7 +1066,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.WebContentProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.WebContent";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1073,7 +1088,7 @@
 				CURRENT_PROJECT_VERSION = "$(CURRENT_BUILD)";
 				DEVELOPMENT_TEAM = NAR5D6HWAD;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Processes/WebContentProcess/Info.plist;
+				INFOPLIST_FILE = Processes/WebContent/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1087,7 +1102,7 @@
 					"$(inherited)",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.WebContentProcess";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.WebContent";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1130,7 +1145,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		02NNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "NetworkingProcess" */ = {
+		02NNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "Networking" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				02NNPDBG2F3000000000001 /* Debug */,
@@ -1139,7 +1154,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		02RNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "RenderingProcess" */ = {
+		02RNPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "Rendering" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				02RNPDBG2F3000000000001 /* Debug */,
@@ -1148,7 +1163,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		02WCPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "WebContentProcess" */ = {
+		02WCPCFG2F3000000000001 /* Build configuration list for PBXNativeTarget "WebContent" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				02WCPDBG2F3000000000001 /* Debug */,

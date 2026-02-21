@@ -1,6 +1,8 @@
 //
-//  ReynardProcessExtensions.swift
+//  ProcessExtensions.swift
 //  Reynard
+//
+//  Created by Minh Ton on 20/2/26.
 //
 
 import Foundation

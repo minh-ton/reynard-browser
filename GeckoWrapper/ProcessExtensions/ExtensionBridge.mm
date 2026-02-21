@@ -1,6 +1,8 @@
 //
-//  ReynardExtensionBridge.mm
+//  ExtensionBridge.mm
 //  Reynard
+//
+//  Created by Minh Ton on 20/2/26.
 //
 
 #import "ExtensionBridge.h"
