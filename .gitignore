@@ -1,4 +1,13 @@
+# macOS
 .DS_Store
+
+# VSCode
 .vscode
+
+# Xcode
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+
+# AI agent stuff
 AGENTS.md
-log.txt
