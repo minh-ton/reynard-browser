@@ -9,10 +9,6 @@ import Foundation
 import GeckoWrapper
 import UIKit
 
-// Set logging
-setenv("MOZ_LOG", "GeckoView:5,Widget:5,WidgetPopup:5,Layers:5,Layout:5,DisplayList:5,RenderCompositor:5,DocShell:5,DocLoader:5,Document:5,ScriptLoader:5", 1)
-setenv("RUST_LOG", "debug", 1)
-
 let defaultArgs = CommandLine.arguments
 let debugArgs = [
     // Debug logging
