@@ -18,7 +18,42 @@ public class GeckoSession {
     var window: GeckoViewWindow?
     var id: String?
 
-    public init() {}
+    lazy var contentHandler = newContentHandler(self)
+    lazy var processHangHandler = newProcessHangHandler(self)
+    public var contentDelegate: ContentDelegate? {
+        get { contentHandler.delegate }
+        set {
+            contentHandler.delegate = newValue
+            processHangHandler.delegate = newValue
+        }
+    }
+
+    lazy var navigationHandler = newNavigationHandler(self)
+    public var navigationDelegate: NavigationDelegate? {
+        get { navigationHandler.delegate }
+        set { navigationHandler.delegate = newValue }
+    }
+
+    lazy var progressHandler = newProgressHandler(self)
+    public var progressDelegate: ProgressDelegate? {
+        get { progressHandler.delegate }
+        set { progressHandler.delegate = newValue }
+    }
+
+    lazy var sessionHandlers: [GeckoSessionHandlerCommon] = [
+        contentHandler,
+        processHangHandler,
+        navigationHandler,
+        progressHandler,
+    ]
+
+    public init() {
+        for sessionHandler in sessionHandlers {
+            for type in sessionHandler.events {
+                dispatcher.addListener(type: type, listener: sessionHandler)
+            }
+        }
+    }
 
     public func open(windowId: String? = nil) {
         if isOpen() {
@@ -43,7 +78,19 @@ public class GeckoSession {
             "unsafeSessionContextId": nil,
         ]
 
-        window = GeckoViewOpenWindow(id, dispatcher, ["settings": settings, "modules": [String: Bool]()], false)
+        let modules = Dictionary(uniqueKeysWithValues: sessionHandlers.map {
+            ($0.moduleName, $0.enabled)
+        })
+
+        window = GeckoViewOpenWindow(
+            id,
+            dispatcher,
+            [
+                "settings": settings,
+                "modules": modules,
+            ],
+            false
+        )
     }
 
     public func isOpen() -> Bool { window != nil }
