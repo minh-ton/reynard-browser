@@ -61,3 +61,6 @@ To run Reynard, open `Reynard.xcodeproj` in Xcode and build/run it from there.
 
 If you’ve come across this repository and find it interesting, I’d love to get help or collaborate on it. I’m learning as I go here and don’t have much prior experience with iOS app development or with Gecko itself, so any contributions, feedback, or pointers would be greatly appreciated.
 
+## License
+
+This project is licensed under the MIT License. The included [truefox](https://github.com/minh-ton/truefox) engine is licensed separately under MPL-2.0.
