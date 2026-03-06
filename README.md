@@ -26,7 +26,9 @@ With Reynard, my goal is to build a Gecko-based browser that does not depend on 
 ## Issues
 - The JIT backend for child processes is disabled, which means that the JS interpreter, JIT compiler, and WebAssembly are currently not available.
 - Some POST request responses like dynamically loaded scripts and video streams are not fully delivered, which can cause Google reCAPTCHA to fail during loading or lead to stalled playback on YouTube. A workaround would be to set the user-agent string to a generic Firefox on Android one. I observed this behavior through debug logs and never fully understood it.
-- On some websites that use `-apple-system`, `system-ui`, or `BlinkMacSystemFont`, the rendered text falls back to an overly thin SF UI variant.
+- On some websites that use `-apple-system` or `BlinkMacSystemFont`, the rendered text falls back to an overly thin SF UI variant.
+- Video playback has no sound output.
+- Child processes responsible for WebContent and Rendering crashes due to "fault hit memory shortage" quite frequently on low memory devices such as the iPad Air 2.
 
 ## Changes
 As of February 23, the browser uses a multi-process architecture, spawning child-processes (WebContent, Rendering, and Networking) through NSExtension. Most modern websites render correctly, including proper font and emoji support, and general browsing feels much smoother. While performance still does not match Safari, the browser is now reliable enough for everyday use.
@@ -48,7 +50,7 @@ cd reynard-browser
 Download Gecko and apply patches.
 
 ```bash
-./tools/development/update_gecko.sh
+./tools/development/update-gecko.sh
 ./tools/development/apply-patches.sh
 ```
 
