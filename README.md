@@ -48,7 +48,7 @@ cd reynard-browser
 Download Gecko and apply patches.
 
 ```bash
-./tools/development/update_gecko.sh
+./tools/development/update-gecko.sh
 ./tools/development/apply-patches.sh
 ```
 
