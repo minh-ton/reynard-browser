@@ -1,8 +1,14 @@
 diff --git a/js/src/jit/arm64/MacroAssembler-arm64.cpp b/js/src/jit/arm64/MacroAssembler-arm64.cpp
-index 02b9a57cbf26..6f7730be2d94 100644
+index 02b9a57cbf26..a96c7200fdbe 100644
 --- a/js/src/jit/arm64/MacroAssembler-arm64.cpp
 +++ b/js/src/jit/arm64/MacroAssembler-arm64.cpp
-@@ -13,6 +13,7 @@
+@@ -9,10 +9,13 @@
+ #include "mozilla/MathAlgorithms.h"
+ #include "mozilla/Maybe.h"
+ 
++#include <libkern/OSCacheControl.h>
++
+ #include "jit/arm64/MoveEmitter-arm64.h"
  #include "jit/arm64/SharedICRegisters-arm64.h"
  #include "jit/Bailouts.h"
  #include "jit/BaselineFrame.h"
@@ -10,14 +16,15 @@ index 02b9a57cbf26..6f7730be2d94 100644
  #include "jit/JitRuntime.h"
  #include "jit/MacroAssembler.h"
  #include "jit/ProcessExecutableMemory.h"
-@@ -24,11 +25,18 @@
+@@ -22,6 +25,7 @@
+ #include "vm/JitActivation.h"  // js::jit::JitActivation
+ #include "vm/JSContext.h"
  #include "vm/StringType.h"
++
  #include "wasm/WasmStubs.h"
  
-+#include <libkern/OSCacheControl.h>
-+
  #include "jit/MacroAssembler-inl.h"
- 
+@@ -29,6 +33,11 @@
  namespace js {
  namespace jit {
  
@@ -29,7 +36,7 @@ index 02b9a57cbf26..6f7730be2d94 100644
  enum class Width { _32 = 32, _64 = 64 };
  
  static inline ARMRegister X(Register r) { return ARMRegister(r, 64); }
-@@ -1726,18 +1734,24 @@ void MacroAssembler::patchFarJump(CodeOffset farJump, uint32_t targetOffset) {
+@@ -1726,18 +1735,24 @@ void MacroAssembler::patchFarJump(CodeOffset farJump, uint32_t targetOffset) {
  }
  
  void MacroAssembler::patchFarJump(uint8_t* farJump, uint8_t* target) {
@@ -58,7 +65,7 @@ index 02b9a57cbf26..6f7730be2d94 100644
  }
  
  CodeOffset MacroAssembler::nopPatchableToCall() {
-@@ -1749,16 +1763,22 @@ CodeOffset MacroAssembler::nopPatchableToCall() {
+@@ -1749,16 +1764,22 @@ CodeOffset MacroAssembler::nopPatchableToCall() {
  
  void MacroAssembler::patchNopToCall(uint8_t* call, uint8_t* target) {
    uint8_t* inst = call - 4;
@@ -87,7 +94,7 @@ index 02b9a57cbf26..6f7730be2d94 100644
  }
  
  CodeOffset MacroAssembler::move32WithPatch(Register dest) {
-@@ -3326,11 +3346,15 @@ void MacroAssembler::patchNearAddressMove(CodeLocationLabel loc,
+@@ -3326,11 +3347,15 @@ void MacroAssembler::patchNearAddressMove(CodeLocationLabel loc,
    ptrdiff_t off = target - loc;
    MOZ_RELEASE_ASSERT(vixl::IsInt21(off));
  
