@@ -17,8 +17,10 @@ typedef struct AdapterHandle AdapterHandle;
 typedef struct DebugProxyHandle DebugProxyHandle;
 typedef struct DebugserverCommandHandle DebugserverCommandHandle;
 typedef struct HeartbeatClientHandle HeartbeatClientHandle;
+typedef struct IdeviceHandle IdeviceHandle;
 typedef struct IdevicePairingFile IdevicePairingFile;
 typedef struct IdeviceProviderHandle IdeviceProviderHandle;
+typedef struct LockdowndClientHandle LockdowndClientHandle;
 typedef struct ProcessControlHandle ProcessControlHandle;
 typedef struct ReadWriteOpaque ReadWriteOpaque;
 typedef struct RemoteServerHandle RemoteServerHandle;
@@ -26,8 +28,8 @@ typedef struct RsdHandshakeHandle RsdHandshakeHandle;
 typedef struct CoreDeviceProxyHandle CoreDeviceProxyHandle;
 
 typedef struct IdeviceFfiError {
-    int32_t code;
-    const char *message;
+  int32_t code;
+  const char *message;
 } IdeviceFfiError;
 
 IdeviceFfiError *idevice_pairing_file_read(const char *path,
@@ -38,22 +40,35 @@ IdeviceFfiError *idevice_tcp_provider_new(const struct sockaddr *ip,
                                           IdevicePairingFile *pairing_file,
                                           const char *label,
                                           IdeviceProviderHandle **provider);
+IdeviceFfiError *
+idevice_provider_get_pairing_file(IdeviceProviderHandle *provider,
+                                  IdevicePairingFile **pairing_file);
 void idevice_provider_free(IdeviceProviderHandle *provider);
+
+IdeviceFfiError *lockdownd_connect(IdeviceProviderHandle *provider,
+                                   LockdowndClientHandle **client);
+IdeviceFfiError *lockdownd_start_session(LockdowndClientHandle *client,
+                                         IdevicePairingFile *pairing_file);
+IdeviceFfiError *lockdownd_start_service(LockdowndClientHandle *client,
+                                         const char *identifier, uint16_t *port,
+                                         bool *ssl);
+void lockdownd_client_free(LockdowndClientHandle *handle);
 
 IdeviceFfiError *heartbeat_connect(IdeviceProviderHandle *provider,
                                    HeartbeatClientHandle **client);
 IdeviceFfiError *heartbeat_get_marco(HeartbeatClientHandle *client,
-                                     uint64_t interval,
-                                     uint64_t *new_interval);
+                                     uint64_t interval, uint64_t *new_interval);
 IdeviceFfiError *heartbeat_send_polo(HeartbeatClientHandle *client);
 void heartbeat_client_free(HeartbeatClientHandle *handle);
 
 IdeviceFfiError *core_device_proxy_connect(IdeviceProviderHandle *provider,
                                            CoreDeviceProxyHandle **client);
-IdeviceFfiError *core_device_proxy_get_server_rsd_port(
-                                                       CoreDeviceProxyHandle *handle, uint16_t *port);
-IdeviceFfiError *core_device_proxy_create_tcp_adapter(
-                                                      CoreDeviceProxyHandle *handle, AdapterHandle **adapter);
+IdeviceFfiError *
+core_device_proxy_get_server_rsd_port(CoreDeviceProxyHandle *handle,
+                                      uint16_t *port);
+IdeviceFfiError *
+core_device_proxy_create_tcp_adapter(CoreDeviceProxyHandle *handle,
+                                     AdapterHandle **adapter);
 void core_device_proxy_free(CoreDeviceProxyHandle *handle);
 
 IdeviceFfiError *adapter_connect(AdapterHandle *adapter_handle, uint16_t port,
@@ -72,8 +87,9 @@ void remote_server_free(RemoteServerHandle *handle);
 IdeviceFfiError *process_control_new(RemoteServerHandle *server,
                                      ProcessControlHandle **handle);
 void process_control_free(ProcessControlHandle *handle);
-IdeviceFfiError *process_control_disable_memory_limit(
-                                                      ProcessControlHandle *handle, uint64_t pid);
+IdeviceFfiError *
+process_control_disable_memory_limit(ProcessControlHandle *handle,
+                                     uint64_t pid);
 
 IdeviceFfiError *debug_proxy_connect_rsd(AdapterHandle *provider,
                                          RsdHandshakeHandle *handshake,

@@ -62,6 +62,7 @@ final class JITController {
             ReportChildProcessJITEnabled(pid, true)
         } catch {
             print("REYNARD_DEBUG: JIT enablement failed for pid=\(pid), error=\(error)")
+            ReportChildProcessJITEnabled(pid, false)
         }
     }
     

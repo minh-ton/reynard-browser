@@ -75,8 +75,7 @@ static NSString *const enablerErrorDomain = @"JITEnabler";
         
         NSError *commandError = nil;
         NSString *noAckResponse = nil;
-        if (!configureNoAckMode(session.debugProxy, &noAckResponse,
-                                &commandError)) {
+        if (!configureNoAckMode(session.debugProxy, &noAckResponse, &commandError)) {
             if (error) *error = commandError ?: errorWithCode(-9, @"Failed to configure no-ack debug mode.");
             freeDebugSession(&session);
             return NO;
@@ -116,7 +115,59 @@ static NSString *const enablerErrorDomain = @"JITEnabler";
         
         return YES;
     } else {
-        // To be implemented.
+        DeviceProvider *provider = [self getProvider:error];
+        if (!provider) return NO;
+        
+        uint16_t debugPort = 0;
+        BOOL usesSSL = NO;
+        const char *serviceName = "<unknown>";
+        if (!startLegacyDebugService(provider, &debugPort, &usesSSL, &serviceName, error)) return NO;
+        
+        LegacyDebugSession *legacySession = calloc(1, sizeof(*legacySession));
+        if (!legacySession) {
+            if (error) *error = errorWithCode(-8, @"Failed to allocate legacy debug session.");
+            return NO;
+        }
+        
+        legacySession->connection.socketFD = -1;
+        legacySession->connection.sslContext = NULL;
+        legacySession->connection.usesSSL = usesSSL;
+        legacySession->debugPort = debugPort;
+        legacySession->usesSSL = usesSSL;
+        legacySession->serviceName = serviceName;
+        
+        if (!connectLegacyDebugSocket(@"10.7.0.1", debugPort, usesSSL, &legacySession->connection, error)) {
+            if (error && *error && usesSSL) {
+                NSString *description = [NSString stringWithFormat:@"%@ lockdownd requested SSL for service %s on port %u.", (*error).localizedDescription ?: @"Legacy debug connect failed.", serviceName, debugPort];
+                *error = errorWithCode((*error).code, description);
+            }
+            free(legacySession);
+            return NO;
+        }
+        
+        NSString *attachResponse = nil;
+        NSString *attachCommand = [NSString stringWithFormat:@"vAttach;%08X", (uint32_t)pid];
+        if (!sendLegacyDebugCommand(&legacySession->connection, attachCommand, &attachResponse, error)) {
+            if (error && *error) {
+                NSString *description = [NSString stringWithFormat:@"%@ (service=%s, port=%u, ssl=%@)", (*error).localizedDescription ?: @"Legacy attach command failed.", serviceName, debugPort, usesSSL ? @"true" : @"false"];
+                *error = errorWithCode((*error).code, description);
+            }
+            
+            closeLegacyDebugConnection(&legacySession->connection);
+            free(legacySession);
+            return NO;
+        }
+        
+        logger([NSString stringWithFormat:@"Legacy attach response for pid %d: %@", pid, attachResponse.length > 0 ? attachResponse : @"<no response>"], logHandler);
+        
+        DeviceLogHandler copiedHandler = [logHandler copy];
+        dispatch_async(debugServiceQueue(), ^{
+            runLegacyDebugService(pid, legacySession, copiedHandler);
+        });
+        
+        logger([NSString stringWithFormat:@"Legacy debug session started for pid %d", pid], logHandler);
+        
+        return YES;
     }
     
     return NO;
