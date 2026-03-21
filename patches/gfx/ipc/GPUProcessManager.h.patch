@@ -1,0 +1,14 @@
+diff --git a/gfx/ipc/GPUProcessManager.h b/gfx/ipc/GPUProcessManager.h
+index 509be2d7319b..b8d757688173 100644
+--- a/gfx/ipc/GPUProcessManager.h
++++ b/gfx/ipc/GPUProcessManager.h
+@@ -128,7 +128,8 @@ class GPUProcessManager final : public GPUProcessHost::Listener {
+       mozilla::ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
+       mozilla::ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
+       mozilla::ipc::Endpoint<PRemoteMediaManagerChild>* aOutVideoManager,
+-      dom::ContentParentId aChildId, nsTArray<uint32_t>* aNamespaces);
++      dom::ContentParentId aChildId, nsTArray<uint32_t>* aNamespaces,
++      uint64_t* aOutProcessToken);
+ 
+   nsresult CreateRddVideoBridge(RDDProcessManager* aRDD, RDDChild* aChild);
+ #ifdef MOZ_WMF_MEDIA_ENGINE

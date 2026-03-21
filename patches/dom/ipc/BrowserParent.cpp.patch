@@ -1,0 +1,26 @@
+diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
+index 65a02c53ef3c..984f78da338d 100644
+--- a/dom/ipc/BrowserParent.cpp
++++ b/dom/ipc/BrowserParent.cpp
+@@ -789,6 +789,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
+     Maybe<CompositorOptions>* aCompositorOptions) {
+   if (mRemoteLayerTreeOwner.IsInitialized()) {
+     mRemoteLayerTreeOwner.EnsureLayersConnected(*aCompositorOptions);
++
++#if defined(MOZ_WIDGET_UIKIT)
++    // REYNARD: After compositor recovery, invalidate the embedding subdocument
++    // frame so the root WR bridge rebuilds its first display list with the
++    // reattached remote tab.
++    if (aCompositorOptions->isSome()) {
++      RefPtr<nsFrameLoader> frameLoader = GetFrameLoader();
++      if (frameLoader) {
++        nsIFrame* frame = frameLoader->GetPrimaryFrameOfOwningContent();
++        if (frame) {
++          frame->InvalidateFrame();
++        }
++      }
++    }
++#endif
+   }
+   return IPC_OK();
+ }

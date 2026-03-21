@@ -1,0 +1,41 @@
+diff --git a/layout/ipc/RemoteLayerTreeOwner.cpp b/layout/ipc/RemoteLayerTreeOwner.cpp
+index 0874c9496964..0d1824fd3191 100644
+--- a/layout/ipc/RemoteLayerTreeOwner.cpp
++++ b/layout/ipc/RemoteLayerTreeOwner.cpp
+@@ -86,14 +86,33 @@ void RemoteLayerTreeOwner::Destroy() {
+ void RemoteLayerTreeOwner::EnsureLayersConnected(
+     Maybe<CompositorOptions>& aCompositorOptions) {
+   RefPtr<WindowRenderer> renderer = GetWindowRenderer(mBrowserParent);
+-  if (!renderer || !renderer->GetCompositorBridgeChild()) {
++  PCompositorBridgeChild* compositor =
++      renderer ? renderer->GetCompositorBridgeChild() : nullptr;
++  if (!compositor) {
+     aCompositorOptions = Nothing();
+     return;
+   }
+ 
++  // REYNARD: Do not report compositor options on failed reconnect attempts.
++  // I found out that BrowserChild::ReinitRendering weirdly treats options
++  // presence as success.
+   mLayersConnected =
+-      renderer->GetCompositorBridgeChild()->SendNotifyChildRecreated(
+-          mLayersId, &mCompositorOptions);
++      compositor->SendNotifyChildRecreated(mLayersId, &mCompositorOptions);
++  if (!mLayersConnected) {
++    aCompositorOptions = Nothing();
++    return;
++  }
++
++  // REYNARD: During GPU/compositor recovery, ensure the recreated child
++  // layertree is readopted onto the current root compositor. Without this,
++  // display lists can flow to the child pipeline while composition targets a
++  // new root pipeline that has no display list yet.
++  if (!compositor->SendAdoptChild(mLayersId)) {
++    mLayersConnected = false;
++    aCompositorOptions = Nothing();
++    return;
++  }
++
+   aCompositorOptions = Some(mCompositorOptions);
+ }
+ 

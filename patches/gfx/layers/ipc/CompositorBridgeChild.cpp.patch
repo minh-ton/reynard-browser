@@ -1,0 +1,38 @@
+diff --git a/gfx/layers/ipc/CompositorBridgeChild.cpp b/gfx/layers/ipc/CompositorBridgeChild.cpp
+index 810391cb8db1..12b2d2ef4f4c 100644
+--- a/gfx/layers/ipc/CompositorBridgeChild.cpp
++++ b/gfx/layers/ipc/CompositorBridgeChild.cpp
+@@ -206,7 +206,8 @@ void CompositorBridgeChild::ShutDown() {
+   }
+ }
+ 
+-void CompositorBridgeChild::InitForContent(uint32_t aNamespace) {
++void CompositorBridgeChild::InitForContent(uint32_t aNamespace,
++                                           uint64_t aProcessToken) {
+   MOZ_ASSERT(NS_IsMainThread());
+   MOZ_ASSERT(aNamespace);
+ 
+@@ -220,6 +221,7 @@ void CompositorBridgeChild::InitForContent(uint32_t aNamespace) {
+ 
+   mCanSend = true;
+   mIdNamespace = aNamespace;
++  mProcessToken = aProcessToken;
+ 
+   sCompositorBridge = this;
+ }
+@@ -298,6 +300,15 @@ void CompositorBridgeChild::ActorDestroy(ActorDestroyReason aWhy) {
+     // false.
+     gfxCriticalNote << "CompositorBridgeChild receives IPC close with "
+                        "reason=AbnormalShutdown";
++
++    // REYNARD: In content processes, propagate abnormal compositor shutdown
++    // along with the current GPU process token so parent can recover.
++    if (mProcessToken && XRE_IsContentProcess()) {
++      if (dom::ContentChild* contentChild = dom::ContentChild::GetSingleton();
++          contentChild && contentChild->CanSend()) {
++        (void)contentChild->SendNotifyGPUProcessLost(mProcessToken);
++      }
++    }
+   }
+ 
+   mCanSend = false;

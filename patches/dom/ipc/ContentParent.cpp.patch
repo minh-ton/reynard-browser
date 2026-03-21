@@ -1,0 +1,60 @@
+diff --git a/dom/ipc/ContentParent.cpp b/dom/ipc/ContentParent.cpp
+index 634b5e771c8a..85d8ec4eef7e 100644
+--- a/dom/ipc/ContentParent.cpp
++++ b/dom/ipc/ContentParent.cpp
+@@ -2916,14 +2916,15 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
+   Endpoint<PVRManagerChild> vrBridge;
+   Endpoint<PRemoteMediaManagerChild> videoManager;
+   AutoTArray<uint32_t, 3> namespaces;
++  uint64_t processToken = 0;
+ 
+   if (NS_SUCCEEDED(gpuReadyRv) &&
+       gpm->CreateContentBridges(OtherEndpointProcInfo(), &compositor,
+                                 &imageBridge, &vrBridge, &videoManager,
+-                                mChildID, &namespaces)) {
++                                mChildID, &namespaces, &processToken)) {
+     (void)SendInitRendering(std::move(compositor), std::move(imageBridge),
+                             std::move(vrBridge), std::move(videoManager),
+-                            namespaces);
++                            namespaces, processToken);
+   } else {
+     // This can fail if we've already started shutting down the compositor
+     // thread. See Bug 1562763 comment 8. On Android this can fail we are are
+@@ -3108,16 +3109,17 @@ void ContentParent::OnCompositorUnexpectedShutdown() {
+   Endpoint<PVRManagerChild> vrBridge;
+   Endpoint<PRemoteMediaManagerChild> videoManager;
+   AutoTArray<uint32_t, 3> namespaces;
++  uint64_t processToken = 0;
+ 
+   if (!gpm->CreateContentBridges(OtherEndpointProcInfo(), &compositor,
+                                  &imageBridge, &vrBridge, &videoManager,
+-                                 mChildID, &namespaces)) {
++                                 mChildID, &namespaces, &processToken)) {
+     return;
+   }
+ 
+   (void)SendReinitRendering(std::move(compositor), std::move(imageBridge),
+                             std::move(vrBridge), std::move(videoManager),
+-                            namespaces);
++                            namespaces, processToken);
+ }
+ 
+ void ContentParent::OnCompositorDeviceReset() {
+@@ -7982,6 +7984,17 @@ IPCResult ContentParent::RecvKillGPUProcess() {
+ }
+ #endif
+ 
++IPCResult ContentParent::RecvNotifyGPUProcessLost(
++    const uint64_t& aProcessToken) {
++  // REYNARD: Route content-side abnormal compositor shutdown events through
++  // the active GPU process token so recovery targets the correct process.
++  gfx::GPUProcessManager* gpm = gfx::GPUProcessManager::Get();
++  if (gpm) {
++    gpm->NotifyRemoteActorDestroyed(aProcessToken);
++  }
++  return IPC_OK();
++}
++
+ nsCString ThreadsafeContentParentHandle::GetRemoteType() {
+   RecursiveMutexAutoLock lock(mMutex);
+   return mRemoteType;

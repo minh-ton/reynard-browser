@@ -1,0 +1,14 @@
+diff --git a/dom/ipc/ContentParent.h b/dom/ipc/ContentParent.h
+index 4f8a67623058..bffe52ff2aa8 100644
+--- a/dom/ipc/ContentParent.h
++++ b/dom/ipc/ContentParent.h
+@@ -746,6 +746,9 @@ class ContentParent final : public PContentParent,
+       const OriginAttributes& aOriginAttributes, uint64_t aInnerWindowId,
+       const nsCString& aPartitionKey, BlobURLDataRequestResolver&& aResolver);
+ 
++  mozilla::ipc::IPCResult RecvNotifyGPUProcessLost(
++      const uint64_t& aProcessToken);
++
+  protected:
+   bool CheckBrowsingContextEmbedder(CanonicalBrowsingContext* aBC,
+                                     const char* aOperation) const;
