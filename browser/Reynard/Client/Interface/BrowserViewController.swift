@@ -70,6 +70,10 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     private var usesEmbeddedSplitRoot: Bool {
         actsAsRootContainer && traitCollection.userInterfaceIdiom == .pad
     }
@@ -84,6 +88,13 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
             return
         }
         
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleJITLessMode),
+            name: NSNotification.Name(rawValue: "me.minh-ton.reynard.jitless-mode-activated"),
+            object: nil
+        )
+        
         browserLayout.configureLayout()
         syncBrowserNavigationChrome(animated: false)
         syncPadSidebarButtonItem()
@@ -92,6 +103,23 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         
         tabManager.createInitialTab()
         browserLayout.applyChromeLayout(animated: false)
+    }
+    // TODO: This is temporary workaround to relaunch child processes with JIT disabled.
+    // In the future, I may 1) relaunch the current tab with current URL if JIT-less mode
+    // is activated on startup, or 2) mark all tabs as needing reload when JIT-less mode is activated mid-session and trigger reload when the tab becomes active.
+    // But the best way is still to find a way to disable JIT for child processes without needing to relaunch them, so I will keep this workaround for now and remove it once a better solution is implemented.
+    @objc private func handleJITLessMode() {
+        let selectedIndex = tabManager.selectedTabIndex
+        guard tabManager.tabs.indices.contains(selectedIndex) else {
+            return
+        }
+        
+        let hadSingleTab = tabManager.tabs.count <= 1
+        closeTab(at: selectedIndex)
+        
+        if !hadSingleTab {
+            _ = createTab(selecting: true)
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
