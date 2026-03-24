@@ -8,10 +8,6 @@
 import UIKit
 import UniformTypeIdentifiers
 
-private enum SettingsLayout {
-    static let bottomContentInset: CGFloat = 112
-}
-
 private final class SettingsTextFieldCell: UITableViewCell {
     let textField = UITextField()
     
@@ -49,8 +45,6 @@ class SettingsTableViewController: UITableViewController {
         
         tableView.alwaysBounceVertical = true
         tableView.keyboardDismissMode = .interactive
-        tableView.sectionFooterHeight = UITableView.automaticDimension
-        tableView.estimatedSectionFooterHeight = 44
         
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
@@ -68,7 +62,7 @@ class SettingsTableViewController: UITableViewController {
     }
     
     private func updateBottomInsets() {
-        let bottomInset = view.safeAreaInsets.bottom + SettingsLayout.bottomContentInset
+        let bottomInset = view.safeAreaInsets.bottom
         tableView.contentInset.bottom = bottomInset
         tableView.verticalScrollIndicatorInsets.bottom = bottomInset
     }
@@ -79,11 +73,15 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
         case jit
         case search
         case compatibility
+        case about
     }
     
     private let jitSwitch = UISwitch()
     private let androidUserAgentSwitch = UISwitch()
     private let backgroundQueue = DispatchQueue(label: "me.minh-ton.reynard.settings.backgroundqueue", qos: .userInitiated)
+    private let sourceCodeURL = URL(string: "https://github.com/minh-ton/reynard-browser")
+    private let githubProfileURL = URL(string: "https://github.com/minh-ton")
+    private let redditProfileURL = URL(string: "https://www.reddit.com/user/Minh-Ton/")
     private var isJITLessModeActive = false
     private var activeDDIDownloadToken: UUID?
     
@@ -130,6 +128,8 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
             return 2
         case .search, .compatibility:
             return 1
+        case .about:
+            return 3
         }
     }
     
@@ -166,6 +166,22 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
             cell.selectionStyle = .none
             cell.accessoryView = androidUserAgentSwitch
             return cell
+            
+        case .about:
+            let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            switch indexPath.row {
+            case 0:
+                cell.textLabel?.text = "View Source Code"
+            case 1:
+                cell.textLabel?.text = "GitHub - @minh-ton"
+            case 2:
+                cell.textLabel?.text = "Reddit - u/Minh-Ton"
+            default:
+                cell.textLabel?.text = nil
+            }
+            cell.textLabel?.textColor = .systemBlue
+            cell.accessoryType = .disclosureIndicator
+            return cell
         }
     }
     
@@ -185,6 +201,24 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
         case .search:
             navigationController?.pushViewController(SearchEngineSettingsViewController(), animated: true)
             
+        case .about:
+            let url: URL?
+            switch indexPath.row {
+            case 0:
+                url = sourceCodeURL
+            case 1:
+                url = githubProfileURL
+            case 2:
+                url = redditProfileURL
+            default:
+                url = nil
+            }
+            
+            guard let url else {
+                return
+            }
+            
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
         default:
             return
         }
@@ -202,6 +236,8 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
             return "Search"
         case .compatibility:
             return "Compatibility"
+        case .about:
+            return "About"
         }
     }
     
@@ -217,6 +253,12 @@ final class SettingsRootViewController: SettingsTableViewController, UIDocumentP
             return nil
         case .compatibility:
             return "Compatibility with several websites, such as YouTube, improves when the user agent is set to Firefox on Android. You might see websites identify your device as an Android though."
+        case .about:
+            let info = Bundle.main.infoDictionary
+            let version = info?["CFBundleShortVersionString"] as? String ?? "Unknown"
+            let build = info?["CFBundleVersion"] as? String ?? "Unknown"
+            let geckoTag = info?["GeckoVersion"] as? String ?? "Unknown"
+            return "App Version: \(version) (\(build))\nGecko Release Tag: \(geckoTag)"
         }
     }
     
