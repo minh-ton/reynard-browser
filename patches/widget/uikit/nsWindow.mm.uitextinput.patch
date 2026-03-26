@@ -1,0 +1,170 @@
+diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
+index 6011967cec36..f72dcf89d0f8 100644
+--- a/widget/uikit/nsWindow.mm
++++ b/widget/uikit/nsWindow.mm
+@@ -94,9 +94,9 @@ static CGRect DevPixelsToUIKitPoints(const LayoutDeviceIntRect& aRect,
+ };
+ 
+ #ifdef ACCESSIBILITY
+-@interface ChildView : UIView <UIKeyInput, MUIRootAccessibleProtocol> {
++@interface ChildView : UIView <UITextInput, MUIRootAccessibleProtocol> {
+ #else
+-@interface ChildView : UIView <UIKeyInput> {
++@interface ChildView : UIView <UITextInput> {
+ #endif
+  @public
+   nsWindow* mGeckoChild;  // weak ref
+@@ -598,6 +598,153 @@ - (BOOL)hasText {
+   return YES;
+ }
+ 
++// UIResponderStandardEditActions
++
++- (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
++  if (action == @selector(paste:)) {
++    return [UIPasteboard generalPasteboard].hasStrings;
++  }
++  if (action == @selector(copy:) || action == @selector(selectAll:) ||
++      action == @selector(cut:)) {
++    return [self hasText];
++  }
++  return [super canPerformAction:action withSender:sender];
++}
++
++- (void)paste:(id)sender {
++  NSString* text = [UIPasteboard generalPasteboard].string;
++  if (text.length > 0) {
++    [self insertText:text];
++  }
++}
++
++- (void)copy:(id)sender {}
++- (void)selectAll:(id)sender {}
++- (void)cut:(id)sender {}
++
++// UITextInput required methods (stubs for tweak compatibility)
++
++- (NSString*)textInRange:(UITextRange*)range {
++  return @"";
++}
++
++- (void)replaceRange:(UITextRange*)range withText:(NSString*)text {
++  if (text.length > 0) {
++    [self insertText:text];
++  }
++}
++
++- (UITextRange*)selectedTextRange {
++  return nil;
++}
++
++- (void)setSelectedTextRange:(UITextRange*)range {}
++
++- (UITextRange*)markedTextRange {
++  return nil;
++}
++
++- (NSDictionary*)markedTextStyle {
++  return nil;
++}
++
++- (void)setMarkedTextStyle:(NSDictionary*)style {}
++
++- (void)setMarkedText:(NSString*)markedText selectedRange:(NSRange)selectedRange {
++  if (markedText.length > 0) {
++    [self insertText:markedText];
++  }
++}
++
++- (void)unmarkText {}
++
++- (UITextPosition*)beginningOfDocument {
++  return nil;
++}
++
++- (UITextPosition*)endOfDocument {
++  return nil;
++}
++
++- (UITextRange*)textRangeFromPosition:(UITextPosition*)fromPosition
++                           toPosition:(UITextPosition*)toPosition {
++  return nil;
++}
++
++- (UITextPosition*)positionFromPosition:(UITextPosition*)position
++                                 offset:(NSInteger)offset {
++  return nil;
++}
++
++- (UITextPosition*)positionFromPosition:(UITextPosition*)position
++                            inDirection:(UITextLayoutDirection)direction
++                                 offset:(NSInteger)offset {
++  return nil;
++}
++
++- (NSComparisonResult)comparePosition:(UITextPosition*)position
++                           toPosition:(UITextPosition*)other {
++  return NSOrderedSame;
++}
++
++- (NSInteger)offsetFromPosition:(UITextPosition*)from
++                     toPosition:(UITextPosition*)toPosition {
++  return 0;
++}
++
++- (id<UITextInputDelegate>)inputDelegate {
++  return nil;
++}
++
++- (void)setInputDelegate:(id<UITextInputDelegate>)delegate {}
++
++- (UITextPosition*)positionWithinRange:(UITextRange*)range
++                   farthestInDirection:(UITextLayoutDirection)direction {
++  return nil;
++}
++
++- (UITextRange*)characterRangeByExtendingPosition:(UITextPosition*)position
++                                      inDirection:(UITextLayoutDirection)direction {
++  return nil;
++}
++
++- (UITextWritingDirection)baseWritingDirectionForPosition:(UITextPosition*)position
++                                             inDirection:(UITextStorageDirection)direction {
++  return UITextWritingDirectionNatural;
++}
++
++- (void)setBaseWritingDirection:(UITextWritingDirection)writingDirection
++                       forRange:(UITextRange*)range {}
++
++- (CGRect)firstRectForRange:(UITextRange*)range {
++  return CGRectZero;
++}
++
++- (CGRect)caretRectForPosition:(UITextPosition*)position {
++  return CGRectZero;
++}
++
++- (NSArray*)selectionRectsForRange:(UITextRange*)range {
++  return @[];
++}
++
++- (UITextPosition*)closestPositionToPoint:(CGPoint)point {
++  return nil;
++}
++
++- (UITextPosition*)closestPositionToPoint:(CGPoint)point
++                              withinRange:(UITextRange*)range {
++  return nil;
++}
++
++- (UITextRange*)characterRangeAtPoint:(CGPoint)point {
++  return nil;
++}
++
++- (id<UITextInputTokenizer>)tokenizer {
++  return nil;
++}
++
+ // UITextInputTraits
+ 
+ - (UIKeyboardType)keyboardType {

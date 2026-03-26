@@ -212,7 +212,10 @@ extension TabManagerImplementation: ContentDelegate {
     
     func onProductUrl(session: GeckoSession) {}
     
-    func onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: ContextElement) {}
+    func onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: ContextElement) {
+        let point = CGPoint(x: screenX, y: screenY)
+        delegate?.tabManager(self, presentContextMenuAt: point, element: element)
+    }
     
     func onCrash(session: GeckoSession) {
         guard let index = tabIndex(for: session) else {

@@ -14,7 +14,7 @@ public struct ContextElement {
         case video
         case audio
     }
-    
+
     public let baseUri: String?
     public let linkUri: String?
     public let title: String?
@@ -22,6 +22,7 @@ public struct ContextElement {
     public let type: ElementType
     public let srcUri: String?
     public let textContent: String?
+    public let isEditable: Bool
 }
 
 public enum SlowScriptResponse {
@@ -133,7 +134,8 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 altText: message?["alt"] as? String,
                 type: parseElementType(message?["elementType"] as? String ?? ""),
                 srcUri: message?["elementSrc"] as? String,
-                textContent: message?["textContent"] as? String
+                textContent: message?["textContent"] as? String,
+                isEditable: message?["isEditable"] as? Bool ?? false
             )
             
             delegate?.onContextMenu(

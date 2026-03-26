@@ -38,6 +38,7 @@ protocol TabManagerDelegate: AnyObject {
     func tabManager(_ tabManager: TabManager, didSelectTabAt index: Int, previousIndex: Int?)
     func tabManager(_ tabManager: TabManager, didUpdateTabAt index: Int, reason: TabManagerUpdateReason)
     func tabManager(_ tabManager: TabManager, animateNewTabSelectionAt index: Int, completion: @escaping () -> Void)
+    func tabManager(_ tabManager: TabManager, presentContextMenuAt point: CGPoint, element: ContextElement)
 }
 
 extension TabManagerDelegate {

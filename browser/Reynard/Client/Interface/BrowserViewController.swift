@@ -372,8 +372,13 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
             completion()
             return
         }
-        
+
         addressBarGestures.animateAutomaticNewTabTransition(to: tabManager.tabs[index], completion: completion)
+    }
+
+    func tabManager(_ tabManager: TabManager, presentContextMenuAt point: CGPoint, element: ContextElement) {
+        // TODO(human): Build the context menu actions based on element type
+        presentContextMenu(at: point, element: element)
     }
     
     func backButtonClicked() {
@@ -449,6 +454,101 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
     
     @objc func dismissKeyboardTapped() {
         browserActions.dismissKeyboard()
+    }
+}
+
+// MARK: - Context Menu
+
+extension BrowserViewController {
+    func presentContextMenu(at point: CGPoint, element: ContextElement) {
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+
+        if let text = element.textContent, !text.isEmpty {
+            alert.addAction(UIAlertAction(title: "Copy", style: .default) { [weak self] _ in
+                UIPasteboard.general.string = text
+                if element.isEditable {
+                    self?.tabManager.selectedTab?.session.load("javascript:void(document.execCommand('copy'))")
+                }
+            })
+        }
+
+        if element.isEditable {
+            if UIPasteboard.general.hasStrings {
+                alert.addAction(UIAlertAction(title: "Paste", style: .default) { [weak self] _ in
+                    guard let self, let text = UIPasteboard.general.string else { return }
+                    let escaped = text
+                        .replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "'", with: "\\'")
+                        .replacingOccurrences(of: "\n", with: "\\n")
+                        .replacingOccurrences(of: "\r", with: "")
+                    self.tabManager.selectedTab?.session.load("javascript:void(document.execCommand('insertText',false,'\(escaped)'))")
+                })
+            }
+            alert.addAction(UIAlertAction(title: "Select All", style: .default) { [weak self] _ in
+                guard let self else { return }
+                self.tabManager.selectedTab?.session.load("javascript:void(document.execCommand('selectAll'))")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    let followUp = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+                    followUp.addAction(UIAlertAction(title: "Copy", style: .default) { [weak self] _ in
+                        self?.tabManager.selectedTab?.session.load("javascript:void(document.execCommand('copy'))")
+                    })
+                    if UIPasteboard.general.hasStrings {
+                        followUp.addAction(UIAlertAction(title: "Paste", style: .default) { [weak self] _ in
+                            guard let self, let text = UIPasteboard.general.string else { return }
+                            let escaped = text
+                                .replacingOccurrences(of: "\\", with: "\\\\")
+                                .replacingOccurrences(of: "'", with: "\\'")
+                                .replacingOccurrences(of: "\n", with: "\\n")
+                                .replacingOccurrences(of: "\r", with: "")
+                            self.tabManager.selectedTab?.session.load("javascript:void(document.execCommand('insertText',false,'\(escaped)'))")
+                        })
+                    }
+                    followUp.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                    if let popover = followUp.popoverPresentationController {
+                        popover.sourceView = self.browserUI.geckoView
+                        popover.sourceRect = CGRect(x: point.x, y: point.y, width: 1, height: 1)
+                    }
+                    self.present(followUp, animated: true)
+                }
+            })
+        }
+
+        if let linkUri = element.linkUri, !linkUri.isEmpty {
+            alert.addAction(UIAlertAction(title: "Copy Link", style: .default) { _ in
+                UIPasteboard.general.string = linkUri
+            })
+            alert.addAction(UIAlertAction(title: "Open in New Tab", style: .default) { [weak self] _ in
+                guard let self else { return }
+                self.createTab(selecting: true)
+                self.tabManager.browse(to: linkUri)
+            })
+        }
+
+        if let srcUri = element.srcUri, !srcUri.isEmpty {
+            switch element.type {
+            case .image:
+                alert.addAction(UIAlertAction(title: "Copy Image URL", style: .default) { _ in
+                    UIPasteboard.general.string = srcUri
+                })
+            case .video, .audio:
+                alert.addAction(UIAlertAction(title: "Copy Media URL", style: .default) { _ in
+                    UIPasteboard.general.string = srcUri
+                })
+            case .none:
+                break
+            }
+        }
+
+        guard alert.actions.count > 0 else { return }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = browserUI.geckoView
+            popover.sourceRect = CGRect(x: point.x, y: point.y, width: 1, height: 1)
+        }
+
+        present(alert, animated: true)
     }
 }
 

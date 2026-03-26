@@ -1,0 +1,48 @@
+diff --git a/mobile/shared/actors/ContentDelegateChild.sys.mjs b/mobile/shared/actors/ContentDelegateChild.sys.mjs
+index 82a1a88bd11e..701a24929204 100644
+--- a/mobile/shared/actors/ContentDelegateChild.sys.mjs
++++ b/mobile/shared/actors/ContentDelegateChild.sys.mjs
+@@ -174,14 +174,16 @@ export class ContentDelegateChild extends GeckoViewActorChild {
+           }
+         }
+ 
+-        if (uri || isImage || isMedia) {
++        const win = this.contentWindow;
++        const selectionInfo = lazy.SelectionUtils.getSelectionDetails(win);
++        const hasSelection = selectionInfo.text.length > 0;
++        const isEditable =
++          elementType === "HTMLInputElement" ||
++          elementType === "HTMLTextAreaElement" ||
++          node.isContentEditable;
++
++        if (uri || isImage || isMedia || hasSelection || isEditable) {
+           const msg = {
+-            // We don't have full zoom on Android, so using CSS coordinates
+-            // here is fine, since the CSS coordinate spaces match between the
+-            // child and parent processes.
+-            //
+-            // TODO(m_kato):
+-            // title, alt and textContent should consider surrogate pair and grapheme cluster?
+             screenX: aEvent.screenX,
+             screenY: aEvent.screenY,
+             baseUri: (baseUri && baseUri.displaySpec) || null,
+@@ -191,13 +193,16 @@ export class ContentDelegateChild extends GeckoViewActorChild {
+             elementType,
+             elementSrc: elementSrc || null,
+             textContent:
+-              (node.textContent &&
+-                node.textContent.substring(0, MAX_TEXT_LENGTH)) ||
+-              null,
++              hasSelection
++                ? selectionInfo.text.substring(0, MAX_TEXT_LENGTH)
++                : (node.textContent &&
++                    node.textContent.substring(0, MAX_TEXT_LENGTH)) ||
++                  null,
+             linkText:
+               (node.innerText &&
+                 node.innerText.substring(0, MAX_TEXT_LENGTH)) ||
+               null,
++            isEditable,
+           };
+ 
+           this.sendAsyncMessage("GeckoView:ContextMenu", msg);
