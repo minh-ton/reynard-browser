@@ -1,0 +1,20 @@
+diff --git a/widget/uikit/components.conf b/widget/uikit/components.conf
+index 56286c8e7443..48bb1aea0222 100644
+--- a/widget/uikit/components.conf
++++ b/widget/uikit/components.conf
+@@ -33,6 +33,15 @@ Classes = [
+         'type': 'nsIOSBridge',
+         'headers': ['/widget/uikit/IOSBridge.h'],
+     },
++    {
++        'cid': '{f0cd2511-0911-4684-bdc6-117bc98f66c8}',
++        'contract_ids': ['@mozilla.org/uriloader/external-helper-app-service;1'],
++        'interfaces': ['nsIExternalHelperAppService'],
++        'type': 'ExternalAppService',
++        'headers': ['/widget/uikit/ExternalAppService.h'],
++        'constructor': 'ExternalAppService::GetSingleton',
++        'processes': ProcessSelector.MAIN_PROCESS_ONLY,
++    },
+     {
+         'cid': '{2d96b3df-c051-11d1-a827-0040959a28c9}',
+         'contract_ids': ['@mozilla.org/widget/appshell/uikit;1'],

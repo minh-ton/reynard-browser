@@ -245,6 +245,22 @@ extension TabManagerImplementation: ContentDelegate {
     func onCookieBannerDetected(session: GeckoSession) {}
     
     func onCookieBannerHandled(session: GeckoSession) {}
+    
+    func onExternalResponse(session: GeckoSession, response: ExternalResponseInfo) {
+        guard let download = DownloadStore.shared.prepareDownload(from: response) else {
+            return
+        }
+        
+        delegate?.tabManager(self, didRequestDownload: download)
+    }
+    
+    func onSavePdf(session: GeckoSession, request: SavePdfInfo) {
+        guard let download = DownloadStore.shared.prepareDownload(from: request) else {
+            return
+        }
+        
+        delegate?.tabManager(self, didRequestDownload: download)
+    }
 }
 
 extension TabManagerImplementation: NavigationDelegate {

@@ -1,0 +1,33 @@
+diff --git a/widget/uikit/ExternalAppService.h b/widget/uikit/ExternalAppService.h
+new file mode 100644
+index 000000000000..3021f534e58f
+--- /dev/null
++++ b/widget/uikit/ExternalAppService.h
+@@ -0,0 +1,27 @@
++/* -*- Mode: c++; c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil; -*-
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef ExternalAppService_h_
++#define ExternalAppService_h_
++
++#include "mozilla/StaticPtr.h"
++#include "nsIExternalHelperAppService.h"
++
++class ExternalAppService : public nsIExternalHelperAppService {
++ public:
++  NS_DECL_ISUPPORTS
++  NS_DECL_NSIEXTERNALHELPERAPPSERVICE
++
++  ExternalAppService();
++
++  static already_AddRefed<ExternalAppService> GetSingleton();
++
++ private:
++  virtual ~ExternalAppService() = default;
++
++  static mozilla::StaticRefPtr<ExternalAppService> sService;
++};
++
++#endif  // ExternalAppService_h_

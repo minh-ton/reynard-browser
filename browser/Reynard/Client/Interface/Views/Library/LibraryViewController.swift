@@ -8,9 +8,11 @@
 import UIKit
 
 final class LibraryViewController: UITabBarController, UITabBarControllerDelegate, UINavigationControllerDelegate {
+    private let initialSection: LibrarySection
     private let onClose: (() -> Void)?
     
-    init(onClose: (() -> Void)? = nil) {
+    init(initialSection: LibrarySection = .bookmarks, onClose: (() -> Void)? = nil) {
+        self.initialSection = initialSection
         self.onClose = onClose
         super.init(nibName: nil, bundle: nil)
     }
@@ -24,7 +26,7 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
         view.backgroundColor = .systemGroupedBackground
         delegate = self
         setViewControllers(makeSectionViewControllers(), animated: false)
-        selectedIndex = LibrarySection.bookmarks.rawValue
+        selectedIndex = initialSection.rawValue
         LibraryTabBarStyle.apply(to: tabBar)
         if onClose != nil {
             navigationItem.rightBarButtonItem = makeCloseBarButtonItem()
@@ -50,9 +52,9 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
     
     private func makeSectionViewControllers() -> [UIViewController] {
         [
-            makeSectionViewController(for: .bookmarks, contentViewController: LibraryHostedSectionViewController(hostedView: BookmarksManagerView())),
-            makeSectionViewController(for: .history, contentViewController: LibraryHostedSectionViewController(hostedView: HistoryManagerView())),
-            makeSectionViewController(for: .downloads, contentViewController: LibraryHostedSectionViewController(hostedView: DownloadsManagerView())),
+            makeSectionViewController(for: .bookmarks, contentViewController: LibraryHostedSectionViewController(hostedViewFactory: { BookmarksManagerView() })),
+            makeSectionViewController(for: .history, contentViewController: LibraryHostedSectionViewController(hostedViewFactory: { HistoryManagerView() })),
+            makeSectionViewController(for: .downloads, contentViewController: LibraryHostedSectionViewController(hostedViewFactory: { DownloadsManagerView() })),
             makeSectionViewController(for: .settings, contentViewController: SettingsRootViewController()),
         ]
     }
@@ -99,10 +101,10 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
 }
 
 private final class LibraryHostedSectionViewController: UIViewController {
-    private let hostedView: UIView
+    private let hostedViewFactory: () -> UIView
     
-    init(hostedView: UIView) {
-        self.hostedView = hostedView
+    init(hostedViewFactory: @escaping () -> UIView) {
+        self.hostedViewFactory = hostedViewFactory
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -114,6 +116,8 @@ private final class LibraryHostedSectionViewController: UIViewController {
         super.viewDidLoad()
         
         view.backgroundColor = .systemGray6
+        
+        let hostedView = hostedViewFactory()
         
         hostedView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hostedView)

@@ -14,11 +14,11 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
     
     private lazy var collectionView: UICollectionView = {
         var configuration = UICollectionLayoutListConfiguration(appearance: .sidebar)
-        configuration.backgroundColor = .systemGroupedBackground
+        configuration.backgroundColor = .systemGray6
         let layout = UICollectionViewCompositionalLayout.list(using: configuration)
         let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .systemGray6
         view.delegate = self
         return view
     }()
@@ -33,7 +33,7 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .systemGray6
         configureCollectionView()
         configureDataSource()
         applySnapshot()
@@ -100,8 +100,23 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
             return
         }
         
-        navigationController?.pushViewController(makeSectionViewController(for: section), animated: true)
-        collectionView.deselectItem(at: indexPath, animated: true)
+        showSection(section, animated: true)
+    }
+    
+    func showSection(_ section: LibrarySection, animated: Bool) {
+        loadViewIfNeeded()
+        
+        let indexPath = dataSource.indexPath(for: section)
+        
+        if let indexPath {
+            collectionView.selectItem(at: indexPath, animated: false, scrollPosition: [])
+        }
+        
+        let viewController = makeSectionViewController(for: section)
+        navigationController?.setViewControllers([self, viewController], animated: animated)
+        if let indexPath {
+            collectionView.deselectItem(at: indexPath, animated: animated)
+        }
     }
     
     private func makeSectionViewController(for section: LibrarySection) -> UIViewController {

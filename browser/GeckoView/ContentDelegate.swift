@@ -29,6 +29,21 @@ public enum SlowScriptResponse {
     case resume
 }
 
+public struct ExternalResponseInfo {
+    public let url: String
+    public let filename: String?
+    public let mimeType: String?
+    public let contentLength: Int64?
+    public let requestMethod: String?
+    public let requestHeaders: [String: String]
+}
+
+public struct SavePdfInfo {
+    public let url: String
+    public let filename: String?
+    public let originalUrl: String?
+}
+
 public protocol ContentDelegate {
     func onTitleChange(session: GeckoSession, title: String)
     func onPreviewImage(session: GeckoSession, previewImageUrl: String)
@@ -48,6 +63,8 @@ public protocol ContentDelegate {
     func onShowDynamicToolbar(session: GeckoSession)
     func onCookieBannerDetected(session: GeckoSession)
     func onCookieBannerHandled(session: GeckoSession)
+    func onExternalResponse(session: GeckoSession, response: ExternalResponseInfo)
+    func onSavePdf(session: GeckoSession, request: SavePdfInfo)
 }
 
 extension ContentDelegate {
@@ -69,6 +86,8 @@ extension ContentDelegate {
     public func onShowDynamicToolbar(session: GeckoSession) {}
     public func onCookieBannerDetected(session: GeckoSession) {}
     public func onCookieBannerHandled(session: GeckoSession) {}
+    public func onExternalResponse(session: GeckoSession, response: ExternalResponseInfo) {}
+    public func onSavePdf(session: GeckoSession, request: SavePdfInfo) {}
 }
 
 enum ContentEvents: String, CaseIterable {
@@ -98,6 +117,33 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         events: ContentEvents.allCases.map(\.rawValue),
         session: session
     ) { @MainActor session, delegate, type, message in
+        func parseStringDictionary(_ value: Any?) -> [String: String] {
+            guard let dictionary = value as? [String: Any] else {
+                return [:]
+            }
+            
+            return dictionary.reduce(into: [:]) { result, entry in
+                if let value = entry.value as? String {
+                    result[entry.key] = value
+                } else if let number = entry.value as? NSNumber {
+                    result[entry.key] = number.stringValue
+                }
+            }
+        }
+        
+        func parseInt64(_ value: Any?) -> Int64? {
+            if let intValue = value as? Int64 {
+                return intValue
+            }
+            if let intValue = value as? Int {
+                return Int64(intValue)
+            }
+            if let number = value as? NSNumber {
+                return number.int64Value
+            }
+            return nil
+        }
+        
         guard let event = ContentEvents(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
@@ -160,7 +206,18 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             return nil
             
         case .externalResponse:
-            throw GeckoHandlerError("GeckoView:ExternalResponse is unimplemented")
+            delegate?.onExternalResponse(
+                session: session,
+                response: ExternalResponseInfo(
+                    url: message?["url"] as? String ?? "",
+                    filename: message?["filename"] as? String,
+                    mimeType: message?["mimeType"] as? String,
+                    contentLength: parseInt64(message?["contentLength"]),
+                    requestMethod: message?["requestMethod"] as? String,
+                    requestHeaders: parseStringDictionary(message?["requestHeaders"])
+                )
+            )
+            return nil
             
         case .focusRequest:
             delegate?.onFocusRequest(session: session)
@@ -204,7 +261,15 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             return nil
             
         case .savePdf:
-            throw GeckoHandlerError("GeckoView:SavePdf is unimplemented")
+            delegate?.onSavePdf(
+                session: session,
+                request: SavePdfInfo(
+                    url: message?["url"] as? String ?? "",
+                    filename: message?["filename"] as? String,
+                    originalUrl: message?["originalUrl"] as? String
+                )
+            )
+            return nil
             
         case .onProductUrl:
             delegate?.onProductUrl(session: session)

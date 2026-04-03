@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/moz.build b/widget/uikit/moz.build
-index 0ea48673ee27..2133a6aaae95 100644
+index 0ea48673ee27..8e41d5b4352d 100644
 --- a/widget/uikit/moz.build
 +++ b/widget/uikit/moz.build
 @@ -15,10 +15,14 @@ EXPORTS += [
@@ -17,13 +17,14 @@ index 0ea48673ee27..2133a6aaae95 100644
  ]
  
  EXPORTS.GeckoView += [
-@@ -26,12 +30,15 @@ EXPORTS.GeckoView += [
+@@ -26,12 +30,16 @@ EXPORTS.GeckoView += [
  ]
  
  SOURCES += [
 +    "CompositorWidgetChild.cpp",
 +    "CompositorWidgetParent.cpp",
      "EventDispatcher.mm",
++    "ExternalAppService.mm",
      "GfxInfo.cpp",
      "IOSBridge.mm",
      "MediaKeysEventSourceFactory.cpp",
@@ -33,7 +34,7 @@ index 0ea48673ee27..2133a6aaae95 100644
      "nsLookAndFeel.mm",
      "nsNativeThemeUIKit.mm",
      "nsUserIdleServiceUIKit.cpp",
-@@ -39,6 +46,7 @@ SOURCES += [
+@@ -39,6 +47,7 @@ SOURCES += [
      "nsWindow.mm",
      "ScreenHelperUIKit.mm",
      "TextInputHandler.mm",

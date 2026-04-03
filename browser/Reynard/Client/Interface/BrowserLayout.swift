@@ -302,7 +302,11 @@ final class BrowserLayout {
         ui.padTopBarButtons.updateLayout(isPadLayout: controller.isPadLayout, showsCompactPadChrome: compactPad, sidebarVisible: controller.isLibrarySidebarVisible)
         ui.padTopBarButtons.leftStack.isHidden = compactPad
         ui.padTopBarButtons.rightStack.isHidden = compactPad
-        ui.padTopBarButtons.leftWidthConstraint.constant = compactPad ? 0 : resolvedPadTopBarLeftWidth(isPadLayout: controller.isPadLayout, sidebarVisible: controller.isLibrarySidebarVisible)
+        ui.padTopBarButtons.leftWidthConstraint.constant = compactPad ? 0 : resolvedPadTopBarLeftWidth(
+            isPadLayout: controller.isPadLayout,
+            sidebarVisible: controller.isLibrarySidebarVisible,
+            showsDownloads: ui.padTopBarButtons.downloadButton.isShowingDownloads
+        )
         ui.padTopBarButtons.rightWidthConstraint.constant = compactPad ? 0 : 126
         
         let showDismissButton = !pad && controller.isSearchFocused
@@ -343,12 +347,15 @@ final class BrowserLayout {
         return 24
     }
     
-    private func resolvedPadTopBarLeftWidth(isPadLayout: Bool, sidebarVisible: Bool) -> CGFloat {
+    private func resolvedPadTopBarLeftWidth(isPadLayout: Bool, sidebarVisible: Bool, showsDownloads: Bool) -> CGFloat {
         guard isPadLayout else {
             return 126
         }
         
-        return sidebarVisible ? 80 : 126
+        let visibleButtonCount = (sidebarVisible ? 2 : 3) + (showsDownloads ? 1 : 0)
+        let buttonWidth: CGFloat = 30
+        let spacing: CGFloat = 10
+        return (CGFloat(visibleButtonCount) * buttonWidth) + (CGFloat(max(visibleButtonCount - 1, 0)) * spacing)
     }
     
     func setSearchFocused(_ focused: Bool, animated: Bool) {

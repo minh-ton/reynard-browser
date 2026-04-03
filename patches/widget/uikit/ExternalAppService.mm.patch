@@ -1,0 +1,431 @@
+diff --git a/widget/uikit/ExternalAppService.mm b/widget/uikit/ExternalAppService.mm
+new file mode 100644
+index 000000000000..c3e81f7ab349
+--- /dev/null
++++ b/widget/uikit/ExternalAppService.mm
+@@ -0,0 +1,425 @@
++/* -*- Mode: c++; c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil; -*-
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "ExternalAppService.h"
++
++#include "js/Object.h"
++#include "js/PropertyAndElement.h"
++#include "js/RootingAPI.h"
++#include "js/String.h"
++#include "js/Value.h"
++#include "mozilla/StaticPtr.h"
++#include "mozilla/dom/BrowsingContext.h"
++#include "mozilla/dom/CanonicalBrowsingContext.h"
++#include "mozilla/dom/ScriptSettings.h"
++#include "mozilla/widget/EventDispatcher.h"
++#include "mozilla/widget/nsWindow.h"
++#include "nsContentSecurityUtils.h"
++#include "nsIAsyncVerifyRedirectCallback.h"
++#include "nsIChannel.h"
++#include "nsIChannelEventSink.h"
++#include "nsIHttpChannel.h"
++#include "nsIHttpHeaderVisitor.h"
++#include "nsIInputStream.h"
++#include "nsIInterfaceRequestor.h"
++#include "nsILoadInfo.h"
++#include "nsIRequest.h"
++#include "nsIStreamListener.h"
++#include "nsITransfer.h"
++#include "nsNetUtil.h"
++#include "nsPrintfCString.h"
++#include "nsReadableUtils.h"
++#include "nsStreamUtils.h"
++#include "nsString.h"
++#include "nsXPCOM.h"
++#include "xpcpublic.h"
++
++using namespace mozilla;
++
++// REYNARD: Capture final external download responses on iOS and dispatch the
++// resolved URL plus response metadata to Swift so the app can download with
++// URLSession instead of handing the transfer back to Gecko.
++
++namespace {
++
++struct HeaderEntry {
++  nsCString name;
++  nsCString value;
++};
++
++class HeaderCollector final : public nsIHttpHeaderVisitor {
++ public:
++  NS_DECL_THREADSAFE_ISUPPORTS
++
++  NS_IMETHOD VisitHeader(const nsACString& aHeader,
++                         const nsACString& aValue) override {
++    HeaderEntry& entry = *mEntries.AppendElement();
++    entry.name = nsCString(aHeader);
++    ToLowerCase(entry.name);
++    entry.value = nsCString(aValue);
++    return NS_OK;
++  }
++
++  const nsTArray<HeaderEntry>& Entries() const { return mEntries; }
++
++ private:
++  ~HeaderCollector() = default;
++
++  nsTArray<HeaderEntry> mEntries;
++};
++
++NS_IMPL_ISUPPORTS(HeaderCollector, nsIHttpHeaderVisitor)
++
++bool DefineUTF8StringProperty(JSContext* aCx, JS::HandleObject aObject,
++                              const char* aName, const nsACString& aValue) {
++  NS_ConvertUTF8toUTF16 utf16Value(aValue);
++  JS::RootedString string(
++      aCx, JS_NewUCStringCopyN(aCx, utf16Value.get(), utf16Value.Length()));
++  if (!string) {
++    return false;
++  }
++
++  JS::RootedValue value(aCx, JS::StringValue(string));
++  return JS_DefineProperty(aCx, aObject, aName, value, JSPROP_ENUMERATE);
++}
++
++bool DefineUTF16StringProperty(JSContext* aCx, JS::HandleObject aObject,
++                               const char* aName, const nsAString& aValue) {
++  JS::RootedString string(
++      aCx, JS_NewUCStringCopyN(aCx, aValue.BeginReading(), aValue.Length()));
++  if (!string) {
++    return false;
++  }
++
++  JS::RootedValue value(aCx, JS::StringValue(string));
++  return JS_DefineProperty(aCx, aObject, aName, value, JSPROP_ENUMERATE);
++}
++
++bool DefineOptionalInt64Property(JSContext* aCx, JS::HandleObject aObject,
++                                 const char* aName, int64_t aValue,
++                                 bool aShouldDefine) {
++  if (!aShouldDefine) {
++    return true;
++  }
++
++  JS::RootedValue value(aCx, JS::NumberValue(static_cast<double>(aValue)));
++  return JS_DefineProperty(aCx, aObject, aName, value, JSPROP_ENUMERATE);
++}
++
++bool DefineHeadersProperty(JSContext* aCx, JS::HandleObject aObject,
++                           const char* aName,
++                           const nsTArray<HeaderEntry>& aHeaders) {
++  JS::RootedObject headers(aCx, JS_NewPlainObject(aCx));
++  if (!headers) {
++    return false;
++  }
++
++  for (const HeaderEntry& header : aHeaders) {
++    if (!DefineUTF8StringProperty(aCx, headers, header.name.get(),
++                                  header.value)) {
++      return false;
++    }
++  }
++
++  JS::RootedValue headersValue(aCx, JS::ObjectValue(*headers));
++  return JS_DefineProperty(aCx, aObject, aName, headersValue, JSPROP_ENUMERATE);
++}
++
++nsCString FindHeaderValue(const nsTArray<HeaderEntry>& aHeaders,
++                          const nsACString& aName) {
++  nsCString normalizedName(aName);
++  ToLowerCase(normalizedName);
++
++  for (const HeaderEntry& header : aHeaders) {
++    if (header.name == normalizedName) {
++      return header.value;
++    }
++  }
++
++  return nsCString();
++}
++
++class ExternalResponseListener final : public nsIStreamListener,
++                                       public nsIInterfaceRequestor,
++                                       public nsIChannelEventSink {
++ public:
++  explicit ExternalResponseListener(nsWindow* aWindow) : mWindow(aWindow) {
++    MOZ_ASSERT(aWindow);
++  }
++
++  NS_DECL_THREADSAFE_ISUPPORTS
++  NS_DECL_NSIREQUESTOBSERVER
++  NS_DECL_NSISTREAMLISTENER
++  NS_DECL_NSIINTERFACEREQUESTOR
++  NS_DECL_NSICHANNELEVENTSINK
++
++ private:
++  ~ExternalResponseListener() = default;
++
++  nsresult DispatchExternalResponse(nsIChannel* aChannel);
++
++  RefPtr<nsWindow> mWindow;
++};
++
++NS_IMPL_ISUPPORTS(ExternalResponseListener, nsIStreamListener,
++                  nsIInterfaceRequestor, nsIChannelEventSink)
++
++NS_IMETHODIMP ExternalResponseListener::OnStartRequest(nsIRequest* aRequest) {
++  nsresult status = NS_OK;
++  aRequest->GetStatus(&status);
++  if (NS_FAILED(status)) {
++    return NS_OK;
++  }
++
++  nsCOMPtr<nsIChannel> channel = do_QueryInterface(aRequest);
++  if (!channel) {
++    return NS_OK;
++  }
++
++  int32_t classification = nsContentSecurityUtils::ClassifyDownload(channel);
++  if (classification == nsITransfer::DOWNLOAD_FORBIDDEN) {
++    channel->Cancel(NS_ERROR_ABORT);
++    return NS_OK;
++  }
++
++  nsresult rv = DispatchExternalResponse(channel);
++  if (NS_FAILED(rv)) {
++    return rv;
++  }
++
++  channel->Cancel(NS_BINDING_ABORTED);
++  return NS_OK;
++}
++
++NS_IMETHODIMP ExternalResponseListener::OnStopRequest(nsIRequest* aRequest,
++                                                      nsresult aStatusCode) {
++  return NS_OK;
++}
++
++NS_IMETHODIMP ExternalResponseListener::OnDataAvailable(
++    nsIRequest* aRequest, nsIInputStream* aInputStream, uint64_t aOffset,
++    uint32_t aCount) {
++  uint32_t discarded = 0;
++  return aInputStream->ReadSegments(NS_DiscardSegment, nullptr, aCount,
++                                    &discarded);
++}
++
++NS_IMETHODIMP ExternalResponseListener::GetInterface(const nsIID& aIID,
++                                                     void** aResultOut) {
++  if (aIID.Equals(NS_GET_IID(nsIChannelEventSink))) {
++    *aResultOut = static_cast<nsIChannelEventSink*>(this);
++    NS_ADDREF_THIS();
++    return NS_OK;
++  }
++
++  return NS_ERROR_NO_INTERFACE;
++}
++
++NS_IMETHODIMP ExternalResponseListener::AsyncOnChannelRedirect(
++    nsIChannel* aOldChannel, nsIChannel* aNewChannel, uint32_t aFlags,
++    nsIAsyncVerifyRedirectCallback* aCallback) {
++  aCallback->OnRedirectVerifyCallback(NS_OK);
++  return NS_OK;
++}
++
++nsresult ExternalResponseListener::DispatchExternalResponse(
++    nsIChannel* aChannel) {
++  if (!mWindow || mWindow->Destroyed()) {
++    return NS_ERROR_ABORT;
++  }
++
++  mozilla::widget::EventDispatcher* dispatcher = mWindow->GetEventDispatcher();
++  if (!dispatcher) {
++    return NS_ERROR_ABORT;
++  }
++
++  static constexpr auto kExternalResponseEvent =
++      u"GeckoView:ExternalResponse"_ns;
++  if (!dispatcher->HasEmbedderListener(kExternalResponseEvent)) {
++    return NS_ERROR_ABORT;
++  }
++
++  dom::AutoJSAPI jsapi;
++  NS_ENSURE_TRUE(jsapi.Init(xpc::PrivilegedJunkScope()), NS_ERROR_FAILURE);
++
++  JSContext* cx = jsapi.cx();
++  JS::RootedObject payload(cx, JS_NewPlainObject(cx));
++  NS_ENSURE_TRUE(payload, NS_ERROR_OUT_OF_MEMORY);
++
++  nsCOMPtr<nsIURI> uri;
++  nsresult rv = aChannel->GetURI(getter_AddRefs(uri));
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  nsAutoCString uriSpec;
++  rv = uri->GetSpec(uriSpec);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  NS_ENSURE_TRUE(DefineUTF8StringProperty(cx, payload, "url", uriSpec),
++                 NS_ERROR_FAILURE);
++
++  nsString filename;
++  if (NS_SUCCEEDED(aChannel->GetContentDispositionFilename(filename)) &&
++      !filename.IsEmpty()) {
++    NS_ENSURE_TRUE(DefineUTF16StringProperty(cx, payload, "filename", filename),
++                   NS_ERROR_FAILURE);
++  }
++
++  nsCString mimeType;
++  if (NS_SUCCEEDED(aChannel->GetContentType(mimeType)) && !mimeType.IsEmpty()) {
++    NS_ENSURE_TRUE(DefineUTF8StringProperty(cx, payload, "mimeType", mimeType),
++                   NS_ERROR_FAILURE);
++  }
++
++  int64_t contentLength = 0;
++  bool hasContentLength =
++      NS_SUCCEEDED(aChannel->GetContentLength(&contentLength)) &&
++      contentLength >= 0;
++  NS_ENSURE_TRUE(DefineOptionalInt64Property(cx, payload, "contentLength",
++                                             contentLength, hasContentLength),
++                 NS_ERROR_FAILURE);
++
++  nsCOMPtr<nsILoadInfo> loadInfo = aChannel->LoadInfo();
++  bool isRedirected = loadInfo && !loadInfo->RedirectChain().IsEmpty();
++  NS_ENSURE_TRUE(JS_DefineProperty(cx, payload, "isRedirected", isRedirected,
++                                   JSPROP_ENUMERATE),
++                 NS_ERROR_FAILURE);
++
++  nsTArray<HeaderEntry> responseHeaders;
++  nsTArray<HeaderEntry> requestHeaders;
++
++  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aChannel, &rv));
++  if (httpChannel) {
++    uint32_t statusCode = 0;
++    if (NS_SUCCEEDED(httpChannel->GetResponseStatus(&statusCode))) {
++      NS_ENSURE_TRUE(JS_DefineProperty(cx, payload, "statusCode", statusCode,
++                                       JSPROP_ENUMERATE),
++                     NS_ERROR_FAILURE);
++    }
++
++    RefPtr<HeaderCollector> responseCollector = new HeaderCollector();
++    rv = httpChannel->VisitResponseHeaders(responseCollector);
++    NS_ENSURE_SUCCESS(rv, rv);
++    responseHeaders.AppendElements(responseCollector->Entries());
++
++    RefPtr<HeaderCollector> requestCollector = new HeaderCollector();
++    rv = httpChannel->VisitRequestHeaders(requestCollector);
++    NS_ENSURE_SUCCESS(rv, rv);
++    requestHeaders.AppendElements(requestCollector->Entries());
++
++    nsCString requestMethod;
++    if (NS_SUCCEEDED(httpChannel->GetRequestMethod(requestMethod)) &&
++        !requestMethod.IsEmpty()) {
++      NS_ENSURE_TRUE(
++          DefineUTF8StringProperty(cx, payload, "requestMethod", requestMethod),
++          NS_ERROR_FAILURE);
++    }
++  } else {
++    if (!filename.IsEmpty()) {
++      HeaderEntry& entry = *responseHeaders.AppendElement();
++      entry.name = "content-disposition"_ns;
++      entry.value = nsPrintfCString("attachment; filename=\"%s\"",
++                                    NS_ConvertUTF16toUTF8(filename).get());
++    }
++
++    if (!mimeType.IsEmpty()) {
++      HeaderEntry& entry = *responseHeaders.AppendElement();
++      entry.name = "content-type"_ns;
++      entry.value = mimeType;
++    }
++
++    if (hasContentLength) {
++      HeaderEntry& entry = *responseHeaders.AppendElement();
++      entry.name = "content-length"_ns;
++      entry.value.AppendInt(contentLength);
++    }
++  }
++
++  NS_ENSURE_TRUE(DefineHeadersProperty(cx, payload, "headers", responseHeaders),
++                 NS_ERROR_FAILURE);
++  NS_ENSURE_TRUE(
++      DefineHeadersProperty(cx, payload, "requestHeaders", requestHeaders),
++      NS_ERROR_FAILURE);
++
++  nsCString contentDisposition =
++      FindHeaderValue(responseHeaders, "content-disposition"_ns);
++  if (!contentDisposition.IsEmpty()) {
++    NS_ENSURE_TRUE(DefineUTF8StringProperty(cx, payload, "contentDisposition",
++                                            contentDisposition),
++                   NS_ERROR_FAILURE);
++  }
++
++  JS::RootedValue payloadValue(cx, JS::ObjectValue(*payload));
++  return dispatcher->DispatchToEmbedder(cx, kExternalResponseEvent,
++                                        payloadValue, nullptr);
++}
++
++}  // namespace
++
++mozilla::StaticRefPtr<ExternalAppService> ExternalAppService::sService;
++
++already_AddRefed<ExternalAppService> ExternalAppService::GetSingleton() {
++  if (!sService) {
++    sService = new ExternalAppService();
++  }
++
++  RefPtr<ExternalAppService> service = sService;
++  return service.forget();
++}
++
++ExternalAppService::ExternalAppService() = default;
++
++NS_IMPL_ISUPPORTS(ExternalAppService, nsIExternalHelperAppService)
++
++NS_IMETHODIMP ExternalAppService::DoContent(
++    const nsACString& aMimeContentType, nsIChannel* aChannel,
++    nsIInterfaceRequestor* aContentContext, bool aForceSave,
++    nsIInterfaceRequestor* aWindowContext,
++    nsIStreamListener** aStreamListener) {
++  return NS_ERROR_FAILURE;
++}
++
++NS_IMETHODIMP ExternalAppService::CreateListener(
++    const nsACString& aMimeContentType, nsIChannel* aChannel,
++    mozilla::dom::BrowsingContext* aContentContext, bool aForceSave,
++    nsIInterfaceRequestor* aWindowContext,
++    nsIStreamListener** aStreamListener) {
++  MOZ_ASSERT(XRE_IsParentProcess());
++  NS_ENSURE_ARG_POINTER(aChannel);
++  NS_ENSURE_ARG_POINTER(aContentContext);
++  NS_ENSURE_ARG_POINTER(aStreamListener);
++
++  nsCOMPtr<nsIWidget> widget =
++      aContentContext->Canonical()->GetParentProcessWidgetContaining();
++  if (!widget) {
++    return NS_ERROR_ABORT;
++  }
++
++  RefPtr<nsWindow> window = nsWindow::From(widget);
++  if (NS_WARN_IF(!window) || NS_WARN_IF(window->Destroyed())) {
++    return NS_ERROR_ABORT;
++  }
++
++  RefPtr<ExternalResponseListener> listener =
++      new ExternalResponseListener(window);
++  nsresult rv = aChannel->SetNotificationCallbacks(listener);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  listener.forget(aStreamListener);
++  return NS_OK;
++}
++
++NS_IMETHODIMP ExternalAppService::ApplyDecodingForExtension(
++    const nsACString& aExtension, const nsACString& aEncodingType,
++    bool* aApplyDecoding) {
++  *aApplyDecoding = true;
++  return NS_OK;
++}
++
++NS_IMETHODIMP ExternalAppService::GetPreferredDownloadsDirectory(
++    nsIFile** aResult) {
++  NS_ENSURE_ARG_POINTER(aResult);
++  *aResult = nullptr;
++  return NS_ERROR_NOT_IMPLEMENTED;
++}

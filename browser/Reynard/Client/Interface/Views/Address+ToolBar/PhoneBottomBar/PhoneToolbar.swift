@@ -12,6 +12,7 @@ protocol PhoneToolbarDelegate: AnyObject {
     func forwardButtonClicked()
     func shareButtonClicked()
     func menuButtonClicked()
+    func downloadsButtonClicked()
     func tabsButtonClicked()
 }
 
@@ -34,6 +35,8 @@ final class PhoneToolbar: UIView {
         MakeButtons.makeToolbarButton(target: self, imageName: "ellipsis.circle", action: #selector(menuButtonClicked))
     }()
     
+    private lazy var downloadButton = MakeButtons.makeDownloadToolbarButton(target: self, action: #selector(toolbarDownloadButtonClicked))
+    
     private lazy var tabsButton: UIButton = {
         MakeButtons.makeToolbarButton(target: self, imageName: "square.on.square", action: #selector(tabsButtonClicked))
     }()
@@ -44,7 +47,9 @@ final class PhoneToolbar: UIView {
         backgroundColor = .clear
         shareButton.isEnabled = false
         
-        let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, menuButton, tabsButton])
+        downloadButton.isHidden = true
+        
+        let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, menuButton, downloadButton, tabsButton])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -77,6 +82,11 @@ final class PhoneToolbar: UIView {
         shareButton.isEnabled = isEnabled
     }
     
+    func updateDownloadButton(summary: DownloadStoreSummary) {
+        downloadButton.apply(summary: summary)
+        downloadButton.isHidden = !downloadButton.isShowingDownloads
+    }
+    
     @objc func backButtonClicked() {
         delegate?.backButtonClicked()
     }
@@ -87,6 +97,10 @@ final class PhoneToolbar: UIView {
     
     @objc func shareButtonClicked() {
         delegate?.shareButtonClicked()
+    }
+    
+    @objc func toolbarDownloadButtonClicked() {
+        delegate?.downloadsButtonClicked()
     }
     
     @objc func menuButtonClicked() {

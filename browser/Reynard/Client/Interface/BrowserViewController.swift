@@ -13,6 +13,9 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
     let overviewSpacing: CGFloat = 16
     private let actsAsRootContainer: Bool
     private var embeddedSplitController: BrowserSplitViewController?
+    private let feedback = BrowserFeedback()
+    private var pendingDownloadConfirmations: [DownloadStore.PendingDownload] = []
+    private var isPresentingDownloadConfirmation = false
     
     lazy var tabCollectionCoordinator = TabCollectionCoordinator(controller: self)
     
@@ -88,6 +91,9 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
             return
         }
         
+        observeDownloadState()
+        syncDownloadButtonState()
+        
         browserLayout.configureLayout()
         syncBrowserNavigationChrome(animated: false)
         syncPadSidebarButtonItem()
@@ -118,8 +124,10 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         guard !usesEmbeddedSplitRoot else {
             return
         }
+        feedback.prepare()
         syncBrowserNavigationChrome(animated: false)
         syncPadSidebarButtonItem()
+        syncDownloadButtonState()
         browserLayout.applyChromeLayout(animated: false)
     }
     
@@ -215,6 +223,34 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         browserUI.padTopBarButtons.shareButton.isEnabled = shareEnabled
         browserUI.padTopBarButtons.backButton.isEnabled = tab.canGoBack
         browserUI.padTopBarButtons.forwardButton.isEnabled = tab.canGoForward
+    }
+    
+    private func observeDownloadState() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDownloadStoreDidChange),
+            name: .downloadStoreDidChange,
+            object: nil
+        )
+    }
+    
+    @objc private func handleDownloadStoreDidChange() {
+        syncDownloadButtonState()
+    }
+    
+    private func syncDownloadButtonState() {
+        let previousPadShowsDownloads = browserUI.padTopBarButtons.downloadButton.isShowingDownloads
+        let summary = DownloadStore.shared.snapshot().summary
+        browserUI.toolbarView.updateDownloadButton(summary: summary)
+        browserUI.padTopBarButtons.updateDownloadButton(summary: summary)
+        let showsPadDownloads = browserUI.padTopBarButtons.downloadButton.isShowingDownloads
+        
+        if !usesEmbeddedSplitRoot,
+           isPadLayout,
+           !usesCompactPadChromeMode,
+           previousPadShowsDownloads != showsPadDownloads {
+            browserLayout.applyChromeLayout(animated: false)
+        }
     }
     
     private func syncPadSidebarButtonItem() {
@@ -376,6 +412,13 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         addressBarGestures.animateAutomaticNewTabTransition(to: tabManager.tabs[index], completion: completion)
     }
     
+    func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {
+        DispatchQueue.main.async { [weak self] in
+            self?.pendingDownloadConfirmations.append(download)
+            self?.presentNextDownloadConfirmationIfNeeded()
+        }
+    }
+    
     func backButtonClicked() {
         browserActions.goBack()
     }
@@ -390,6 +433,10 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
     
     func menuButtonClicked() {
         browserActions.presentMenuSheet()
+    }
+    
+    func downloadsButtonClicked() {
+        presentDownloadsFromToolbar()
     }
     
     func tabsButtonClicked() {
@@ -409,6 +456,58 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         if !browserUI.addressBar.isEditingText {
             setSearchFocused(false, animated: true)
         }
+    }
+    
+    private func presentNextDownloadConfirmationIfNeeded() {
+        guard !isPresentingDownloadConfirmation,
+              let download = pendingDownloadConfirmations.first,
+              let presenter = topPresentedViewController else {
+            return
+        }
+        
+        isPresentingDownloadConfirmation = true
+        
+        let alert = UIAlertController(
+            title: "Do you want to download \"\(download.fileName)\"?",
+            message: nil,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.finishDownloadConfirmation(startDownload: false)
+        })
+        alert.addAction(UIAlertAction(title: "Download", style: .default) { [weak self] _ in
+            self?.finishDownloadConfirmation(startDownload: true)
+        })
+        
+        presenter.present(alert, animated: true)
+    }
+    
+    private func finishDownloadConfirmation(startDownload: Bool) {
+        guard !pendingDownloadConfirmations.isEmpty else {
+            isPresentingDownloadConfirmation = false
+            return
+        }
+        
+        let download = pendingDownloadConfirmations.removeFirst()
+        isPresentingDownloadConfirmation = false
+        
+        if startDownload {
+            DownloadStore.shared.startDownload(download)
+        }
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.presentNextDownloadConfirmationIfNeeded()
+        }
+    }
+    
+    private var topPresentedViewController: UIViewController? {
+        var controller: UIViewController? = self
+        
+        while let presentedViewController = controller?.presentedViewController {
+            controller = presentedViewController
+        }
+        
+        return controller
     }
     
     @objc func tabsTapped() {
@@ -447,14 +546,32 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         browserActions.presentMenuSheet()
     }
     
+    @objc func topBarDownloadsTapped() {
+        presentDownloadsFromToolbar()
+    }
+    
     @objc func dismissKeyboardTapped() {
         browserActions.dismissKeyboard()
     }
+    
+    private func presentDownloadsFromToolbar() {
+        DownloadStore.shared.markCompletedDownloadsViewed()
+        if isPadLayout,
+           !usesCompactPadChromeMode,
+           let splitViewController = splitViewController as? BrowserSplitViewController {
+            splitViewController.showLibrarySection(.downloads)
+            return
+        }
+        
+        browserActions.presentMenuSheet(initialSection: .downloads)
+    }
+    
 }
 
 final class BrowserSplitViewController: UISplitViewController, UISplitViewControllerDelegate {
     private let browserViewController: BrowserViewController
     private var sidebarVisible = false
+    private lazy var libraryViewController = LibrarySidebarViewController()
     
     private lazy var browserNavigationController: UINavigationController = {
         let navigationController = UINavigationController(rootViewController: browserViewController)
@@ -463,7 +580,6 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
     }()
     
     private lazy var libraryNavigationController: UINavigationController = {
-        let libraryViewController = LibrarySidebarViewController()
         let navigationController = UINavigationController(rootViewController: libraryViewController)
         navigationController.navigationBar.tintColor = .label
         return navigationController
@@ -544,6 +660,11 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
             destinationButton.alpha = 1
             snapshot.removeFromSuperview()
         }
+    }
+    
+    func showLibrarySection(_ section: LibrarySection) {
+        setLibrarySidebarVisible(true)
+        libraryViewController.showSection(section, animated: false)
     }
     
     var isLibrarySidebarVisible: Bool {

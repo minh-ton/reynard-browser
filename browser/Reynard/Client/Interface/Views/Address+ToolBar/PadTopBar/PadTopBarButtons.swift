@@ -13,12 +13,15 @@ final class PadTopBarButtons {
     lazy var backButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "chevron.backward", action: #selector(BrowserViewController.padBackTapped))
     lazy var forwardButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "chevron.forward", action: #selector(BrowserViewController.padForwardTapped))
     lazy var menuButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "ellipsis.circle", action: #selector(BrowserViewController.topBarMenuTapped))
+    lazy var downloadButton = MakeButtons.makeDownloadToolbarButton(target: controller, action: #selector(BrowserViewController.topBarDownloadsTapped))
     lazy var shareButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "square.and.arrow.up", action: #selector(BrowserViewController.shareTapped))
     lazy var newTabButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "plus", action: #selector(BrowserViewController.newTabTapped))
     lazy var tabOverviewButton = MakeButtons.makeToolbarButton(controller: controller, imageName: "square.on.square", action: #selector(BrowserViewController.tabsTapped))
     
     lazy var leftStack: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [sidebarButton, backButton, forwardButton, menuButton])
+        downloadButton.isHidden = true
+        
+        let stack = UIStackView(arrangedSubviews: [sidebarButton, downloadButton, backButton, forwardButton, menuButton])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.spacing = 10
@@ -54,9 +57,15 @@ final class PadTopBarButtons {
     
     func updateLayout(isPadLayout: Bool, showsCompactPadChrome: Bool, sidebarVisible: Bool) {
         let showsSidebarButton = isPadLayout && !showsCompactPadChrome
-        let showsMenuButton = !isPadLayout && !showsCompactPadChrome
+        let showsMenuControls = !isPadLayout && !showsCompactPadChrome
         
         sidebarButton.isHidden = !showsSidebarButton || sidebarVisible
-        menuButton.isHidden = !showsMenuButton
+        menuButton.isHidden = !showsMenuControls
+        downloadButton.isHidden = showsCompactPadChrome || !downloadButton.isShowingDownloads
+    }
+    
+    func updateDownloadButton(summary: DownloadStoreSummary) {
+        downloadButton.apply(summary: summary)
+        downloadButton.isHidden = controller.usesCompactPadChromeMode || !downloadButton.isShowingDownloads
     }
 }
