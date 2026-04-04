@@ -211,6 +211,10 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         tabManager.browse(to: term)
     }
     
+    func openExternalURL(_ url: URL) {
+        browse(to: url.absoluteString)
+    }
+    
     func updateNavigationButtons() {
         guard let tab = tabManager.selectedTab else {
             return
