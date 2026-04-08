@@ -1,0 +1,22 @@
+diff --git a/widget/uikit/TextInputHandler.h b/widget/uikit/TextInputHandler.h
+index 1f27bf11f0ca..8a9433cd22fd 100644
+--- a/widget/uikit/TextInputHandler.h
++++ b/widget/uikit/TextInputHandler.h
+@@ -42,6 +42,17 @@ class TextInputHandler final : public TextEventDispatcherListener {
+   bool InsertText(NSString* aText);
+   bool HandleCommand(Command aCommand);
+ 
++  bool SelectedRange(NSRange& aRange);
++  bool SetSelectedRange(const NSRange& aRange);
++  bool TextLength(uint32_t& aLength);
++  bool TextInRange(const NSRange& aRange, nsString& aText);
++  bool ReplaceRange(const NSRange& aRange, NSString* aText);
++  bool TextRectForRange(const NSRange& aRange, LayoutDeviceIntRect& aRect);
++  bool CaretRectForOffset(uint32_t aOffset, LayoutDeviceIntRect& aRect);
++  bool EditorRect(LayoutDeviceIntRect& aRect);
++  bool RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
++                  bool* aIsEnabled = nullptr);
++
+   void OnDestroyed();
+ 
+  private:

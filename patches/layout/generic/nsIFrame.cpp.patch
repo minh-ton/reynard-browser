@@ -1,0 +1,17 @@
+diff --git a/layout/generic/nsIFrame.cpp b/layout/generic/nsIFrame.cpp
+index 0a27c9f3935e..ea310311ca18 100644
+--- a/layout/generic/nsIFrame.cpp
++++ b/layout/generic/nsIFrame.cpp
+@@ -4914,6 +4914,12 @@ bool nsIFrame::IsSelectable(StyleUserSelect* aSelectStyle) const {
+ }
+ 
+ bool nsIFrame::ShouldPaintNormalSelection() const {
++// REYNARD: Hide the selection highlight because we use
++// iOS's native selection highlight instead.
++#if defined(XP_IOS)
++  return false;
++#endif
++
+   if (IsSelectable()) {
+     // NOTE: Ideally, we should return false if display selection is "OFF".
+     // However, here is a hot path at painting.  Therefore, it should be checked

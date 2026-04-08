@@ -1,0 +1,52 @@
+diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
+index 3ee3573b838a..2e29ab2524ec 100644
+--- a/widget/uikit/TextInputHandler.mm
++++ b/widget/uikit/TextInputHandler.mm
+@@ -22,6 +22,16 @@
+ 
+ mozilla::LazyLogModule gIMELog("TextInputHandler");
+ 
++@interface ChildView : UIView
++
++@end
++
++@interface ChildView (TextInputNotifications)
++
++- (void)selectionGeometryChanged;
++
++@end
++
+ namespace mozilla::widget {
+ 
+ NS_IMPL_ISUPPORTS(TextInputHandler, TextEventDispatcherListener,
+@@ -32,11 +42,29 @@
+ 
+ nsresult TextInputHandler::NotifyIME(TextEventDispatcher* aTextEventDispatcher,
+                                      const IMENotification& aNotification) {
++  if (Destroyed() || aTextEventDispatcher != mDispatcher) {
++    return NS_OK;
++  }
++
++  switch (aNotification.mMessage) {
++    case NOTIFY_IME_OF_POSITION_CHANGE: {
++      ChildView* view =
++          static_cast<ChildView*>(mWidget->GetNativeData(NS_NATIVE_WIDGET));
++      if (view) {
++        [view selectionGeometryChanged];
++      }
++      break;
++    }
++    default:
++      break;
++  }
++
+   return NS_OK;
+ }
+ 
+ IMENotificationRequests TextInputHandler::GetIMENotificationRequests() {
+-  return IMENotificationRequests();
++  return IMENotificationRequests(
++      IMENotificationRequests::NOTIFY_POSITION_CHANGE);
+ }
+ 
+ void TextInputHandler::OnRemovedFrom(

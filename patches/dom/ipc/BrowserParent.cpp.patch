@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index 7d405ed7d3b3..6e79a23b2b6a 100644
+index 7d405ed7d3b3..378b051232de 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
 @@ -789,6 +789,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
@@ -24,3 +24,64 @@ index 7d405ed7d3b3..6e79a23b2b6a 100644
    }
    return IPC_OK();
  }
+@@ -2550,14 +2565,22 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMEPositionChange(
+     const ContentCache& aContentCache,
+     const IMENotification& aIMENotification) {
+   nsCOMPtr<nsIWidget> widget = GetTextInputHandlingWidget();
+-  if (!widget || !IMEStateManager::DoesBrowserParentHaveIMEFocus(this)) {
++  if (!widget) {
+     return IPC_OK();
+   }
+   if (NS_WARN_IF(!aContentCache.IsValid())) {
+     return IPC_FAIL(this, "Invalid content cache data");
+   }
+-  mContentCache.AssignContent(aContentCache, widget, &aIMENotification);
+-  mContentCache.MaybeNotifyIME(widget, aIMENotification);
++  if (IMEStateManager::DoesBrowserParentHaveIMEFocus(this)) {
++    mContentCache.AssignContent(aContentCache, widget, &aIMENotification);
++    mContentCache.MaybeNotifyIME(widget, aIMENotification);
++  } else {
++    // REYNARD: During APZ scroll, BrowserParent temporarily loses IME focus.
++    // Still update the cache and notify the widget directly so that
++    // UIKit gets updated caret/selection geometry during scrolling.
++    mContentCache.AssignContent(aContentCache, widget);
++    widget->NotifyIME(aIMENotification);
++  }
+   return IPC_OK();
+ }
+ 
+@@ -3224,18 +3247,31 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
+       NS_WARN_IF(aEvent.Failed())) {
+     return true;
+   }
++  nsCOMPtr<nsIWidget> browserWidget = GetWidget();
++  const LayoutDeviceIntPoint textInputWidgetOffset =
++      browserWidget != textInputHandlingWidget
++          ? nsLayoutUtils::WidgetToWidgetOffset(browserWidget,
++                                                textInputHandlingWidget)
++          : LayoutDeviceIntPoint();
+   switch (aEvent.mMessage) {
+     case eQueryTextRect:
+     case eQueryCaretRect:
+     case eQueryEditorRect: {
+-      nsCOMPtr<nsIWidget> browserWidget = GetWidget();
+       if (browserWidget != textInputHandlingWidget) {
+-        aEvent.mReply->mRect += nsLayoutUtils::WidgetToWidgetOffset(
+-            browserWidget, textInputHandlingWidget);
++        aEvent.mReply->mRect += textInputWidgetOffset;
+       }
+       aEvent.mReply->mRect = TransformChildToParent(aEvent.mReply->mRect);
+       break;
+     }
++    case eQueryTextRectArray: {
++      for (LayoutDeviceIntRect& rect : aEvent.mReply->mRectArray) {
++        if (browserWidget != textInputHandlingWidget) {
++          rect += textInputWidgetOffset;
++        }
++        rect = TransformChildToParent(rect);
++      }
++      break;
++    }
+     default:
+       break;
+   }

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsLookAndFeel.mm b/widget/uikit/nsLookAndFeel.mm
-index 22a5c1ab905e..67a655694982 100644
+index 22a5c1ab905e..84c2bf06ad12 100644
 --- a/widget/uikit/nsLookAndFeel.mm
 +++ b/widget/uikit/nsLookAndFeel.mm
 @@ -5,7 +5,10 @@
@@ -142,7 +142,32 @@ index 22a5c1ab905e..67a655694982 100644
        break;
      case ColorID::MozMacFocusring:
        aResult = NS_RGB(0x3F, 0x98, 0xDD);
-@@ -302,6 +346,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -224,10 +268,12 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+       aResult = 3;
+       break;
+     case IntID::CaretBlinkTime:
+-      aResult = 567;
++      aResult = 0;
+       break;
++    // REYNARD: Hacky way to hide Gecko's caret since we have
++    // our own native one (tbh I don't know of a better way to do this)
+     case IntID::CaretWidth:
+-      aResult = 1;
++      aResult = 0;
+       break;
+     case IntID::SelectTextfieldsOnKeyFocus:
+       // Select textfield content when focused by kbd
+@@ -294,6 +340,9 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+     case IntID::SpellCheckerUnderlineStyle:
+       aResult = static_cast<int32_t>(StyleTextDecorationStyle::Dotted);
+       break;
++    case IntID::TouchDeviceSupportPresent:
++      aResult = 1;
++      break;
+     case IntID::ContextMenuOffsetVertical:
+     case IntID::ContextMenuOffsetHorizontal:
+       aResult = 2;
+@@ -302,6 +351,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = 0;
        res = NS_ERROR_FAILURE;
    }
@@ -154,21 +179,15 @@ index 22a5c1ab905e..67a655694982 100644
    return res;
  }
  
-@@ -334,7 +383,13 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -334,7 +388,6 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
      aFontStyle.size = 14;
      aFontStyle.systemFont = true;
  
-+// REYNARD: On iOS, use SF-based fonts
-+#if defined(XP_IOS)
-+    aFontName.AssignLiteral("-apple-system");
-+#else
-     aFontName.AssignLiteral("sans-serif");
-+#endif
-+
+-    aFontName.AssignLiteral("sans-serif");
      return true;
    }
  
-@@ -348,7 +403,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -348,7 +401,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
    }
    mInitialized = true;
  

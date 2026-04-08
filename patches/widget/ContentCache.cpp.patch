@@ -1,0 +1,142 @@
+diff --git a/widget/ContentCache.cpp b/widget/ContentCache.cpp
+index 21e7504a7921..bb4c7d90f7db 100644
+--- a/widget/ContentCache.cpp
++++ b/widget/ContentCache.cpp
+@@ -42,6 +42,33 @@ static const char* GetNotificationName(const IMENotification* aNotification) {
+ 
+ LazyLogModule sContentCacheLog("ContentCacheWidgets");
+ 
++void ContentCache::OffsetAllRectsBy(LayoutDeviceIntPoint aDelta) {
++  mEditorRect.MoveBy(aDelta);
++  mFirstCharRect.MoveBy(aDelta);
++  if (mCaret) {
++    mCaret->mRect.MoveBy(aDelta);
++  }
++  if (mSelection) {
++    for (auto& rect : mSelection->mAnchorCharRects) {
++      rect.MoveBy(aDelta);
++    }
++    for (auto& rect : mSelection->mFocusCharRects) {
++      rect.MoveBy(aDelta);
++    }
++    mSelection->mRect.MoveBy(aDelta);
++  }
++  if (mTextRectArray) {
++    for (auto& rect : mTextRectArray->mRects) {
++      rect.MoveBy(aDelta);
++    }
++  }
++  if (mLastCommitStringTextRectArray) {
++    for (auto& rect : mLastCommitStringTextRectArray->mRects) {
++      rect.MoveBy(aDelta);
++    }
++  }
++}
++
+ bool ContentCache::IsValid() const {
+   if (mText.isNothing()) {
+     // mSelection and mCaret depend on mText.
+@@ -66,11 +93,14 @@ bool ContentCache::IsValid() const {
+   // mTextRectArray stores character rects around composition string.
+   // Note that even if we fail to collect the rects, we may keep storing
+   // mCompositionStart.
+-  if (mTextRectArray.isSome()) {
++
++  // REYNARD: Commenting this to allow the neighborhood around the
++  // selection to be stored for line boundary checks.
++  /* if (mTextRectArray.isSome()) {
+     if (NS_WARN_IF(mCompositionStart.isNothing())) {
+       return false;
+     }
+-  }
++  } */
+ 
+   return true;
+ }
+@@ -125,6 +155,7 @@ void ContentCacheInChild::Clear() {
+   mCaret.reset();
+   mTextRectArray.reset();
+   mLastCommitStringTextRectArray.reset();
++  mEditorRectIsEditable = false;
+   mEditorRect.SetEmpty();
+ }
+ 
+@@ -275,6 +306,9 @@ bool ContentCacheInChild::CacheEditorRect(
+           ("0x%p CacheEditorRect(aWidget=0x%p, aNotification=%s)", this,
+            aWidget, GetNotificationName(aNotification)));
+ 
++  mEditorRectIsEditable = false;
++  mEditorRect.SetEmpty();
++
+   WidgetQueryContentEvent queryEditorRectEvent(true, eQueryEditorRect, aWidget);
+   aWidget->DispatchEvent(&queryEditorRectEvent);
+   if (NS_WARN_IF(queryEditorRectEvent.Failed())) {
+@@ -294,6 +328,9 @@ bool ContentCacheInChild::CacheEditorRect(
+              this));
+     return false;
+   }
++  // REYNARD: Keep the editor-rect cache tied to the editable-content state
++  // returned by the content query so parent-side replies can preserve it.
++  mEditorRectIsEditable = true;
+   mEditorRect = queryEditorRectEvent.mReply->mRect;
+   MOZ_LOG(sContentCacheLog, LogLevel::Info,
+           ("0x%p   CacheEditorRect(), Succeeded, mEditorRect=%s", this,
+@@ -451,6 +488,42 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
+   } else {
+     mCompositionStart.reset();
+     mTextRectArray.reset();
++
++    // REYNARD: Cache character rects for a neighborhood around a non-collapsed
++    // selection so the parent process can detect visual line boundaries during
++    // handle dragging.
++    static bool sInLineRectCache = false;
++    if (!sInLineRectCache && mSelection.isSome() && mSelection->mHasRange &&
++        !mSelection->IsCollapsed() && mText.isSome() && mText->Length() > 0) {
++      sInLineRectCache = true;
++      const uint32_t textLength = mText->Length();
++      const uint32_t selStart = std::min(mSelection->StartOffset(), textLength);
++      const uint32_t selEnd = std::min(mSelection->EndOffset(), textLength);
++      if (selStart < selEnd) {
++        // Derive padding from the widget width so the cache always covers at
++        // least one full visual line regardless of screen size or orientation.
++        // Narrowest char is ~4 points with 17px, so we use width * 0.25.
++        // However, user may set smaller font, so we just extend a little
++        // bit more to width * 0.3
++        LayoutDeviceIntRect widgetBounds = aWidget->GetBounds();
++        const uint32_t kPad =
++            widgetBounds.Width() > 0
++                ? static_cast<uint32_t>(widgetBounds.Width() * 0.3) + 1
++                : 300;
++        const uint32_t cacheStart = selStart > kPad ? selStart - kPad : 0;
++        const uint32_t cacheEnd = std::min(selEnd + kPad, textLength);
++        const uint32_t cacheLength = cacheEnd - cacheStart;
++        if (cacheLength > 0) {
++          RectArray rects;
++          if (QueryCharRectArray(aWidget, cacheStart, cacheLength, rects) &&
++              rects.Length() > 0) {
++            mTextRectArray = Some(TextRectArray(cacheStart));
++            mTextRectArray->mRects = std::move(rects);
++          }
++        }
++      }
++      sInLineRectCache = false;
++    }
+   }
+ 
+   if (mSelection.isSome()) {
+@@ -702,6 +775,7 @@ void ContentCacheInParent::AssignContent(const ContentCache& aOther,
+   mCaret = aOther.mCaret;
+   mTextRectArray = aOther.mTextRectArray;
+   mLastCommitStringTextRectArray = aOther.mLastCommitStringTextRectArray;
++  mEditorRectIsEditable = aOther.mEditorRectIsEditable;
+   mEditorRect = aOther.mEditorRect;
+ 
+   // Only when there is one composition, the TextComposition instance in this
+@@ -1020,6 +1094,7 @@ bool ContentCacheInParent::HandleQueryContentEvent(
+       aEvent.EmplaceReply();
+       aEvent.mReply->mFocusedWidget = aWidget;
+       aEvent.mReply->mRect = mEditorRect;
++      aEvent.mReply->mIsEditableContent = mEditorRectIsEditable;
+       MOZ_LOG(sContentCacheLog, LogLevel::Info,
+               ("0x%p   HandleQueryContentEvent(), Succeeded, aEvent={ "
+                "mMessage=eQueryEditorRect, mReply=%s }",

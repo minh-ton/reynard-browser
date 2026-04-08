@@ -1,0 +1,59 @@
+diff --git a/widget/PuppetWidget.cpp b/widget/PuppetWidget.cpp
+index e9b7ca0408b4..793279f734e7 100644
+--- a/widget/PuppetWidget.cpp
++++ b/widget/PuppetWidget.cpp
+@@ -13,6 +13,7 @@
+ #include "mozilla/layers/WebRenderLayerManager.h"
+ #include "mozilla/NativeKeyBindingsType.h"
+ #include "mozilla/PresShell.h"
++#include "mozilla/ScrollContainerFrame.h"
+ #include "mozilla/SchedulerGroup.h"
+ #include "mozilla/TextComposition.h"
+ #include "mozilla/TextEventDispatcher.h"
+@@ -810,6 +811,17 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+           !mContentCache.CacheCaretAndTextRects(this, &aIMENotification))) {
+     return NS_ERROR_FAILURE;
+   }
++
++  // REYNARD: Record the scroll offset at cache time so AdjustIMECacheForScroll
++  // can compute the correct delta later.
++  if (nsIWidgetListener* l = mWidgetListener) {
++    if (PresShell* ps = l->GetPresShell()) {
++      if (ScrollContainerFrame* sf = ps->GetRootScrollContainerFrame()) {
++        mIMELastScrollOffset = CSSPoint::FromAppUnits(sf->GetScrollPosition());
++      }
++    }
++  }
++
+   if (mIMENotificationRequestsOfParent.WantPositionChanged()) {
+     mBrowserChild->SendNotifyIMEPositionChange(mContentCache, aIMENotification);
+   } else {
+@@ -818,6 +830,28 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+   return NS_OK;
+ }
+ 
++void PuppetWidget::AdjustIMECacheForScroll(const CSSPoint& aNewScrollOffset) {
++  if (!mBrowserChild) {
++    return;
++  }
++  CSSPoint delta = aNewScrollOffset - mIMELastScrollOffset;
++  if (delta.x == 0 && delta.y == 0) {
++    return;
++  }
++  mIMELastScrollOffset = aNewScrollOffset;
++
++  double scale = GetDefaultScale().scale;
++  LayoutDeviceIntPoint devDelta(-NSToIntRound(delta.x * scale),
++                                -NSToIntRound(delta.y * scale));
++  mContentCache.OffsetAllRectsBy(devDelta);
++
++  // REYNARD: Always send position change notification during scroll so the
++  // parent fires selectionGeometryChanged and UIKit updates caret/selection
++  // display.
++  widget::IMENotification notification(widget::NOTIFY_IME_OF_POSITION_CHANGE);
++  mBrowserChild->SendNotifyIMEPositionChange(mContentCache, notification);
++}
++
+ struct CursorSurface {
+   UniquePtr<char[]> mData;
+   IntSize mSize;

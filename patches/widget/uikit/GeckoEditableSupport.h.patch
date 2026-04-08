@@ -1,0 +1,177 @@
+diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
+new file mode 100644
+index 000000000000..48e48b41919b
+--- /dev/null
++++ b/widget/uikit/GeckoEditableSupport.h
+@@ -0,0 +1,171 @@
++/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_widget_GeckoEditableSupport_h
++#define mozilla_widget_GeckoEditableSupport_h
++
++#import <UIKit/UIKit.h>
++
++#include <algorithm>
++#include <cmath>
++
++#include "Units.h"
++
++// MARK: - Selection Handle Type
++
++typedef NS_ENUM(NSUInteger, GeckoSelectionHandle) {
++  GeckoSelectionHandleNone = 0,
++  GeckoSelectionHandleStart,
++  GeckoSelectionHandleEnd,
++};
++
++// MARK: - UITextInput Model Objects
++
++@interface ChildViewTextPosition : UITextPosition
++@property(nonatomic, assign) NSUInteger offset;
+++ (instancetype)positionWithOffset:(NSUInteger)offset;
++@end
++
++@interface ChildViewTextRange : UITextRange
++@property(nonatomic, retain) ChildViewTextPosition* startPosition;
++@property(nonatomic, retain) ChildViewTextPosition* endPosition;
+++ (instancetype)rangeWithStart:(ChildViewTextPosition*)aStart
++                           end:(ChildViewTextPosition*)aEnd;
++@end
++
++@interface ChildViewTextSelectionRect : UITextSelectionRect
++@property(nonatomic, assign) CGRect rectValue;
++@property(nonatomic, assign) NSWritingDirection writingDirectionValue;
++@property(nonatomic, assign) BOOL containsStartValue;
++@property(nonatomic, assign) BOOL containsEndValue;
++@property(nonatomic, assign) BOOL verticalValue;
+++ (instancetype)selectionRectWithRect:(CGRect)aRect
++                        containsStart:(BOOL)aContainsStart
++                          containsEnd:(BOOL)aContainsEnd;
++@end
++
++// MARK: - Editable State
++
++struct GeckoEditableState {
++  UITextInputStringTokenizer* mTokenizer;
++  id<UITextInputDelegate> mTextInputDelegate;
++  NSDictionary* mMarkedTextStyle;
++  UITextInteraction* mEditableTextInteraction;
++  UITextInteraction* mNonEditableTextInteraction;
++  id mSelectionDisplayInteraction;
++  UIPanGestureRecognizer* mSelectionHandlePanRecognizer;
++  BOOL mTextInteractionInProgress;
++  BOOL mPendingSelectionGeometryRefresh;
++  BOOL mCaretMenuActive;
++  BOOL mPendingCaretMenu;
++  NSUInteger mPreTapCaretOffset;
++  GeckoSelectionHandle mActiveSelectionHandle;
++  NSUInteger mSelectionHandleAnchorOffset;
++  NSRange mShadowSelectedRange;
++  CGRect mShadowActiveHandleRect;
++  NSUInteger mShadowActiveHandleOffset;
++  NSUInteger mLineBoundaryStart;
++  NSUInteger mLineBoundaryEnd;
++  BOOL mLineBoundariesComputed;
++  CGFloat mVerticalBoundaryTop;
++  CGFloat mVerticalBoundaryBottom;
++  BOOL mVerticalBoundariesComputed;
++};
++
++// Recursively collects subviews whose class name matches aClassName.
++inline void CollectViewsOfClass(UIView* aView, NSString* aClassName,
++                                NSMutableArray<UIView*>* aViews) {
++  if (!aView || !aClassName || !aViews) {
++    return;
++  }
++
++  if ([NSStringFromClass([aView class]) isEqualToString:aClassName]) {
++    [aViews addObject:aView];
++  }
++
++  for (UIView* subview in aView.subviews) {
++    CollectViewsOfClass(subview, aClassName, aViews);
++  }
++}
++
++// MARK: - Coordinate Conversion Utilities
++
++inline mozilla::LayoutDeviceIntPoint UIKitPointsToDevPixels(
++    CGPoint aPoint, CGFloat aBackingScale) {
++  return mozilla::LayoutDeviceIntPoint(
++      static_cast<int32_t>(std::lround(aPoint.x * aBackingScale)),
++      static_cast<int32_t>(std::lround(aPoint.y * aBackingScale)));
++}
++
++inline CGRect DevPixelsToUIKitPoints(const mozilla::LayoutDeviceIntRect& aRect,
++                                     CGFloat aBackingScale) {
++  return CGRectMake((CGFloat)aRect.x / aBackingScale,
++                    (CGFloat)aRect.y / aBackingScale,
++                    (CGFloat)aRect.width / aBackingScale,
++                    (CGFloat)aRect.height / aBackingScale);
++}
++
++// MARK: - Geometry Utilities
++
++inline bool ClipCGRectToBounds(CGRect& aRect, const CGRect& aBounds) {
++  if (CGRectIsNull(aRect) || CGRectIsEmpty(aRect) || CGRectIsNull(aBounds) ||
++      CGRectIsEmpty(aBounds)) {
++    aRect = CGRectZero;
++    return false;
++  }
++
++  CGRect clippedRect =
++      CGRectIntersection(CGRectStandardize(aRect), CGRectStandardize(aBounds));
++  if (CGRectIsNull(clippedRect) || CGRectIsEmpty(clippedRect)) {
++    aRect = CGRectZero;
++    return false;
++  }
++
++  aRect = clippedRect;
++  return true;
++}
++
++inline bool RectsShareVisualLine(const CGRect& aFirstRect,
++                                 const CGRect& aSecondRect) {
++  const CGFloat lineSlack = std::max(
++      (CGFloat)1.0,
++      std::min(CGRectGetHeight(aFirstRect), CGRectGetHeight(aSecondRect)) *
++          (CGFloat)0.5);
++  return std::fabs(CGRectGetMidY(aFirstRect) - CGRectGetMidY(aSecondRect)) <=
++         lineSlack;
++}
++
++inline CGFloat DistanceToSelectionHandle(CGPoint aPoint, const CGRect& aRect) {
++  return hypot(aPoint.x - CGRectGetMidX(aRect),
++               aPoint.y - CGRectGetMidY(aRect));
++}
++
++inline NSUInteger ClampTrackedSelectionOffset(GeckoSelectionHandle aHandle,
++                                              NSUInteger aCandidateOffset,
++                                              NSUInteger aAnchorOffset) {
++  switch (aHandle) {
++    case GeckoSelectionHandleStart:
++      return std::min(aCandidateOffset, aAnchorOffset);
++    case GeckoSelectionHandleEnd:
++      return std::max(aCandidateOffset, aAnchorOffset);
++    case GeckoSelectionHandleNone:
++      return aCandidateOffset;
++  }
++}
++
++inline void AppendSelectionRect(NSMutableArray* aSelectionRects,
++                                const CGRect& aRect, BOOL aContainsStart,
++                                BOOL aContainsEnd) {
++  if (!aSelectionRects) {
++    return;
++  }
++
++  [aSelectionRects addObject:[ChildViewTextSelectionRect
++                                 selectionRectWithRect:aRect
++                                         containsStart:aContainsStart
++                                           containsEnd:aContainsEnd]];
++}
++
++#endif  // mozilla_widget_GeckoEditableSupport_h

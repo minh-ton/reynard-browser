@@ -1,0 +1,19 @@
+diff --git a/widget/PuppetWidget.h b/widget/PuppetWidget.h
+index b4d3bfc58ccc..a89f2f426a3a 100644
+--- a/widget/PuppetWidget.h
++++ b/widget/PuppetWidget.h
+@@ -298,7 +298,14 @@ class PuppetWidget final : public nsIWidget,
+ 
+   void OnMemoryPressure(layers::MemoryPressureReason aWhy) override;
+ 
++  // REYNARD: Called by APZCCallbackHelper when scroll position changes while an
++  // editable element is focused. Adjusts the cached rects by the scroll
++  // delta and sends the updated cache to the parent process.
++  void AdjustIMECacheForScroll(const CSSPoint& aNewScrollOffset);
++
+  private:
++  CSSPoint mIMELastScrollOffset;
++
+   void Paint();
+ 
+   nsresult RequestIMEToCommitComposition(bool aCancel);
