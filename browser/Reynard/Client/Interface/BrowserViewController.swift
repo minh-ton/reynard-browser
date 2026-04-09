@@ -13,7 +13,6 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
     let overviewSpacing: CGFloat = 16
     private let actsAsRootContainer: Bool
     private var embeddedSplitController: BrowserSplitViewController?
-    private let feedback = BrowserFeedback()
     private var pendingDownloadConfirmations: [DownloadStore.PendingDownload] = []
     private var isPresentingDownloadConfirmation = false
     
@@ -124,7 +123,6 @@ final class BrowserViewController: UIViewController, AddressBarDelegate, PhoneTo
         guard !usesEmbeddedSplitRoot else {
             return
         }
-        feedback.prepare()
         syncBrowserNavigationChrome(animated: false)
         syncPadSidebarButtonItem()
         syncDownloadButtonState()
