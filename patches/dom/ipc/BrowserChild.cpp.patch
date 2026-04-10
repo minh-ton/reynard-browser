@@ -1,0 +1,21 @@
+diff --git a/dom/ipc/BrowserChild.cpp b/dom/ipc/BrowserChild.cpp
+index a3e61d13bff2..dadc96ac233d 100644
+--- a/dom/ipc/BrowserChild.cpp
++++ b/dom/ipc/BrowserChild.cpp
+@@ -1392,12 +1392,16 @@ mozilla::ipc::IPCResult BrowserChild::RecvHandleTap(
+ 
+   switch (aType) {
+     case GeckoContentController::TapType::eSingleTap:
++#if defined(MOZ_WIDGET_UIKIT)
++      break;
++#else
+       if (mBrowserChildMessageManager) {
+         RefPtr<APZEventState> eventState(mAPZEventState);
+         eventState->ProcessSingleTap(point, scale, aModifiers, 1,
+                                      aInputBlockId);
+       }
+       break;
++#endif
+     case GeckoContentController::TapType::eDoubleTap:
+       HandleDoubleTap(point, aModifiers, aGuid, *aDoubleTapToZoomMetrics);
+       break;

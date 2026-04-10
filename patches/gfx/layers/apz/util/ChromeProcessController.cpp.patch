@@ -1,0 +1,18 @@
+diff --git a/gfx/layers/apz/util/ChromeProcessController.cpp b/gfx/layers/apz/util/ChromeProcessController.cpp
+index b1cc73de3e54..d8ffd26ba971 100644
+--- a/gfx/layers/apz/util/ChromeProcessController.cpp
++++ b/gfx/layers/apz/util/ChromeProcessController.cpp
+@@ -199,9 +199,13 @@ void ChromeProcessController::HandleTap(
+ 
+   switch (aType) {
+     case TapType::eSingleTap: {
++#if defined(MOZ_WIDGET_UIKIT)
++      break;
++#else
+       RefPtr<APZEventState> eventState(mAPZEventState);
+       eventState->ProcessSingleTap(point, scale, aModifiers, 1, aInputBlockId);
+       break;
++#endif
+     }
+     case TapType::eDoubleTap:
+       MOZ_ASSERT(aDoubleTapToZoomMetrics);
