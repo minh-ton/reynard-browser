@@ -50,6 +50,19 @@ extension SettingsRootViewController {
         detailLabel.text = "Enabling JIT improves performance significantly and is required for features like WebAssembly."
         stack.addArrangedSubview(detailLabel)
         
+        // if on 16.6 to 17.3.1, show warning about JIT
+        if #available(iOS 16.6, *) {
+            if #unavailable(iOS 17.4) {
+                let warningLabel = UILabel()
+                warningLabel.numberOfLines = 0
+                warningLabel.font = UIFont.preferredFont(forTextStyle: .footnote)
+                warningLabel.adjustsFontForContentSizeCategory = true
+                warningLabel.textColor = .systemRed
+                warningLabel.text = "This pairing-based JIT enablement method is not working properly on the OS version you are using. You can use the browser without JIT; or if you're on an iOS/iPadOS version that supports TrollStore, consider using the TrollStore IPA instead."
+                stack.addArrangedSubview(warningLabel)
+            }
+        }
+        
         footerView.contentView.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: footerView.contentView.layoutMarginsGuide.leadingAnchor),

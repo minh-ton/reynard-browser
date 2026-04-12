@@ -33,6 +33,12 @@ final class SettingsRootViewController: SettingsTableViewController {
         if UIDevice.current.userInterfaceIdiom == .pad {
             return Section.allCases.filter { $0 != .tab }
         }
+        
+        // if using Trollstore or jailbroken, hide JIT section
+        if getEntitlementValue("com.apple.private.security.no-sandbox") {
+            return Section.allCases.filter { $0 != .jit }
+        }
+        
         return Section.allCases
     }
     
@@ -104,6 +110,14 @@ final class SettingsRootViewController: SettingsTableViewController {
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             cell.textLabel?.text = "Import Pairing File..."
             cell.textLabel?.textColor = view.tintColor
+            // if on 16.6 to 17.3.1, disable the cell.
+            if #available(iOS 16.6, *) {
+                if #unavailable(iOS 17.4) {
+                    cell.textLabel?.textColor = .secondaryLabel
+                    cell.selectionStyle = .none
+                    cell.isUserInteractionEnabled = false
+                }
+            }
             return cell
         case .search:
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
