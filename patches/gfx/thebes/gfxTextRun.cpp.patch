@@ -1,8 +1,8 @@
 diff --git a/gfx/thebes/gfxTextRun.cpp b/gfx/thebes/gfxTextRun.cpp
-index dea967e3b823..810fa95487c1 100644
+index ea420d13cd96..9b5f81ebbc1b 100644
 --- a/gfx/thebes/gfxTextRun.cpp
 +++ b/gfx/thebes/gfxTextRun.cpp
-@@ -3156,6 +3156,11 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
+@@ -3145,6 +3145,11 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
    // preceding character if possible. This is preferable to using the font
    // group because it avoids breaks in shaping within a cluster.
    if (aPrevMatchedFont && IsClusterExtender(aCh)) {
@@ -14,7 +14,7 @@ index dea967e3b823..810fa95487c1 100644
      if (aPrevMatchedFont->HasCharacter(aCh) || IsDefaultIgnorable(aCh)) {
        return do_AddRef(aPrevMatchedFont);
      }
-@@ -3247,6 +3252,17 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
+@@ -3236,6 +3241,17 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
      }
    }
  
@@ -32,7 +32,7 @@ index dea967e3b823..810fa95487c1 100644
    if (!isJoinControl && !wasJoinCauser && !isVarSelector &&
        !nextIsVarSelector && presentation == FontPresentation::Any) {
      RefPtr<gfxFont> firstFont = GetFontAt(0, aCh, &loading);
-@@ -3293,7 +3309,13 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
+@@ -3282,7 +3298,13 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
      // if previous character was a join-causer (ZWJ),
      // use the same font as the previous range if we can
      if (wasJoinCauser) {
@@ -47,7 +47,7 @@ index dea967e3b823..810fa95487c1 100644
          return do_AddRef(aPrevMatchedFont);
        }
      }
-@@ -3639,7 +3661,10 @@ void gfxFontGroup::ComputeRanges(nsTArray<TextRange>& aRanges, const T* aString,
+@@ -3628,7 +3650,10 @@ void gfxFontGroup::ComputeRanges(nsTArray<TextRange>& aRanges, const T* aString,
                !gfxFontUtils::IsJoinControl(ch) &&
                !gfxFontUtils::IsJoinCauser(prevCh) &&
                !gfxFontUtils::IsVarSelector(ch) &&

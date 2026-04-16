@@ -1,8 +1,8 @@
 diff --git a/widget/ContentCache.h b/widget/ContentCache.h
-index a5d2962c4a27..cd0566e71053 100644
+index 53456460c859..b33a9061a370 100644
 --- a/widget/ContentCache.h
 +++ b/widget/ContentCache.h
-@@ -47,6 +47,13 @@ class ContentCache {
+@@ -44,6 +44,13 @@ class ContentCache {
  
    [[nodiscard]] bool IsValid() const;
  
@@ -16,7 +16,7 @@ index a5d2962c4a27..cd0566e71053 100644
   protected:
    void AssertIfInvalid() const;
  
-@@ -300,6 +307,9 @@ class ContentCache {
+@@ -297,6 +304,9 @@ class ContentCache {
    Maybe<TextRectArray> mTextRectArray;
    Maybe<TextRectArray> mLastCommitStringTextRectArray;
  

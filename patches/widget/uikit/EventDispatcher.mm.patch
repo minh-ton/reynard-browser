@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/EventDispatcher.mm b/widget/uikit/EventDispatcher.mm
-index e8c225b0afa5..a09d7631f31b 100644
+index 97d0ae64653b..c26fc1d639e2 100644
 --- a/widget/uikit/EventDispatcher.mm
 +++ b/widget/uikit/EventDispatcher.mm
-@@ -85,7 +85,7 @@ nsresult BoxArray(JSContext* aCx, JS::Handle<JSObject*> aArray,
+@@ -83,7 +83,7 @@ nsresult BoxArray(JSContext* aCx, JS::Handle<JSObject*> aArray,
      }
      nsresult rv = BoxValue(aCx, valJS, valCF);
      NS_ENSURE_SUCCESS(rv, rv);

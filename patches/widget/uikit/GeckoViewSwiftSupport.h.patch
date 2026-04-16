@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/GeckoViewSwiftSupport.h b/widget/uikit/GeckoViewSwiftSupport.h
-index 24cd4ecf0e62..2fb710721d4d 100644
+index e68fca9134c0..a723338a8f1e 100644
 --- a/widget/uikit/GeckoViewSwiftSupport.h
 +++ b/widget/uikit/GeckoViewSwiftSupport.h
-@@ -28,6 +28,8 @@
+@@ -26,6 +26,8 @@
  @protocol SwiftGeckoViewRuntime <NSObject>
  - (id<SwiftEventDispatcher>)runtimeDispatcher;
  - (id<SwiftEventDispatcher>)dispatcherByName:(const char*)name;

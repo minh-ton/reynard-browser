@@ -1,8 +1,8 @@
 diff --git a/gfx/thebes/CoreTextFontList.cpp b/gfx/thebes/CoreTextFontList.cpp
-index 6d7cf034ab3b..a9cff85a97f9 100644
+index 09cc159cad78..181477a1fa0a 100644
 --- a/gfx/thebes/CoreTextFontList.cpp
 +++ b/gfx/thebes/CoreTextFontList.cpp
-@@ -355,6 +355,12 @@ nsresult CTFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
+@@ -354,6 +354,12 @@ nsresult CTFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
      // if error occurred, initialize to null cmap
      charmap = new gfxCharacterMap(0);
      mHasCmapTable = false;
@@ -15,7 +15,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
    }
    if (setCharMap) {
      // Temporarily retain charmap, until the shared version is
-@@ -1341,7 +1347,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
+@@ -1340,7 +1346,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
    // use CoreText to find the fallback family
  
    gfxFontEntry* fontEntry = nullptr;
@@ -23,7 +23,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
  
    if (!mDefaultFont) {
      mDefaultFont = CTFontCreateWithName(CFSTR("LucidaGrande"), 12.f, NULL);
-@@ -1381,7 +1386,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
+@@ -1380,7 +1385,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
                aMatchedFamily = FontFamily(family);
              } else {
                fontEntry = nullptr;
@@ -31,7 +31,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
              }
            }
          }
-@@ -1399,7 +1403,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
+@@ -1398,7 +1402,6 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
                aMatchedFamily = FontFamily(family);
              } else {
                fontEntry = nullptr;
@@ -39,7 +39,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
              }
            }
          }
-@@ -1407,11 +1410,44 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
+@@ -1406,11 +1409,44 @@ gfxFontEntry* CoreTextFontList::PlatformGlobalFontFallback(
      }
    }
  
@@ -89,7 +89,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
    }
  
    CFRelease(str);
-@@ -1542,9 +1578,20 @@ bool CoreTextFontList::FindAndAddFamiliesLocked(
+@@ -1541,9 +1577,20 @@ bool CoreTextFontList::FindAndAddFamiliesLocked(
      nsTArray<FamilyAndGeneric>* aOutput, FindFamiliesFlags aFlags,
      gfxFontStyle* aStyle, nsAtom* aLanguage, gfxFloat aDevToCssSize) {
    if (aFamily.EqualsLiteral(kSystemFont_system)) {
@@ -113,7 +113,7 @@ index 6d7cf034ab3b..a9cff85a97f9 100644
      if (auto* fam = FindSystemFontFamily(mSystemFontFamilyName)) {
        aOutput->AppendElement(fam);
        return true;
-@@ -1918,12 +1965,34 @@ FontFamily CoreTextFontList::GetDefaultFontForPlatform(
+@@ -1917,12 +1964,34 @@ FontFamily CoreTextFontList::GetDefaultFontForPlatform(
      nsAtom* aLanguage) {
    AutoCFTypeRef<CTFontRef> font(CTFontCreateUIFontForLanguage(
        kCTFontUIFontUser, 0.0, nullptr));  // TODO: language

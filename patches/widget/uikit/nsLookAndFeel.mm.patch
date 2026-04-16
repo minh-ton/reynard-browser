@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/nsLookAndFeel.mm b/widget/uikit/nsLookAndFeel.mm
-index 22a5c1ab905e..84c2bf06ad12 100644
+index e5198c6f3fac..e7671f14199d 100644
 --- a/widget/uikit/nsLookAndFeel.mm
 +++ b/widget/uikit/nsLookAndFeel.mm
-@@ -5,7 +5,10 @@
+@@ -4,7 +4,10 @@
  
  #import <UIKit/UIColor.h>
  #import <UIKit/UIInterface.h>
@@ -13,7 +13,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
  #include "nsLookAndFeel.h"
  
  #include "mozilla/FontPropertyTypes.h"
-@@ -15,10 +18,44 @@
+@@ -14,10 +17,44 @@
  
  using namespace mozilla;
  
@@ -58,7 +58,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
  static nscolor GetColorFromUIColor(UIColor* aColor) {
    CGColorRef cgColor = [aColor CGColor];
    CGColorSpaceModel model = CGColorSpaceGetModel(CGColorGetColorSpace(cgColor));
-@@ -35,6 +72,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -34,6 +71,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
    return 0;
  }
  
@@ -70,7 +70,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
  void nsLookAndFeel::NativeInit() { EnsureInit(); }
  
  void nsLookAndFeel::RefreshImpl() {
-@@ -93,7 +135,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -92,7 +134,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
      case ColorID::Menutext:
      case ColorID::Infotext:
      case ColorID::Windowtext:
@@ -79,7 +79,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case ColorID::Activecaption:
        aResult = NS_RGB(0xff, 0xff, 0xff);
-@@ -102,14 +144,15 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -101,14 +143,15 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = NS_RGB(0x00, 0x00, 0x00);
        break;
      case ColorID::Appworkspace:
@@ -97,7 +97,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case ColorID::Buttonhighlight:
        aResult = NS_RGB(0xFF, 0xFF, 0xFF);
-@@ -118,7 +161,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -117,7 +160,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = NS_RGB(0xDC, 0xDC, 0xDC);
        break;
      case ColorID::Graytext:
@@ -106,7 +106,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case ColorID::Inactiveborder:
        aResult = NS_RGB(0xff, 0xff, 0xff);
-@@ -148,7 +191,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -147,7 +190,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = NS_RGB(0xDA, 0xDA, 0xDA);
        break;
      case ColorID::Menu:
@@ -115,7 +115,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case ColorID::Infobackground:
        aResult = NS_RGB(0xFF, 0xFF, 0xC7);
-@@ -159,21 +202,22 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -158,21 +201,22 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
      case ColorID::Window:
      case ColorID::Field:
      case ColorID::MozCombobox:
@@ -142,7 +142,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case ColorID::MozMacFocusring:
        aResult = NS_RGB(0x3F, 0x98, 0xDD);
-@@ -224,10 +268,12 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -223,10 +267,12 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = 3;
        break;
      case IntID::CaretBlinkTime:
@@ -157,7 +157,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
        break;
      case IntID::SelectTextfieldsOnKeyFocus:
        // Select textfield content when focused by kbd
-@@ -294,6 +340,9 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -293,6 +339,9 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
      case IntID::SpellCheckerUnderlineStyle:
        aResult = static_cast<int32_t>(StyleTextDecorationStyle::Dotted);
        break;
@@ -167,7 +167,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
      case IntID::ContextMenuOffsetVertical:
      case IntID::ContextMenuOffsetHorizontal:
        aResult = 2;
-@@ -302,6 +351,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -301,6 +350,11 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
        aResult = 0;
        res = NS_ERROR_FAILURE;
    }
@@ -179,7 +179,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
    return res;
  }
  
-@@ -334,7 +388,6 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -333,7 +387,6 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
      aFontStyle.size = 14;
      aFontStyle.systemFont = true;
  
@@ -187,7 +187,7 @@ index 22a5c1ab905e..84c2bf06ad12 100644
      return true;
    }
  
-@@ -348,7 +401,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
+@@ -347,7 +400,7 @@ static nscolor GetColorFromUIColor(UIColor* aColor) {
    }
    mInitialized = true;
  

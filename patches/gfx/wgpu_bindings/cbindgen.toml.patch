@@ -1,8 +1,8 @@
 diff --git a/gfx/wgpu_bindings/cbindgen.toml b/gfx/wgpu_bindings/cbindgen.toml
-index 2ccd3597157b..b75098315d63 100644
+index 4b6b18157b9d..cef9bd74981e 100644
 --- a/gfx/wgpu_bindings/cbindgen.toml
 +++ b/gfx/wgpu_bindings/cbindgen.toml
-@@ -143,5 +143,6 @@ bitflags = true
+@@ -147,5 +147,6 @@ bitflags = true
  [defines]
  "target_os = windows" = "XP_WIN"
  "target_os = macos" = "XP_MACOSX"

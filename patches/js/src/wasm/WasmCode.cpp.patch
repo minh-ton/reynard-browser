@@ -1,5 +1,5 @@
 diff --git a/js/src/wasm/WasmCode.cpp b/js/src/wasm/WasmCode.cpp
-index 7803134d7860..aa8d17c798df 100644
+index b883a8e9e3d6..1cc39ec7f966 100644
 --- a/js/src/wasm/WasmCode.cpp
 +++ b/js/src/wasm/WasmCode.cpp
 @@ -31,6 +31,7 @@

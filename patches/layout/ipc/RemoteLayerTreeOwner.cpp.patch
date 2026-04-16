@@ -1,8 +1,8 @@
 diff --git a/layout/ipc/RemoteLayerTreeOwner.cpp b/layout/ipc/RemoteLayerTreeOwner.cpp
-index 0874c9496964..0d1824fd3191 100644
+index 33f0b073e093..c22a2c17d6d4 100644
 --- a/layout/ipc/RemoteLayerTreeOwner.cpp
 +++ b/layout/ipc/RemoteLayerTreeOwner.cpp
-@@ -86,14 +86,33 @@ void RemoteLayerTreeOwner::Destroy() {
+@@ -84,14 +84,33 @@ void RemoteLayerTreeOwner::Destroy() {
  void RemoteLayerTreeOwner::EnsureLayersConnected(
      Maybe<CompositorOptions>& aCompositorOptions) {
    RefPtr<WindowRenderer> renderer = GetWindowRenderer(mBrowserParent);

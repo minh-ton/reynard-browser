@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/apz/util/ChromeProcessController.cpp b/gfx/layers/apz/util/ChromeProcessController.cpp
-index b1cc73de3e54..d8ffd26ba971 100644
+index 5f1c230377be..2af823695b8c 100644
 --- a/gfx/layers/apz/util/ChromeProcessController.cpp
 +++ b/gfx/layers/apz/util/ChromeProcessController.cpp
-@@ -199,9 +199,13 @@ void ChromeProcessController::HandleTap(
+@@ -197,9 +197,13 @@ void ChromeProcessController::HandleTap(
  
    switch (aType) {
      case TapType::eSingleTap: {

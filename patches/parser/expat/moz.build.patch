@@ -1,8 +1,8 @@
 diff --git a/parser/expat/moz.build b/parser/expat/moz.build
-index db00d8e0ff66..04e8c7c2a50b 100644
+index 8c1842d5a5d3..4bd05d07e885 100644
 --- a/parser/expat/moz.build
 +++ b/parser/expat/moz.build
-@@ -21,10 +21,18 @@ EXPORTS += [
+@@ -19,10 +19,18 @@ EXPORTS += [
  ]
  
  if CONFIG["MOZ_WASM_SANDBOXING_EXPAT"]:

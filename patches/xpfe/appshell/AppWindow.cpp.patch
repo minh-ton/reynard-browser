@@ -1,8 +1,8 @@
 diff --git a/xpfe/appshell/AppWindow.cpp b/xpfe/appshell/AppWindow.cpp
-index f297266b3f7c..da8267965b82 100644
+index d980bca7b42b..26dcb355878f 100644
 --- a/xpfe/appshell/AppWindow.cpp
 +++ b/xpfe/appshell/AppWindow.cpp
-@@ -6,6 +6,7 @@
+@@ -4,6 +4,7 @@
  
  #include "ErrorList.h"
  #include "mozilla/MathAlgorithms.h"
@@ -10,7 +10,7 @@ index f297266b3f7c..da8267965b82 100644
  
  // Local includes
  #include "AppWindow.h"
-@@ -220,7 +221,16 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
+@@ -218,7 +219,16 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
    LayoutDeviceIntRect r = mWindow->GetClientBounds();
    // Match the default background color of content. Previously important on
    // Windows, but no longer has any effect there.

@@ -1,8 +1,8 @@
 diff --git a/gfx/ipc/GPUProcessManager.cpp b/gfx/ipc/GPUProcessManager.cpp
-index 11d3cdf5a38f..744b1a99b215 100644
+index 01240e82fba0..c500b652ef72 100644
 --- a/gfx/ipc/GPUProcessManager.cpp
 +++ b/gfx/ipc/GPUProcessManager.cpp
-@@ -1381,7 +1381,9 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1379,7 +1379,9 @@ bool GPUProcessManager::CreateContentBridges(
      ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
      ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
      ipc::Endpoint<PRemoteMediaManagerChild>* aOutVideoManager,
@@ -13,7 +13,7 @@ index 11d3cdf5a38f..744b1a99b215 100644
    const uint32_t cmNamespace = AllocateNamespace();
    if (!CreateContentCompositorManager(aOtherProcess, aChildId, cmNamespace,
                                        aOutCompositor) ||
-@@ -1389,6 +1391,9 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1387,6 +1389,9 @@ bool GPUProcessManager::CreateContentBridges(
        !CreateContentVRManager(aOtherProcess, aChildId, aOutVRBridge)) {
      return false;
    }

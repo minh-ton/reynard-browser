@@ -1,8 +1,8 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index 7d405ed7d3b3..378b051232de 100644
+index 743eb01a2176..c26bf7ed1d77 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
-@@ -789,6 +789,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
+@@ -787,6 +787,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
      Maybe<CompositorOptions>* aCompositorOptions) {
    if (mRemoteLayerTreeOwner.IsInitialized()) {
      mRemoteLayerTreeOwner.EnsureLayersConnected(*aCompositorOptions);
@@ -24,7 +24,7 @@ index 7d405ed7d3b3..378b051232de 100644
    }
    return IPC_OK();
  }
-@@ -2550,14 +2565,22 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMEPositionChange(
+@@ -2546,14 +2561,22 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMEPositionChange(
      const ContentCache& aContentCache,
      const IMENotification& aIMENotification) {
    nsCOMPtr<nsIWidget> widget = GetTextInputHandlingWidget();
@@ -50,7 +50,7 @@ index 7d405ed7d3b3..378b051232de 100644
    return IPC_OK();
  }
  
-@@ -3224,18 +3247,31 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
+@@ -3215,18 +3238,31 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
        NS_WARN_IF(aEvent.Failed())) {
      return true;
    }

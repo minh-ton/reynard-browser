@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
-index 3ee3573b838a..2e29ab2524ec 100644
+index e8f05ad59f6f..81ce0e0ceded 100644
 --- a/widget/uikit/TextInputHandler.mm
 +++ b/widget/uikit/TextInputHandler.mm
-@@ -22,6 +22,16 @@
+@@ -20,6 +20,16 @@
  
  mozilla::LazyLogModule gIMELog("TextInputHandler");
  
@@ -19,7 +19,7 @@ index 3ee3573b838a..2e29ab2524ec 100644
  namespace mozilla::widget {
  
  NS_IMPL_ISUPPORTS(TextInputHandler, TextEventDispatcherListener,
-@@ -32,11 +42,29 @@
+@@ -30,11 +40,28 @@
  
  nsresult TextInputHandler::NotifyIME(TextEventDispatcher* aTextEventDispatcher,
                                       const IMENotification& aNotification) {
@@ -44,9 +44,8 @@ index 3ee3573b838a..2e29ab2524ec 100644
  }
  
  IMENotificationRequests TextInputHandler::GetIMENotificationRequests() {
--  return IMENotificationRequests();
-+  return IMENotificationRequests(
-+      IMENotificationRequests::NOTIFY_POSITION_CHANGE);
+-  return IMENotificationRequests{};
++  return IMENotificationRequests{IMENotificationRequest::PositionChange};
  }
  
  void TextInputHandler::OnRemovedFrom(

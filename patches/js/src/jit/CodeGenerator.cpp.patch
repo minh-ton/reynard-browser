@@ -1,8 +1,8 @@
 diff --git a/js/src/jit/CodeGenerator.cpp b/js/src/jit/CodeGenerator.cpp
-index a23423c4d234..a366efb299c8 100644
+index a8a8f8022b67..6d102ee7e643 100644
 --- a/js/src/jit/CodeGenerator.cpp
 +++ b/js/src/jit/CodeGenerator.cpp
-@@ -4889,7 +4889,9 @@ void CodeGenerator::visitMegamorphicLoadSlotPermissive(
+@@ -4890,7 +4890,9 @@ void CodeGenerator::visitMegamorphicLoadSlotPermissive(
    masm.movePropertyKey(lir->mir()->name(), temp1);
    pushArg(temp2);
    pushArg(temp1);
@@ -13,7 +13,7 @@ index a23423c4d234..a366efb299c8 100644
  
    using Fn = bool (*)(JSContext*, HandleObject, HandleId,
                        MegamorphicCacheEntry*, MutableHandleValue);
-@@ -4983,7 +4985,12 @@ void CodeGenerator::visitMegamorphicLoadSlotByValuePermissive(
+@@ -4984,7 +4986,12 @@ void CodeGenerator::visitMegamorphicLoadSlotByValuePermissive(
  
    pushArg(temp2);
    pushArg(idVal);

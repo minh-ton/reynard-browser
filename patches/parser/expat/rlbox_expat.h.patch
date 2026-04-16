@@ -1,8 +1,8 @@
 diff --git a/parser/expat/rlbox_expat.h b/parser/expat/rlbox_expat.h
-index 38afe9381456..f186f38ec1ba 100644
+index cebd90be580d..d7b617c5f088 100644
 --- a/parser/expat/rlbox_expat.h
 +++ b/parser/expat/rlbox_expat.h
-@@ -11,7 +11,8 @@
+@@ -10,7 +10,8 @@
  // Load general firefox configuration of RLBox
  #include "mozilla/rlbox/rlbox_config.h"
  

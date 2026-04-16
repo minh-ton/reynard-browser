@@ -1,8 +1,8 @@
 diff --git a/widget/PuppetWidget.cpp b/widget/PuppetWidget.cpp
-index e9b7ca0408b4..793279f734e7 100644
+index 04113d8e30fb..76ef6ea80120 100644
 --- a/widget/PuppetWidget.cpp
 +++ b/widget/PuppetWidget.cpp
-@@ -13,6 +13,7 @@
+@@ -10,6 +10,7 @@
  #include "mozilla/layers/WebRenderLayerManager.h"
  #include "mozilla/NativeKeyBindingsType.h"
  #include "mozilla/PresShell.h"
@@ -10,7 +10,7 @@ index e9b7ca0408b4..793279f734e7 100644
  #include "mozilla/SchedulerGroup.h"
  #include "mozilla/TextComposition.h"
  #include "mozilla/TextEventDispatcher.h"
-@@ -810,6 +811,17 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+@@ -808,6 +809,17 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
            !mContentCache.CacheCaretAndTextRects(this, &aIMENotification))) {
      return NS_ERROR_FAILURE;
    }
@@ -25,10 +25,10 @@ index e9b7ca0408b4..793279f734e7 100644
 +    }
 +  }
 +
-   if (mIMENotificationRequestsOfParent.WantPositionChanged()) {
+   if (mIMENotificationRequestsOfParent.contains(
+           IMENotificationRequest::PositionChange)) {
      mBrowserChild->SendNotifyIMEPositionChange(mContentCache, aIMENotification);
-   } else {
-@@ -818,6 +830,28 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+@@ -817,6 +829,28 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
    return NS_OK;
  }
  

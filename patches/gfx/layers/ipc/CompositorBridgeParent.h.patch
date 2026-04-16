@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.h b/gfx/layers/ipc/CompositorBridgeParent.h
-index e20f172e4191..5f10dbb29cee 100644
+index c21a4534bc54..7a410450a9fd 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.h
 +++ b/gfx/layers/ipc/CompositorBridgeParent.h
-@@ -256,10 +256,13 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase,
+@@ -254,10 +254,13 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase,
    void InitSameProcess(widget::CompositorWidget* aWidget,
                         const LayersId& aLayerTreeId);
  

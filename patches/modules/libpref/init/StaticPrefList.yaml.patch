@@ -1,8 +1,8 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 262eee800b3f..527b4632a52e 100644
+index f36788f33221..b9726d855c1a 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
-@@ -5714,7 +5714,7 @@
+@@ -5749,7 +5749,7 @@
  # on aarch64 (Apple Silicon) MacOS.
  - name: dom.webgpu.enabled
    type: RelaxedAtomicBool
@@ -11,7 +11,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: @IS_EARLY_BETA_OR_EARLIER@
-@@ -5725,7 +5725,7 @@
+@@ -5760,7 +5760,7 @@
  # on a platform that supports the GPU process, else true.
  - name: dom.webgpu.allow-in-parent
    type: bool
@@ -20,7 +20,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: false
  #else
    value: true
-@@ -5735,7 +5735,7 @@
+@@ -5770,7 +5770,7 @@
  # Is support for the Web GPU API enabled on service workers?
  - name: dom.webgpu.service-workers.enabled
    type: RelaxedAtomicBool
@@ -29,7 +29,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: @IS_EARLY_BETA_OR_EARLIER@
-@@ -5762,7 +5762,7 @@
+@@ -5797,7 +5797,7 @@
  
  - name: dom.webgpu.allow-present-without-readback
    type: RelaxedAtomicBool
@@ -38,7 +38,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: false
-@@ -5772,7 +5772,7 @@
+@@ -5807,7 +5807,7 @@
  # Whether WebGPU's GPUExternalTexture API is enabled.
  - name: dom.webgpu.external-texture.enabled
    type: bool
@@ -47,7 +47,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: false
-@@ -7426,7 +7426,13 @@
+@@ -7448,7 +7448,13 @@
    # backend.
  -   name: gfx.font_rendering.coretext.enabled
      type: RelaxedAtomicBool
@@ -61,7 +61,7 @@ index 262eee800b3f..527b4632a52e 100644
      mirror: always
  #endif
  
-@@ -9625,7 +9631,7 @@
+@@ -9687,7 +9693,7 @@
  # or executable but never both at the same time. OpenBSD defaults to W^X.
  - name: javascript.options.content_process_write_protect_code
    type: bool
@@ -70,7 +70,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: false
-@@ -9794,7 +9800,9 @@
+@@ -9862,7 +9868,9 @@
  
  - name: layers.gpu-process.enabled
    type: bool
@@ -81,7 +81,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #elif defined(MOZ_X11)
    value: false  # we'd like this to be @IS_NIGHTLY_BUILD@, see Bug 1927058
-@@ -11510,7 +11518,7 @@
+@@ -11602,7 +11610,7 @@
  - name: media.cubeb.sandbox
    type: bool
    mirror: always
@@ -90,7 +90,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: true
  #else
    value: false
-@@ -14476,7 +14484,10 @@
+@@ -14575,7 +14583,10 @@
  - name: network.process.enabled
    type: RelaxedAtomicBool
    mirror: always
@@ -102,7 +102,7 @@ index 262eee800b3f..527b4632a52e 100644
    value: false # see bug 1641427
  #else
    value: true
-@@ -14525,7 +14536,13 @@
+@@ -14624,7 +14635,13 @@
  - name: network.http.network_access_on_socket_process.enabled
    type: RelaxedAtomicBool
    mirror: always

@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/ExecutableAllocator.cpp b/js/src/jit/ExecutableAllocator.cpp
-index 700ffe57f670..207818aa5e6a 100644
+index ad2936d5bff6..384674d0ae5a 100644
 --- a/js/src/jit/ExecutableAllocator.cpp
 +++ b/js/src/jit/ExecutableAllocator.cpp
 @@ -26,6 +26,7 @@

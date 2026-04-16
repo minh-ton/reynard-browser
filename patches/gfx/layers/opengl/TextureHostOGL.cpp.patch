@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/opengl/TextureHostOGL.cpp b/gfx/layers/opengl/TextureHostOGL.cpp
-index 1936991deb0c..5c7070701bf6 100644
+index a1e17c74ac06..04d06bd970aa 100644
 --- a/gfx/layers/opengl/TextureHostOGL.cpp
 +++ b/gfx/layers/opengl/TextureHostOGL.cpp
-@@ -23,7 +23,7 @@
+@@ -21,7 +21,7 @@
  #include "GfxTexturesReporter.h"  // for GfxTexturesReporter
  #include "GeckoProfiler.h"
  
@@ -11,7 +11,7 @@ index 1936991deb0c..5c7070701bf6 100644
  #  include "mozilla/layers/MacIOSurfaceTextureHostOGL.h"
  #endif
  
-@@ -105,7 +105,7 @@ already_AddRefed<TextureHost> CreateTextureHostOGL(
+@@ -103,7 +103,7 @@ already_AddRefed<TextureHost> CreateTextureHostOGL(
      }
  #endif
  

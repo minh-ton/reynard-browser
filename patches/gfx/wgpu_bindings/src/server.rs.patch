@@ -1,8 +1,8 @@
 diff --git a/gfx/wgpu_bindings/src/server.rs b/gfx/wgpu_bindings/src/server.rs
-index 214fb0fc39c6..19efaf39d4db 100644
+index daeb49305c06..8580d23705a5 100644
 --- a/gfx/wgpu_bindings/src/server.rs
 +++ b/gfx/wgpu_bindings/src/server.rs
-@@ -60,7 +60,12 @@ const MAX_TEXTURE_EXTENT: u32 = std::i16::MAX as u32;
+@@ -58,7 +58,12 @@ const MAX_TEXTURE_EXTENT: u32 = std::i16::MAX as u32;
  // Then we may have to ignore the spec or get it changed.
  const MAX_BINDINGS_PER_RESOURCE_TYPE: u32 = 64;
  
@@ -16,7 +16,7 @@ index 214fb0fc39c6..19efaf39d4db 100644
  fn emit_critical_invalid_note(what: &'static str) {
      // SAFETY: We ensure that the pointer provided is not null.
      let msg = CString::new(format!("{what} is invalid")).unwrap();
-@@ -3104,31 +3109,39 @@ pub unsafe extern "C" fn wgpu_server_device_wait_fence_from_shared_handle(
+@@ -3141,31 +3146,39 @@ pub unsafe extern "C" fn wgpu_server_device_wait_fence_from_shared_handle(
      res.is_ok()
  }
  
@@ -62,7 +62,7 @@ index 214fb0fc39c6..19efaf39d4db 100644
      use wgc::id;
  
      /// Imports a Metal texture from the specified plane of an IOSurface.
-@@ -3218,6 +3231,7 @@ mod macos {
+@@ -3255,6 +3268,7 @@ mod macos {
          }
      }
  

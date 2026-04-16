@@ -1,8 +1,8 @@
 diff --git a/gfx/ots/RLBoxWOFF2Host.cpp b/gfx/ots/RLBoxWOFF2Host.cpp
-index 23ba7b5d8116..aa98ed480bcc 100644
+index b221af03e30c..c86e8d9d4f7a 100644
 --- a/gfx/ots/RLBoxWOFF2Host.cpp
 +++ b/gfx/ots/RLBoxWOFF2Host.cpp
-@@ -11,6 +11,7 @@
+@@ -9,6 +9,7 @@
  #include "mozilla/RLBoxUtils.h"
  #include "mozilla/ScopeExit.h"
  #include "opentype-sanitiser.h"  // For ots_ntohl
@@ -10,7 +10,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  
  using namespace rlbox;
  using namespace mozilla;
-@@ -143,6 +144,43 @@ static uint32_t ComputeWOFF2FinalSize(const uint8_t* aData, size_t aLength,
+@@ -141,6 +142,43 @@ static uint32_t ComputeWOFF2FinalSize(const uint8_t* aData, size_t aLength,
    return decompressedSize;
  }
  
@@ -54,7 +54,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  template <typename T>
  using TransferBufferToWOFF2 =
      mozilla::RLBoxTransferBufferToSandbox<T, rlbox_woff2_sandbox_type>;
-@@ -162,10 +200,24 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -160,10 +198,24 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
    // index (7).
    NS_ENSURE_TRUE(aLength >= 8, false);
  
@@ -80,7 +80,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  
    // The sandbox should have space for the input, output and misc allocations
    // To account for misc allocations, we'll set the sandbox size to:
-@@ -173,9 +225,17 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -171,9 +223,17 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
  
    const uint64_t expectedSandboxSize =
        static_cast<uint64_t>(2 * (aLength + expectedSize));
@@ -99,7 +99,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  
    const auto* sandboxData =
        static_cast<const RLBoxWOFF2SandboxData*>(sandboxPoolData->SandboxData());
-@@ -187,7 +247,12 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -185,7 +245,12 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
  
    auto data = TransferBufferToWOFF2<char>(
        sandbox, reinterpret_cast<const char*>(aData), aLength);
@@ -113,7 +113,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  
    // Perform the actual conversion to TTF.
  
-@@ -202,7 +267,9 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -200,7 +265,9 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
                                       bufOwnerString.get(), bufp.get())
             .unverified_safe_because(
                 "The ProcessTT* functions validate the decompressed data.")) {
@@ -124,7 +124,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
    }
  
    auto bufCleanup = mozilla::MakeScopeExit([&sandbox, &bufOwnerString] {
-@@ -222,7 +289,11 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -220,7 +287,11 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
          return val;
        });
  
@@ -137,7 +137,7 @@ index 23ba7b5d8116..aa98ed480bcc 100644
  
    const uint8_t* decompressed = reinterpret_cast<const uint8_t*>(
        (*bufp.get())
-@@ -231,7 +302,11 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
+@@ -229,7 +300,11 @@ bool RLBoxProcessWOFF2(ots::FontFile* aHeader, ots::OTSStream* aOutput,
                "Only care that the buffer is within sandbox boundary."));
  
    // Since ProcessTT* memcpy from the buffer, make sure it's not null.

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index d6a975d47a1c..b0ed0bf5dd6a 100644
+index 4441c8faf625..eb217decbd70 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -25,9 +25,11 @@

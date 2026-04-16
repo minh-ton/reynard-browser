@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/nsWidgetFactory.mm b/widget/uikit/nsWidgetFactory.mm
-index 46e5ad189737..00f264797bf4 100644
+index 25d89f7bbbac..86585b973084 100644
 --- a/widget/uikit/nsWidgetFactory.mm
 +++ b/widget/uikit/nsWidgetFactory.mm
-@@ -14,13 +14,20 @@
+@@ -13,13 +13,20 @@
  #include "nsAppShellSingleton.h"
  #include "nsLookAndFeel.h"
  

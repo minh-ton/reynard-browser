@@ -1,8 +1,8 @@
 diff --git a/mobile/shared/actors/GeckoViewContentChild.sys.mjs b/mobile/shared/actors/GeckoViewContentChild.sys.mjs
-index cef3910b568d..22d28c1be7f9 100644
+index 9ca6e15bed3e..2437b06b5718 100644
 --- a/mobile/shared/actors/GeckoViewContentChild.sys.mjs
 +++ b/mobile/shared/actors/GeckoViewContentChild.sys.mjs
-@@ -68,6 +68,40 @@ export class GeckoViewContentChild extends GeckoViewActorChild {
+@@ -67,6 +67,71 @@ export class GeckoViewContentChild extends GeckoViewActorChild {
      return windowUtils.SCROLL_MODE_SMOOTH;
    }
  
@@ -40,10 +40,41 @@ index cef3910b568d..22d28c1be7f9 100644
 +    };
 +  }
 +
-   collectSessionState() {
-     const { docShell, contentWindow } = this;
-     const history = lazy.SessionHistory.collect(docShell);
-@@ -241,6 +275,9 @@ export class GeckoViewContentChild extends GeckoViewActorChild {
++  collectSessionState() {
++    const { docShell, contentWindow } = this;
++    const history = lazy.SessionHistory.collect(docShell);
++    let formdata = SessionStoreUtils.collectFormData(contentWindow);
++    let scrolldata = SessionStoreUtils.collectScrollPosition(contentWindow);
++
++    // Save the current document resolution.
++    let zoom = 1;
++    const domWindowUtils = contentWindow.windowUtils;
++    zoom = domWindowUtils.getResolution();
++    scrolldata = scrolldata || {};
++    scrolldata.zoom = {};
++    scrolldata.zoom.resolution = zoom;
++
++    // Save some data that'll help in adjusting the zoom level
++    // when restoring in a different screen orientation.
++    const displaySize = {};
++    const width = {},
++      height = {};
++    domWindowUtils.getDocumentViewerSize(width, height);
++
++    displaySize.width = width.value;
++    displaySize.height = height.value;
++
++    scrolldata.zoom.displaySize = displaySize;
++
++    formdata = lazy.PrivacyFilter.filterFormData(formdata || {});
++
++    return { history, formdata, scrolldata };
++  }
++
+   orientation() {
+     const currentOrientationType = this.contentWindow?.screen.orientation.type;
+     if (!currentOrientationType) {
+@@ -184,6 +249,9 @@ export class GeckoViewContentChild extends GeckoViewActorChild {
        case "ContainsFormData": {
          return this.containsFormData();
        }

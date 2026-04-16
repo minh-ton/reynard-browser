@@ -1,8 +1,8 @@
 diff --git a/media/libcubeb/src/moz.build b/media/libcubeb/src/moz.build
-index 7ab524bfc7e8..3d5f0afe7cfb 100644
+index eb61973da700..631f73c255c6 100644
 --- a/media/libcubeb/src/moz.build
 +++ b/media/libcubeb/src/moz.build
-@@ -75,6 +75,10 @@ if CONFIG['MOZ_AUDIOUNIT_RUST']:
+@@ -73,6 +73,10 @@ if CONFIG['MOZ_AUDIOUNIT_RUST']:
              'cubeb_osx_run_loop.c',
          ]
          DEFINES['USE_AUDIOUNIT_RUST'] = True

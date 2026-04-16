@@ -1,8 +1,8 @@
 diff --git a/widget/ContentCache.cpp b/widget/ContentCache.cpp
-index 21e7504a7921..bb4c7d90f7db 100644
+index 6dab6b200190..88b54fc49fe2 100644
 --- a/widget/ContentCache.cpp
 +++ b/widget/ContentCache.cpp
-@@ -42,6 +42,33 @@ static const char* GetNotificationName(const IMENotification* aNotification) {
+@@ -39,6 +39,33 @@ static const char* GetNotificationName(const IMENotification* aNotification) {
  
  LazyLogModule sContentCacheLog("ContentCacheWidgets");
  
@@ -36,7 +36,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
  bool ContentCache::IsValid() const {
    if (mText.isNothing()) {
      // mSelection and mCaret depend on mText.
-@@ -66,11 +93,14 @@ bool ContentCache::IsValid() const {
+@@ -63,11 +90,14 @@ bool ContentCache::IsValid() const {
    // mTextRectArray stores character rects around composition string.
    // Note that even if we fail to collect the rects, we may keep storing
    // mCompositionStart.
@@ -53,7 +53,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
  
    return true;
  }
-@@ -125,6 +155,7 @@ void ContentCacheInChild::Clear() {
+@@ -122,6 +152,7 @@ void ContentCacheInChild::Clear() {
    mCaret.reset();
    mTextRectArray.reset();
    mLastCommitStringTextRectArray.reset();
@@ -61,7 +61,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
    mEditorRect.SetEmpty();
  }
  
-@@ -275,6 +306,9 @@ bool ContentCacheInChild::CacheEditorRect(
+@@ -272,6 +303,9 @@ bool ContentCacheInChild::CacheEditorRect(
            ("0x%p CacheEditorRect(aWidget=0x%p, aNotification=%s)", this,
             aWidget, GetNotificationName(aNotification)));
  
@@ -71,7 +71,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
    WidgetQueryContentEvent queryEditorRectEvent(true, eQueryEditorRect, aWidget);
    aWidget->DispatchEvent(&queryEditorRectEvent);
    if (NS_WARN_IF(queryEditorRectEvent.Failed())) {
-@@ -294,6 +328,9 @@ bool ContentCacheInChild::CacheEditorRect(
+@@ -291,6 +325,9 @@ bool ContentCacheInChild::CacheEditorRect(
               this));
      return false;
    }
@@ -81,7 +81,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
    mEditorRect = queryEditorRectEvent.mReply->mRect;
    MOZ_LOG(sContentCacheLog, LogLevel::Info,
            ("0x%p   CacheEditorRect(), Succeeded, mEditorRect=%s", this,
-@@ -451,6 +488,42 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
+@@ -448,6 +485,42 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
    } else {
      mCompositionStart.reset();
      mTextRectArray.reset();
@@ -124,7 +124,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
    }
  
    if (mSelection.isSome()) {
-@@ -702,6 +775,7 @@ void ContentCacheInParent::AssignContent(const ContentCache& aOther,
+@@ -699,6 +772,7 @@ void ContentCacheInParent::AssignContent(const ContentCache& aOther,
    mCaret = aOther.mCaret;
    mTextRectArray = aOther.mTextRectArray;
    mLastCommitStringTextRectArray = aOther.mLastCommitStringTextRectArray;
@@ -132,7 +132,7 @@ index 21e7504a7921..bb4c7d90f7db 100644
    mEditorRect = aOther.mEditorRect;
  
    // Only when there is one composition, the TextComposition instance in this
-@@ -1020,6 +1094,7 @@ bool ContentCacheInParent::HandleQueryContentEvent(
+@@ -1017,6 +1091,7 @@ bool ContentCacheInParent::HandleQueryContentEvent(
        aEvent.EmplaceReply();
        aEvent.mReply->mFocusedWidget = aWidget;
        aEvent.mReply->mRect = mEditorRect;

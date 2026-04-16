@@ -1,8 +1,8 @@
 diff --git a/ipc/glue/moz.build b/ipc/glue/moz.build
-index a37300e74b03..1d2b661f55c1 100644
+index bfb11d852776..52721665be71 100644
 --- a/ipc/glue/moz.build
 +++ b/ipc/glue/moz.build
-@@ -150,10 +150,10 @@ if CONFIG["OS_ARCH"] != "WINNT":
+@@ -148,10 +148,10 @@ if CONFIG["OS_ARCH"] != "WINNT":
  
  if CONFIG["TARGET_OS"] == "iOS":
      EXPORTS.mozilla.ipc += [
@@ -15,7 +15,7 @@ index a37300e74b03..1d2b661f55c1 100644
      ]
  
  EXPORTS.ipc += [
-@@ -290,8 +290,6 @@ FINAL_LIBRARY = "xul"
+@@ -288,8 +288,6 @@ FINAL_LIBRARY = "xul"
  
  if CONFIG["TARGET_OS"] == "OSX":
      OS_LIBS += ["bsm"]  # for audit_token_to_pid

@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/NativeLayerRootRemoteMacParent.h b/gfx/layers/NativeLayerRootRemoteMacParent.h
-index 1897a71434e3..458dee962833 100644
+index 08fd472917ed..18400ca7e221 100644
 --- a/gfx/layers/NativeLayerRootRemoteMacParent.h
 +++ b/gfx/layers/NativeLayerRootRemoteMacParent.h
-@@ -24,6 +24,8 @@ class NativeLayerRootRemoteMacParent final : public NativeLayerRemoteParent {
+@@ -23,6 +23,8 @@ class NativeLayerRootRemoteMacParent final : public NativeLayerRemoteParent {
    explicit NativeLayerRootRemoteMacParent(
        RefPtr<NativeLayerRootCA> aRealNativeLayerRoot);
  

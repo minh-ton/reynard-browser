@@ -1,8 +1,8 @@
 diff --git a/dom/ipc/ContentChild.cpp b/dom/ipc/ContentChild.cpp
-index 8af6d3df9c3b..af75a6ced7a5 100644
+index 9ce046ea07e1..816f77b7c202 100644
 --- a/dom/ipc/ContentChild.cpp
 +++ b/dom/ipc/ContentChild.cpp
-@@ -638,9 +638,9 @@ ContentChild::ContentChild()
+@@ -637,9 +637,9 @@ ContentChild::ContentChild()
  
  #ifdef _MSC_VER
  #  pragma warning(push)
@@ -15,7 +15,7 @@ index 8af6d3df9c3b..af75a6ced7a5 100644
  #endif
  
  ContentChild::~ContentChild() {
-@@ -1639,7 +1639,7 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
+@@ -1638,7 +1638,7 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
      Endpoint<PImageBridgeChild>&& aImageBridge,
      Endpoint<PVRManagerChild>&& aVRBridge,
      Endpoint<PRemoteMediaManagerChild>&& aVideoManager,
@@ -24,7 +24,7 @@ index 8af6d3df9c3b..af75a6ced7a5 100644
    MOZ_ASSERT(namespaces.Length() == 3);
  
    // Note that for all of the methods below, if it can fail, it should only
-@@ -1649,7 +1649,10 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
+@@ -1648,7 +1648,10 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
    // should crash itself (because we are actually talking to the UI process). If
    // there are localized failures (e.g. failed to spawn a thread), then it
    // should MOZ_RELEASE_ASSERT or MOZ_CRASH as necessary instead.
@@ -36,7 +36,7 @@ index 8af6d3df9c3b..af75a6ced7a5 100644
      return GetResultForRenderingInitFailure(aCompositor.OtherChildID());
    }
    if (!CompositorManagerChild::CreateContentCompositorBridge(namespaces[1])) {
-@@ -1681,12 +1684,15 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
+@@ -1680,12 +1683,15 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
      Endpoint<PImageBridgeChild>&& aImageBridge,
      Endpoint<PVRManagerChild>&& aVRBridge,
      Endpoint<PRemoteMediaManagerChild>&& aVideoManager,
@@ -54,7 +54,7 @@ index 8af6d3df9c3b..af75a6ced7a5 100644
      return GetResultForRenderingInitFailure(aCompositor.OtherChildID());
    }
    if (!CompositorManagerChild::CreateContentCompositorBridge(namespaces[1])) {
-@@ -1801,7 +1807,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetProcessSandbox(
+@@ -1800,7 +1806,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetProcessSandbox(
    sandboxEnabled = (GetEffectiveContentSandboxLevel() >= 1);
    DisconnectWindowServer(sandboxEnabled);
  #  elif defined(XP_IOS)

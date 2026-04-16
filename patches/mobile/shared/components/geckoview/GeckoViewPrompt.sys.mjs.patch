@@ -1,8 +1,8 @@
 diff --git a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
-index 70ca45b8185e..d65662f3c948 100644
+index 51ce0b4bd1b7..9d57a56eb286 100644
 --- a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
 +++ b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
-@@ -162,11 +162,22 @@ export class PromptFactory {
+@@ -158,11 +158,22 @@ export class PromptFactory {
        mozSystemGroup: true,
      });
  

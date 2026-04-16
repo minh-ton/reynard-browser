@@ -1,8 +1,8 @@
 diff --git a/parser/expat/rlbox_expat_types.h b/parser/expat/rlbox_expat_types.h
-index 8596a213c70f..9cc75c62e520 100644
+index 3f7ee94e85dd..9a47ba044a6d 100644
 --- a/parser/expat/rlbox_expat_types.h
 +++ b/parser/expat/rlbox_expat_types.h
-@@ -9,7 +9,8 @@
+@@ -8,7 +8,8 @@
  #include <stddef.h>
  #include "mozilla/rlbox/rlbox_types.hpp"
  

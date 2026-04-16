@@ -1,8 +1,8 @@
 diff --git a/dom/media/CubebUtils.cpp b/dom/media/CubebUtils.cpp
-index 27391be79e91..9d794126a198 100644
+index 39aafbf9e3dc..1434b36c68b7 100644
 --- a/dom/media/CubebUtils.cpp
 +++ b/dom/media/CubebUtils.cpp
-@@ -71,7 +71,8 @@
+@@ -69,7 +69,8 @@
  #define PREF_AUDIOIPC_STACK_SIZE "media.audioipc.stack_size"
  #define PREF_AUDIOIPC_SHM_AREA_SIZE "media.audioipc.shm_area_size"
  

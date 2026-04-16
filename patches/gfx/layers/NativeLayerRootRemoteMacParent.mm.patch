@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerRootRemoteMacParent.mm b/gfx/layers/NativeLayerRootRemoteMacParent.mm
-index 7fe69ec5edb1..cd28e24bbbd3 100644
+index c7b01ec96ef9..4814bc8967f4 100644
 --- a/gfx/layers/NativeLayerRootRemoteMacParent.mm
 +++ b/gfx/layers/NativeLayerRootRemoteMacParent.mm
 @@ -15,9 +15,25 @@

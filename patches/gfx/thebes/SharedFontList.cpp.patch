@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/SharedFontList.cpp b/gfx/thebes/SharedFontList.cpp
-index 24ccd66e0d82..adf677cc9a16 100644
+index 95e31ad0de40..499bf4786db3 100644
 --- a/gfx/thebes/SharedFontList.cpp
 +++ b/gfx/thebes/SharedFontList.cpp
 @@ -6,6 +6,7 @@

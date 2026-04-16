@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/components.conf b/widget/uikit/components.conf
-index 56286c8e7443..48bb1aea0222 100644
+index e8f65c05c3e0..ef09aab0adcf 100644
 --- a/widget/uikit/components.conf
 +++ b/widget/uikit/components.conf
-@@ -33,6 +33,15 @@ Classes = [
+@@ -31,6 +31,15 @@ Classes = [
          'type': 'nsIOSBridge',
          'headers': ['/widget/uikit/IOSBridge.h'],
      },

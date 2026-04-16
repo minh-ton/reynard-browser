@@ -1,8 +1,8 @@
 diff --git a/memory/build/mozjemalloc.cpp b/memory/build/mozjemalloc.cpp
-index 929d25284ae4..e1c7d95af887 100644
+index eca0b3268401..74e4bedd4df5 100644
 --- a/memory/build/mozjemalloc.cpp
 +++ b/memory/build/mozjemalloc.cpp
-@@ -122,6 +122,7 @@
+@@ -121,6 +121,7 @@
  #endif
  #ifdef XP_DARWIN
  #  include <libkern/OSAtomic.h>
@@ -10,7 +10,7 @@ index 929d25284ae4..e1c7d95af887 100644
  #  include <mach/mach_init.h>
  #  include <mach/vm_map.h>
  #endif
-@@ -4284,6 +4285,20 @@ inline void* BaseAllocator::realloc(void* aPtr, size_t aSize) {
+@@ -3637,6 +3638,20 @@ inline void* BaseAllocator::realloc(void* aPtr, size_t aSize) {
    }
  
    if (aPtr) {
@@ -31,7 +31,7 @@ index 929d25284ae4..e1c7d95af887 100644
      MOZ_RELEASE_ASSERT(malloc_initialized);
  
      auto info = AllocInfo::Get(aPtr);
-@@ -4308,6 +4323,18 @@ inline void* BaseAllocator::realloc(void* aPtr, size_t aSize) {
+@@ -3661,6 +3676,18 @@ inline void* BaseAllocator::realloc(void* aPtr, size_t aSize) {
  inline void BaseAllocator::free(void* aPtr) {
    size_t offset;
  

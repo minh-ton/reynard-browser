@@ -1,8 +1,8 @@
 diff --git a/modules/woff2/moz.build b/modules/woff2/moz.build
-index 3af9c00923c0..e9991359698e 100644
+index 661cb8744853..eebf5e3bb64b 100644
 --- a/modules/woff2/moz.build
 +++ b/modules/woff2/moz.build
-@@ -9,7 +9,8 @@ include("sources.mozbuild")
+@@ -7,7 +7,8 @@ include("sources.mozbuild")
  with Files('**'):
      BUG_COMPONENT = ('Core', 'Graphics: Text')
  

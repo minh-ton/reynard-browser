@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/nsLookAndFeel.h b/widget/uikit/nsLookAndFeel.h
-index f491bd4e8bb8..f7205682ee62 100644
+index 79eaa500b9cb..49c40effe654 100644
 --- a/widget/uikit/nsLookAndFeel.h
 +++ b/widget/uikit/nsLookAndFeel.h
-@@ -13,6 +13,8 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
+@@ -12,6 +12,8 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
    nsLookAndFeel();
    virtual ~nsLookAndFeel();
  
@@ -11,7 +11,7 @@ index f491bd4e8bb8..f7205682ee62 100644
    void NativeInit() final;
    void RefreshImpl() override;
    nsresult NativeGetInt(IntID aID, int32_t& aResult) override;
-@@ -28,8 +30,6 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
+@@ -27,8 +29,6 @@ class nsLookAndFeel final : public nsXPLookAndFeel {
    static bool UseOverlayScrollbars() { return true; }
  
   private:

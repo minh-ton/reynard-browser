@@ -1,8 +1,8 @@
 diff --git a/js/src/jit/arm64/Assembler-arm64.cpp b/js/src/jit/arm64/Assembler-arm64.cpp
-index 0e3b04417e09..cc6ff4aabae8 100644
+index 5f3ef2365a3f..0a0050aae408 100644
 --- a/js/src/jit/arm64/Assembler-arm64.cpp
 +++ b/js/src/jit/arm64/Assembler-arm64.cpp
-@@ -16,9 +16,14 @@
+@@ -15,9 +15,14 @@
  #include "jit/arm64/vixl/Disasm-vixl.h"
  #include "jit/AutoWritableJitCode.h"
  #include "jit/ExecutableAllocator.h"
@@ -17,8 +17,8 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  #include "gc/StoreBuffer-inl.h"
  
  using namespace js;
-@@ -27,6 +32,16 @@ using namespace js::jit;
- using mozilla::CountLeadingZeroes32;
+@@ -25,6 +30,16 @@ using namespace js::jit;
+ 
  using mozilla::DebugOnly;
  
 +// REYNARD: Late arm64 JIT patches can update instructions and literal pools
@@ -34,7 +34,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  ABIArg ABIArgGenerator::next(MIRType type) {
    switch (type) {
      case MIRType::Int32:
-@@ -174,8 +189,11 @@ BufferOffset Assembler::emitExtendedJumpTable() {
+@@ -172,8 +187,11 @@ BufferOffset Assembler::emitExtendedJumpTable() {
  }
  
  void Assembler::executableCopy(uint8_t* buffer) {
@@ -47,7 +47,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  
    // Patch any relative jumps that target code outside the buffer.
    // The extended jump table may be used for distant jumps.
-@@ -184,16 +202,30 @@ void Assembler::executableCopy(uint8_t* buffer) {
+@@ -182,16 +200,30 @@ void Assembler::executableCopy(uint8_t* buffer) {
      MOZ_ASSERT(rp.target);
  
      Instruction* target = (Instruction*)rp.target;
@@ -86,7 +86,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
        }
      } else {
        // Currently a two-instruction call, it should be possible to optimize
-@@ -201,6 +233,12 @@ void Assembler::executableCopy(uint8_t* buffer) {
+@@ -199,6 +231,12 @@ void Assembler::executableCopy(uint8_t* buffer) {
        // will work.
      }
    }
@@ -99,7 +99,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  }
  
  BufferOffset Assembler::immPool(ARMRegister dest, uint8_t* value,
-@@ -318,22 +356,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
+@@ -316,22 +354,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
  
  void Assembler::PatchWrite_NearCall(CodeLocationLabel start,
                                      CodeLocationLabel toCall) {
@@ -131,7 +131,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  }
  
  void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
-@@ -343,21 +386,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
+@@ -341,21 +384,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
  }
  
  void Assembler::ToggleToJmp(CodeLocationLabel inst_) {
@@ -163,7 +163,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
    // bit 23 is reserved, and the simulator throws an assertion when this happens
    // It'll be messy to decode, but we can steal bit 30 or bit 31.
    MOZ_ASSERT(vixl::IsInt18(imm19));
-@@ -371,68 +417,80 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
+@@ -369,68 +415,80 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
    // 0:4 - Destination Register. Must be xzr.
  
    // From the above, there is a safe 19-bit contiguous region from 5:23.
@@ -262,7 +262,7 @@ index 0e3b04417e09..cc6ff4aabae8 100644
  }
  
  class RelocationIterator {
-@@ -537,7 +595,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
+@@ -535,7 +593,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
      // Refer to movePatchablePtr() for generation.
      MOZ_ASSERT(load->Mask(vixl::LoadLiteralMask) == vixl::LDR_x_lit);
  

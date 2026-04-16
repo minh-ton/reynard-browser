@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeChild.h b/gfx/layers/ipc/CompositorBridgeChild.h
-index 2d07d9d73913..dc2a48b3477a 100644
+index 3d82a00d958b..0ff282baa755 100644
 --- a/gfx/layers/ipc/CompositorBridgeChild.h
 +++ b/gfx/layers/ipc/CompositorBridgeChild.h
-@@ -60,7 +60,7 @@ class CompositorBridgeChild final : public PCompositorBridgeChild,
+@@ -58,7 +58,7 @@ class CompositorBridgeChild final : public PCompositorBridgeChild,
    /**
     * Initialize the singleton compositor bridge for a content process.
     */

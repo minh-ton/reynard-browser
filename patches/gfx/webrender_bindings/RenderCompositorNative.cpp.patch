@@ -1,12 +1,13 @@
 diff --git a/gfx/webrender_bindings/RenderCompositorNative.cpp b/gfx/webrender_bindings/RenderCompositorNative.cpp
-index 042248f62eb6..57e52c79239e 100644
+index f60325f45f62..aef7ca853af0 100644
 --- a/gfx/webrender_bindings/RenderCompositorNative.cpp
 +++ b/gfx/webrender_bindings/RenderCompositorNative.cpp
-@@ -116,7 +116,6 @@ inline layers::WebRenderCompositor RenderCompositorNative::CompositorType()
+@@ -108,7 +108,7 @@ bool RenderCompositorNative::Resume() { return true; }
+ inline layers::WebRenderCompositor RenderCompositorNative::CompositorType()
+     const {
+   if (gfx::gfxVars::UseWebRenderCompositor()) {
+-#if defined(XP_DARWIN)
++#if defined(XP_DARWIN) || defined(XP_IOS)
+     return layers::WebRenderCompositor::CORE_ANIMATION;
+ #elif defined(MOZ_WAYLAND)
      return layers::WebRenderCompositor::WAYLAND;
- #endif
-   }
--  return layers::WebRenderCompositor::DRAW;
- }
- 
- LayoutDeviceIntSize RenderCompositorNative::GetBufferSize() {

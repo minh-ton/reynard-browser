@@ -1,16 +1,19 @@
 diff --git a/gfx/thebes/gfxFontEntry.cpp b/gfx/thebes/gfxFontEntry.cpp
-index 98d209e4f28b..2e093f0fe766 100644
+index d3ce30944a81..1600f92c3f89 100644
 --- a/gfx/thebes/gfxFontEntry.cpp
 +++ b/gfx/thebes/gfxFontEntry.cpp
-@@ -1780,13 +1780,34 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
+@@ -1650,13 +1650,36 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
    gfxFontEntry* fe = nullptr;
    float distance = INFINITY;
  
-+  // REYARD: Make variation-sequence color glyph support can qualify a font even when base cmap says missing
+-  for (auto* e : entries) {
++  // REYARD: Make variation-sequence color glyph support can qualify a font even
++  // when base cmap says missing
 +  const bool hasPresentationRequest =
 +      aMatchData->mPresentation != FontPresentation::Any;
 +  const bool prefersColor = PrefersColor(aMatchData->mPresentation);
-+  const bool nextIsVarSelector = gfxFontUtils::IsVarSelector(aMatchData->mNextCh);
++  const bool nextIsVarSelector =
++      gfxFontUtils::IsVarSelector(aMatchData->mNextCh);
 +  auto hasColorGlyphForMatch = [&](gfxFont* aFont) {
 +    if (!aFont) {
 +      return false;
@@ -20,7 +23,7 @@ index 98d209e4f28b..2e093f0fe766 100644
 +            aFont->HasColorGlyphFor(aMatchData->mCh, kVariationSelector16));
 +  };
 +
-   for (auto e : entries) {
++  for (auto e : entries) {
      if (e->SkipDuringSystemFallback()) {
        continue;
      }
@@ -38,7 +41,7 @@ index 98d209e4f28b..2e093f0fe766 100644
        aMatchData->mCount++;
  
        LogModule* log = gfxPlatform::GetLog(eGfxLog_textrun);
-@@ -1803,13 +1824,14 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
+@@ -1673,13 +1696,14 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
        fe = e;
        distance = WeightStyleStretchDistance(fe, aMatchData->mStyle);
        if (aMatchData->mPresentation != FontPresentation::Any) {
@@ -57,14 +60,15 @@ index 98d209e4f28b..2e093f0fe766 100644
            distance += kPresentationMismatch;
          }
        }
-@@ -1845,26 +1867,49 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
+@@ -1715,26 +1739,50 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
  }
  
  void gfxFontFamily::SearchAllFontsForChar(GlobalFontMatch* aMatchData) {
 +  const bool hasPresentationRequest =
 +      aMatchData->mPresentation != FontPresentation::Any;
 +  const bool prefersColor = PrefersColor(aMatchData->mPresentation);
-+  const bool nextIsVarSelector = gfxFontUtils::IsVarSelector(aMatchData->mNextCh);
++  const bool nextIsVarSelector =
++      gfxFontUtils::IsVarSelector(aMatchData->mNextCh);
 +  auto hasColorGlyphForMatch = [&](gfxFont* aFont) {
 +    if (!aFont) {
 +      return false;

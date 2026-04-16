@@ -1,8 +1,8 @@
 diff --git a/dom/webgpu/ExternalTexture.cpp b/dom/webgpu/ExternalTexture.cpp
-index ca4f83c2dfcd..f20d05124432 100644
+index 5c333e65f1dc..1211b4912c32 100644
 --- a/dom/webgpu/ExternalTexture.cpp
 +++ b/dom/webgpu/ExternalTexture.cpp
-@@ -30,7 +30,7 @@
+@@ -29,7 +29,7 @@
  #  include "mozilla/layers/GpuProcessD3D11TextureMap.h"
  #  include "mozilla/layers/TextureD3D11.h"
  #endif
@@ -11,7 +11,7 @@ index ca4f83c2dfcd..f20d05124432 100644
  #  include "mozilla/gfx/MacIOSurface.h"
  #  include "mozilla/layers/MacIOSurfaceTextureHostOGL.h"
  #endif
-@@ -878,7 +878,7 @@ ExternalTextureSourceHost::CreateFromMacIOSurfaceTextureHost(
+@@ -885,7 +885,7 @@ ExternalTextureSourceHost::CreateFromMacIOSurfaceTextureHost(
      WebGPUParent* aParent, RawId aDeviceId,
      const ExternalTextureSourceDescriptor& aDesc,
      const layers::MacIOSurfaceTextureHostOGL* aTextureHost) {

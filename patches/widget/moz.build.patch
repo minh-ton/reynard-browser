@@ -1,8 +1,8 @@
 diff --git a/widget/moz.build b/widget/moz.build
-index 3cb35a0b0e14..827e0713c7ed 100644
+index 813b1d5351b4..92d9572f0022 100644
 --- a/widget/moz.build
 +++ b/widget/moz.build
-@@ -393,7 +393,7 @@ elif toolkit == "android":
+@@ -391,7 +391,7 @@ elif toolkit == "android":
          "android/PlatformWidgetTypes.ipdlh",
          "headless/HeadlessWidgetTypes.ipdlh",
      ]
