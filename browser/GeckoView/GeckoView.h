@@ -15,7 +15,7 @@ FOUNDATION_EXPORT double GeckoViewVersionNumber;
 FOUNDATION_EXPORT const unsigned char GeckoViewVersionString[];
 
 #import "ExtensionBridge.h"
-#import "Utils.h"
+#import "TSUtils.h"
 #import <GeckoView/GeckoViewSwiftSupport.h>
 #import <GeckoView/IOSBootstrap.h>
 

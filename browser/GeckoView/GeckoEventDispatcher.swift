@@ -35,7 +35,6 @@ extension GeckoEventListenerInternal {
     }
 }
 
-/// Swift wrapper for the event dispatcher that bridges Swift and Gecko engine
 public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
     static var runtimeInstance = GeckoEventDispatcherWrapper()
     static var dispatchers: [String: GeckoEventDispatcherWrapper] = [:]
@@ -108,8 +107,6 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
             dispatch(type: type, message: message, callback: AsyncCallback($0))
         })
     }
-
-    // MARK: - SwiftEventDispatcher protocol implementation
 
     public func attach(_ dispatcher: (any GeckoEventDispatcher)?) {
         gecko = dispatcher

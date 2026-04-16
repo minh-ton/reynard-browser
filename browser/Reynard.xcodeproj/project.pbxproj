@@ -80,10 +80,10 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		010FB2AE2F90837000271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */ = {
+		010FB2CB2F909FE300271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				TrollStore/Utils/Utils.m,
+				TrollStore/Utils/TSUtils.m,
 			);
 			target = 01GECKO0012F2F289C001F0002 /* GeckoView */;
 		};
@@ -142,7 +142,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				018C67B02F2F289E001F0BBB /* Exceptions for "Reynard" folder in "Reynard" target */,
-				010FB2AE2F90837000271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */,
+				010FB2CB2F909FE300271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */,
 			);
 			path = Reynard;
 			sourceTree = "<group>";

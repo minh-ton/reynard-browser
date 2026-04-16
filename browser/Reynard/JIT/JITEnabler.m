@@ -8,8 +8,8 @@
 #import "JITEnabler.h"
 #import "JITSupport.h"
 #import "JITUtils.h"
-#import "Root.h"
-#import "Utils.h"
+#import "TSRoot.h"
+#import "TSUtils.h"
 
 @interface JITEnabler ()
 

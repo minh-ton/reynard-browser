@@ -1,5 +1,5 @@
 //
-//  Utils.m
+//  TSUtils.m
 //  Reynard
 //
 //  Created by Minh Ton on 12/4/26.
@@ -8,7 +8,7 @@
 // https://github.com/AngelAuraMC/Amethyst-iOS/blob/ed267f52dafa24219f1166c542294b0e682ebc64/Natives/utils.m
 // https://github.com/AngelAuraMC/Amethyst-iOS/blob/00678b07a192ef5c79f8c4a2e4cecf1d7406c8c5/Natives/SurfaceViewController.m
 
-#import "Utils.h"
+#import "TSUtils.h"
 
 #include <string.h>
 #include <errno.h>

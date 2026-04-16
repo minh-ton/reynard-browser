@@ -1,5 +1,5 @@
 //
-//  Root.m
+//  TSRoot.m
 //  Reynard
 //
 //  Created by Minh Ton on 12/4/26.
@@ -7,7 +7,7 @@
 
 // https://github.com/opa334/TrollStore/blob/88424f683b2a08f34a3f88985f790f97d84ce1df/Shared/TSUtil.m
 
-#import "Root.h"
+#import "TSRoot.h"
 #import <spawn.h>
 #import <sys/wait.h>
 
