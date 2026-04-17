@@ -1,0 +1,35 @@
+diff --git a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
+index 5cddcd90765c..cc5deceb4e61 100644
+--- a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
++++ b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
+@@ -55,6 +55,10 @@ export class FilePickerDelegate {
+   }
+ 
+   open(aFilePickerShownCallback) {
++    void this._open(aFilePickerShownCallback);
++  }
++
++  async _open(aFilePickerShownCallback) {
+     if (!this._browsingContext.canOpenModalPicker) {
+       // File pickers are not allowed to open, so we respond to the callback
+       // with returnCancel.
+@@ -64,6 +68,10 @@ export class FilePickerDelegate {
+ 
+     this._msg.mimeTypes = this._mimeTypes;
+     this._msg.capture = this._capture;
++    const actor = this._browsingContext.currentWindowGlobal?.getActor("GeckoViewPrompter");
++
++    // REYNARD: Get the file input rect
++    this._msg.rect = actor ? await actor.sendQuery("GetFileInputRect").catch(() => null) : null;
+     this._prompt.asyncShowPrompt(this._msg, result => {
+       // OK: result
+       // Cancel: !result
+@@ -269,7 +277,7 @@ export class FilePickerDelegate {
+   *_getDOMFilesInWebKitDirectory() {
+     if (
+       this._mode != Ci.nsIFilePicker.modeGetFolder ||
+-      AppConstants.platform != "android"
++      !["android", "ios"].includes(AppConstants.platform)
+     ) {
+       throw Components.Exception("", Cr.NS_ERROR_NOT_AVAILABLE);
+     }

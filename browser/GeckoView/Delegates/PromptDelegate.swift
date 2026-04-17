@@ -42,6 +42,30 @@ private var activePickers: [String: SelectPicker] = [:]
 private var activeColorPickers: [String: ColorPicker] = [:]
 @MainActor
 private var activeDateTimePickers: [String: DateTimePicker] = [:]
+@MainActor
+private var activeFilePickers: [String: FilePicker] = [:]
+
+private func resolvePromptAnchor(
+    from promptData: [String: Any],
+    session: GeckoSession
+) -> (geckoView: UIView, rect: CGRect)? {
+    guard let rectDict = promptData["rect"] as? [String: Any],
+          let childView = session.window?.view(),
+          let geckoView = childView.superview,
+          let window = geckoView.window else {
+        return nil
+    }
+    
+    var rect = CGRect(
+        x: (rectDict["left"] as? Double) ?? 0,
+        y: (rectDict["top"] as? Double) ?? 0,
+        width: (rectDict["width"] as? Double) ?? 0,
+        height: (rectDict["height"] as? Double) ?? 0
+    )
+    let windowPoint = window.convert(rect.origin, from: nil)
+    rect.origin = geckoView.convert(windowPoint, from: nil)
+    return (geckoView, rect)
+}
 
 func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -65,20 +89,11 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 let colorValue = promptData["value"] as? String ?? "#000000"
                 let initialColor = UIColor(hexString: colorValue) ?? .black
                 
-                guard let rectDict = promptData["rect"] as? [String: Any],
-                      let geckoView = session.window?.view()?.superview,
-                      let window = geckoView.window else { return nil }
+                guard let anchor = resolvePromptAnchor(from: promptData, session: session) else {
+                    return nil
+                }
                 
-                var anchorRect = CGRect(
-                    x: (rectDict["left"] as? Double) ?? 0,
-                    y: (rectDict["top"] as? Double) ?? 0,
-                    width: (rectDict["width"] as? Double) ?? 0,
-                    height: (rectDict["height"] as? Double) ?? 0
-                )
-                let windowPoint = window.convert(anchorRect.origin, from: nil)
-                anchorRect.origin = geckoView.convert(windowPoint, from: nil)
-                
-                let picker = ColorPicker(promptId: promptId, anchorRect: anchorRect, geckoView: geckoView)
+                let picker = ColorPicker(promptId: promptId, anchorRect: anchor.rect, geckoView: anchor.geckoView)
                 activeColorPickers[promptId] = picker
                 
                 let result = await picker.present(initialColor: initialColor)
@@ -94,20 +109,11 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 let max = promptData["max"] as? String ?? ""
                 let step = promptData["step"] as? String ?? ""
                 
-                guard let rectDict = promptData["rect"] as? [String: Any],
-                      let geckoView = session.window?.view()?.superview,
-                      let window = geckoView.window else { return nil }
+                guard let anchor = resolvePromptAnchor(from: promptData, session: session) else {
+                    return nil
+                }
                 
-                var anchorRect = CGRect(
-                    x: (rectDict["left"] as? Double) ?? 0,
-                    y: (rectDict["top"] as? Double) ?? 0,
-                    width: (rectDict["width"] as? Double) ?? 0,
-                    height: (rectDict["height"] as? Double) ?? 0
-                )
-                let windowPoint = window.convert(anchorRect.origin, from: nil)
-                anchorRect.origin = geckoView.convert(windowPoint, from: nil)
-                
-                let picker = DateTimePicker(promptId: promptId, inputMode: inputMode, anchorRect: anchorRect, geckoView: geckoView)
+                let picker = DateTimePicker(promptId: promptId, inputMode: inputMode, anchorRect: anchor.rect, geckoView: anchor.geckoView)
                 activeDateTimePickers[promptId] = picker
                 
                 let result = await picker.present(value: value, min: min, max: max, step: step)
@@ -116,34 +122,45 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 return result.map { ["datetime": $0] }
             }
             
+            if promptType == "file" {
+                let mode = promptData["mode"] as? String ?? "single"
+                let mimeTypes = promptData["mimeTypes"] as? [String] ?? []
+                let capture = promptData["capture"] as? Int ?? 0
+                
+                guard let anchor = resolvePromptAnchor(from: promptData, session: session) else {
+                    return nil
+                }
+                
+                let picker = FilePicker(
+                    promptId: promptId,
+                    mode: mode,
+                    mimeTypes: mimeTypes,
+                    capture: capture,
+                    anchorRect: anchor.rect,
+                    geckoView: anchor.geckoView
+                )
+                activeFilePickers[promptId] = picker
+                
+                let result = await picker.present()
+                activeFilePickers.removeValue(forKey: promptId)
+                return result
+            }
+            
             if promptType == "choice" {
                 let mode = promptData["mode"] as? String ?? "single"
                 let rawChoices = promptData["choices"]
                 let choices = parseChoices(rawChoices)
                 
-                let rectDict = promptData["rect"] as? [String: Any]
-                var rect = CGRect(
-                    x: (rectDict?["left"] as? Double) ?? 0,
-                    y: (rectDict?["top"] as? Double) ?? 0,
-                    width: (rectDict?["width"] as? Double) ?? 0,
-                    height: (rectDict?["height"] as? Double) ?? 0
-                )
-                
-                guard let childView = session.window?.view() else { return nil }
-                guard let geckoView = childView.superview else { return nil }
-                
-                if let window = geckoView.window {
-                    let windowPoint = window.convert(rect.origin, from: nil)
-                    let localPoint = geckoView.convert(windowPoint, from: nil)
-                    rect.origin = localPoint
+                guard let anchor = resolvePromptAnchor(from: promptData, session: session) else {
+                    return nil
                 }
                 
                 let picker = SelectPicker(
                     promptId: promptId,
                     mode: mode,
                     choices: choices,
-                    sourceRect: rect,
-                    geckoView: geckoView
+                    sourceRect: anchor.rect,
+                    geckoView: anchor.geckoView
                 )
                 activePickers[promptId] = picker
                 

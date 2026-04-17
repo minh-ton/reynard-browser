@@ -1,0 +1,31 @@
+diff --git a/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs b/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
+index dcb397c62cc4..7749e89729af 100644
+--- a/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
++++ b/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
+@@ -56,6 +56,26 @@ export class GeckoViewPrompterChild extends GeckoViewActorChild {
+    * @param   {object} message.data The data of the message.
+    */
+   async receiveMessage({ name, data }) {
++
++    // REYNARD: A hack to get the input button position of the file input element.
++    if (name == "GetFileInputRect") {
++      const win = this.contentWindow;
++      const el = win?.document?.activeElement;
++      if (el && ChromeUtils.getClassName(el) === "HTMLInputElement" && el.type === "file") {
++        const btn = InspectorUtils.getChildrenForNode(
++          el,
++          /* showingAnonymousContent */ true,
++          /* includeAssignedNodes */ false
++        ).find(n => ChromeUtils.getClassName(n) === "HTMLButtonElement");
++        const r = (btn ?? el).getBoundingClientRect();
++        const s = win.windowUtils.toScreenRectInCSSUnits(
++          r.left, r.top, r.width, r.height
++        );
++        return { left: s.left, top: s.top, width: s.width, height: s.height };
++      }
++      return;
++    }
++
+     const prompt = this._prompts.get(data.id);
+     if (!prompt) {
+       // Unknown prompt, probably for a different child actor.
