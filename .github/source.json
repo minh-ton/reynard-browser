@@ -5,7 +5,7 @@
   "subtitle": "Official AltStore Source for Reynard Browser",
   "description": "An experimental Gecko-based web browser for iOS 14+.",
   "tintColor": "#FB3728",
-  "iconURL": "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/icon.png",
+  "iconURL": "https://github.com/user-attachments/assets/1c42dda2-b778-4342-9f94-8f852c3ad652",
   "apps": [
     {
       "name": "Reynard Browser",
@@ -13,15 +13,15 @@
       "developerName": "Minh Ton",
       "subtitle": "An experimental Gecko-based web browser for iOS 14+.",
       "localizedDescription": "Reynard is a Gecko-based mobile web browser for iOS 14+.\n\nUnlike other browsers on iOS that are forced to use Apple's WebKit engine (including Safari and all third-party browsers), Reynard uses Gecko. This is the same engine that powers the Firefox browser on desktop and Android devices.\n\nThis is mainly for users on older iOS versions who are stuck with an outdated version of WebKit. Because WebKit is bundled with the OS, these devices cannot receive engine updates and often fail to load modern websites. By using Gecko which is kept up to date independently, Reynard allows these sites to work again. Users on newer iOS versions can also use the browser if they want an alternative browser engine on their device.\n\nSource code is available on GitHub at https://github.com/minh-ton/reynard-browser.",
-      "iconURL": "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/icon.png",
+      "iconURL": "https://github.com/user-attachments/assets/1c42dda2-b778-4342-9f94-8f852c3ad652",
       "tintColor": "#FB3728",
       "category": "other",
       "screenshotURLs": [
-        "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/screenshots/ss1.png",
-        "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/screenshots/ss2.png",
-        "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/screenshots/ss3.png",
-        "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/screenshots/ss4.png",
-        "https://raw.githubusercontent.com/minh-ton/reynard-browser/main/.github/assets/screenshots/ss5.png"
+        "https://github.com/user-attachments/assets/974e8ce1-f798-4bef-bac1-621ee535c5ee",
+        "https://github.com/user-attachments/assets/1429c985-f439-4e58-9385-0eefef4add4c",
+        "https://github.com/user-attachments/assets/a9eeaf68-828f-4ead-b619-8b9914e0ed2c",
+        "https://github.com/user-attachments/assets/bbc08422-4bf3-4928-933e-71cdad551fed",
+        "https://github.com/user-attachments/assets/cf01d298-a8d2-49ea-a557-7b1bbd1d893a"
       ],
       "appPermissions": {
         "entitlements": [
