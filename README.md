@@ -1,4 +1,4 @@
-<img width="100" height="100" src="https://github.com/user-attachments/assets/b5a6e1e0-6318-43f5-9a28-3d52fd44afef" />
+<img width="100" height="100" src="https://github.com/user-attachments/assets/1c42dda2-b778-4342-9f94-8f852c3ad652" />
 
 # Reynard Browser
 
@@ -15,6 +15,8 @@ The latest builds are available on the [Releases](https://github.com/minh-ton/re
 For the best performance and automatic JIT enablement, it is recommended to sideload Reynard via [TrollStore](https://github.com/opa334/TrollStore) using the `Reynard-TrollStore.tipa` build.
 
 If TrollStore is not available, you should use [AltStore](https://altstore.io/) or [SideStore](https://sidestore.io/) to sideload the `Reynard.ipa` build instead. Please note that you must select the **Keep App Extensions** option during installation, as Reynard relies on its extensions to function and will not work without them. After sideloading, you may want to enable JIT by following [this guide](https://github.com/minh-ton/reynard-browser/wiki/2.-Enabling-JIT).
+
+You can also [click here](https://stikstore.app/altdirect/?url=https://github.com/minh-ton/reynard-browser/releases/download/0.0.1-a1/source.json&exclude=livecontainer) to add the AltStore Source for Reynard in AltStore or SideStore.
 
 > [!WARNING]
 > - **LiveContainer is not supported**, as it does not support extensions or launch apps in a way that is compatible with Reynard.
@@ -44,22 +46,22 @@ These sites are known to break or render incorrectly on iOS 14. The screenshots 
   </tr>
   <tr>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/e558041d-4552-4f60-996f-2657958d7a06"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/d89f4385-c478-4aea-aa9d-6c9fca72252b"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/eae998cf-9dc6-468a-a240-8731c0683d81"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/917ee435-39cb-469d-835f-8e69f9e13d03"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/2d14675b-8648-452d-a80a-f64b4ff3f7e3"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/1a68024e-83d4-489c-a576-26d5ea43011c"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/66d48ede-ca71-43f0-a8bb-a437a9b92f55"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/6880b1ac-63f9-421f-a373-5d69c5745cd7"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/158c3626-8d26-4a24-a975-ea5b83e5842d"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/d237118e-be3b-43d1-b14c-032784b43571"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/af440996-62db-4c74-a98d-259a128399e6"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/9f799569-d712-44d0-918a-21d523874c6e"><br>
     </td>
   </tr>
 </table>
@@ -69,19 +71,19 @@ These sites are known to break or render incorrectly on iOS 14. The screenshots 
 <table>
   <tr>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/f9238d3f-2a06-4ec2-aa1f-83b00e93a720"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/a7f1b302-51b6-4afe-a2ce-35b518e5b761"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/38021234-0ec0-47d0-bedf-06fb9428865f"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/f5dbfba5-c1a8-4729-bd7d-b96a7ace1237"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/17f25dcf-2197-4b68-9753-d05ca9ead132"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/986c8cfb-7979-4f4b-9305-73ebd1a87b19"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/68f2c8a2-c07f-4aa3-b2f5-7c897f2eed81"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/544ff493-6807-4b2f-b526-6d34f029e1d3"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/9c5ec535-5a35-41ae-a7c6-24faa84c192f"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/31ef9486-8631-4d0e-ad9a-1281d513151f"><br>
     </td>
   </tr>
 </table>
@@ -93,19 +95,19 @@ Reynard also works great on the latest version of iOS!
 <table>
   <tr>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/97fbb40f-9471-4a32-bdfd-691c459fc82b"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/974e8ce1-f798-4bef-bac1-621ee535c5ee"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/fe9ba115-a242-4281-ab14-3a07527ec36a"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/1429c985-f439-4e58-9385-0eefef4add4c"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/6e918f0f-af28-4e12-855e-8065f6ceebf3"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/a9eeaf68-828f-4ead-b619-8b9914e0ed2c"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/d199aad2-9234-43a0-9ea1-aed2d143cacf"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/bbc08422-4bf3-4928-933e-71cdad551fed"><br>
     </td>
     <td>
-      <img width=150 src="https://github.com/user-attachments/assets/2edeb828-9602-4198-8c8c-ba761f3a5dae"><br>
+      <img width=150 src="https://github.com/user-attachments/assets/cf01d298-a8d2-49ea-a557-7b1bbd1d893a"><br>
     </td>
   </tr>
 </table>
