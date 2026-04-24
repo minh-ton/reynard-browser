@@ -1,8 +1,16 @@
 diff --git a/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs b/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
-index fce3e07e5b3c..e5c767a19561 100644
+index fce3e07e5b3c..7254549a19b5 100644
 --- a/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
 +++ b/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
-@@ -215,8 +215,17 @@ fn new_ct_font_with_variations(ct_font_desc: &CTFontDescriptor, size: f64, varia
+@@ -19,6 +19,7 @@ use core_graphics::font::{CGFont, CGGlyph};
+ use core_graphics::geometry::{CGAffineTransform, CGPoint, CGSize};
+ use core_graphics::geometry::{CG_AFFINE_TRANSFORM_IDENTITY, CGRect};
+ use core_text::font::CTFont;
++use core_text::font_descriptor::{kCTFontBoldTrait, kCTFontCondensedTrait, kCTFontExpandedTrait, kCTFontItalicTrait};
+ use core_text::font_descriptor::{CTFontDescriptor, kCTFontDefaultOrientation};
+ use core_text::font_descriptor::{kCTFontURLAttribute, kCTFontVariationAttribute};
+ use core_text::font_manager;
+@@ -215,8 +216,17 @@ fn new_ct_font_with_variations(ct_font_desc: &CTFontDescriptor, size: f64, varia
      let vals_dict = CFDictionary::from_CFType_pairs(&vals);
      let variation_attribute = unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute) };
      let attrs_dict = CFDictionary::from_CFType_pairs(&[(variation_attribute, vals_dict)]);
@@ -22,7 +30,41 @@ index fce3e07e5b3c..e5c767a19561 100644
  
  }
  
-@@ -277,20 +286,42 @@ impl FontContext {
+@@ -226,6 +236,33 @@ fn is_bitmap_font(font: &FontInstance) -> bool {
+     font.flags.contains(FontInstanceFlags::EMBEDDED_BITMAPS)
+ }
+ 
++// REYNARD: Recover the traits encoded in Apple system font names 
++// so the font fallback preserves the same symbolic style.
++fn hidden_system_font_traits(name: &str) -> (u32, u32) {
++    let lower = name.to_ascii_lowercase();
++    let mut trait_value = 0;
++    let mut trait_mask = 0;
++
++    if lower.contains("italic") || lower.contains("oblique") {
++        trait_value |= kCTFontItalicTrait;
++        trait_mask |= kCTFontItalicTrait;
++    }
++    if lower.contains("bold") || lower.contains("semibold") || lower.contains("demibold") {
++        trait_value |= kCTFontBoldTrait;
++        trait_mask |= kCTFontBoldTrait;
++    }
++    if lower.contains("condensed") || lower.contains("narrow") {
++        trait_value |= kCTFontCondensedTrait;
++        trait_mask |= kCTFontCondensedTrait;
++    }
++    if lower.contains("expanded") || lower.contains("extended") {
++        trait_value |= kCTFontExpandedTrait;
++        trait_mask |= kCTFontExpandedTrait;
++    }
++
++    (trait_value, trait_mask)
++}
++
+ impl FontContext {
+     pub fn distribute_across_threads() -> bool {
+         true
+@@ -277,20 +314,52 @@ impl FontContext {
          // we can't instantiate CTFonts via a descriptor. We're really
          // supposed to use CTFontCreateUIFontForLanguage, but for now
          // we just use the CGFont.
@@ -44,12 +86,22 @@ index fce3e07e5b3c..e5c767a19561 100644
 -                        .expect("couldn't find font with postscript name and couldn't load fallback font")
 +                    #[cfg(target_os = "ios")]
 +                    {
-+                        core_text::font::new_ui_font_for_language(
++                        // REYNARD: Recreate the iOS system font and reapply traits
++                        let system_font = core_text::font::new_ui_font_for_language(
 +                            core_text::font::kCTFontSystemFontType,
 +                            0.0,
 +                            None,
-+                        )
-+                        .copy_descriptor()
++                        );
++                        let (trait_value, trait_mask) =
++                            hidden_system_font_traits(&native_font_handle.name);
++                        let system_font = if trait_mask != 0 {
++                            system_font
++                                .clone_with_symbolic_traits(trait_value, trait_mask)
++                                .unwrap_or(system_font)
++                        } else {
++                            system_font
++                        };
++                        system_font.copy_descriptor()
 +                    }
 +                    #[cfg(not(target_os = "ios"))]
 +                    {
