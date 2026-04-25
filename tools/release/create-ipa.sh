@@ -24,6 +24,12 @@ if [ -z "$APP_PATH" ]; then
 	exit 1
 fi
 
+# I absolutely hate Apple for this
+# Why is my bundle identifier just become unavailable for no reason?
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard" "$APP_PATH/Info.plist"
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.Helper" "$APP_PATH/PlugIns/Reynard Helper.appex/Info.plist"
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.OpenIn" "$APP_PATH/PlugIns/OpenIn.appex/Info.plist"
+
 rm -rf "$WORK_DIR" "$ROOT_DIR/dist/Reynard.ipa" "$ROOT_DIR/dist/Reynard-TrollStore.ipa"
 mkdir -p "$WORK_DIR/Payload"
 cp -R "$APP_PATH" "$WORK_DIR/Payload/"

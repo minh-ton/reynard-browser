@@ -10,6 +10,8 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>reynard</string>
+				<string>http</string>
+				<string>https</string>
 			</array>
 		</dict>
 	</array>
@@ -39,7 +41,7 @@
 		<string>processing</string>
 	</array>
 	<key>UIFileSharingEnabled</key>
-	<false/>
+	<true/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
