@@ -1,0 +1,60 @@
+diff --git a/gfx/webrender_bindings/src/moz2d_renderer.rs b/gfx/webrender_bindings/src/moz2d_renderer.rs
+index c885ba051ebd..73cf8c659417 100644
+--- a/gfx/webrender_bindings/src/moz2d_renderer.rs
++++ b/gfx/webrender_bindings/src/moz2d_renderer.rs
+@@ -27,11 +27,15 @@ use std::mem;
+ use std::os::raw::c_void;
+ use std::ptr;
+ use std::sync::Arc;
++#[cfg(target_os = "ios")]
++use webrender::api::hidden_system_font_traits;
+ 
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+ use core_foundation::string::CFString;
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+ use core_graphics::font::CGFont;
++#[cfg(target_os = "ios")]
++use core_text::font::{kCTFontSystemFontType, new_ui_font_for_language};
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+ use foreign_types::ForeignType;
+ 
+@@ -839,7 +843,7 @@ impl Moz2dBlobImageHandler {
+             unsafe { AddNativeFontHandle(key, face.as_ptr() as *mut c_void, 0) };
+         }
+ 
+-        #[cfg(any(target_os = "macos", target_os = "ios"))]
++        #[cfg(target_os = "macos")]
+         fn process_native_font_handle(key: FontKey, handle: &NativeFontHandle) {
+             let font = match CGFont::from_name(&CFString::new(&handle.name)) {
+                 Ok(font) => font,
+@@ -856,6 +860,30 @@ impl Moz2dBlobImageHandler {
+             unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0) };
+         }
+ 
++        #[cfg(target_os = "ios")]
++        fn process_native_font_handle(key: FontKey, handle: &NativeFontHandle) {
++            let font = match CGFont::from_name(&CFString::new(&handle.name)) {
++                Ok(font) => font,
++                Err(_) => {
++                    let system_font = new_ui_font_for_language(kCTFontSystemFontType, 0.0, None);
++                    let system_font = if handle.name.starts_with('.') {
++                        let (trait_value, trait_mask) = hidden_system_font_traits(&handle.name);
++                        if trait_mask != 0 {
++                            system_font
++                                .clone_with_symbolic_traits(trait_value, trait_mask)
++                                .unwrap_or(system_font)
++                        } else {
++                            system_font
++                        }
++                    } else {
++                        system_font
++                    };
++                    system_font.copy_to_CGFont()
++                },
++            };
++            unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0) };
++        }
++
+         #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
+         fn process_native_font_handle(key: FontKey, handle: &NativeFontHandle) {
+             let cstr = CString::new(handle.path.as_os_str().as_bytes()).unwrap();

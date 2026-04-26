@@ -1,0 +1,11 @@
+diff --git a/gfx/wr/webrender_api/Cargo.toml b/gfx/wr/webrender_api/Cargo.toml
+index a720959819c3..cfa13d96b7c4 100644
+--- a/gfx/wr/webrender_api/Cargo.toml
++++ b/gfx/wr/webrender_api/Cargo.toml
+@@ -27,3 +27,6 @@ malloc_size_of = { version = "0.2.0", path = "../wr_malloc_size_of", package = "
+ peek-poke = { version = "0.3", path = "../peek-poke", features = ["extras"] }
+ crossbeam-channel = "0.5"
+ zeitstempel = "0.2.0"
++
++[target.'cfg(target_os = "ios")'.dependencies]
++core-text = { version = "20.1", default-features = false }

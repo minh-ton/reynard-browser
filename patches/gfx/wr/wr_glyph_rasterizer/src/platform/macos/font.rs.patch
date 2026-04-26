@@ -1,16 +1,17 @@
 diff --git a/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs b/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
-index fce3e07e5b3c..7254549a19b5 100644
+index fce3e07e5b3c..33d49aac23e8 100644
 --- a/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
 +++ b/gfx/wr/wr_glyph_rasterizer/src/platform/macos/font.rs
-@@ -19,6 +19,7 @@ use core_graphics::font::{CGFont, CGGlyph};
- use core_graphics::geometry::{CGAffineTransform, CGPoint, CGSize};
- use core_graphics::geometry::{CG_AFFINE_TRANSFORM_IDENTITY, CGRect};
- use core_text::font::CTFont;
-+use core_text::font_descriptor::{kCTFontBoldTrait, kCTFontCondensedTrait, kCTFontExpandedTrait, kCTFontItalicTrait};
- use core_text::font_descriptor::{CTFontDescriptor, kCTFontDefaultOrientation};
- use core_text::font_descriptor::{kCTFontURLAttribute, kCTFontVariationAttribute};
- use core_text::font_manager;
-@@ -215,8 +216,17 @@ fn new_ct_font_with_variations(ct_font_desc: &CTFontDescriptor, size: f64, varia
+@@ -3,6 +3,8 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ 
+ use api::{ColorF, ColorU, FontKey, FontRenderMode, FontSize, GlyphDimensions};
++#[cfg(target_os = "ios")]
++use api::hidden_system_font_traits;
+ use api::{FontInstanceFlags, FontVariation, NativeFontHandle};
+ use core_foundation::data::CFData;
+ use core_foundation::base::TCFType;
+@@ -215,8 +217,17 @@ fn new_ct_font_with_variations(ct_font_desc: &CTFontDescriptor, size: f64, varia
      let vals_dict = CFDictionary::from_CFType_pairs(&vals);
      let variation_attribute = unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute) };
      let attrs_dict = CFDictionary::from_CFType_pairs(&[(variation_attribute, vals_dict)]);
@@ -30,41 +31,7 @@ index fce3e07e5b3c..7254549a19b5 100644
  
  }
  
-@@ -226,6 +236,33 @@ fn is_bitmap_font(font: &FontInstance) -> bool {
-     font.flags.contains(FontInstanceFlags::EMBEDDED_BITMAPS)
- }
- 
-+// REYNARD: Recover the traits encoded in Apple system font names 
-+// so the font fallback preserves the same symbolic style.
-+fn hidden_system_font_traits(name: &str) -> (u32, u32) {
-+    let lower = name.to_ascii_lowercase();
-+    let mut trait_value = 0;
-+    let mut trait_mask = 0;
-+
-+    if lower.contains("italic") || lower.contains("oblique") {
-+        trait_value |= kCTFontItalicTrait;
-+        trait_mask |= kCTFontItalicTrait;
-+    }
-+    if lower.contains("bold") || lower.contains("semibold") || lower.contains("demibold") {
-+        trait_value |= kCTFontBoldTrait;
-+        trait_mask |= kCTFontBoldTrait;
-+    }
-+    if lower.contains("condensed") || lower.contains("narrow") {
-+        trait_value |= kCTFontCondensedTrait;
-+        trait_mask |= kCTFontCondensedTrait;
-+    }
-+    if lower.contains("expanded") || lower.contains("extended") {
-+        trait_value |= kCTFontExpandedTrait;
-+        trait_mask |= kCTFontExpandedTrait;
-+    }
-+
-+    (trait_value, trait_mask)
-+}
-+
- impl FontContext {
-     pub fn distribute_across_threads() -> bool {
-         true
-@@ -277,20 +314,52 @@ impl FontContext {
+@@ -277,20 +288,52 @@ impl FontContext {
          // we can't instantiate CTFonts via a descriptor. We're really
          // supposed to use CTFontCreateUIFontForLanguage, but for now
          // we just use the CGFont.
