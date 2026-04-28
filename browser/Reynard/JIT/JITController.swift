@@ -18,6 +18,7 @@ final class JITController {
     private var preflightWatchdogs: [Int32: DispatchWorkItem] = [:]
     private var hasHandledFailure = false
     private(set) var isJITLessModeActive = false
+    private var pendingFailureAction: (() -> Void)?
     private let preflightTimeoutSeconds: Int = 5
     private let failurePresentationRetryLimit = 12
     
@@ -46,6 +47,13 @@ final class JITController {
             self,
             selector: #selector(handleJITDisconnectNotification(_:)),
             name: Notification.Name("me-minh-ton.jit.endpoint-monitor-failed"),
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleApplicationDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
     }
@@ -177,6 +185,13 @@ final class JITController {
             return
         }
         
+        guard Self.canPresentFailureUI() else {
+            pendingFailureAction = { [weak self] in
+                self?.presentEnablementFailureScreen(error: error, showsErrorDetails: showsErrorDetails)
+            }
+            return
+        }
+        
         guard let presenter = Self.topViewControllerForPresentation() else {
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(150)) {
                 self.presentEnablementFailureScreen(error: error, showsErrorDetails: showsErrorDetails, retryCount: retryCount + 1)
@@ -210,6 +225,13 @@ final class JITController {
     
     private func presentMissingDDIFailureScreen(retryCount: Int = 0) {
         guard retryCount <= failurePresentationRetryLimit else {
+            return
+        }
+        
+        guard Self.canPresentFailureUI() else {
+            pendingFailureAction = { [weak self] in
+                self?.presentMissingDDIFailureScreen()
+            }
             return
         }
         
@@ -268,7 +290,7 @@ final class JITController {
     private static func topViewControllerForPresentation() -> UIViewController? {
         let foregroundScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+            .filter { $0.activationState == .foregroundActive }
         
         guard let scene = foregroundScenes.first else {
             return nil
@@ -290,6 +312,22 @@ final class JITController {
             current = presented
         }
         return current
+    }
+    
+    private static func canPresentFailureUI() -> Bool {
+        guard UIApplication.shared.applicationState == .active else {
+            return false
+        }
+        
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .contains { $0.activationState == .foregroundActive }
+    }
+    
+    @objc private func handleApplicationDidBecomeActive() {
+        let action = pendingFailureAction
+        pendingFailureAction = nil
+        action?()
     }
     
     @objc private func handleChildProcessNotification(_ notification: Notification) {

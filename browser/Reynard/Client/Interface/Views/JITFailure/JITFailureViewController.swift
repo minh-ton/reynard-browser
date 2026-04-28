@@ -20,6 +20,7 @@ final class JITFailureView: UIView {
     private var quitButtonMaxLandscapeWidthConstraint: NSLayoutConstraint?
     private var topRegionBottomToErrorConstraint: NSLayoutConstraint?
     private var topRegionBottomToButtonConstraint: NSLayoutConstraint?
+    private var currentPhoneLandscapeState: Bool?
     let quitButton = UIButton(type: .system)
     
     override init(frame: CGRect) {
@@ -52,11 +53,15 @@ final class JITFailureView: UIView {
     }
     
     func updateForOrientation(isPhoneLandscape: Bool) {
+        guard currentPhoneLandscapeState != isPhoneLandscape else {
+            return
+        }
+        
+        currentPhoneLandscapeState = isPhoneLandscape
         setSymbolHidden(isPhoneLandscape)
         quitButtonMaxLandscapeWidthConstraint?.isActive = isPhoneLandscape
         topRegionBottomToErrorConstraint?.isActive = !isPhoneLandscape
         topRegionBottomToButtonConstraint?.isActive = isPhoneLandscape
-        setNeedsLayout()
     }
     
     private func configureView() {
