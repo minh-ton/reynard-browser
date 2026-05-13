@@ -171,7 +171,7 @@ extension SettingsRootViewController {
             completion: { [weak self] result in
                 guard let self, self.activeDDIDownloadToken == token else { return }
                 self.activeDDIDownloadToken = nil
-                sender.isEnabled = self.preferences.hasPairingFile
+                sender.isEnabled = self.hasEntitledJIT || self.preferences.hasPairingFile
                 switch result {
                 case .success:
                     self.dismissAlertIfPresented(alert) { self.presentJITRestartAlert() }
@@ -192,7 +192,7 @@ extension SettingsRootViewController {
         DDIManager.shared.cancelActiveDownload()
         preferences.isJITEnabled = false
         sender.setOn(false, animated: true)
-        sender.isEnabled = preferences.hasPairingFile
+        sender.isEnabled = hasEntitledJIT || preferences.hasPairingFile
     }
     
     func dismissAlertIfPresented(_ alert: UIAlertController, completion: @escaping () -> Void) {

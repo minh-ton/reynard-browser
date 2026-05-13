@@ -10,6 +10,8 @@
 #import "JITUtils.h"
 #import "TSRoot.h"
 #import "TSUtils.h"
+#include <sys/stat.h>
+#include <errno.h>
 
 @interface JITEnabler ()
 
@@ -45,13 +47,36 @@
 - (BOOL)enableJITForPID:(int32_t)pid hasTXM26:(BOOL)hasTXM26 error:(NSError **)error {
     // TrollStore or jailbroken devices
     if (getEntitlementValue(@"com.apple.private.security.no-sandbox")) {
-        NSString *helperPath = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"ptrace_jit"];
-        if (![[NSFileManager defaultManager] isExecutableFileAtPath:helperPath]) {
-            if (error) *error = MakeError(TSPtraceHelperMissing);
-            return NO;
+        NSBundle *bundle = NSBundle.mainBundle;
+        NSString *helperPath = [bundle.bundlePath stringByAppendingPathComponent:@"ptrace_jit"];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:helperPath]) {
+            NSString *resourceCandidate = [bundle.resourcePath stringByAppendingPathComponent:@"ptrace_jit"];
+            if ([[NSFileManager defaultManager] fileExistsAtPath:resourceCandidate]) helperPath = resourceCandidate;
+        }
+        if (![[NSFileManager defaultManager] fileExistsAtPath:helperPath]) {
+            NSURL *auxURL = [bundle URLForAuxiliaryExecutable:@"ptrace_jit"];
+            if (auxURL.path.length > 0) helperPath = auxURL.path;
         }
         
         int result = spawnRoot(helperPath, @[[NSString stringWithFormat:@"%d", pid]]);
+        logger([NSString stringWithFormat:@"ptrace_jit result %d", result]);
+        
+        if (result != 0 && result != EACCES && result != ENOENT && result != ENOEXEC && result != 126 && result != 127) {
+            // keep existing behavior for non-permission failures
+        } else if (result == EACCES || result == ENOENT || result == ENOEXEC || result == 126 || result == 127) {
+            NSString *tempPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"ptrace_jit"];
+            NSError *copyError = nil;
+            [[NSFileManager defaultManager] removeItemAtPath:tempPath error:nil];
+            if ([[NSFileManager defaultManager] copyItemAtPath:helperPath toPath:tempPath error:&copyError]) {
+                chmod(tempPath.UTF8String, 0755);
+                if ([[NSFileManager defaultManager] isExecutableFileAtPath:tempPath]) {
+                    logger([NSString stringWithFormat:@"Retrying ptrace_jit from temp path %@", tempPath]);
+                    result = spawnRoot(tempPath, @[[NSString stringWithFormat:@"%d", pid]]);
+                }
+            } else {
+                logger([NSString stringWithFormat:@"Failed to copy ptrace_jit to temp path: %@", copyError.localizedDescription ?: @"unknown"]);
+            }
+        }
         if (result >= 128) {
             if (error) *error = MakeError(TSPtraceHelperTerminated);
             return NO;

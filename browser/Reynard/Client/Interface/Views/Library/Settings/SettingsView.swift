@@ -51,6 +51,10 @@ final class SettingsRootViewController: SettingsTableViewController {
         return Section.allCases.filter { !hiddenSections.contains($0) }
     }
     
+    var hasEntitledJIT: Bool {
+        getEntitlementValue("com.apple.private.security.no-sandbox")
+    }
+    
     let jitSwitch = UISwitch()
     let backgroundQueue = DispatchQueue(label: "me.minh-ton.reynard.settings.backgroundqueue", qos: .userInitiated)
     var isJITLessModeActive = false
@@ -86,7 +90,7 @@ final class SettingsRootViewController: SettingsTableViewController {
     }
     
     func refreshControls() {
-        jitSwitch.isEnabled = preferences.hasPairingFile
+        jitSwitch.isEnabled = hasEntitledJIT || preferences.hasPairingFile
         jitSwitch.isOn = preferences.isJITEnabled
         isJITLessModeActive = JITController.shared.isJITLessModeActive
     }

@@ -3,7 +3,7 @@ new file mode 100644
 index 000000000000..71ff604d0873
 --- /dev/null
 +++ b/media/libcubeb/src/cubeb_audiounit_ios.mm
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,61 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -12,6 +12,7 @@ index 000000000000..71ff604d0873
 + * https://github.com/minh-ton/reynard-browser using the Gecko fork
 + * https://github.com/minh-ton/truefox in Feb 2026. */
 +
++#if defined(__IPHONE_14_0) && (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0)
 +#import <AVFoundation/AVFoundation.h>
 +
 +extern "C" void cubeb_ios_activate_audio_session(void) {
@@ -30,3 +31,35 @@ index 000000000000..71ff604d0873
 +  AVAudioSession* session = [AVAudioSession sharedInstance];
 +  return static_cast<uint32_t>(session.sampleRate);
 +}
++#else
++#import <AudioToolbox/AudioToolbox.h>
++
++static void cubeb_ios_ensure_audio_session_initialized() {
++  static bool sInitialized = false;
++  if (sInitialized) {
++    return;
++  }
++  AudioSessionInitialize(nullptr, nullptr, nullptr, nullptr);
++  sInitialized = true;
++}
++
++extern "C" void cubeb_ios_activate_audio_session(void) {
++  cubeb_ios_ensure_audio_session_initialized();
++  UInt32 category = kAudioSessionCategory_MediaPlayback;
++  AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
++                          sizeof(category), &category);
++  AudioSessionSetActive(true);
++}
++
++extern "C" uint32_t cubeb_ios_session_sample_rate(void) {
++  cubeb_ios_ensure_audio_session_initialized();
++  Float64 sample_rate = 0.0;
++  UInt32 size = sizeof(sample_rate);
++  if (AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate,
++                              &size, &sample_rate) != noErr ||
++      sample_rate <= 0.0) {
++    return 44100;
++  }
++  return static_cast<uint32_t>(sample_rate);
++}
++#endif

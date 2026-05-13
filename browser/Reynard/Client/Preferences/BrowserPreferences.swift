@@ -112,15 +112,19 @@ final class BrowserPreferences {
         fileManager.fileExists(atPath: pairingFileURL.path)
     }
     
+    var hasEntitledJIT: Bool {
+        getEntitlementValue("com.apple.private.security.no-sandbox")
+    }
+    
     var isJITEnabled: Bool {
         get {
-            guard hasPairingFile else {
+            guard hasEntitledJIT || hasPairingFile else {
                 return false
             }
             return defaults.bool(forKey: Keys.jitEnabled)
         }
         set {
-            defaults.set(hasPairingFile && newValue, forKey: Keys.jitEnabled)
+            defaults.set((hasEntitledJIT || hasPairingFile) && newValue, forKey: Keys.jitEnabled)
         }
     }
     
