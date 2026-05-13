@@ -7,6 +7,7 @@
 
 import UIKit
 import UniformTypeIdentifiers
+import MobileCoreServices
 
 final class OpenInViewController: UIViewController {
     private var hasStartedOpenFlow = false
@@ -58,8 +59,9 @@ final class OpenInViewController: UIViewController {
         let inputItems = extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem } ?? []
         let providers = inputItems.flatMap { $0.attachments ?? [] }
         
-        if let urlProvider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.url.identifier) }) {
-            urlProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { item, _ in
+        let urlTypeIdentifier = kUTTypeURL as String
+        if let urlProvider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(urlTypeIdentifier) }) {
+            urlProvider.loadItem(forTypeIdentifier: urlTypeIdentifier, options: nil) { item, _ in
                 let sharedURL = (item as? URL) ?? (item as? NSURL as URL?)
                 DispatchQueue.main.async {
                     completion(sharedURL)

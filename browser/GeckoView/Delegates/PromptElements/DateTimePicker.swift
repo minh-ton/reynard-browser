@@ -161,7 +161,9 @@ private final class DateTimePickerViewController: UIViewController {
     init(date: Date, pickerMode: UIDatePicker.Mode, minDate: Date?, maxDate: Date?, minuteInterval: Int) {
         super.init(nibName: nil, bundle: nil)
         datePicker.datePickerMode = pickerMode
-        datePicker.preferredDatePickerStyle = .wheels
+        if #available(iOS 13.4, *) {
+            datePicker.preferredDatePickerStyle = .wheels
+        }
         datePicker.date = date
         if let minDate = minDate { datePicker.minimumDate = minDate }
         if let maxDate = maxDate { datePicker.maximumDate = maxDate }

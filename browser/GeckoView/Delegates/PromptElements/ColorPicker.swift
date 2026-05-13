@@ -8,8 +8,7 @@
 import UIKit
 
 @MainActor
-final class ColorPicker: NSObject, UIColorPickerViewControllerDelegate,
-                         UIPopoverPresentationControllerDelegate {
+final class ColorPicker: NSObject, UIPopoverPresentationControllerDelegate {
     let promptId: String
     let anchorRect: CGRect
     weak var geckoView: UIView?
@@ -35,6 +34,12 @@ final class ColorPicker: NSObject, UIColorPickerViewControllerDelegate,
         guard let geckoView = geckoView,
               let presentingVC = geckoView.nearestViewController() else {
             finishWithResult(nil)
+            return
+        }
+
+        guard #available(iOS 14.0, *) else {
+            // iOS 13 has no system color picker; keep the existing color.
+            finishWithResult(initialColor.toHexString())
             return
         }
         
@@ -67,7 +72,12 @@ final class ColorPicker: NSObject, UIColorPickerViewControllerDelegate,
         _ popoverPresentationController: UIPopoverPresentationController
     ) -> Bool {
         let vc = popoverPresentationController.presentedViewController
-        let color = (vc as? UIColorPickerViewController)?.selectedColor
+        let color: UIColor?
+        if #available(iOS 14.0, *) {
+            color = (vc as? UIColorPickerViewController)?.selectedColor
+        } else {
+            color = nil
+        }
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.finishWithResult(color?.toHexString() ?? self.currentColor.toHexString())
@@ -75,23 +85,26 @@ final class ColorPicker: NSObject, UIColorPickerViewControllerDelegate,
         return true
     }
     
+    private func finishWithResult(_ result: String?) {
+        guard let cont = continuation else { return }
+        continuation = nil
+        cont.resume(returning: result)
+    }
+}
+
+@available(iOS 14.0, *)
+extension ColorPicker: UIColorPickerViewControllerDelegate {
     nonisolated func colorPickerViewControllerDidSelectColor(_ viewController: UIColorPickerViewController) {
         let color = viewController.selectedColor
         Task { @MainActor [weak self] in
             self?.currentColor = color
         }
     }
-    
+
     nonisolated func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
         let hex = viewController.selectedColor.toHexString()
         Task { @MainActor [weak self] in
             self?.finishWithResult(hex)
         }
-    }
-    
-    private func finishWithResult(_ result: String?) {
-        guard let cont = continuation else { return }
-        continuation = nil
-        cont.resume(returning: result)
     }
 }

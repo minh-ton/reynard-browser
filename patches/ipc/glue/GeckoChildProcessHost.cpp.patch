@@ -1,5 +1,5 @@
 diff --git a/ipc/glue/GeckoChildProcessHost.cpp b/ipc/glue/GeckoChildProcessHost.cpp
-index 40d2ad7a79fd..ef244dd37d7e 100644
+index 40d2ad7a79fd..3a4f1325e0d0 100644
 --- a/ipc/glue/GeckoChildProcessHost.cpp
 +++ b/ipc/glue/GeckoChildProcessHost.cpp
 @@ -32,6 +32,13 @@
@@ -147,7 +147,7 @@ index 40d2ad7a79fd..ef244dd37d7e 100644
  void BaseProcessLauncher::GetChildLogName(const char* origLogName,
                                            nsACString& buffer) {
  #ifdef XP_WIN
-@@ -1398,18 +1473,24 @@ Result<Ok, LaunchError> IosProcessLauncher::DoSetup() {
+@@ -1398,20 +1473,26 @@ Result<Ok, LaunchError> IosProcessLauncher::DoSetup() {
  }
  
  RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
@@ -161,7 +161,8 @@ index 40d2ad7a79fd..ef244dd37d7e 100644
 +  // REYNARD: Use the iOS extension-backed process launcher path and bootstrap
 +  // child processes over libxpc.
    DarwinObjectPtr<xpc_object_t> bootstrapMessage =
-       AdoptDarwinObject(xpc_dictionary_create_empty());
+-      AdoptDarwinObject(xpc_dictionary_create_empty());
++      AdoptDarwinObject(xpc_dictionary_create(nullptr, nullptr, 0));
    xpc_dictionary_set_string(bootstrapMessage.get(), "message-name",
                              "bootstrap");
  
@@ -177,8 +178,44 @@ index 40d2ad7a79fd..ef244dd37d7e 100644
 +                        jitReadyReadFd.get());
 +
    DarwinObjectPtr<xpc_object_t> environDict =
-       AdoptDarwinObject(xpc_dictionary_create_empty());
+-      AdoptDarwinObject(xpc_dictionary_create_empty());
++      AdoptDarwinObject(xpc_dictionary_create(nullptr, nullptr, 0));
    for (auto& [envKey, envValue] : mLaunchOptions->env_map) {
+     xpc_dictionary_set_string(environDict.get(), envKey.c_str(),
+                               envValue.c_str());
+@@ -1424,7 +1505,7 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+   xpc_dictionary_set_fd(bootstrapMessage.get(), "stderr", STDERR_FILENO);
+ 
+   DarwinObjectPtr<xpc_object_t> argsArray =
+-      AdoptDarwinObject(xpc_array_create_empty());
++      AdoptDarwinObject(xpc_array_create(nullptr, 0));
+   for (auto& argv : mChildArgs.mArgs) {
+     xpc_array_set_string(argsArray.get(), XPC_ARRAY_APPEND, argv.c_str());
+   }
+@@ -1432,7 +1513,7 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+   xpc_dictionary_set_value(bootstrapMessage.get(), "argv", argsArray.get());
+ 
+   DarwinObjectPtr<xpc_object_t> fdsArray =
+-      AdoptDarwinObject(xpc_array_create_empty());
++      AdoptDarwinObject(xpc_array_create(nullptr, 0));
+   for (auto& file : mChildArgs.mFiles) {
+     xpc_array_set_fd(fdsArray.get(), XPC_ARRAY_APPEND, file.get());
+   }
+@@ -1440,12 +1521,12 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+   xpc_dictionary_set_value(bootstrapMessage.get(), "fds", fdsArray.get());
+ 
+   DarwinObjectPtr<xpc_object_t> sendRightsArray =
+-      AdoptDarwinObject(xpc_array_create_empty());
++      AdoptDarwinObject(xpc_array_create(nullptr, 0));
+   for (auto& sendRight : mChildArgs.mSendRights) {
+     // NOTE: As iOS doesn't expose an xpc_array_set_mach_send function, send
+     // rights are wrapped with single-key dictionaries.
+     DarwinObjectPtr<xpc_object_t> sendRightWrapper =
+-        AdoptDarwinObject(xpc_dictionary_create_empty());
++        AdoptDarwinObject(xpc_dictionary_create(nullptr, nullptr, 0));
+     xpc_dictionary_set_mach_send(sendRightWrapper.get(), "port",
+                                  sendRight.get());
+     xpc_array_set_value(sendRightsArray.get(), XPC_ARRAY_APPEND,
 @@ -1457,34 +1538,36 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
                             sendRightsArray.get());
  

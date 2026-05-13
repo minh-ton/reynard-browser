@@ -7,6 +7,7 @@
 
 import UIKit
 import UniformTypeIdentifiers
+import MobileCoreServices
 
 @MainActor
 final class FilePicker: NSObject {
@@ -30,7 +31,8 @@ final class FilePicker: NSObject {
     }
     
     private struct AcceptedTypes: Sendable {
-        let documentTypes: [UTType]
+        let documentTypeIdentifiers: [String]
+        let legacyDocumentTypes: [String]
         let mediaTypes: [String]
     }
     
@@ -124,6 +126,11 @@ final class FilePicker: NSObject {
     private func showMenu() {
         guard let geckoView = geckoView else {
             finish(with: nil)
+            return
+        }
+
+        guard #available(iOS 14.0, *) else {
+            showActionSheet(in: geckoView)
             return
         }
         
@@ -301,15 +308,23 @@ final class FilePicker: NSObject {
         }
         
         let picker: UIDocumentPickerViewController
-        if mode == .folder {
-            picker = UIDocumentPickerViewController(
-                forOpeningContentTypes: [UTType.folder],
-                asCopy: false
-            )
+        if #available(iOS 14.0, *) {
+            if mode == .folder {
+                picker = UIDocumentPickerViewController(
+                    forOpeningContentTypes: [UTType.folder],
+                    asCopy: false
+                )
+            } else {
+                let contentTypes = acceptedTypes.documentTypeIdentifiers.compactMap { UTType($0) }
+                picker = UIDocumentPickerViewController(
+                    forOpeningContentTypes: contentTypes.isEmpty ? [UTType.item] : contentTypes
+                )
+            }
         } else {
-            picker = UIDocumentPickerViewController(
-                forOpeningContentTypes: acceptedTypes.documentTypes,
-            )
+            let legacyTypes = acceptedTypes.legacyDocumentTypes.isEmpty
+                ? [kUTTypeItem as String]
+                : acceptedTypes.legacyDocumentTypes
+            picker = UIDocumentPickerViewController(documentTypes: legacyTypes, in: .open)
         }
         picker.delegate = self
         picker.presentationController?.delegate = self
@@ -346,7 +361,7 @@ final class FilePicker: NSObject {
             if UIImagePickerController.isCameraDeviceAvailable(preferredDevice) {
                 picker.cameraDevice = preferredDevice
             }
-            if mediaTypes == [UTType.movie.identifier] {
+            if mediaTypes == [kUTTypeMovie as String] {
                 picker.cameraCaptureMode = .video
             }
         }
@@ -384,59 +399,56 @@ final class FilePicker: NSObject {
         
         if filters.isEmpty || filters.contains("*/*") {
             return AcceptedTypes(
-                documentTypes: [UTType.item],
-                mediaTypes: [UTType.image.identifier, UTType.movie.identifier]
+                documentTypeIdentifiers: [kUTTypeItem as String],
+                legacyDocumentTypes: [kUTTypeItem as String],
+                mediaTypes: [kUTTypeImage as String, kUTTypeMovie as String]
             )
         }
         
-        var documentTypes: [UTType] = []
+        var documentTypeIdentifiers: [String] = []
+        var legacyDocumentTypes: [String] = []
         var mediaTypes: Set<String> = []
         
         for filter in filters {
             switch filter {
             case "image/*":
-                documentTypes.append(.image)
-                mediaTypes.insert(UTType.image.identifier)
+                documentTypeIdentifiers.append(kUTTypeImage as String)
+                legacyDocumentTypes.append(kUTTypeImage as String)
+                mediaTypes.insert(kUTTypeImage as String)
                 continue
             case "video/*":
-                documentTypes.append(.movie)
-                mediaTypes.insert(UTType.movie.identifier)
+                documentTypeIdentifiers.append(kUTTypeMovie as String)
+                legacyDocumentTypes.append(kUTTypeMovie as String)
+                mediaTypes.insert(kUTTypeMovie as String)
                 continue
             case "audio/*":
-                documentTypes.append(.audio)
+                documentTypeIdentifiers.append(kUTTypeAudio as String)
+                legacyDocumentTypes.append(kUTTypeAudio as String)
                 continue
             default:
                 break
             }
-            
-            let resolvedType: UTType?
-            if filter.hasPrefix(".") {
-                resolvedType = UTType(filenameExtension: String(filter.dropFirst()))
-            } else if filter.contains("/") {
-                resolvedType = UTType(mimeType: filter)
-            } else {
-                resolvedType = UTType(filenameExtension: filter)
+
+            documentTypeIdentifiers.append(filter)
+            legacyDocumentTypes.append(filter)
+            if filter.hasPrefix("image/") {
+                mediaTypes.insert(kUTTypeImage as String)
             }
-            
-            guard let resolvedType else {
-                continue
-            }
-            
-            documentTypes.append(resolvedType)
-            if resolvedType.conforms(to: .image) {
-                mediaTypes.insert(UTType.image.identifier)
-            }
-            if resolvedType.conforms(to: .movie) || resolvedType.conforms(to: .video) {
-                mediaTypes.insert(UTType.movie.identifier)
+            if filter.hasPrefix("video/") {
+                mediaTypes.insert(kUTTypeMovie as String)
             }
         }
         
-        if documentTypes.isEmpty {
-            documentTypes = [UTType.item]
+        if documentTypeIdentifiers.isEmpty {
+            documentTypeIdentifiers = [kUTTypeItem as String]
+        }
+        if legacyDocumentTypes.isEmpty {
+            legacyDocumentTypes = [kUTTypeItem as String]
         }
         
         return AcceptedTypes(
-            documentTypes: Array(Set(documentTypes)).sorted { $0.identifier < $1.identifier },
+            documentTypeIdentifiers: Array(Set(documentTypeIdentifiers)).sorted(),
+            legacyDocumentTypes: Array(Set(legacyDocumentTypes)).sorted(),
             mediaTypes: Array(mediaTypes).sorted()
         )
     }
@@ -593,10 +605,21 @@ final class FilePicker: NSObject {
     }
     
     nonisolated private static func mimeType(for url: URL) -> String {
-        guard let contentType = UTType(filenameExtension: url.pathExtension) else {
+        let ext = url.pathExtension as CFString
+        guard let uti = UTTypeCreatePreferredIdentifierForTag(
+            kUTTagClassFilenameExtension,
+            ext,
+            nil
+        )?.takeRetainedValue() else {
             return "application/octet-stream"
         }
-        return contentType.preferredMIMEType ?? "application/octet-stream"
+        guard let mime = UTTypeCopyPreferredTagWithClass(
+            uti,
+            kUTTagClassMIMEType
+        )?.takeRetainedValue() else {
+            return "application/octet-stream"
+        }
+        return mime as String
     }
 }
 
@@ -660,6 +683,7 @@ extension FilePicker: UIAdaptivePresentationControllerDelegate {
 private final class FileMenuAnchorButton: UIButton {
     var onMenuDismissed: (() -> Void)?
     
+    @available(iOS 14.0, *)
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willEndFor configuration: UIContextMenuConfiguration,

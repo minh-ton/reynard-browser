@@ -63,6 +63,11 @@ final class SelectPicker {
             finishWithResult(nil)
             return
         }
+
+        guard #available(iOS 14.0, *) else {
+            showSingleSelectFallback(in: geckoView)
+            return
+        }
         
         let button = MenuAnchorButton(frame: sourceRect)
         button.backgroundColor = .clear
@@ -98,6 +103,45 @@ final class SelectPicker {
                 self?.handleMenuDismissed()
             }
         }
+    }
+
+    private func showSingleSelectFallback(in geckoView: UIView) {
+        guard let presentingVC = geckoView.nearestViewController() else {
+            finishWithResult(nil)
+            return
+        }
+
+        let alert = UIAlertController(title: "Select Option", message: nil, preferredStyle: .actionSheet)
+        for item in selectableChoices(from: choices) {
+            let title = item.label.isEmpty ? "Option" : item.label
+            alert.addAction(UIAlertAction(title: title, style: .default) { [weak self] _ in
+                self?.finishWithResult([item.id])
+            })
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.finishWithResult(nil)
+        })
+
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = geckoView
+            popover.sourceRect = sourceRect
+            popover.permittedArrowDirections = []
+        }
+
+        presentingVC.present(alert, animated: true)
+        presentedController = alert
+    }
+
+    private func selectableChoices(from items: [ChoiceItem]) -> [ChoiceItem] {
+        var result: [ChoiceItem] = []
+        for item in items where !item.separator {
+            if let subItems = item.items {
+                result.append(contentsOf: selectableChoices(from: subItems))
+            } else {
+                result.append(item)
+            }
+        }
+        return result
     }
     
     private func buildMenuElements(from items: [ChoiceItem]) -> [UIMenuElement] {
@@ -192,6 +236,7 @@ final class SelectPicker {
 private final class MenuAnchorButton: UIButton {
     var onMenuDismissed: (() -> Void)?
     
+    @available(iOS 14.0, *)
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willEndFor configuration: UIContextMenuConfiguration,

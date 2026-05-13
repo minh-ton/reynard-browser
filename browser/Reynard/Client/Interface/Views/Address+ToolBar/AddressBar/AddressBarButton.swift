@@ -32,20 +32,24 @@ final class AddressBarButton: UIButton {
     }
     
     func setMenuPreservingPresentation(_ menu: UIMenu?) {
-        if isMenuVisible,
-           let menu,
-           let contextMenuInteraction {
-            pendingMenuAfterDismissal = menu
-            contextMenuInteraction.updateVisibleMenu { visibleMenu in
-                if let replacementMenu = self.replacementMenu(for: visibleMenu, in: menu) {
-                    return replacementMenu
+        if #available(iOS 14.0, *) {
+            if isMenuVisible,
+               let menu,
+               let contextMenuInteraction = self.contextMenuInteraction {
+                pendingMenuAfterDismissal = menu
+                contextMenuInteraction.updateVisibleMenu { visibleMenu in
+                    if let replacementMenu = self.replacementMenu(for: visibleMenu, in: menu) {
+                        return replacementMenu
+                    }
+                    return menu
                 }
-                return menu
+                return
             }
-            return
+            pendingMenuAfterDismissal = nil
+            self.menu = menu
+        } else {
+            pendingMenuAfterDismissal = nil
         }
-        pendingMenuAfterDismissal = nil
-        self.menu = menu
     }
     
     func performAfterMenuDismissal(_ action: @escaping () -> Void) {
@@ -79,6 +83,7 @@ final class AddressBarButton: UIButton {
         return nil
     }
     
+    @available(iOS 14.0, *)
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willDisplayMenuFor configuration: UIContextMenuConfiguration,
@@ -88,6 +93,7 @@ final class AddressBarButton: UIButton {
         isMenuVisible = true
     }
     
+    @available(iOS 14.0, *)
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willEndFor configuration: UIContextMenuConfiguration,
@@ -100,7 +106,8 @@ final class AddressBarButton: UIButton {
                 return
             }
             
-            if let pendingMenuAfterDismissal {
+            if #available(iOS 14.0, *),
+               let pendingMenuAfterDismissal {
                 self.menu = pendingMenuAfterDismissal
                 self.pendingMenuAfterDismissal = nil
             }

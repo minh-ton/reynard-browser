@@ -145,7 +145,9 @@ final class AddressBarGestures: NSObject {
         let leadingButton = AddressBarButton(type: .system)
         leadingButton.translatesAutoresizingMaskIntoConstraints = false
         leadingButton.tintColor = tab.url != nil ? .label : .secondaryLabel
-        leadingButton.showsMenuAsPrimaryAction = true
+        if #available(iOS 14.0, *) {
+            leadingButton.showsMenuAsPrimaryAction = true
+        }
         leadingButton.isUserInteractionEnabled = false
         leadingButton.setImage(UIImage(systemName: tab.url != nil ? "list.bullet.below.rectangle" : "magnifyingglass"), for: .normal)
         

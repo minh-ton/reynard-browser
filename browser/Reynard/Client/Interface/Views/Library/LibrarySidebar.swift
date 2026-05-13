@@ -9,13 +9,23 @@ import UIKit
 
 final class LibrarySidebarViewController: UIViewController, UICollectionViewDelegate, UINavigationControllerDelegate {
     private let mainSection = "main"
+    private let cellReuseIdentifier = "LibrarySidebarCell"
     private var dataSource: UICollectionViewDiffableDataSource<String, LibrarySection>!
     private lazy var sidebarButton = makeLibrarySidebarButton(target: self, action: #selector(collapseSidebarFromRoot))
     
     private lazy var collectionView: UICollectionView = {
-        var configuration = UICollectionLayoutListConfiguration(appearance: .sidebar)
-        configuration.backgroundColor = .systemGray6
-        let layout = UICollectionViewCompositionalLayout.list(using: configuration)
+        let layout: UICollectionViewLayout
+        if #available(iOS 14.0, *) {
+            var configuration = UICollectionLayoutListConfiguration(appearance: .sidebar)
+            configuration.backgroundColor = .systemGray6
+            layout = UICollectionViewCompositionalLayout.list(using: configuration)
+        } else {
+            let flowLayout = UICollectionViewFlowLayout()
+            flowLayout.itemSize = CGSize(width: 1, height: 48)
+            flowLayout.minimumLineSpacing = 0
+            flowLayout.sectionInset = .zero
+            layout = flowLayout
+        }
         let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .systemGray6
@@ -64,6 +74,7 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
     private func configureCollectionView() {
         collectionView.contentInset.top = 32
         collectionView.verticalScrollIndicatorInsets.top = 32
+        collectionView.register(LibrarySidebarCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -74,17 +85,12 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
     }
     
     private func configureDataSource() {
-        let cellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, LibrarySection> { cell, _, section in
-            var content = cell.defaultContentConfiguration()
-            content.text = section.title
-            content.image = UIImage(systemName: section.symbolName)
-            content.imageProperties.tintColor = .label
-            cell.contentConfiguration = content
-            cell.accessories = []
-        }
-        
         dataSource = UICollectionViewDiffableDataSource<String, LibrarySection>(collectionView: collectionView) { (collectionView: UICollectionView, indexPath: IndexPath, item: LibrarySection) in
-            collectionView.dequeueConfiguredReusableCell(using: cellRegistration, for: indexPath, item: item)
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: self.cellReuseIdentifier, for: indexPath)
+            if let sidebarCell = cell as? LibrarySidebarCell {
+                sidebarCell.configure(title: item.title, symbolName: item.symbolName)
+            }
+            return cell
         }
     }
     
@@ -145,6 +151,42 @@ final class LibrarySidebarViewController: UIViewController, UICollectionViewDele
     
     @objc private func collapseSidebarFromAnyChild(_ sender: UIButton) {
         (splitViewController as? BrowserSplitViewController)?.collapseLibrarySidebar(from: sender)
+    }
+}
+
+private final class LibrarySidebarCell: UICollectionViewCell {
+    private let iconView = UIImageView()
+    private let titleLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.backgroundColor = .clear
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.tintColor = .label
+        contentView.addSubview(iconView)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.textColor = .label
+        titleLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        contentView.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            iconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 18),
+            iconView.heightAnchor.constraint(equalToConstant: 18),
+            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(title: String, symbolName: String) {
+        titleLabel.text = title
+        iconView.image = UIImage(systemName: symbolName)
     }
 }
 

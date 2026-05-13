@@ -51,7 +51,9 @@ final class AddressBar: UIView {
         let button = AddressBarButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .secondaryLabel
-        button.showsMenuAsPrimaryAction = true
+        if #available(iOS 14.0, *) {
+            button.showsMenuAsPrimaryAction = true
+        }
         button.isUserInteractionEnabled = false
         return button
     }()

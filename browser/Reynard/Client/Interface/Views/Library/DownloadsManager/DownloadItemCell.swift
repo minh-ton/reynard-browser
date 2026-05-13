@@ -8,6 +8,7 @@
 import UIKit
 import QuickLookThumbnailing
 import UniformTypeIdentifiers
+import MobileCoreServices
 
 final class DownloadItemCell: UITableViewCell {
     static let reuseIdentifier = "DownloadItemCell"
@@ -244,7 +245,7 @@ private final class DownloadFileIconProvider {
         guard let placeholderURL = placeholderURL(fileName: "generic-file", mimeType: nil),
               let image = documentInteractionIcon(
                 for: placeholderURL,
-                uti: UTType.data.identifier,
+                uti: kUTTypeData as String,
                 name: "Downloading"
               ) else {
             return nil
@@ -260,7 +261,7 @@ private final class DownloadFileIconProvider {
             return
         }
         
-        generateIcon(for: fileURL, size: size, contentType: nil) { [weak self] image in
+        generateIcon(for: fileURL, size: size, contentTypeIdentifier: nil) { [weak self] image in
             if let image {
                 self?.cache.setObject(image, forKey: fileURL as NSURL)
                 completion(image)
@@ -278,7 +279,7 @@ private final class DownloadFileIconProvider {
     private func generateIcon(
         for fileURL: URL,
         size: CGSize,
-        contentType: UTType?,
+        contentTypeIdentifier: String?,
         representationTypes: QLThumbnailGenerator.Request.RepresentationTypes = .all,
         completion: @escaping (UIImage?) -> Void
     ) {
@@ -289,7 +290,9 @@ private final class DownloadFileIconProvider {
             representationTypes: representationTypes
         )
         request.iconMode = true
-        if let contentType {
+        if #available(iOS 14.0, *),
+           let contentTypeIdentifier,
+           let contentType = UTType(contentTypeIdentifier) {
             request.contentType = contentType
         }
         
@@ -316,7 +319,7 @@ private final class DownloadFileIconProvider {
         generateIcon(
             for: placeholderURL,
             size: size,
-            contentType: resolvedContentType(fileName: fileName, mimeType: nil),
+            contentTypeIdentifier: resolvedContentTypeIdentifier(fileName: fileName, mimeType: nil),
             representationTypes: .icon
         ) { [weak self] image in
             let resolvedImage = image ?? self?.documentInteractionIcon(for: placeholderURL)
@@ -342,9 +345,11 @@ private final class DownloadFileIconProvider {
             return nil
         }
         
-        let contentType = resolvedContentType(fileName: fileName, mimeType: mimeType)
+        let contentTypeIdentifier = resolvedContentTypeIdentifier(fileName: fileName, mimeType: mimeType)
         let existingExtension = URL(fileURLWithPath: fileName).pathExtension.lowercased()
-        let preferredExtension = existingExtension.isEmpty ? (contentType?.preferredFilenameExtension ?? "") : existingExtension
+        let preferredExtension = existingExtension.isEmpty
+            ? (preferredFilenameExtension(from: contentTypeIdentifier) ?? "")
+            : existingExtension
         let placeholderName = preferredExtension.isEmpty ? "generic-file" : "generic-file.\(preferredExtension)"
         let placeholderURL = placeholderDirectory.appendingPathComponent(placeholderName)
         
@@ -366,9 +371,15 @@ private final class DownloadFileIconProvider {
         return "generic"
     }
     
-    private func resolvedContentType(fileName: String, mimeType: String?) -> UTType? {
-        if let mimeType, let contentType = UTType(mimeType: mimeType) {
-            return contentType
+    private func resolvedContentTypeIdentifier(fileName: String, mimeType: String?) -> String? {
+        if let mimeType {
+            if let uti = UTTypeCreatePreferredIdentifierForTag(
+                kUTTagClassMIMEType,
+                mimeType as CFString,
+                nil
+            )?.takeRetainedValue() {
+                return uti as String
+            }
         }
         
         let pathExtension = URL(fileURLWithPath: fileName).pathExtension
@@ -376,7 +387,21 @@ private final class DownloadFileIconProvider {
             return nil
         }
         
-        return UTType(filenameExtension: pathExtension)
+        return UTTypeCreatePreferredIdentifierForTag(
+            kUTTagClassFilenameExtension,
+            pathExtension as CFString,
+            nil
+        )?.takeRetainedValue() as String?
+    }
+
+    private func preferredFilenameExtension(from contentTypeIdentifier: String?) -> String? {
+        guard let contentTypeIdentifier else {
+            return nil
+        }
+        return UTTypeCopyPreferredTagWithClass(
+            contentTypeIdentifier as CFString,
+            kUTTagClassFilenameExtension
+        )?.takeRetainedValue() as String?
     }
     
     private func documentInteractionIcon(for fileURL: URL, uti: String? = nil, name: String? = nil) -> UIImage? {

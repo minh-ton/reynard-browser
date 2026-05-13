@@ -7,6 +7,7 @@
 
 import UIKit
 import UniformTypeIdentifiers
+import MobileCoreServices
 
 extension SettingsRootViewController: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
@@ -75,8 +76,13 @@ extension SettingsRootViewController {
     }
     
     func presentPairingFilePicker() {
-        let types = allowedPairingFileTypes()
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        let picker: UIDocumentPickerViewController
+        if #available(iOS 14.0, *) {
+            let types = allowedPairingFileTypes()
+            picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        } else {
+            picker = UIDocumentPickerViewController(documentTypes: allowedPairingDocumentTypeIdentifiers(), in: .import)
+        }
         picker.delegate = self
         picker.allowsMultipleSelection = false
         present(picker, animated: true)
@@ -210,6 +216,7 @@ extension SettingsRootViewController {
     }
 }
 
+@available(iOS 14.0, *)
 func allowedPairingFileTypes() -> [UTType] {
     var types = [UTType.propertyList]
     ["mobiledevicepairing", "mobiledevicepair", "plist"].forEach { ext in
@@ -218,4 +225,19 @@ func allowedPairingFileTypes() -> [UTType] {
         }
     }
     return types
+}
+
+func allowedPairingDocumentTypeIdentifiers() -> [String] {
+    var identifiers = [kUTTypePropertyList as String]
+    ["mobiledevicepairing", "mobiledevicepair", "plist"].forEach { ext in
+        if let uti = UTTypeCreatePreferredIdentifierForTag(
+            kUTTagClassFilenameExtension,
+            ext as CFString,
+            nil
+        )?.takeRetainedValue() as String?,
+           !identifiers.contains(uti) {
+            identifiers.append(uti)
+        }
+    }
+    return identifiers
 }
