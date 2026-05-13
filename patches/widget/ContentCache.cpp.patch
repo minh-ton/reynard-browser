@@ -1,5 +1,5 @@
 diff --git a/widget/ContentCache.cpp b/widget/ContentCache.cpp
-index 6dab6b200190..88b54fc49fe2 100644
+index 6dab6b200190..4449f54838ec 100644
 --- a/widget/ContentCache.cpp
 +++ b/widget/ContentCache.cpp
 @@ -39,6 +39,33 @@ static const char* GetNotificationName(const IMENotification* aNotification) {
@@ -61,7 +61,28 @@ index 6dab6b200190..88b54fc49fe2 100644
    mEditorRect.SetEmpty();
  }
  
-@@ -272,6 +303,9 @@ bool ContentCacheInChild::CacheEditorRect(
+@@ -208,20 +239,6 @@ bool ContentCacheInChild::CacheSelection(nsIWidget* aWidget,
+          this));
+     // XXX Allowing selection-independent character rects makes things
+     //     complicated in the parent...
+-  }
+-  // ContentCache should store only editable content.  Therefore, if current
+-  // selection root is not editable, we don't need to store the selection, i.e.,
+-  // let's treat it as there is no selection.  However, if we already have
+-  // previously editable text, let's store the selection even if it becomes
+-  // uneditable because not doing so would create odd situation.  E.g., IME may
+-  // fail only querying selection after succeeded querying text.
+-  else if (NS_WARN_IF(!querySelectedTextEvent.mReply->mIsEditableContent)) {
+-    MOZ_LOG(sContentCacheLog, LogLevel::Error,
+-            ("0x%p CacheSelection(), FAILED, editable content had already been "
+-             "blurred",
+-             this));
+-    AssertIfInvalid();
+-    return false;
+   } else {
+     mSelection.emplace(querySelectedTextEvent);
+   }
+@@ -272,6 +289,9 @@ bool ContentCacheInChild::CacheEditorRect(
            ("0x%p CacheEditorRect(aWidget=0x%p, aNotification=%s)", this,
             aWidget, GetNotificationName(aNotification)));
  
@@ -71,7 +92,7 @@ index 6dab6b200190..88b54fc49fe2 100644
    WidgetQueryContentEvent queryEditorRectEvent(true, eQueryEditorRect, aWidget);
    aWidget->DispatchEvent(&queryEditorRectEvent);
    if (NS_WARN_IF(queryEditorRectEvent.Failed())) {
-@@ -291,6 +325,9 @@ bool ContentCacheInChild::CacheEditorRect(
+@@ -291,6 +311,9 @@ bool ContentCacheInChild::CacheEditorRect(
               this));
      return false;
    }
@@ -81,7 +102,24 @@ index 6dab6b200190..88b54fc49fe2 100644
    mEditorRect = queryEditorRectEvent.mReply->mRect;
    MOZ_LOG(sContentCacheLog, LogLevel::Info,
            ("0x%p   CacheEditorRect(), Succeeded, mEditorRect=%s", this,
-@@ -448,6 +485,42 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
+@@ -324,16 +347,6 @@ bool ContentCacheInChild::CacheText(nsIWidget* aWidget,
+     MOZ_LOG(sContentCacheLog, LogLevel::Error,
+             ("0x%p   CacheText(), FAILED, couldn't retrieve whole text", this));
+     mText.reset();
+-  }
+-  // ContentCache should store only editable content.  Therefore, if current
+-  // selection root is not editable, we don't need to store the text, i.e.,
+-  // let's treat it as there is no editable text.
+-  else if (NS_WARN_IF(!queryTextContentEvent.mReply->mIsEditableContent)) {
+-    MOZ_LOG(sContentCacheLog, LogLevel::Error,
+-            ("0x%p   CacheText(), FAILED, editable content had already been "
+-             "blurred",
+-             this));
+-    mText.reset();
+   } else {
+     mText = Some(nsString(queryTextContentEvent.mReply->DataRef()));
+     MOZ_LOG(sContentCacheLog, LogLevel::Info,
+@@ -448,6 +461,63 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
    } else {
      mCompositionStart.reset();
      mTextRectArray.reset();
@@ -118,13 +156,34 @@ index 6dab6b200190..88b54fc49fe2 100644
 +            mTextRectArray->mRects = std::move(rects);
 +          }
 +        }
++
++        const uint32_t selLength = selEnd - selStart;
++        if (mTextRectArray.isNothing() ||
++            !mTextRectArray->IsRangeCompletelyInRange(selStart, selLength)) {
++          RectArray selRect;
++          if (!(QueryCharRectArray(aWidget, selStart, selLength, selRect) &&
++                selRect.Length() == selLength)) {
++            selRect.Clear();
++            selRect.SetCapacity(selLength);
++            for (uint32_t offset = selStart; offset < selEnd; offset++) {
++              LayoutDeviceIntRect rect;
++              if (!QueryCharRect(aWidget, offset, rect)) {
++                rect.SetEmpty();
++              }
++              selRect.AppendElement(rect);
++            }
++          }
++
++          mTextRectArray = Some(TextRectArray(selStart));
++          mTextRectArray->mRects = std::move(selRect);
++        }
 +      }
 +      sInLineRectCache = false;
 +    }
    }
  
    if (mSelection.isSome()) {
-@@ -699,6 +772,7 @@ void ContentCacheInParent::AssignContent(const ContentCache& aOther,
+@@ -699,6 +769,7 @@ void ContentCacheInParent::AssignContent(const ContentCache& aOther,
    mCaret = aOther.mCaret;
    mTextRectArray = aOther.mTextRectArray;
    mLastCommitStringTextRectArray = aOther.mLastCommitStringTextRectArray;
@@ -132,7 +191,7 @@ index 6dab6b200190..88b54fc49fe2 100644
    mEditorRect = aOther.mEditorRect;
  
    // Only when there is one composition, the TextComposition instance in this
-@@ -1017,6 +1091,7 @@ bool ContentCacheInParent::HandleQueryContentEvent(
+@@ -1017,6 +1088,7 @@ bool ContentCacheInParent::HandleQueryContentEvent(
        aEvent.EmplaceReply();
        aEvent.mReply->mFocusedWidget = aWidget;
        aEvent.mReply->mRect = mEditorRect;

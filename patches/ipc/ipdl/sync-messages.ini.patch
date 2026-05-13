@@ -1,0 +1,19 @@
+diff --git a/ipc/ipdl/sync-messages.ini b/ipc/ipdl/sync-messages.ini
+index d56225567094..83c7ed23d9fc 100644
+--- a/ipc/ipdl/sync-messages.ini
++++ b/ipc/ipdl/sync-messages.ini
+@@ -126,6 +126,14 @@ description = legacy sync IPC - please add detailed description
+ description = legacy sync IPC - please add detailed description
+ [PBrowser::RequestNativeKeyBindings]
+ description = legacy sync IPC - please add detailed description
++[PBrowser::SelectWordAtPoint]
++description = iOS webpage text selection touch-point
++[PBrowser::ClearSelection]
++description = iOS webpage text selection clearing
++[PBrowser::SetSelectionRange]
++description = iOS webpage selection updates
++[PBrowser::QueryCaretRectAtOffset]
++description = iOS webpage selection caret position query
+ [PBrowser::DispatchWheelEvent]
+ description = Only used by automation tests
+ [PBrowser::DispatchMouseEvent]

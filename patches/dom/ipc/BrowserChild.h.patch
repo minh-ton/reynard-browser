@@ -1,0 +1,24 @@
+diff --git a/dom/ipc/BrowserChild.h b/dom/ipc/BrowserChild.h
+index 0a96ae442aac..3dd1e1f5157f 100644
+--- a/dom/ipc/BrowserChild.h
++++ b/dom/ipc/BrowserChild.h
+@@ -395,6 +395,19 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+   mozilla::ipc::IPCResult RecvNormalPrioritySelectionEvent(
+       const mozilla::WidgetSelectionEvent& aEvent);
+ 
++  mozilla::ipc::IPCResult RecvSelectWordAtPoint(
++      const mozilla::LayoutDeviceIntPoint& aPoint, bool* aSucceeded);
++
++  mozilla::ipc::IPCResult RecvClearSelection(bool* aSucceeded);
++
++  mozilla::ipc::IPCResult RecvSetSelectionRange(const uint32_t& aOffset,
++                                                const uint32_t& aLength,
++                                                bool* aSucceeded);
++
++  mozilla::ipc::IPCResult RecvQueryCaretRectAtOffset(
++      const uint32_t& aOffset, bool* aSucceeded,
++      mozilla::LayoutDeviceIntRect* aRect);
++
+   mozilla::ipc::IPCResult RecvSimpleContentCommandEvent(
+       const mozilla::EventMessage& aMessage);
+ 

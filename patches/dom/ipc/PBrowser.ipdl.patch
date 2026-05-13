@@ -1,0 +1,24 @@
+diff --git a/dom/ipc/PBrowser.ipdl b/dom/ipc/PBrowser.ipdl
+index 10390a6f988f..1ae836941567 100644
+--- a/dom/ipc/PBrowser.ipdl
++++ b/dom/ipc/PBrowser.ipdl
+@@ -854,6 +854,19 @@ child:
+     [Priority=input] async SelectionEvent(WidgetSelectionEvent event);
+     async NormalPrioritySelectionEvent(WidgetSelectionEvent event);
+ 
++        [Nested=inside_sync] sync SelectWordAtPoint(LayoutDeviceIntPoint aPoint)
++            returns (bool aSucceeded);
++
++        [Nested=inside_sync] sync ClearSelection()
++            returns (bool aSucceeded);
++
++        [Nested=inside_sync] sync SetSelectionRange(uint32_t aOffset,
++                                                    uint32_t aLength)
++            returns (bool aSucceeded);
++
++        [Nested=inside_sync] sync QueryCaretRectAtOffset(uint32_t aOffset)
++            returns (bool aSucceeded, LayoutDeviceIntRect aRect);
++
+ 
+     [Priority=input] async SimpleContentCommandEvent(EventMessage message);
+     async NormalPrioritySimpleContentCommandEvent(EventMessage message);

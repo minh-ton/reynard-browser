@@ -1,5 +1,5 @@
 diff --git a/widget/PuppetWidget.cpp b/widget/PuppetWidget.cpp
-index bcbe3a47443c..d3aa2d5cc091 100644
+index bcbe3a47443c..734d942f2a73 100644
 --- a/widget/PuppetWidget.cpp
 +++ b/widget/PuppetWidget.cpp
 @@ -11,6 +11,7 @@
@@ -10,13 +10,57 @@ index bcbe3a47443c..d3aa2d5cc091 100644
  #include "mozilla/SchedulerGroup.h"
  #include "mozilla/TextComposition.h"
  #include "mozilla/TextEventDispatcher.h"
-@@ -813,6 +814,17 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+@@ -772,12 +773,14 @@ nsresult PuppetWidget::NotifyIMEOfSelectionChange(
+   // Therefore, we don't need to query text content again here.
+   if (MOZ_UNLIKELY(!mContentCache.SetSelection(
+           this, aIMENotification.mSelectionChangeData))) {
+-    // If there is no text cache yet, caching text will cache selection too.
+-    // Therefore, in the case, we don't need to notify IME of selection change
+-    // right now.
+-    return NS_OK;
++    if (NS_WARN_IF(!mContentCache.CacheText(this, &aIMENotification)) ||
++        MOZ_UNLIKELY(!mContentCache.SetSelection(
++            this, aIMENotification.mSelectionChangeData))) {
++      return NS_OK;
++    }
+   }
+ 
++  RecordIMECacheScrollOffset();
+   mBrowserChild->SendNotifyIMESelection(mContentCache, aIMENotification);
+ 
+   return NS_OK;
+@@ -806,13 +809,20 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+     return NS_ERROR_FAILURE;
+   }
+ 
+-  if (NS_WARN_IF(!mContentCache.CacheEditorRect(this, &aIMENotification))) {
++  const bool hasNonCollapsedSelection =
++      mContentCache.HasNonCollapsedSelection();
++  const bool cachedEditorRect =
++      mContentCache.CacheEditorRect(this, &aIMENotification);
++  if (NS_WARN_IF(!cachedEditorRect && !hasNonCollapsedSelection)) {
+     return NS_ERROR_FAILURE;
+   }
+   if (NS_WARN_IF(
            !mContentCache.CacheCaretAndTextRects(this, &aIMENotification))) {
      return NS_ERROR_FAILURE;
    }
 +
-+  // REYNARD: Record the scroll offset at cache time so AdjustIMECacheForScroll
-+  // can compute the correct delta later.
++  RecordIMECacheScrollOffset();
++
+   if (mIMENotificationRequestsOfParent.contains(
+           IMENotificationRequest::PositionChange)) {
+     mBrowserChild->SendNotifyIMEPositionChange(mContentCache, aIMENotification);
+@@ -822,6 +832,43 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
+   return NS_OK;
+ }
+ 
++bool PuppetWidget::ShouldAdjustIMECacheForScroll() {
++  return GetInputContext().mIMEState.IsEditable() ||
++         mContentCache.HasNonCollapsedSelection();
++}
++
++void PuppetWidget::RecordIMECacheScrollOffset() {
 +  if (nsIWidgetListener* l = mWidgetListener) {
 +    if (PresShell* ps = l->GetPresShell()) {
 +      if (ScrollContainerFrame* sf = ps->GetRootScrollContainerFrame()) {
@@ -24,14 +68,8 @@ index bcbe3a47443c..d3aa2d5cc091 100644
 +      }
 +    }
 +  }
++}
 +
-   if (mIMENotificationRequestsOfParent.contains(
-           IMENotificationRequest::PositionChange)) {
-     mBrowserChild->SendNotifyIMEPositionChange(mContentCache, aIMENotification);
-@@ -822,6 +834,28 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
-   return NS_OK;
- }
- 
 +void PuppetWidget::AdjustIMECacheForScroll(const CSSPoint& aNewScrollOffset) {
 +  if (!mBrowserChild) {
 +    return;

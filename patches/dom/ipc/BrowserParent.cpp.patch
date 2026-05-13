@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index e5acd23dcb6e..e2002e72b9d4 100644
+index e5acd23dcb6e..f95f6a5c878d 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
 @@ -786,6 +786,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
@@ -24,7 +24,20 @@ index e5acd23dcb6e..e2002e72b9d4 100644
    }
    return IPC_OK();
  }
-@@ -2549,14 +2564,22 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMEPositionChange(
+@@ -2509,7 +2524,11 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMESelection(
+     const ContentCache& aContentCache,
+     const IMENotification& aIMENotification) {
+   nsCOMPtr<nsIWidget> widget = GetTextInputHandlingWidget();
+-  if (!widget || !IMEStateManager::DoesBrowserParentHaveIMEFocus(this)) {
++  const bool hasIMEFocus = IMEStateManager::DoesBrowserParentHaveIMEFocus(this);
++  const bool allowNonEditableSelectionWithoutIMEFocus =
++      widget && !hasIMEFocus &&
++      !widget->GetInputContext().mIMEState.IsEditable();
++  if (!widget || (!hasIMEFocus && !allowNonEditableSelectionWithoutIMEFocus)) {
+     return IPC_OK();
+   }
+   if (NS_WARN_IF(!aContentCache.IsValid())) {
+@@ -2549,14 +2568,22 @@ mozilla::ipc::IPCResult BrowserParent::RecvNotifyIMEPositionChange(
      const ContentCache& aContentCache,
      const IMENotification& aIMENotification) {
    nsCOMPtr<nsIWidget> widget = GetTextInputHandlingWidget();
@@ -50,7 +63,7 @@ index e5acd23dcb6e..e2002e72b9d4 100644
    return IPC_OK();
  }
  
-@@ -3218,18 +3241,31 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
+@@ -3218,18 +3245,31 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
        NS_WARN_IF(aEvent.Failed())) {
      return true;
    }

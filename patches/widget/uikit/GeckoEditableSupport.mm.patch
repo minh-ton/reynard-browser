@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..1959769ddc3e
+index 000000000000..1e63ab8999fc
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,2711 @@
+@@ -0,0 +1,3668 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* vim: set ts=2 sw=2 et tw=80: */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -22,6 +22,7 @@ index 000000000000..1959769ddc3e
 +#include "TextInputHandler.h"
 +#include "UIKitUtils.h"
 +
++#include "mozilla/dom/BrowserParent.h"
 +#include "mozilla/EventForwards.h"
 +#include "mozilla/MacStringHelpers.h"
 +#include "mozilla/MiscEvents.h"
@@ -44,6 +45,11 @@ index 000000000000..1959769ddc3e
 +  bool hasStart;
 +  bool hasEnd;
 +};
++
++static CGRect UnionSelectionFragments(const CGRect& aFirst,
++                                      const CGRect& aSecond) {
++  return CGRectUnion(CGRectStandardize(aFirst), CGRectStandardize(aSecond));
++}
 +
 +}  // namespace
 +
@@ -388,6 +394,9 @@ index 000000000000..1959769ddc3e
 +- (BOOL)caretRect:(CGRect*)aRect
 +         atOffset:(NSUInteger)aOffset
 +          handler:(widget::TextInputHandler*)aHandler;
++- (BOOL)lineTrackingRect:(CGRect*)aRect
++                atOffset:(NSUInteger)aOffset
++                 handler:(widget::TextInputHandler*)aHandler;
 +- (BOOL)handleRect:(CGRect*)aRect
 +          atOffset:(NSUInteger)aOffset
 +            handle:(GeckoSelectionHandle)aHandle
@@ -412,10 +421,20 @@ index 000000000000..1959769ddc3e
 +                               handler:(widget::TextInputHandler*)aHandler;
 +- (void)computeVerticalBoundariesForOffset:(NSUInteger)aOffset
 +                                   handler:(widget::TextInputHandler*)aHandler;
++- (BOOL)resolveAdjacentLineCaretRect:(CGRect*)aRect
++                      resolvedOffset:(NSUInteger*)aResolvedOffset
++                  fromBoundaryOffset:(NSUInteger)aBoundaryOffset
++                           direction:(NSInteger)aDirection
++                       referenceRect:(CGRect)aReferenceRect
++                             handler:(widget::TextInputHandler*)aHandler;
 +- (NSUInteger)findClosestOffsetToX:(CGFloat)aTargetX
 +                       onLineStart:(NSUInteger)aLineStart
 +                           lineEnd:(NSUInteger)aLineEnd
 +                           handler:(widget::TextInputHandler*)aHandler;
++- (BOOL)adjacentLineRect:(CGRect*)aRect
++                atOffset:(NSUInteger)aOffset
++               direction:(NSInteger)aDirection
++                 handler:(widget::TextInputHandler*)aHandler;
 +- (void)updateTextInteractions;
 +- (void)scheduleResponderBlur;
 +- (void)cancelResponderBlur;
@@ -446,8 +465,37 @@ index 000000000000..1959769ddc3e
 +@interface ChildView (Legacy)
 +
 +- (void)updateLegacyTextInteractions;
++- (void)refreshLegacySelectionViews;
++- (void)deactivateLegacySelectionViews;
 +- (void)setLegacyGrabbersHidden:(BOOL)aHidden;
 +- (void)updateLegacyGrabbers;
++
++@end
++
++@interface ChildView (WebSelection)
++
++- (BOOL)isUsingWebTextSelection;
++- (BOOL)hasActiveWebSelection;
++- (void)activateWebSelectionIfNeeded;
++- (void)setupWebSelectionGestures;
++- (void)teardownWebSelectionGestures;
++- (BOOL)shouldDismissWebSelectionAtPoint:(CGPoint)aPoint;
++- (BOOL)clearWebSelection;
++- (BOOL)setWebSelectedRange:(NSRange)aRange;
++- (BOOL)queryWebCaretRect:(LayoutDeviceIntRect&)aRect
++                 atOffset:(NSUInteger)aOffset;
++- (BOOL)queryWebTextRect:(LayoutDeviceIntRect&)aRect
++                atOffset:(NSUInteger)aOffset;
++- (BOOL)webCaretRect:(CGRect*)aRect atOffset:(NSUInteger)aOffset;
++- (BOOL)selectWebWordAtPoint:(CGPoint)aPoint;
++- (BOOL)queryWebTextRects:(CopyableTArray<LayoutDeviceIntRect>&)aRects
++                  inRange:(NSRange)aRange;
++- (void)handleWebSelectionLongPress:(UILongPressGestureRecognizer*)aRecognizer;
++- (void)handleWebSelectionDismissTap:(UITapGestureRecognizer*)aRecognizer;
++- (CGRect)webFirstRectForRange:(UITextRange*)aRange;
++- (NSArray*)webSelectionRectsForRange:(UITextRange*)aRange;
++- (BOOL)webCanPerformAction:(SEL)aAction;
++- (void)performWebCopy:(id)aSender;
 +
 +@end
 +
@@ -464,6 +512,8 @@ index 000000000000..1959769ddc3e
 +  mEditable.mNonEditableTextInteraction = nil;
 +  mEditable.mSelectionDisplayInteraction = nil;
 +  mEditable.mSelectionHandlePanRecognizer = nil;
++  mEditable.mWebSelectionLongPressRecognizer = nil;
++  mEditable.mWebSelectionDismissTapRecognizer = nil;
 +  mEditable.mTextInteractionInProgress = NO;
 +  mEditable.mPendingSelectionGeometryRefresh = NO;
 +  [self resetHandleState];
@@ -709,6 +759,10 @@ index 000000000000..1959769ddc3e
 +    return NO;
 +  }
 +
++  if ([self isUsingWebTextSelection]) {
++    return [self webCaretRect:aRect atOffset:aOffset];
++  }
++
 +  LayoutDeviceIntRect caretRect;
 +  if (!aHandler->CaretRectForOffset(static_cast<uint32_t>(aOffset),
 +                                    caretRect)) {
@@ -719,6 +773,77 @@ index 000000000000..1959769ddc3e
 +  *aRect = DevPixelsToUIKitPoints(caretRect, [self contentScaleFactor]);
 +  aRect->size.width = 2.0;
 +  return YES;
++}
++
++- (BOOL)lineTrackingRect:(CGRect*)aRect
++                atOffset:(NSUInteger)aOffset
++                 handler:(widget::TextInputHandler*)aHandler {
++  if (!aRect || !aHandler) {
++    return NO;
++  }
++
++  if (![self isUsingWebTextSelection]) {
++    return [self caretRect:aRect atOffset:aOffset handler:aHandler];
++  }
++
++  const NSUInteger textLength = [self documentLength];
++  if (textLength > 0) {
++    NSUInteger characterOffset = NSNotFound;
++    if (mEditable.mActiveSelectionHandle != GeckoSelectionHandleEnd &&
++        aOffset < textLength) {
++      characterOffset = aOffset;
++    } else if (aOffset > 0) {
++      characterOffset = aOffset - 1;
++    }
++
++    if (characterOffset != NSNotFound && characterOffset < textLength) {
++      LayoutDeviceIntRect textRect;
++      if (aHandler->TextRectForRange(NSMakeRange(characterOffset, 1),
++                                     textRect)) {
++        *aRect = DevPixelsToUIKitPoints(textRect, [self contentScaleFactor]);
++        if (!CGRectIsEmpty(*aRect) && !CGRectIsNull(*aRect)) {
++          return YES;
++        }
++      }
++    }
++  }
++
++  return [self caretRect:aRect atOffset:aOffset handler:aHandler];
++}
++
++- (BOOL)adjacentLineRect:(CGRect*)aRect
++                atOffset:(NSUInteger)aOffset
++               direction:(NSInteger)aDirection
++                 handler:(widget::TextInputHandler*)aHandler {
++  if (!aRect || !aHandler || (aDirection != -1 && aDirection != 1)) {
++    return NO;
++  }
++
++  if (![self isUsingWebTextSelection]) {
++    return [self caretRect:aRect atOffset:aOffset handler:aHandler];
++  }
++
++  const NSUInteger textLength = [self documentLength];
++  NSUInteger characterOffset = NSNotFound;
++  if (aDirection > 0) {
++    if (aOffset < textLength) {
++      characterOffset = aOffset;
++    }
++  } else if (aOffset > 0) {
++    characterOffset = aOffset - 1;
++  }
++
++  if (characterOffset != NSNotFound && characterOffset < textLength) {
++    LayoutDeviceIntRect textRect;
++    if (aHandler->TextRectForRange(NSMakeRange(characterOffset, 1), textRect)) {
++      *aRect = DevPixelsToUIKitPoints(textRect, [self contentScaleFactor]);
++      if (!CGRectIsEmpty(*aRect) && !CGRectIsNull(*aRect)) {
++        return YES;
++      }
++    }
++  }
++
++  return [self lineTrackingRect:aRect atOffset:aOffset handler:aHandler];
 +}
 +
 +// Returns the rect for a selection endpoint.
@@ -909,7 +1034,7 @@ index 000000000000..1959769ddc3e
 +  }
 +
 +  CGRect refRect;
-+  if (![self caretRect:&refRect atOffset:aOffset handler:aHandler]) {
++  if (![self lineTrackingRect:&refRect atOffset:aOffset handler:aHandler]) {
 +    return;
 +  }
 +
@@ -919,7 +1044,7 @@ index 000000000000..1959769ddc3e
 +  NSUInteger rightBoundary = aOffset;
 +  for (NSUInteger i = aOffset + 1; i <= textLength; i++) {
 +    CGRect testRect;
-+    if (![self caretRect:&testRect atOffset:i handler:aHandler]) {
++    if (![self lineTrackingRect:&testRect atOffset:i handler:aHandler]) {
 +      break;
 +    }
 +    if (!RectsShareVisualLine(refRect, testRect)) {
@@ -933,7 +1058,9 @@ index 000000000000..1959769ddc3e
 +  if (aOffset > 0) {
 +    for (NSInteger i = (NSInteger)aOffset - 1; i >= 0; i--) {
 +      CGRect testRect;
-+      if (![self caretRect:&testRect atOffset:(NSUInteger)i handler:aHandler]) {
++      if (![self lineTrackingRect:&testRect
++                         atOffset:(NSUInteger)i
++                          handler:aHandler]) {
 +        break;
 +      }
 +      if (!RectsShareVisualLine(refRect, testRect)) {
@@ -946,6 +1073,51 @@ index 000000000000..1959769ddc3e
 +  mEditable.mLineBoundaryStart = leftBoundary;
 +  mEditable.mLineBoundaryEnd = rightBoundary;
 +  mEditable.mLineBoundariesComputed = YES;
++}
++
++// Scans outward from the current line boundary until the caret geometry
++// actually enters the adjacent visual line.
++- (BOOL)resolveAdjacentLineCaretRect:(CGRect*)aRect
++                      resolvedOffset:(NSUInteger*)aResolvedOffset
++                  fromBoundaryOffset:(NSUInteger)aBoundaryOffset
++                           direction:(NSInteger)aDirection
++                       referenceRect:(CGRect)aReferenceRect
++                             handler:(widget::TextInputHandler*)aHandler {
++  if (!aHandler || (aDirection != -1 && aDirection != 1)) {
++    return NO;
++  }
++
++  const NSUInteger textLength = [self documentLength];
++  if ((aDirection < 0 && aBoundaryOffset == 0) ||
++      (aDirection > 0 && aBoundaryOffset >= textLength)) {
++    return NO;
++  }
++
++  NSInteger offset = static_cast<NSInteger>(aBoundaryOffset);
++  while (true) {
++    offset += aDirection;
++    if (offset < 0 || offset > static_cast<NSInteger>(textLength)) {
++      return NO;
++    }
++
++    CGRect rect = CGRectZero;
++    const BOOL hasRect = [self adjacentLineRect:&rect
++                                       atOffset:static_cast<NSUInteger>(offset)
++                                      direction:aDirection
++                                        handler:aHandler];
++    if (!hasRect || CGRectIsEmpty(rect) ||
++        RectsShareVisualLine(aReferenceRect, rect)) {
++      continue;
++    }
++
++    if (aRect) {
++      *aRect = rect;
++    }
++    if (aResolvedOffset) {
++      *aResolvedOffset = static_cast<NSUInteger>(offset);
++    }
++    return YES;
++  }
 +}
 +
 +// findClosestOffsetToX and computeVerticalBoundariesForOffset, are functions
@@ -983,13 +1155,50 @@ index 000000000000..1959769ddc3e
 +  }
 +
 +  CGRect refRect;
-+  if (![self caretRect:&refRect atOffset:aOffset handler:aHandler]) {
++  if (![self lineTrackingRect:&refRect atOffset:aOffset handler:aHandler]) {
 +    return;
 +  }
 +
 +  CGFloat currentMidY = CGRectGetMidY(refRect);
 +
-+  // Find the adjacent line above by looking one offset before the line start.
++  if ([self isUsingWebTextSelection]) {
++    if (mEditable.mLineBoundaryStart > 0) {
++      CGRect aboveRect;
++      if ([self resolveAdjacentLineCaretRect:&aboveRect
++                              resolvedOffset:nullptr
++                          fromBoundaryOffset:mEditable.mLineBoundaryStart
++                                   direction:-1
++                               referenceRect:refRect
++                                     handler:aHandler]) {
++        CGFloat aboveMidY = CGRectGetMidY(aboveRect);
++        if (aboveMidY < currentMidY) {
++          mEditable.mVerticalBoundaryTop = (currentMidY + aboveMidY) / 2.0;
++        }
++      }
++    }
++
++    // Find the adjacent line below by scanning until the caret leaves the
++    // current visual line on the web-selection path.
++    const NSUInteger textLength = [self documentLength];
++    if (mEditable.mLineBoundaryEnd < textLength) {
++      CGRect belowRect;
++      if ([self resolveAdjacentLineCaretRect:&belowRect
++                              resolvedOffset:nullptr
++                          fromBoundaryOffset:mEditable.mLineBoundaryEnd
++                                   direction:1
++                               referenceRect:refRect
++                                     handler:aHandler]) {
++        CGFloat belowMidY = CGRectGetMidY(belowRect);
++        if (belowMidY > currentMidY) {
++          mEditable.mVerticalBoundaryBottom = (currentMidY + belowMidY) / 2.0;
++        }
++      }
++    }
++
++    mEditable.mVerticalBoundariesComputed = YES;
++    return;
++  }
++
 +  if (mEditable.mLineBoundaryStart > 0) {
 +    CGRect aboveRect;
 +    if ([self caretRect:&aboveRect
@@ -1000,7 +1209,6 @@ index 000000000000..1959769ddc3e
 +    }
 +  }
 +
-+  // Find the adjacent line below by looking one offset past the line end.
 +  const NSUInteger textLength = [self documentLength];
 +  if (mEditable.mLineBoundaryEnd < textLength) {
 +    CGRect belowRect;
@@ -1024,9 +1232,28 @@ index 000000000000..1959769ddc3e
 +  NSUInteger bestOffset = aLineStart;
 +  CGFloat bestDistance = CGFLOAT_MAX;
 +
++  if ([self isUsingWebTextSelection]) {
++    // Match vertical web selection jumps against the center of each
++    // fragment rect instead of the editable insertion edge.
++    for (NSUInteger i = aLineStart; i <= aLineEnd; i++) {
++      CGRect rect;
++      if (![self lineTrackingRect:&rect atOffset:i handler:aHandler]) {
++        continue;
++      }
++      CGFloat dist = fabs(aTargetX - CGRectGetMidX(rect));
++      if (dist < bestDistance) {
++        bestDistance = dist;
++        bestOffset = i;
++      }
++    }
++
++    return bestOffset;
++  }
++
++  // Keep editable drag targeting tied to the caret origin.
 +  for (NSUInteger i = aLineStart; i <= aLineEnd; i++) {
 +    CGRect rect;
-+    if (![self caretRect:&rect atOffset:i handler:aHandler]) {
++    if (![self lineTrackingRect:&rect atOffset:i handler:aHandler]) {
 +      continue;
 +    }
 +    CGFloat dist = fabs(aTargetX - CGRectGetMinX(rect));
@@ -1076,7 +1303,16 @@ index 000000000000..1959769ddc3e
 +  }
 +
 +  [mEditable.mTextInputDelegate selectionWillChange:self];
-+  handler->SetSelectedRange(range);
++  if ([self isUsingWebTextSelection]) {
++    if (![self setWebSelectedRange:range]) {
++      return;
++    }
++  } else {
++    if (!handler->SetSelectedRange(range)) {
++      return;
++    }
++  }
++
 +  [mEditable.mTextInputDelegate selectionDidChange:self];
 +  if (mEditable.mSelectionDisplayInteraction != nil) {
 +    [self updateEditMenu];
@@ -1088,6 +1324,15 @@ index 000000000000..1959769ddc3e
 +  NSRange queryRange = [self rangeForTextRange:aRange];
 +  if (queryRange.location == NSNotFound) {
 +    return CGRectZero;
++  }
++
++  if ([self isUsingWebTextSelection]) {
++    if (queryRange.length > 0) {
++      CGRect webRect = [self webFirstRectForRange:aRange];
++      if (!CGRectIsEmpty(webRect)) {
++        return webRect;
++      }
++    }
 +  }
 +
 +  widget::TextInputHandler* handler = [self textHandler];
@@ -1292,6 +1537,17 @@ index 000000000000..1959769ddc3e
 +    return [NSArray array];
 +  }
 +
++  if ([self isUsingWebTextSelection]) {
++    // Let the web selection fragment builder answer first, then fall
++    // back to the shared endpoint geometry only if it has nothing to return.
++    if (queryRange.length > 0) {
++      NSArray* webSelectionRects = [self webSelectionRectsForRange:aRange];
++      if ([webSelectionRects count] > 0) {
++        return webSelectionRects;
++      }
++    }
++  }
++
 +  widget::TextInputHandler* handler = [self textHandler];
 +  if (!handler) {
 +    return [NSArray array];
@@ -1464,71 +1720,174 @@ index 000000000000..1959769ddc3e
 +    // position it at the character closest to the finger's x.
 +    BOOL verticalJump = NO;
 +    if (mEditable.mVerticalBoundariesComputed) {
-+      BOOL crossedUp = aPoint.y < mEditable.mVerticalBoundaryTop;
-+      BOOL crossedDown = aPoint.y > mEditable.mVerticalBoundaryBottom;
 +      const NSUInteger anchor = mEditable.mSelectionHandleAnchorOffset;
-+
-+      NSUInteger iterations = 0;
-+      while (crossedUp || crossedDown) {
-+        if (++iterations > 50) {
-+          break;
++      if ([self isUsingWebTextSelection]) {
++        BOOL crossedUp = NO;
++        BOOL crossedDown = NO;
++        CGRect activeLineRect = CGRectZero;
++        if ([self lineTrackingRect:&activeLineRect
++                          atOffset:baseOffset
++                           handler:handler]) {
++          crossedUp = aPoint.y < CGRectGetMinY(activeLineRect);
++          crossedDown = aPoint.y > CGRectGetMaxY(activeLineRect);
 +        }
 +
-+        NSUInteger entryOffset = NSNotFound;
-+        if (crossedUp && mEditable.mLineBoundaryStart > 0) {
-+          entryOffset = mEditable.mLineBoundaryStart - 1;
-+        } else if (crossedDown && mEditable.mLineBoundaryEnd < textLength) {
-+          entryOffset = mEditable.mLineBoundaryEnd + 1;
++        NSUInteger iterations = 0;
++        while (crossedUp || crossedDown) {
++          if (++iterations > 50) {
++            break;
++          }
++
++          NSUInteger entryOffset = NSNotFound;
++          CGRect currentLineRect = CGRectZero;
++          NSUInteger currentLineOffset = crossedUp
++                                             ? mEditable.mLineBoundaryStart
++                                             : mEditable.mLineBoundaryEnd;
++          if (![self lineTrackingRect:&currentLineRect
++                             atOffset:currentLineOffset
++                              handler:handler]) {
++            break;
++          }
++
++          if (crossedUp && mEditable.mLineBoundaryStart > 0) {
++            NSUInteger resolvedOffset = NSNotFound;
++            if ([self resolveAdjacentLineCaretRect:nil
++                                    resolvedOffset:&resolvedOffset
++                                fromBoundaryOffset:mEditable.mLineBoundaryStart
++                                         direction:-1
++                                     referenceRect:currentLineRect
++                                           handler:handler]) {
++              entryOffset = resolvedOffset;
++            }
++          } else if (crossedDown && mEditable.mLineBoundaryEnd < textLength) {
++            NSUInteger resolvedOffset = NSNotFound;
++            if ([self resolveAdjacentLineCaretRect:nil
++                                    resolvedOffset:&resolvedOffset
++                                fromBoundaryOffset:mEditable.mLineBoundaryEnd
++                                         direction:1
++                                     referenceRect:currentLineRect
++                                           handler:handler]) {
++              entryOffset = resolvedOffset;
++            }
++          }
++          if (entryOffset == NSNotFound) {
++            break;
++          }
++
++          CGRect unused;
++          if (![self lineTrackingRect:&unused
++                             atOffset:entryOffset
++                              handler:handler]) {
++            break;
++          }
++
++          const NSUInteger savedLineStart = mEditable.mLineBoundaryStart;
++          const NSUInteger savedLineEnd = mEditable.mLineBoundaryEnd;
++          const CGFloat savedVTop = mEditable.mVerticalBoundaryTop;
++          const CGFloat savedVBot = mEditable.mVerticalBoundaryBottom;
++          const BOOL savedVComputed = mEditable.mVerticalBoundariesComputed;
++
++          [self computeLineBoundariesForOffset:entryOffset handler:handler];
++          [self computeVerticalBoundariesForOffset:entryOffset handler:handler];
++
++          BOOL pastAnchor =
++              (mEditable.mActiveSelectionHandle == GeckoSelectionHandleEnd &&
++               mEditable.mLineBoundaryEnd < anchor) ||
++              (mEditable.mActiveSelectionHandle == GeckoSelectionHandleStart &&
++               mEditable.mLineBoundaryStart > anchor);
++
++          if (pastAnchor) {
++            mEditable.mLineBoundaryStart = savedLineStart;
++            mEditable.mLineBoundaryEnd = savedLineEnd;
++            mEditable.mLineBoundariesComputed = YES;
++            mEditable.mVerticalBoundaryTop = savedVTop;
++            mEditable.mVerticalBoundaryBottom = savedVBot;
++            mEditable.mVerticalBoundariesComputed = savedVComputed;
++            break;
++          }
++
++          verticalJump = YES;
++
++          CGRect jumpedLineRect = CGRectZero;
++          if ([self lineTrackingRect:&jumpedLineRect
++                            atOffset:entryOffset
++                             handler:handler]) {
++            crossedUp = aPoint.y < CGRectGetMinY(jumpedLineRect);
++            crossedDown = aPoint.y > CGRectGetMaxY(jumpedLineRect);
++          } else {
++            crossedUp = NO;
++            crossedDown = NO;
++          }
 +        }
-+        if (entryOffset == NSNotFound) {
-+          break;
++      } else {
++        BOOL crossedUp = aPoint.y < mEditable.mVerticalBoundaryTop;
++        BOOL crossedDown = aPoint.y > mEditable.mVerticalBoundaryBottom;
++
++        NSUInteger iterations = 0;
++        while (crossedUp || crossedDown) {
++          if (++iterations > 50) {
++            break;
++          }
++
++          NSUInteger entryOffset = NSNotFound;
++          CGRect currentLineRect = CGRectZero;
++          NSUInteger currentLineOffset = crossedUp
++                                             ? mEditable.mLineBoundaryStart
++                                             : mEditable.mLineBoundaryEnd;
++          if (![self lineTrackingRect:&currentLineRect
++                             atOffset:currentLineOffset
++                              handler:handler]) {
++            break;
++          }
++
++          if (crossedUp && mEditable.mLineBoundaryStart > 0) {
++            entryOffset = mEditable.mLineBoundaryStart - 1;
++          } else if (crossedDown && mEditable.mLineBoundaryEnd < textLength) {
++            entryOffset = mEditable.mLineBoundaryEnd + 1;
++          }
++          if (entryOffset == NSNotFound) {
++            break;
++          }
++
++          CGRect unused;
++          if (![self lineTrackingRect:&unused
++                             atOffset:entryOffset
++                              handler:handler]) {
++            break;
++          }
++
++          const NSUInteger savedLineStart = mEditable.mLineBoundaryStart;
++          const NSUInteger savedLineEnd = mEditable.mLineBoundaryEnd;
++          const CGFloat savedVTop = mEditable.mVerticalBoundaryTop;
++          const CGFloat savedVBot = mEditable.mVerticalBoundaryBottom;
++          const BOOL savedVComputed = mEditable.mVerticalBoundariesComputed;
++
++          [self computeLineBoundariesForOffset:entryOffset handler:handler];
++          [self computeVerticalBoundariesForOffset:entryOffset handler:handler];
++
++          BOOL pastAnchor =
++              (mEditable.mActiveSelectionHandle == GeckoSelectionHandleEnd &&
++               mEditable.mLineBoundaryEnd < anchor) ||
++              (mEditable.mActiveSelectionHandle == GeckoSelectionHandleStart &&
++               mEditable.mLineBoundaryStart > anchor);
++
++          if (pastAnchor) {
++            mEditable.mLineBoundaryStart = savedLineStart;
++            mEditable.mLineBoundaryEnd = savedLineEnd;
++            mEditable.mLineBoundariesComputed = YES;
++            mEditable.mVerticalBoundaryTop = savedVTop;
++            mEditable.mVerticalBoundaryBottom = savedVBot;
++            mEditable.mVerticalBoundariesComputed = savedVComputed;
++            break;
++          }
++
++          verticalJump = YES;
++
++          crossedUp = mEditable.mVerticalBoundariesComputed &&
++                      aPoint.y < mEditable.mVerticalBoundaryTop;
++          crossedDown = mEditable.mVerticalBoundariesComputed &&
++                        aPoint.y > mEditable.mVerticalBoundaryBottom;
 +        }
-+
-+        CGRect unused;
-+        if (![self caretRect:&unused atOffset:entryOffset handler:handler]) {
-+          break;
-+        }
-+
-+        // Save the current boundaries so we can revert if the new line
-+        // turns out to be past the anchor (the handle cannot cross it).
-+        const NSUInteger savedLineStart = mEditable.mLineBoundaryStart;
-+        const NSUInteger savedLineEnd = mEditable.mLineBoundaryEnd;
-+        const CGFloat savedVTop = mEditable.mVerticalBoundaryTop;
-+        const CGFloat savedVBot = mEditable.mVerticalBoundaryBottom;
-+        const BOOL savedVComputed = mEditable.mVerticalBoundariesComputed;
-+
-+        // Recompute horizontal and vertical boundaries for the new line.
-+        [self computeLineBoundariesForOffset:entryOffset handler:handler];
-+        [self computeVerticalBoundariesForOffset:entryOffset handler:handler];
-+
-+        // Check if the new line is entirely past the anchor. The end
-+        // handle cannot go above a line that does not contain the anchor,
-+        // and the start handle cannot go below such a line.
-+        BOOL pastAnchor =
-+            (mEditable.mActiveSelectionHandle == GeckoSelectionHandleEnd &&
-+             mEditable.mLineBoundaryEnd < anchor) ||
-+            (mEditable.mActiveSelectionHandle == GeckoSelectionHandleStart &&
-+             mEditable.mLineBoundaryStart > anchor);
-+
-+        if (pastAnchor) {
-+          // Revert to the previous boundaries and stop jumping.
-+          mEditable.mLineBoundaryStart = savedLineStart;
-+          mEditable.mLineBoundaryEnd = savedLineEnd;
-+          mEditable.mLineBoundariesComputed = YES;
-+          mEditable.mVerticalBoundaryTop = savedVTop;
-+          mEditable.mVerticalBoundaryBottom = savedVBot;
-+          mEditable.mVerticalBoundariesComputed = savedVComputed;
-+          break;
-+        }
-+
-+        verticalJump = YES;
-+
-+        // If the finger is still beyond the new line's vertical boundaries,
-+        // continue jumping to the next line in the same direction.
-+        crossedUp = mEditable.mVerticalBoundariesComputed &&
-+                    aPoint.y < mEditable.mVerticalBoundaryTop;
-+        crossedDown = mEditable.mVerticalBoundariesComputed &&
-+                      aPoint.y > mEditable.mVerticalBoundaryBottom;
 +      }
 +
 +      if (verticalJump) {
@@ -1693,6 +2052,11 @@ index 000000000000..1959769ddc3e
 +    }
 +  }
 +
++  if ([self isUsingWebTextSelection]) {
++    [self updateTextInteractions];
++    [self activateWebSelectionIfNeeded];
++  }
++
 +  if (mEditable.mSelectionDisplayInteraction != nil) {
 +    [self refreshSelectionUI];
 +  }
@@ -1714,10 +2078,22 @@ index 000000000000..1959769ddc3e
 +- (void)applySelectionGeometryChange {
 +  mEditable.mPendingSelectionGeometryRefresh = NO;
 +
++  if ([self isUsingWebTextSelection]) {
++    if (mEditable.mSelectionDisplayInteraction == nil) {
++      NSRange selection = [self selectedRange];
++      if (selection.location != NSNotFound && selection.length > 0) {
++        [self refreshLegacySelectionViews];
++      } else {
++        [self deactivateLegacySelectionViews];
++      }
++    }
++  }
++
 +  if (!mEditable.mTextInputDelegate || !mGeckoChild ||
 +      mGeckoChild->Destroyed()) {
 +    return;
 +  }
++
 +  if (mEditable.mSelectionDisplayInteraction == nil) {
 +    [mEditable.mTextInputDelegate selectionWillChange:self];
 +  }
@@ -1880,6 +2256,10 @@ index 000000000000..1959769ddc3e
 +
 +// Reports which edit actions should appear in the menu.
 +- (BOOL)canPerformAction:(SEL)aAction withSender:(id)aSender {
++  if ([self isUsingWebTextSelection]) {
++    return [self webCanPerformAction:aAction];
++  }
++
 +  widget::TextInputHandler* handler = [self textHandler];
 +  if (!handler) {
 +    return [super canPerformAction:aAction withSender:aSender];
@@ -1912,6 +2292,11 @@ index 000000000000..1959769ddc3e
 +}
 +
 +- (void)copy:(id)aSender {
++  if ([self isUsingWebTextSelection]) {
++    [self performWebCopy:aSender];
++    return;
++  }
++
 +  if (widget::TextInputHandler* handler = [self textHandler]) {
 +    handler->RunCommand(eContentCommandCopy, false);
 +  }
@@ -1949,6 +2334,10 @@ index 000000000000..1959769ddc3e
 +}
 +
 +- (void)selectAll:(id)aSender {
++  if ([self isUsingWebTextSelection]) {
++    return;
++  }
++
 +  widget::TextInputHandler* handler = [self textHandler];
 +  if (!handler) {
 +    return;
@@ -2268,6 +2657,19 @@ index 000000000000..1959769ddc3e
 +  if (!mGeckoChild || mGeckoChild->Destroyed()) {
 +    return NO;
 +  }
++
++  if ([self isUsingWebTextSelection]) {
++    widget::TextInputHandler* handler = [self textHandler];
++    uint32_t length = 0;
++    const BOOL hasLength = handler && handler->TextLength(length);
++    if (hasLength) {
++      return length > 0;
++    }
++
++    NSRange range = [self selectedRange];
++    return range.location != NSNotFound && range.length > 0;
++  }
++
 +  widget::InputContext context = mGeckoChild->GetInputContext();
 +  if (context.mIMEState.mEnabled == IMEEnabled::Disabled) {
 +    return NO;
@@ -2280,15 +2682,19 @@ index 000000000000..1959769ddc3e
 +// Lets UIKit text interactions begin and seeds handle tracking.
 +- (BOOL)interactionShouldBegin:(UITextInteraction*)aInteraction
 +                       atPoint:(CGPoint)aPoint {
-+  // Somehow there's a non-owned UITextSelectionInteraction subclass causing
-+  // overlapping duplicated selections on modern path CJK. So we allow only our
-+  // owned interactions to trigger handle tracking.
 +  const BOOL isOwnedInteraction =
 +      aInteraction == mEditable.mEditableTextInteraction ||
 +      aInteraction == mEditable.mNonEditableTextInteraction;
 +
-+  if (mEditable.mSelectionDisplayInteraction != nil && !isOwnedInteraction) {
++  if (!isOwnedInteraction) {
 +    return NO;
++  }
++
++  if ([self isUsingWebTextSelection]) {
++    if (aInteraction == mEditable.mNonEditableTextInteraction &&
++        ![self hasActiveWebSelection]) {
++      return NO;
++    }
 +  }
 +
 +  [self startHandleTrackingAtPoint:aPoint
@@ -2298,7 +2704,11 @@ index 000000000000..1959769ddc3e
 +}
 +
 +- (void)interactionWillBegin:(UITextInteraction*)aInteraction {
-+  (void)aInteraction;
++  if (aInteraction != mEditable.mEditableTextInteraction &&
++      aInteraction != mEditable.mNonEditableTextInteraction) {
++    return;
++  }
++
 +  // Prevent ChildView from replaying this touch as a Gecko tap.
 +  mEditable.mTextInteractionInProgress = YES;
 +  [[UIMenuController sharedMenuController] hideMenuFromView:self];
@@ -2312,7 +2722,11 @@ index 000000000000..1959769ddc3e
 +
 +// Cleans up state after a UIKit text interaction finishes.
 +- (void)interactionDidEnd:(UITextInteraction*)aInteraction {
-+  (void)aInteraction;
++  if (aInteraction != mEditable.mEditableTextInteraction &&
++      aInteraction != mEditable.mNonEditableTextInteraction) {
++    return;
++  }
++
 +  mEditable.mTextInteractionInProgress = NO;
 +  if (mEditable.mSelectionDisplayInteraction != nil) {
 +    [self updateHandleVisibility];
@@ -2331,6 +2745,8 @@ index 000000000000..1959769ddc3e
 +@implementation ChildView (Modern)
 +
 +- (void)setupModernTextInput {
++  [self setupWebSelectionGestures];
++
 +  if (Class selectionDisplayInteractionClass =
 +          NSClassFromString(@"UITextSelectionDisplayInteraction")) {
 +    id selectionDisplayInteraction =
@@ -2351,6 +2767,8 @@ index 000000000000..1959769ddc3e
 +}
 +
 +- (void)teardownModernTextInput {
++  [self teardownWebSelectionGestures];
++
 +  if ([(id)mEditable.mSelectionDisplayInteraction view] == self) {
 +    [self removeInteraction:mEditable.mSelectionDisplayInteraction];
 +  }
@@ -2371,12 +2789,17 @@ index 000000000000..1959769ddc3e
 +
 +  const bool keyboardDisabled =
 +      mGeckoChild && mGeckoChild->IsVirtualKeyboardDisabled();
++  const BOOL shouldAttachNonEditableInteraction = keyboardDisabled;
 +  if (keyboardDisabled) {
 +    if (mEditable.mEditableTextInteraction.view == self) {
 +      [self removeInteraction:mEditable.mEditableTextInteraction];
 +    }
-+    if (mEditable.mNonEditableTextInteraction.view != self) {
++    if (shouldAttachNonEditableInteraction &&
++        mEditable.mNonEditableTextInteraction.view != self) {
 +      [self addInteraction:mEditable.mNonEditableTextInteraction];
++    } else if (!shouldAttachNonEditableInteraction &&
++               mEditable.mNonEditableTextInteraction.view == self) {
++      [self removeInteraction:mEditable.mNonEditableTextInteraction];
 +    }
 +  } else {
 +    if (mEditable.mNonEditableTextInteraction.view == self) {
@@ -2491,6 +2914,20 @@ index 000000000000..1959769ddc3e
 +}
 +
 +- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer*)aGestureRecognizer {
++  if (aGestureRecognizer == mEditable.mWebSelectionLongPressRecognizer) {
++    if ([self isUsingWebTextSelection]) {
++      return ![self hasActiveWebSelection];
++    }
++    return NO;
++  }
++
++  if (aGestureRecognizer == mEditable.mWebSelectionDismissTapRecognizer) {
++    if ([self isUsingWebTextSelection]) {
++      return [self hasActiveWebSelection];
++    }
++    return NO;
++  }
++
 +  if (aGestureRecognizer != mEditable.mSelectionHandlePanRecognizer) {
 +    return YES;
 +  }
@@ -2515,6 +2952,15 @@ index 000000000000..1959769ddc3e
 +                                                     range:range
 +                                                   handler:handler];
 +  return handle != GeckoSelectionHandleNone;
++}
++
++- (BOOL)gestureRecognizer:(UIGestureRecognizer*)aGestureRecognizer
++       shouldReceiveTouch:(UITouch*)aTouch {
++  if (aGestureRecognizer == mEditable.mWebSelectionDismissTapRecognizer) {
++    return [self shouldDismissWebSelectionAtPoint:[aTouch locationInView:self]];
++  }
++
++  return YES;
 +}
 +
 +// Drive visible selection-handle drags on iOS 17+ when the passive
@@ -2595,6 +3041,67 @@ index 000000000000..1959769ddc3e
 +
 +@implementation ChildView (Legacy)
 +
++- (void)refreshLegacySelectionViews {
++  if (mEditable.mSelectionDisplayInteraction != nil || !self.window) {
++    return;
++  }
++
++  NSMutableArray<UIView*>* selectionViews = [NSMutableArray array];
++  CollectViewsOfClass(self.window, @"UITextSelectionView", selectionViews);
++  for (UIView* selectionView in selectionViews) {
++    selectionView.hidden = NO;
++    CallSelector(selectionView, @"activate");
++    CallSelector(selectionView, @"selectionChanged");
++    CallSelector(selectionView, @"updateRangeViewForSelectionMode");
++    CallSelector(selectionView, @"updateSelectionRects");
++    CallSelector(selectionView, @"updateSelectionRectsIfNeeded");
++    CallSelector(selectionView, @"updateSelectionDots");
++    CallSelector(selectionView, @"updateSelectionCommands");
++
++    UIView* rangeView =
++        (UIView*)CallSelector(selectionView, @"rangeView", (id)nil);
++    if ([rangeView isKindOfClass:[UIView class]]) {
++      rangeView.hidden = NO;
++      [rangeView setNeedsDisplay];
++      [rangeView setNeedsLayout];
++      [rangeView layoutIfNeeded];
++    }
++
++    [selectionView setNeedsDisplay];
++    [selectionView setNeedsLayout];
++    [selectionView layoutIfNeeded];
++  }
++}
++
++- (void)deactivateLegacySelectionViews {
++  if (mEditable.mSelectionDisplayInteraction != nil || !self.window) {
++    return;
++  }
++
++  NSMutableArray<UIView*>* selectionViews = [NSMutableArray array];
++  CollectViewsOfClass(self.window, @"UITextSelectionView", selectionViews);
++  for (UIView* selectionView in selectionViews) {
++    CallSelector(selectionView, @"deactivate");
++    CallSelector(selectionView, @"updateRangeViewForSelectionMode");
++    CallSelector(selectionView, @"updateSelectionRectsIfNeeded");
++    CallSelector(selectionView, @"updateSelectionCommands");
++
++    UIView* rangeView =
++        (UIView*)CallSelector(selectionView, @"rangeView", (id)nil);
++    if ([rangeView isKindOfClass:[UIView class]]) {
++      rangeView.hidden = YES;
++      [rangeView setNeedsDisplay];
++      [rangeView setNeedsLayout];
++      [rangeView layoutIfNeeded];
++    }
++
++    selectionView.hidden = YES;
++    [selectionView setNeedsDisplay];
++    [selectionView setNeedsLayout];
++    [selectionView layoutIfNeeded];
++  }
++}
++
 +- (void)configureLegacyNonEditableTextInteractionGestures {
 +  if (!mEditable.mNonEditableTextInteraction) {
 +    return;
@@ -2615,14 +3122,22 @@ index 000000000000..1959769ddc3e
 +
 +  const bool keyboardDisabled =
 +      mGeckoChild && mGeckoChild->IsVirtualKeyboardDisabled();
++  const BOOL shouldAttachNonEditableInteraction = keyboardDisabled;
++
 +  if (keyboardDisabled) {
 +    if (mEditable.mEditableTextInteraction.view == self) {
 +      [self removeInteraction:mEditable.mEditableTextInteraction];
 +    }
-+    if (mEditable.mNonEditableTextInteraction.view != self) {
++    if (shouldAttachNonEditableInteraction &&
++        mEditable.mNonEditableTextInteraction.view != self) {
 +      [self addInteraction:mEditable.mNonEditableTextInteraction];
++    } else if (!shouldAttachNonEditableInteraction &&
++               mEditable.mNonEditableTextInteraction.view == self) {
++      [self removeInteraction:mEditable.mNonEditableTextInteraction];
 +    }
-+    [self configureLegacyNonEditableTextInteractionGestures];
++    if (shouldAttachNonEditableInteraction) {
++      [self configureLegacyNonEditableTextInteractionGestures];
++    }
 +  } else {
 +    if (mEditable.mNonEditableTextInteraction.view == self) {
 +      [self removeInteraction:mEditable.mNonEditableTextInteraction];
@@ -2711,6 +3226,448 @@ index 000000000000..1959769ddc3e
 +  CollectViewsOfClass(self.window, @"UISelectionGrabber", grabberViews);
 +  for (UIView* grabberView in grabberViews) {
 +    grabberView.hidden = aHidden;
++  }
++}
++
++@end
++
++// MARK: - ChildView (WebSelection)
++
++@implementation ChildView (WebSelection)
++
++- (BOOL)isUsingWebTextSelection {
++  return mGeckoChild && !mGeckoChild->Destroyed() &&
++         mGeckoChild->IsVirtualKeyboardDisabled();
++}
++
++- (BOOL)hasActiveWebSelection {
++  if (![self isUsingWebTextSelection]) {
++    return NO;
++  }
++
++  NSRange selectedRange = [self selectedRange];
++  return selectedRange.location != NSNotFound && selectedRange.length > 0;
++}
++
++- (void)activateWebSelectionIfNeeded {
++  if (![self hasActiveWebSelection] || [self isFirstResponder]) {
++    return;
++  }
++
++  [self becomeFirstResponder];
++}
++
++- (void)setupWebSelectionGestures {
++  if (mEditable.mWebSelectionLongPressRecognizer) {
++    return;
++  }
++
++  mEditable.mWebSelectionLongPressRecognizer =
++      [[UILongPressGestureRecognizer alloc]
++          initWithTarget:self
++                  action:@selector(handleWebSelectionLongPress:)];
++  mEditable.mWebSelectionLongPressRecognizer.delegate = self;
++  mEditable.mWebSelectionLongPressRecognizer.cancelsTouchesInView = YES;
++  [self addGestureRecognizer:mEditable.mWebSelectionLongPressRecognizer];
++
++  mEditable.mWebSelectionDismissTapRecognizer = [[UITapGestureRecognizer alloc]
++      initWithTarget:self
++              action:@selector(handleWebSelectionDismissTap:)];
++  mEditable.mWebSelectionDismissTapRecognizer.delegate = self;
++  mEditable.mWebSelectionDismissTapRecognizer.cancelsTouchesInView = YES;
++  [self addGestureRecognizer:mEditable.mWebSelectionDismissTapRecognizer];
++}
++
++- (void)teardownWebSelectionGestures {
++  if (mEditable.mWebSelectionLongPressRecognizer) {
++    [self removeGestureRecognizer:mEditable.mWebSelectionLongPressRecognizer];
++    [mEditable.mWebSelectionLongPressRecognizer release];
++    mEditable.mWebSelectionLongPressRecognizer = nil;
++  }
++
++  if (mEditable.mWebSelectionDismissTapRecognizer) {
++    [self removeGestureRecognizer:mEditable.mWebSelectionDismissTapRecognizer];
++    [mEditable.mWebSelectionDismissTapRecognizer release];
++    mEditable.mWebSelectionDismissTapRecognizer = nil;
++  }
++}
++
++- (void)handleWebSelectionLongPress:(UILongPressGestureRecognizer*)aRecognizer {
++  if (aRecognizer.state != UIGestureRecognizerStateBegan ||
++      ![self isUsingWebTextSelection] || [self hasActiveWebSelection]) {
++    return;
++  }
++
++  [self selectWebWordAtPoint:[aRecognizer locationInView:self]];
++}
++
++- (BOOL)shouldDismissWebSelectionAtPoint:(CGPoint)aPoint {
++  if (![self hasActiveWebSelection]) {
++    return NO;
++  }
++
++  widget::TextInputHandler* handler = [self textHandler];
++  if (!handler) {
++    return NO;
++  }
++
++  NSRange selectedRange = [self selectedRange];
++  if (selectedRange.location == NSNotFound || selectedRange.length == 0) {
++    return NO;
++  }
++
++  CGRect handleRect = CGRectZero;
++  if ([self visibleHandleRect:&handleRect
++                     atOffset:selectedRange.location
++                       handle:GeckoSelectionHandleStart
++                      handler:handler] &&
++      // Keep a generous hit target around the native handles so a near-miss
++      // while aiming for drag/reposition still counts as an interaction with
++      // the current selection instead of dismissing it.
++      CGRectContainsPoint(CGRectInset(handleRect, -22.0, -22.0), aPoint)) {
++    return NO;
++  }
++
++  const NSUInteger endOffset = selectedRange.location + selectedRange.length;
++  if ([self visibleHandleRect:&handleRect
++                     atOffset:endOffset
++                       handle:GeckoSelectionHandleEnd
++                      handler:handler] &&
++      // Match the same larger safety margin for the trailing handle so the
++      // dismiss tap recognizer does not steal touches intended for handle
++      // drags at the edge of the selection.
++      CGRectContainsPoint(CGRectInset(handleRect, -22.0, -22.0), aPoint)) {
++    return NO;
++  }
++
++  UITextRange* textRange = [self textRangeForRange:selectedRange];
++  for (UITextSelectionRect* rect in
++       [self webSelectionRectsForRange:textRange]) {
++    // Use a smaller padding around the highlight itself so taps visually on
++    // the selected glyphs still count as interacting with the selection,
++    // while nearby page taps can dismiss it predictably.
++    if (CGRectContainsPoint(CGRectInset(rect.rect, -8.0, -8.0), aPoint)) {
++      return NO;
++    }
++  }
++
++  return YES;
++}
++
++- (void)handleWebSelectionDismissTap:(UITapGestureRecognizer*)aRecognizer {
++  if (aRecognizer.state != UIGestureRecognizerStateRecognized ||
++      ![self hasActiveWebSelection]) {
++    return;
++  }
++
++  const CGPoint point = [aRecognizer locationInView:self];
++  if (![self shouldDismissWebSelectionAtPoint:point]) {
++    return;
++  }
++
++  [self clearWebSelection];
++}
++
++- (BOOL)clearWebSelection {
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed()) {
++    return NO;
++  }
++
++  dom::BrowserParent* browserParent = dom::BrowserParent::GetFocused();
++  if (!browserParent) {
++    return NO;
++  }
++
++  nsCOMPtr<nsIWidget> widget = browserParent->GetTextInputHandlingWidget();
++  if (widget != mGeckoChild) {
++    return NO;
++  }
++
++  bool didClear = false;
++  if (!browserParent->SendClearSelection(&didClear) || !didClear) {
++    return NO;
++  }
++
++  [self selectionGeometryChanged];
++
++  [self resetHandleState];
++  [self scheduleResponderBlur];
++  return YES;
++}
++
++- (BOOL)setWebSelectedRange:(NSRange)aRange {
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed() || aRange.location == NSNotFound ||
++      aRange.location > UINT32_MAX || aRange.length > UINT32_MAX) {
++    return NO;
++  }
++
++  dom::BrowserParent* browserParent = dom::BrowserParent::GetFocused();
++  if (!browserParent) {
++    return NO;
++  }
++
++  nsCOMPtr<nsIWidget> widget = browserParent->GetTextInputHandlingWidget();
++  if (widget != mGeckoChild) {
++    return NO;
++  }
++
++  bool didSet = false;
++  return browserParent->SendSetSelectionRange(
++             static_cast<uint32_t>(aRange.location),
++             static_cast<uint32_t>(aRange.length), &didSet) &&
++         didSet;
++}
++
++- (BOOL)selectWebWordAtPoint:(CGPoint)aPoint {
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed()) {
++    return NO;
++  }
++
++  if (![self isFirstResponder] && ![self becomeFirstResponder]) {
++    return NO;
++  }
++
++  dom::BrowserParent* browserParent = dom::BrowserParent::GetFocused();
++  if (!browserParent) {
++    return NO;
++  }
++
++  nsCOMPtr<nsIWidget> widget = browserParent->GetTextInputHandlingWidget();
++  if (widget != mGeckoChild) {
++    return NO;
++  }
++
++  const CGFloat scale = [self contentScaleFactor];
++  const LayoutDeviceIntPoint parentPoint(
++      static_cast<int32_t>(std::lround(aPoint.x * scale)),
++      static_cast<int32_t>(std::lround(aPoint.y * scale)));
++  const LayoutDeviceIntPoint childPoint =
++      browserParent->TransformParentToChild(parentPoint);
++  bool didSelect = false;
++  if (!browserParent->SendSelectWordAtPoint(childPoint, &didSelect) ||
++      !didSelect) {
++    return NO;
++  }
++
++  [self selectionGeometryChanged];
++
++  return YES;
++}
++
++- (BOOL)queryWebTextRects:(CopyableTArray<LayoutDeviceIntRect>&)aRects
++                  inRange:(NSRange)aRange {
++  aRects.Clear();
++  const uint64_t endOffset = static_cast<uint64_t>(aRange.location) +
++                             static_cast<uint64_t>(aRange.length);
++
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed() || aRange.location == NSNotFound ||
++      aRange.length == 0 || aRange.location > UINT32_MAX ||
++      aRange.length > UINT32_MAX ||
++      endOffset > static_cast<uint64_t>(UINT32_MAX) + 1u) {
++    return NO;
++  }
++
++  aRects.SetCapacity(aRange.length);
++  for (NSUInteger index = 0; index < aRange.length; index++) {
++    LayoutDeviceIntRect rect;
++    if (![self queryWebTextRect:rect atOffset:aRange.location + index]) {
++      rect.SetEmpty();
++    }
++    aRects.AppendElement(rect);
++  }
++
++  return YES;
++}
++
++- (BOOL)queryWebTextRect:(LayoutDeviceIntRect&)aRect
++                atOffset:(NSUInteger)aOffset {
++  aRect.SetEmpty();
++
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed() || aOffset > UINT32_MAX) {
++    return NO;
++  }
++
++  WidgetQueryContentEvent query(true, eQueryTextRect, mGeckoChild);
++  query.InitForQueryTextRect(static_cast<uint32_t>(aOffset), 1);
++  mGeckoChild->DispatchWindowEvent(query);
++  if (query.Failed()) {
++    return NO;
++  }
++
++  aRect = query.mReply->mRect;
++  return YES;
++}
++
++- (BOOL)queryWebCaretRect:(LayoutDeviceIntRect&)aRect
++                 atOffset:(NSUInteger)aOffset {
++  aRect.SetEmpty();
++
++  if (![self isUsingWebTextSelection] || !mGeckoChild ||
++      mGeckoChild->Destroyed() || aOffset > UINT32_MAX) {
++    return NO;
++  }
++
++  dom::BrowserParent* browserParent = dom::BrowserParent::GetFocused();
++  if (!browserParent) {
++    return NO;
++  }
++
++  nsCOMPtr<nsIWidget> widget = browserParent->GetTextInputHandlingWidget();
++  if (widget != mGeckoChild) {
++    return NO;
++  }
++
++  bool didQuery = false;
++  if (!browserParent->SendQueryCaretRectAtOffset(static_cast<uint32_t>(aOffset),
++                                                 &didQuery, &aRect) ||
++      !didQuery) {
++    return NO;
++  }
++
++  return YES;
++}
++
++- (BOOL)webCaretRect:(CGRect*)aRect atOffset:(NSUInteger)aOffset {
++  if (!aRect) {
++    return NO;
++  }
++
++  LayoutDeviceIntRect rect;
++  if (![self queryWebCaretRect:rect atOffset:aOffset]) {
++    *aRect = CGRectZero;
++    return NO;
++  }
++
++  *aRect = DevPixelsToUIKitPoints(rect, [self contentScaleFactor]);
++  aRect->size.width = 2.0;
++  return YES;
++}
++
++- (NSArray*)webSelectionRectsForRange:(UITextRange*)aRange {
++  NSRange queryRange = [self rangeForTextRange:aRange];
++  if (queryRange.location == NSNotFound || queryRange.length == 0) {
++    return [NSArray array];
++  }
++
++  widget::TextInputHandler* handler = [self textHandler];
++  if (!handler) {
++    return [NSArray array];
++  }
++
++  CGRect visibleBounds = [self selectionBounds];
++  if (CGRectIsEmpty(visibleBounds) || CGRectIsNull(visibleBounds)) {
++    return [NSArray array];
++  }
++
++  CopyableTArray<LayoutDeviceIntRect> rects;
++  if (![self queryWebTextRects:rects inRange:queryRange]) {
++    return [NSArray array];
++  }
++
++  const NSUInteger startOffset = queryRange.location;
++  const NSUInteger endOffset = queryRange.location + queryRange.length;
++
++  CGRect endpointRect = CGRectZero;
++  BOOL containsStart = [self visibleHandleRect:&endpointRect
++                                      atOffset:startOffset
++                                        handle:GeckoSelectionHandleStart
++                                       handler:handler];
++  BOOL containsEnd = [self visibleHandleRect:&endpointRect
++                                    atOffset:endOffset
++                                      handle:GeckoSelectionHandleEnd
++                                     handler:handler];
++
++  NSMutableArray* selectionRects = [NSMutableArray array];
++  CGRect currentRect = CGRectZero;
++  BOOL hasCurrentRect = NO;
++
++  auto appendCurrentRect = [&]() {
++    if (!hasCurrentRect) {
++      return;
++    }
++    AppendSelectionRect(selectionRects, currentRect, NO, NO);
++    currentRect = CGRectZero;
++    hasCurrentRect = NO;
++  };
++
++  for (const LayoutDeviceIntRect& rect : rects) {
++    if (rect.IsEmpty()) {
++      appendCurrentRect();
++      continue;
++    }
++
++    CGRect uiRect = DevPixelsToUIKitPoints(rect, [self contentScaleFactor]);
++    CGRect clippedRect = uiRect;
++    if (!ClipCGRectToBounds(clippedRect, visibleBounds)) {
++      appendCurrentRect();
++      continue;
++    }
++
++    if (!hasCurrentRect) {
++      currentRect = clippedRect;
++      hasCurrentRect = YES;
++      continue;
++    }
++
++    if (!RectsShareVisualLine(currentRect, clippedRect)) {
++      appendCurrentRect();
++      currentRect = clippedRect;
++      hasCurrentRect = YES;
++      continue;
++    }
++
++    currentRect = UnionSelectionFragments(currentRect, clippedRect);
++  }
++
++  appendCurrentRect();
++
++  if ([selectionRects count] == 0) {
++    return selectionRects;
++  }
++
++  ChildViewTextSelectionRect* firstRect = [selectionRects objectAtIndex:0];
++  firstRect.containsStartValue = containsStart;
++  ChildViewTextSelectionRect* lastRect = [selectionRects lastObject];
++  lastRect.containsEndValue = containsEnd;
++  return selectionRects;
++}
++
++- (CGRect)webFirstRectForRange:(UITextRange*)aRange {
++  NSArray* selectionRects = [self webSelectionRectsForRange:aRange];
++  if ([selectionRects count] == 0) {
++    return CGRectZero;
++  }
++
++  return [(UITextSelectionRect*)[selectionRects objectAtIndex:0] rect];
++}
++
++- (BOOL)webCanPerformAction:(SEL)aAction {
++  widget::TextInputHandler* handler = [self textHandler];
++  if (!handler) {
++    return NO;
++  }
++
++  NSRange selection = NSMakeRange(NSNotFound, 0);
++  handler->SelectedRange(selection);
++  const BOOL hasSelection =
++      selection.location != NSNotFound && selection.length > 0;
++
++  if (aAction == @selector(copy:)) {
++    return hasSelection;
++  }
++
++  return NO;
++}
++
++- (void)performWebCopy:(id)aSender {
++  (void)aSender;
++  if (widget::TextInputHandler* handler = [self textHandler]) {
++    handler->RunCommand(eContentCommandCopy, false);
 +  }
 +}
 +

@@ -1,11 +1,16 @@
 diff --git a/widget/ContentCache.h b/widget/ContentCache.h
-index 53456460c859..b33a9061a370 100644
+index 53456460c859..34390f82ea50 100644
 --- a/widget/ContentCache.h
 +++ b/widget/ContentCache.h
-@@ -44,6 +44,13 @@ class ContentCache {
+@@ -44,6 +44,18 @@ class ContentCache {
  
    [[nodiscard]] bool IsValid() const;
  
++  [[nodiscard]] bool HasNonCollapsedSelection() const {
++    return mSelection.isSome() && mSelection->mHasRange &&
++           !mSelection->IsCollapsed();
++  }
++
 +  /**
 +   * REYNARD: Adjust all cached rects by the given delta. Used when the page
 +   * scrolls while an editor is focused, to update the cached positions without
@@ -16,7 +21,7 @@ index 53456460c859..b33a9061a370 100644
   protected:
    void AssertIfInvalid() const;
  
-@@ -297,6 +304,9 @@ class ContentCache {
+@@ -297,6 +309,9 @@ class ContentCache {
    Maybe<TextRectArray> mTextRectArray;
    Maybe<TextRectArray> mLastCommitStringTextRectArray;
  

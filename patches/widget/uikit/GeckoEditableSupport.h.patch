@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
 new file mode 100644
-index 000000000000..48e48b41919b
+index 000000000000..2884d29f312c
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.h
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,208 @@
 +/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -62,6 +62,8 @@ index 000000000000..48e48b41919b
 +  UITextInteraction* mNonEditableTextInteraction;
 +  id mSelectionDisplayInteraction;
 +  UIPanGestureRecognizer* mSelectionHandlePanRecognizer;
++  UILongPressGestureRecognizer* mWebSelectionLongPressRecognizer;
++  UITapGestureRecognizer* mWebSelectionDismissTapRecognizer;
 +  BOOL mTextInteractionInProgress;
 +  BOOL mPendingSelectionGeometryRefresh;
 +  BOOL mCaretMenuActive;
@@ -94,6 +96,41 @@ index 000000000000..48e48b41919b
 +  for (UIView* subview in aView.subviews) {
 +    CollectViewsOfClass(subview, aClassName, aViews);
 +  }
++}
++
++inline void CallSelector(id aTarget, NSString* aSelectorName) {
++  if (!aTarget || !aSelectorName) {
++    return;
++  }
++
++  SEL selector = NSSelectorFromString(aSelectorName);
++  if (![aTarget respondsToSelector:selector]) {
++    return;
++  }
++
++  using SelectorMethod = void (*)(id, SEL);
++  SelectorMethod method =
++      reinterpret_cast<SelectorMethod>([aTarget methodForSelector:selector]);
++  if (method) {
++    method(aTarget, selector);
++  }
++}
++
++inline id CallSelector(id aTarget, NSString* aSelectorName,
++                                  id aDefaultValue) {
++  if (!aTarget || !aSelectorName) {
++    return aDefaultValue;
++  }
++
++  SEL selector = NSSelectorFromString(aSelectorName);
++  if (![aTarget respondsToSelector:selector]) {
++    return aDefaultValue;
++  }
++
++  using SelectorMethod = id (*)(id, SEL);
++  SelectorMethod method =
++      reinterpret_cast<SelectorMethod>([aTarget methodForSelector:selector]);
++  return method ? method(aTarget, selector) : aDefaultValue;
 +}
 +
 +// MARK: - Coordinate Conversion Utilities

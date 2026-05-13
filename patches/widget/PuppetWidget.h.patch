@@ -1,18 +1,18 @@
 diff --git a/widget/PuppetWidget.h b/widget/PuppetWidget.h
-index e036af1e43c1..4d6f88569957 100644
+index e036af1e43c1..767bca967f67 100644
 --- a/widget/PuppetWidget.h
 +++ b/widget/PuppetWidget.h
 @@ -302,8 +302,14 @@ class PuppetWidget final : public nsIWidget,
    void OnMemoryPressure(layers::MemoryPressureReason aWhy) override;
  
    void PerformHapticFeedback(mozilla::HapticFeedbackType aType) override;
-+  // REYNARD: Called by APZCCallbackHelper when scroll position changes while an
-+  // editable element is focused. Adjusts the cached rects by the scroll
-+  // delta and sends the updated cache to the parent process.
++  [[nodiscard]] bool ShouldAdjustIMECacheForScroll();
 +  void AdjustIMECacheForScroll(const CSSPoint& aNewScrollOffset);
  
   private:
 +  CSSPoint mIMELastScrollOffset;
++
++  void RecordIMECacheScrollOffset();
 +
    void Paint();
  

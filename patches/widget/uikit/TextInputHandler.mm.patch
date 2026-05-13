@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
-index e8f05ad59f6f..2c5e570238b0 100644
+index e8f05ad59f6f..d410551a7395 100644
 --- a/widget/uikit/TextInputHandler.mm
 +++ b/widget/uikit/TextInputHandler.mm
 @@ -2,6 +2,8 @@
@@ -21,7 +21,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
  #include "mozilla/TextEvents.h"
  #include "mozilla/WidgetUtils.h"
  #include "nsIWidget.h"
-@@ -20,21 +24,112 @@
+@@ -20,21 +24,113 @@
  
  mozilla::LazyLogModule gIMELog("TextInputHandler");
  
@@ -115,6 +115,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
 +    case NOTIFY_IME_OF_BLUR:
 +      ClearCompositionState();
 +      break;
++    case NOTIFY_IME_OF_SELECTION_CHANGE:
 +    case NOTIFY_IME_OF_POSITION_CHANGE: {
 +      ChildView* view =
 +          static_cast<ChildView*>(mWidget->GetNativeData(NS_NATIVE_WIDGET));
@@ -136,7 +137,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
  }
  
  void TextInputHandler::OnRemovedFrom(
-@@ -45,6 +140,16 @@
+@@ -45,6 +141,16 @@
      WidgetKeyboardEvent& aKeyboardEvent, uint32_t aIndexOfKeypress,
      void* aData) {}
  
@@ -153,7 +154,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
  bool TextInputHandler::InsertText(NSString* aText) {
    nsString str;
    CopyNSStringToXPCOMString(aText, str);
-@@ -57,6 +162,17 @@
+@@ -57,6 +163,17 @@
      return false;
    }
  
@@ -171,7 +172,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
    if (str.Length() == 1) {
      char16_t charCode = str[0];
      if (charCode == 0x0a) {
-@@ -91,6 +207,93 @@
+@@ -91,6 +208,93 @@
    return true;
  }
  
@@ -265,7 +266,7 @@ index e8f05ad59f6f..2c5e570238b0 100644
  bool TextInputHandler::HandleCommand(Command aCommand) {
    MOZ_LOG(gIMELog, LogLevel::Info,
            ("%p   TextInputHandler::HandleCommand, aCommand=%s", this,
-@@ -233,6 +436,9 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -233,6 +437,9 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
    return true;
  }
  

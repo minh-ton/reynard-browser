@@ -1,0 +1,181 @@
+diff --git a/dom/ipc/BrowserChild.cpp b/dom/ipc/BrowserChild.cpp
+index 317c1e2c48e2..5f89f24e2dfb 100644
+--- a/dom/ipc/BrowserChild.cpp
++++ b/dom/ipc/BrowserChild.cpp
+@@ -13,6 +13,7 @@
+ #include "BrowserParent.h"
+ #include "ContentChild.h"
+ #include "EventStateManager.h"
++#include "IMEData.h"
+ #include "MMPrinter.h"
+ #include "PuppetWidget.h"
+ #include "StructuredCloneData.h"
+@@ -2649,6 +2650,168 @@ mozilla::ipc::IPCResult BrowserChild::RecvNormalPrioritySelectionEvent(
+   return RecvSelectionEvent(aEvent);
+ }
+ 
++mozilla::ipc::IPCResult BrowserChild::RecvSelectWordAtPoint(
++    const LayoutDeviceIntPoint& aPoint, bool* aSucceeded) {
++  *aSucceeded = false;
++
++  if (!mPuppetWidget) {
++    return IPC_OK();
++  }
++
++  RefPtr<PresShell> presShell = GetTopLevelPresShell();
++  if (!presShell) {
++    return IPC_OK();
++  }
++
++  nsIFrame* rootFrame = presShell->GetRootFrame();
++  if (!rootFrame) {
++    return IPC_OK();
++  }
++
++  const nsPoint pointInRoot = nsLayoutUtils::GetEventCoordinatesRelativeTo(
++      mPuppetWidget, aPoint, RelativeTo{rootFrame});
++  nsIFrame* targetFrame =
++      nsLayoutUtils::GetFrameForPoint(RelativeTo{rootFrame}, pointInRoot);
++  if (!targetFrame) {
++    return IPC_OK();
++  }
++
++  const nsPoint relativePoint = nsLayoutUtils::GetEventCoordinatesRelativeTo(
++      mPuppetWidget, aPoint, RelativeTo{targetFrame});
++  *aSucceeded = NS_SUCCEEDED(targetFrame->SelectByTypeAtPoint(
++      relativePoint, eSelectWord, eSelectWord, nsIFrame::SELECT_ACCUMULATE));
++
++  if (*aSucceeded) {
++    WidgetQueryContentEvent queryEvent(true, eQuerySelectedText, mPuppetWidget);
++    queryEvent.InitForQuerySelectedText(SelectionType::eNormal);
++    mPuppetWidget->DispatchEvent(&queryEvent);
++    if (!queryEvent.Failed() && !queryEvent.DidNotFindSelection()) {
++      IMENotification notification(NOTIFY_IME_OF_SELECTION_CHANGE);
++      notification.mSelectionChangeData.Assign(queryEvent);
++      mPuppetWidget->NotifyIME(mPuppetWidget->GetTextEventDispatcher(),
++                               notification);
++    }
++  }
++  return IPC_OK();
++}
++
++mozilla::ipc::IPCResult BrowserChild::RecvClearSelection(bool* aSucceeded) {
++  *aSucceeded = false;
++
++  if (!mPuppetWidget) {
++    return IPC_OK();
++  }
++
++  nsCOMPtr<nsIDocShell> docShell = do_GetInterface(WebNavigation());
++  if (!docShell) {
++    return IPC_OK();
++  }
++
++  if (NS_FAILED(docShell->DoCommand("cmd_selectNone"))) {
++    return IPC_OK();
++  }
++
++  *aSucceeded = true;
++
++  WidgetQueryContentEvent queryEvent(true, eQuerySelectedText, mPuppetWidget);
++  queryEvent.InitForQuerySelectedText(SelectionType::eNormal);
++  mPuppetWidget->DispatchEvent(&queryEvent);
++  if (!queryEvent.Failed() && !queryEvent.DidNotFindSelection()) {
++    IMENotification notification(NOTIFY_IME_OF_SELECTION_CHANGE);
++    notification.mSelectionChangeData.Assign(queryEvent);
++    mPuppetWidget->NotifyIME(mPuppetWidget->GetTextEventDispatcher(),
++                             notification);
++  }
++
++  return IPC_OK();
++}
++
++mozilla::ipc::IPCResult BrowserChild::RecvSetSelectionRange(
++    const uint32_t& aOffset, const uint32_t& aLength, bool* aSucceeded) {
++  *aSucceeded = false;
++
++  if (!mPuppetWidget) {
++    return IPC_OK();
++  }
++
++  WidgetSelectionEvent event(true, eSetSelection, mPuppetWidget);
++  event.mOffset = aOffset;
++  event.mLength = aLength;
++  event.mExpandToClusterBoundary = false;
++  mPuppetWidget->DispatchEvent(&event);
++  if (!event.mSucceeded) {
++    return IPC_OK();
++  }
++
++  *aSucceeded = true;
++
++  WidgetQueryContentEvent queryEvent(true, eQuerySelectedText, mPuppetWidget);
++  queryEvent.InitForQuerySelectedText(SelectionType::eNormal);
++  mPuppetWidget->DispatchEvent(&queryEvent);
++  if (!queryEvent.Failed() && !queryEvent.DidNotFindSelection()) {
++    IMENotification notification(NOTIFY_IME_OF_SELECTION_CHANGE);
++    notification.mSelectionChangeData.Assign(queryEvent);
++    mPuppetWidget->NotifyIME(mPuppetWidget->GetTextEventDispatcher(),
++                             notification);
++  }
++
++  return IPC_OK();
++}
++
++mozilla::ipc::IPCResult BrowserChild::RecvQueryCaretRectAtOffset(
++    const uint32_t& aOffset, bool* aSucceeded, LayoutDeviceIntRect* aRect) {
++  *aSucceeded = false;
++  aRect->SetEmpty();
++
++  if (!mPuppetWidget) {
++    return IPC_OK();
++  }
++
++  WidgetQueryContentEvent queryEvent(true, eQueryCaretRect, mPuppetWidget);
++  queryEvent.InitForQueryCaretRect(aOffset);
++  mPuppetWidget->DispatchEvent(&queryEvent);
++  if (queryEvent.Failed()) {
++    if (aOffset > 0) {
++      WidgetQueryContentEvent queryTextContentEvent(true, eQueryTextContent,
++                                                    mPuppetWidget);
++      queryTextContentEvent.InitForQueryTextContent(aOffset, 1);
++      mPuppetWidget->DispatchEvent(&queryTextContentEvent);
++
++      const bool startsWithHardLineBreak =
++          !queryTextContentEvent.Failed() &&
++          !queryTextContentEvent.mReply->IsDataEmpty() &&
++          (queryTextContentEvent.mReply->DataRef()[0] == '\n' ||
++           queryTextContentEvent.mReply->DataRef()[0] == '\r');
++      if (startsWithHardLineBreak) {
++        WidgetQueryContentEvent queryPrevTextRectEvent(true, eQueryTextRect,
++                                                       mPuppetWidget);
++        queryPrevTextRectEvent.InitForQueryTextRect(aOffset - 1, 1);
++        mPuppetWidget->DispatchEvent(&queryPrevTextRectEvent);
++        if (!queryPrevTextRectEvent.Failed()) {
++          LayoutDeviceIntRect caretRect = queryPrevTextRectEvent.mReply->mRect;
++          const WritingMode& writingMode =
++              queryPrevTextRectEvent.mReply->mWritingMode;
++          if (writingMode.IsVertical()) {
++            caretRect.y = caretRect.YMost() + 1;
++            caretRect.height = 1;
++          } else {
++            caretRect.x = caretRect.XMost() + 1;
++            caretRect.width = 1;
++          }
++
++          *aSucceeded = true;
++          *aRect = caretRect;
++        }
++      }
++    }
++    return IPC_OK();
++  }
++
++  *aSucceeded = true;
++  *aRect = queryEvent.mReply->mRect;
++  return IPC_OK();
++}
++
+ mozilla::ipc::IPCResult BrowserChild::RecvSimpleContentCommandEvent(
+     const EventMessage& aMessage) {
+   WidgetContentCommandEvent localEvent(true, aMessage, mPuppetWidget);
