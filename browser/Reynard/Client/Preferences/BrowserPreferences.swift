@@ -16,6 +16,7 @@ final class BrowserPreferences {
         case brave
         case duckDuckGo
         case ecosia
+        case startpage
         case custom
         
         var displayName: String {
@@ -32,6 +33,8 @@ final class BrowserPreferences {
                 return "DuckDuckGo"
             case .ecosia:
                 return "Ecosia"
+            case .startpage:
+                return "Startpage"
             case .custom:
                 return "Custom"
             }
@@ -51,6 +54,8 @@ final class BrowserPreferences {
                 return "https://duckduckgo.com/?q=%s"
             case .ecosia:
                 return "https://www.ecosia.org/search?q=%s"
+            case .startpage:
+                return "https://www.startpage.com/sp/search?query=%s"
             case .custom:
                 return nil
             }
