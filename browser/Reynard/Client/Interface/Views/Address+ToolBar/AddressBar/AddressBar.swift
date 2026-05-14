@@ -321,14 +321,14 @@ final class AddressBar: UIView {
         leadingButton.isHidden = false
         if leadingButtonShowsSearchIcon {
             leadingButton.tintColor = .secondaryLabel
-            leadingButton.setImage(UIImage(systemName: "magnifyingglass"), for: .normal)
+            leadingButton.setImage(symbolImage(primary: "magnifyingglass", fallback: "magnifyingglass.circle"), for: .normal)
             leadingButton.setMenuPreservingPresentation(nil)
             leadingButton.isUserInteractionEnabled = false
             return
         }
         
         leadingButton.tintColor = leadingButtonShowsMenu ? .label : .secondaryLabel
-        leadingButton.setImage(UIImage(systemName: "list.bullet.below.rectangle"), for: .normal)
+        leadingButton.setImage(symbolImage(primary: "list.bullet.below.rectangle", fallback: "line.horizontal.3"), for: .normal)
         leadingButton.setMenuPreservingPresentation(leadingButtonShowsMenu ? addonsMenu : nil)
         leadingButton.isUserInteractionEnabled = leadingButtonShowsMenu && addonsMenu != nil
     }
@@ -406,6 +406,13 @@ final class AddressBar: UIView {
     @objc
     private func handleTrailingButtonTap() {
         delegate?.addressBarDidTapTrailingButton(self)
+    }
+
+    private func symbolImage(primary: String, fallback: String) -> UIImage? {
+        if let image = UIImage(systemName: primary) {
+            return image
+        }
+        return UIImage(systemName: fallback)
     }
 }
 

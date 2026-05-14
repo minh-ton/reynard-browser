@@ -12,10 +12,27 @@ import Symbols
 enum MakeButtons {
     static let hasLiquidGlass = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "_UISolariumEnabled") != nil && _UISolariumEnabled()
     
+    private static func toolbarImage(for imageName: String) -> UIImage? {
+        if let image = UIImage(systemName: imageName) {
+            return image
+        }
+        
+        switch imageName {
+        case "chevron.backward":
+            return UIImage(systemName: "chevron.left")
+        case "chevron.forward":
+            return UIImage(systemName: "chevron.right")
+        case "list.bullet.below.rectangle":
+            return UIImage(systemName: "line.horizontal.3")
+        default:
+            return nil
+        }
+    }
+    
     static func makeToolbarButton(target: AnyObject, imageName: String, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: imageName), for: .normal)
+        button.setImage(toolbarImage(for: imageName), for: .normal)
         if imageName == "plus" {
             button.setPreferredSymbolConfiguration(
                 UIImage.SymbolConfiguration(pointSize: 20, weight: .regular),
@@ -42,7 +59,7 @@ enum MakeButtons {
     static func makeTabOverviewBarButton(controller: BrowserViewController, imageName: String, isFilled: Bool, action: Selector) -> UIButton {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: imageName), for: .normal)
+        button.setImage(toolbarImage(for: imageName), for: .normal)
         button.setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: 17, weight: .regular),
             forImageIn: .normal
