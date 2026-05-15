@@ -16,10 +16,4 @@ final class TabOverview {
         view.isHidden = true
         return view
     }()
-    
-    let blurView: UIVisualEffectView = {
-        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
 }

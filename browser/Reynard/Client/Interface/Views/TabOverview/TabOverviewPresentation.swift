@@ -132,9 +132,7 @@ final class TabOverviewPresentation {
         controller.browserUI.tabOverviewCollection.collectionView.reloadData()
         controller.browserUI.tabOverview.containerView.isHidden = false
         controller.browserUI.tabOverview.containerView.alpha = 0
-        controller.browserUI.tabOverview.blurView.alpha = 0
         controller.browserUI.tabOverviewBottomBar.barView.alpha = 0
-        controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 0
         controller.view.bringSubviewToFront(controller.browserUI.tabOverview.containerView)
         controller.view.endEditing(true)
         controller.setSearchFocused(false, animated: false)
@@ -176,9 +174,7 @@ final class TabOverviewPresentation {
             pageSnapshot.frame = targetFrame
             pageSnapshot.layer.cornerRadius = 18
             bottomSnapshot.alpha = 0
-            self.controller.browserUI.tabOverview.blurView.alpha = 1
             self.controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-            self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             bottomSnapshot.removeFromSuperview()
@@ -198,9 +194,7 @@ final class TabOverviewPresentation {
         
         controller.browserUI.tabOverview.containerView.isHidden = false
         controller.browserUI.tabOverview.containerView.alpha = 1
-        controller.browserUI.tabOverview.blurView.alpha = 1
         controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-        controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
         controller.view.bringSubviewToFront(controller.browserUI.tabOverview.containerView)
         controller.view.layoutIfNeeded()
         
@@ -264,11 +258,9 @@ final class TabOverviewPresentation {
             pageSnapshot.layer.cornerRadius = 0
             bottomSnapshot.alpha = 0
             self.controller.browserUI.tabOverview.containerView.alpha = 0
-            self.controller.browserUI.tabOverview.blurView.alpha = 0
             self.controller.browserUI.tabOverviewCollection.collectionView.alpha = 0
             self.controller.browserUI.chromeContainer.containerView.alpha = 1
             self.controller.browserUI.chromeContainer.bottomSafeAreaFillView.alpha = 1
-            self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 0
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             bottomSnapshot.removeFromSuperview()
@@ -278,9 +270,7 @@ final class TabOverviewPresentation {
             self.controller.browserUI.tabOverviewCollection.collectionView.alpha = 1
             self.controller.browserUI.tabOverviewCollection.collectionView.transform = .identity
             self.controller.browserUI.tabOverview.containerView.isHidden = true
-            self.controller.browserUI.tabOverview.blurView.alpha = 1
             self.controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-            self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
             self.isTransitionRunning = false
         }
     }
@@ -295,10 +285,8 @@ final class TabOverviewPresentation {
         let isPhoneTopPresentation = controller.usesBottomPhoneOverview
         controller.browserUI.tabOverview.containerView.isHidden = false
         controller.browserUI.tabOverview.containerView.alpha = 0
-        controller.browserUI.tabOverview.blurView.alpha = 0
         if isPhoneTopPresentation {
             controller.browserUI.tabOverviewBottomBar.barView.alpha = 0
-            controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 0
         } else {
             controller.browserUI.tabOverviewTopBar.barView.alpha = 0
         }
@@ -335,10 +323,8 @@ final class TabOverviewPresentation {
         UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseInOut]) {
             pageSnapshot.frame = targetFrame
             pageSnapshot.layer.cornerRadius = 18
-            self.controller.browserUI.tabOverview.blurView.alpha = 1
             if isPhoneTopPresentation {
                 self.controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-                self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
             } else {
                 self.controller.browserUI.tabOverviewTopBar.barView.alpha = 1
             }
@@ -363,10 +349,8 @@ final class TabOverviewPresentation {
         let isPhoneTopDismissal = controller.usesBottomPhoneOverview
         controller.browserUI.tabOverview.containerView.isHidden = false
         controller.browserUI.tabOverview.containerView.alpha = 1
-        controller.browserUI.tabOverview.blurView.alpha = 1
         if isPhoneTopDismissal {
             controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-            controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
         } else {
             controller.browserUI.tabOverviewTopBar.barView.alpha = 1
         }
@@ -429,11 +413,9 @@ final class TabOverviewPresentation {
             pageSnapshot.frame = self.controller.dismissalContentFrame()
             pageSnapshot.layer.cornerRadius = 0
             self.controller.browserUI.tabOverview.containerView.alpha = 0
-            self.controller.browserUI.tabOverview.blurView.alpha = 0
             self.controller.browserUI.tabOverviewCollection.collectionView.alpha = 0
             if isPhoneTopDismissal {
                 self.controller.browserUI.tabOverviewBottomBar.barView.alpha = 0
-                self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 0
             } else {
                 self.controller.browserUI.tabOverviewTopBar.barView.alpha = 0
             }
@@ -449,10 +431,8 @@ final class TabOverviewPresentation {
             self.controller.browserUI.tabOverviewCollection.collectionView.alpha = 1
             self.controller.browserUI.tabOverviewCollection.collectionView.transform = .identity
             self.controller.browserUI.tabOverview.containerView.isHidden = true
-            self.controller.browserUI.tabOverview.blurView.alpha = 1
             if isPhoneTopDismissal {
                 self.controller.browserUI.tabOverviewBottomBar.barView.alpha = 1
-                self.controller.browserUI.tabOverviewBottomBar.safeAreaFillView.alpha = 1
             } else {
                 self.controller.browserUI.tabOverviewTopBar.barView.alpha = 1
             }

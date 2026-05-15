@@ -424,9 +424,7 @@ final class BrowserUI {
         ui.topBar.barView.addSubview(ui.tabBar.collectionView)
         
         view.addSubview(ui.tabOverview.containerView)
-        ui.tabOverview.containerView.addSubview(ui.tabOverview.blurView)
         ui.tabOverview.containerView.addSubview(ui.tabOverviewCollection.collectionView)
-        ui.tabOverview.containerView.addSubview(ui.tabOverviewBottomBar.safeAreaFillView)
         ui.tabOverview.containerView.addSubview(ui.tabOverviewBottomBar.barView)
         ui.tabOverview.containerView.addSubview(ui.tabOverviewTopBar.barView)
         ui.tabOverviewBarButtons.attach(to: ui.tabOverviewBottomBar.barView)
@@ -489,7 +487,7 @@ final class BrowserUI {
         ui.tabOverviewCollection.topPadConstraint = ui.tabOverviewCollection.collectionView.topAnchor.constraint(equalTo: ui.tabOverviewTopBar.barView.bottomAnchor)
         ui.tabOverviewCollection.bottomPadConstraint = ui.tabOverviewCollection.collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         
-        ui.tabOverviewBottomBar.bottomConstraint = ui.tabOverviewBottomBar.barView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ui.tabOverviewBottomBar.bottomConstraint = ui.tabOverviewBottomBar.barView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ui.tabOverviewBottomBar.heightConstraint = ui.tabOverviewBottomBar.barView.heightAnchor.constraint(equalToConstant: 108)
         ui.tabOverviewTopBar.heightConstraint = ui.tabOverviewTopBar.barView.heightAnchor.constraint(equalToConstant: 108)
         
@@ -559,11 +557,6 @@ final class BrowserUI {
             ui.tabOverview.containerView.topAnchor.constraint(equalTo: view.topAnchor),
             ui.tabOverview.containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
-            ui.tabOverview.blurView.leadingAnchor.constraint(equalTo: ui.tabOverview.containerView.leadingAnchor),
-            ui.tabOverview.blurView.trailingAnchor.constraint(equalTo: ui.tabOverview.containerView.trailingAnchor),
-            ui.tabOverview.blurView.topAnchor.constraint(equalTo: ui.tabOverview.containerView.topAnchor),
-            ui.tabOverview.blurView.bottomAnchor.constraint(equalTo: ui.tabOverview.containerView.bottomAnchor),
-            
             ui.tabOverviewCollection.collectionView.leadingAnchor.constraint(equalTo: ui.tabOverview.containerView.safeAreaLayoutGuide.leadingAnchor),
             ui.tabOverviewCollection.collectionView.trailingAnchor.constraint(equalTo: ui.tabOverview.containerView.safeAreaLayoutGuide.trailingAnchor),
             ui.tabOverviewCollection.topPhoneConstraint,
@@ -573,11 +566,6 @@ final class BrowserUI {
             ui.tabOverviewBottomBar.barView.trailingAnchor.constraint(equalTo: ui.tabOverview.containerView.trailingAnchor),
             ui.tabOverviewBottomBar.bottomConstraint,
             ui.tabOverviewBottomBar.heightConstraint,
-            
-            ui.tabOverviewBottomBar.safeAreaFillView.leadingAnchor.constraint(equalTo: ui.tabOverview.containerView.leadingAnchor),
-            ui.tabOverviewBottomBar.safeAreaFillView.trailingAnchor.constraint(equalTo: ui.tabOverview.containerView.trailingAnchor),
-            ui.tabOverviewBottomBar.safeAreaFillView.topAnchor.constraint(equalTo: ui.tabOverviewBottomBar.barView.bottomAnchor),
-            ui.tabOverviewBottomBar.safeAreaFillView.bottomAnchor.constraint(equalTo: ui.tabOverview.containerView.bottomAnchor),
             
             ui.tabOverviewTopBar.barView.leadingAnchor.constraint(equalTo: ui.tabOverview.containerView.leadingAnchor),
             ui.tabOverviewTopBar.barView.trailingAnchor.constraint(equalTo: ui.tabOverview.containerView.trailingAnchor),
@@ -708,7 +696,6 @@ final class BrowserUI {
         
         ui.tabOverviewTopBar.barView.isHidden = phoneOverview
         ui.tabOverviewBottomBar.barView.isHidden = !phoneOverview
-        ui.tabOverviewBottomBar.safeAreaFillView.isHidden = true
         ui.tabOverviewBarButtons.attach(to: phoneOverview ? ui.tabOverviewBottomBar.barView : ui.tabOverviewTopBar.barView)
         ui.padTopBarButtons.updateLayout(isPadLayout: controller.isPad, showsCompactPadChrome: compactPad, sidebarVisible: controller.isLibrarySidebarVisible)
         ui.padTopBarButtons.leftStack.isHidden = compactPad
@@ -808,7 +795,6 @@ final class BrowserUI {
         
         ui.tabOverviewTopBar.barView.isHidden = controller.usesBottomPhoneOverview
         ui.tabOverviewBottomBar.barView.isHidden = !controller.usesBottomPhoneOverview
-        ui.tabOverviewBottomBar.safeAreaFillView.isHidden = true
         ui.padTopBarButtons.leftStack.isHidden = controller.usesCompactPadChrome
         ui.padTopBarButtons.rightStack.isHidden = controller.usesCompactPadChrome
         ui.phoneToolbarTopConstraint.isActive = !pad && !controller.usesCompactPadChrome

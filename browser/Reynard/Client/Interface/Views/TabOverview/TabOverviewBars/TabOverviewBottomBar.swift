@@ -15,13 +15,6 @@ final class TabOverviewBottomBar {
         return view
     }()
     
-    let safeAreaFillView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
-        return view
-    }()
-    
     var bottomConstraint: NSLayoutConstraint!
     var heightConstraint: NSLayoutConstraint!
 }
