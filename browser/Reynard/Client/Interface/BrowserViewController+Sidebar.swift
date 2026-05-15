@@ -110,16 +110,25 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
     
     init(browserViewController: BrowserViewController) {
         self.browserViewController = browserViewController
-        super.init(style: .doubleColumn)
-        preferredDisplayMode = .secondaryOnly
-        preferredSplitBehavior = .tile
-        preferredPrimaryColumnWidth = 320
-        minimumPrimaryColumnWidth = 280
-        maximumPrimaryColumnWidth = 360
-        presentsWithGesture = false
-        showsSecondaryOnlyButton = false
-        if #available(iOS 14.5, *) {
-            displayModeButtonVisibility = .never
+        if #available(iOS 14.0, *) {
+            super.init(style: .doubleColumn)
+            preferredDisplayMode = .secondaryOnly
+            preferredSplitBehavior = .tile
+            preferredPrimaryColumnWidth = 320
+            minimumPrimaryColumnWidth = 280
+            maximumPrimaryColumnWidth = 360
+            presentsWithGesture = false
+            showsSecondaryOnlyButton = false
+            if #available(iOS 14.5, *) {
+                displayModeButtonVisibility = .never
+            }
+            setViewController(libraryNavigationController, for: .primary)
+            setViewController(browserNavigationController, for: .secondary)
+        } else {
+            super.init(nibName: nil, bundle: nil)
+            preferredDisplayMode = .primaryHidden
+            presentsWithGesture = false
+            viewControllers = [libraryNavigationController, browserNavigationController]
         }
         delegate = self
         NotificationCenter.default.addObserver(
@@ -128,8 +137,6 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
-        setViewController(libraryNavigationController, for: .primary)
-        setViewController(browserNavigationController, for: .secondary)
     }
     
     required init?(coder: NSCoder) {
@@ -142,10 +149,14 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
     
     func setLibrarySidebarVisible(_ visible: Bool) {
         sidebarVisible = visible
-        if visible {
-            show(.primary)
+        if #available(iOS 14.0, *) {
+            if visible {
+                show(.primary)
+            } else {
+                hide(.primary)
+            }
         } else {
-            hide(.primary)
+            preferredDisplayMode = visible ? .allVisible : .primaryHidden
         }
         if browserViewController.isViewLoaded {
             browserViewController.applyChromeLayout(animated: false)
