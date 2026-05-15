@@ -253,7 +253,7 @@ extension SettingsRootViewController {
         
         if isTrollStore {
             let tsURLStr = downloadURLStr.replacingOccurrences(of: "Reynard.ipa", with: "Reynard-TrollStore.tipa")
-            let encoded = tsURLStr.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? tsURLStr
+            _ = tsURLStr.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? tsURLStr
             /*
              if let schemeURL = URL(string: "apple-magnifier://install?url=" + encoded),
              UIApplication.shared.canOpenURL(schemeURL) {

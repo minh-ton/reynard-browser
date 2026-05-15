@@ -16,7 +16,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
     private let androidUASwitch = UISwitch()
     
     private var rows: [Row] {
-        preferences.useAndroidUserAgent ? [.useAndroidUserAgent] : Row.allCases
+        Prefs.CompatibilitySettings.useAndroidUserAgent ? [.useAndroidUserAgent] : Row.allCases
     }
     
     init() {
@@ -80,8 +80,8 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        if preferences.useAndroidUserAgent {
-            return preferences.requestDesktopWebsite
+        if Prefs.CompatibilitySettings.useAndroidUserAgent {
+            return Prefs.BrowsingSettings.requestDesktopWebsite
             ? "The browser will use a desktop Firefox user agent for navigating the web."
             : "To maximize compatibility, the browser will use the Firefox for Android user agent for navigating the web. As a result, websites may identify your device as an Android device."
         }
@@ -90,12 +90,12 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
     }
     
     private func refreshControls() {
-        androidUASwitch.isOn = preferences.useAndroidUserAgent
+        androidUASwitch.isOn = Prefs.CompatibilitySettings.useAndroidUserAgent
     }
     
     @objc private func androidUASwitchChanged() {
         let nowOn = androidUASwitch.isOn
-        preferences.useAndroidUserAgent = nowOn
+        Prefs.CompatibilitySettings.useAndroidUserAgent = nowOn
         
         let overrideRowIndexPath = IndexPath(row: 1, section: 0)
         UIView.performWithoutAnimation {
@@ -121,7 +121,6 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
     }
     
     private var domains: [String] = []
-    private let preferences = BrowserPreferences.shared
     
     init() {
         super.init(style: .insetGrouped)
@@ -134,7 +133,7 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        domains = preferences.androidUserAgentDomains
+        domains = Prefs.CompatibilitySettings.androidUserAgentDomains
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -174,7 +173,7 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
               indexPath.section == Section.userList.rawValue,
               indexPath.row < domains.count else { return }
         domains.remove(at: indexPath.row)
-        preferences.androidUserAgentDomains = domains
+        Prefs.CompatibilitySettings.androidUserAgentDomains = domains
         tableView.deleteRows(at: [indexPath], with: .automatic)
     }
     
@@ -216,7 +215,7 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
         guard !normalised.isEmpty, !domains.contains(normalised) else { return }
         domains.append(normalised)
         domains.sort()
-        preferences.androidUserAgentDomains = domains
+        Prefs.CompatibilitySettings.androidUserAgentDomains = domains
         tableView.reloadData()
     }
 }

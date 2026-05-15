@@ -24,7 +24,7 @@ final class SearchPreferencesViewController: SettingsTableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.textLabel?.text = "Search Engine"
-        cell.detailTextLabel?.text = preferences.searchEngineSummary
+        cell.detailTextLabel?.text = Prefs.SearchSettings.searchEngine.displayName
         cell.detailTextLabel?.textColor = .secondaryLabel
         cell.accessoryType = .disclosureIndicator
         return cell
@@ -83,11 +83,11 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        preferences.searchEngine == .custom ? 2 : 1
+        Prefs.SearchSettings.searchEngine == .custom ? 2 : 1
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        section == 0 ? BrowserPreferences.SearchEngine.allCases.count : 1
+        section == 0 ? SearchEngine.allCases.count : 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -97,23 +97,23 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
             }
             cell.textField.delegate = self
             cell.textField.placeholder = "https://example.com/search?q=%s"
-            cell.textField.text = preferences.customSearchTemplate
+            cell.textField.text = Prefs.SearchSettings.customSearchTemplate
             return cell
         }
-        let engine = BrowserPreferences.SearchEngine.allCases[indexPath.row]
+        let engine = SearchEngine.allCases[indexPath.row]
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.textLabel?.text = engine.displayName
-        cell.accessoryType = preferences.searchEngine == engine ? .checkmark : .none
+        cell.accessoryType = Prefs.SearchSettings.searchEngine == engine ? .checkmark : .none
         return cell
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
         guard indexPath.section == 0,
-              BrowserPreferences.SearchEngine.allCases.indices.contains(indexPath.row) else { return }
-        let selectedEngine = BrowserPreferences.SearchEngine.allCases[indexPath.row]
-        let wasCustom = preferences.searchEngine == .custom
-        preferences.searchEngine = selectedEngine
+              SearchEngine.allCases.indices.contains(indexPath.row) else { return }
+        let selectedEngine = SearchEngine.allCases[indexPath.row]
+        let wasCustom = Prefs.SearchSettings.searchEngine == .custom
+        Prefs.SearchSettings.searchEngine = selectedEngine
         if wasCustom != (selectedEngine == .custom) {
             tableView.reloadData()
         } else {
@@ -135,16 +135,16 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         guard section == 1 else { return nil }
         let baseText = "Enter URL with %s in place of query"
-        guard !preferences.customSearchTemplate.isEmpty,
-              !preferences.isCustomSearchTemplateValid else { return baseText }
+        guard !Prefs.SearchSettings.customSearchTemplate.isEmpty,
+              isValidCustomSearchTemplate(Prefs.SearchSettings.customSearchTemplate) else { return baseText }
         return "\(baseText). The current value must be a valid http(s) URL."
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        preferences.customSearchTemplate = textField.text ?? ""
+        Prefs.SearchSettings.customSearchTemplate = textField.text ?? ""
         tableView.reloadData()
-        let value = preferences.customSearchTemplate
-        guard !value.isEmpty, !preferences.isCustomSearchTemplateValid else { return }
+        let value = Prefs.SearchSettings.customSearchTemplate
+        guard !value.isEmpty, !isValidCustomSearchTemplate(value) else { return }
         presentAlert(
             title: "Invalid Search URL",
             message: "Enter a valid http(s) URL containing %s where the search query should go."

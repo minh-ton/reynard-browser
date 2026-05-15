@@ -32,10 +32,9 @@ final class UserAgentController {
         let defaultDesktopUserAgent = "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X; rv:\(geckoMajorVersion).0) Gecko/\(geckoMajorVersion).0 Firefox/\(geckoMajorVersion).0"
         let googleMobileUserAgent = "Mozilla/5.0 (Linux; Android 15; Nexus 5 Build/MRA58N) FxQuantum/\(geckoMajorVersion).0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/\(chromeMajorVersion).0.0.0 Mobile Safari/537.36"
         
-        let prefs = BrowserPreferences.shared
         let requestDesktopWebsite = tabID.flatMap { tabID in
             isDesktopMode(for: urlString, tabID: tabID)
-        } ?? prefs.requestDesktopWebsite
+        } ?? Prefs.BrowsingSettings.requestDesktopWebsite
         
         // Always use the Android mobile user agent for AMO to
         // allow addons installation.
@@ -51,13 +50,13 @@ final class UserAgentController {
         // I have so many people reporting broken UI issues, login
         // issues, etc on Google services, so this is a compatibility
         // hack stolen from the Google Search Fixer extension.
-        if prefs.useAndroidUserAgent && !requestDesktopWebsite,
+        if Prefs.CompatibilitySettings.useAndroidUserAgent && !requestDesktopWebsite,
            host?.split(separator: ".").contains("google") == true {
             return googleMobileUserAgent
         }
         
-        let shouldUseAndroidUserAgent = prefs.useAndroidUserAgent || (host.map { host in
-            prefs.androidUserAgentDomains.contains { domainMatches(host: host, domain: $0) }
+        let shouldUseAndroidUserAgent = Prefs.CompatibilitySettings.useAndroidUserAgent || (host.map { host in
+            Prefs.CompatibilitySettings.androidUserAgentDomains.contains { domainMatches(host: host, domain: $0) }
         } ?? false)
         
         switch (shouldUseAndroidUserAgent, requestDesktopWebsite) {
@@ -82,7 +81,7 @@ final class UserAgentController {
         let overrides = tabHostDesktopOverrides[tabID]
         return overrides?[host] ?? overrides?.first(where: {
             domainMatches(host: host, domain: $0.key) || domainMatches(host: $0.key, domain: host)
-        })?.value ?? BrowserPreferences.shared.requestDesktopWebsite
+        })?.value ?? Prefs.BrowsingSettings.requestDesktopWebsite
     }
     
     func changeWebsiteMode(for urlString: String, tabID: UUID) {
@@ -92,7 +91,7 @@ final class UserAgentController {
         }
         
         let newSetting = !isDesktop
-        if newSetting == BrowserPreferences.shared.requestDesktopWebsite {
+        if newSetting == Prefs.BrowsingSettings.requestDesktopWebsite {
             tabHostDesktopOverrides[tabID]?.removeValue(forKey: host)
             if tabHostDesktopOverrides[tabID]?.isEmpty == true {
                 tabHostDesktopOverrides.removeValue(forKey: tabID)

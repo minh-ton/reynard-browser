@@ -22,12 +22,12 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         requestDesktopWebsiteSwitch.addTarget(self, action: #selector(requestDesktopWebsiteSwitchChanged(_:)), for: .valueChanged)
-        requestDesktopWebsiteSwitch.isOn = preferences.requestDesktopWebsite
+        requestDesktopWebsiteSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsite
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        requestDesktopWebsiteSwitch.isOn = preferences.requestDesktopWebsite
+        requestDesktopWebsiteSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsite
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -48,6 +48,6 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     }
     
     @objc private func requestDesktopWebsiteSwitchChanged(_ sender: UISwitch) {
-        preferences.requestDesktopWebsite = sender.isOn
+        Prefs.BrowsingSettings.requestDesktopWebsite = sender.isOn
     }
 }

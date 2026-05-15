@@ -8,12 +8,12 @@
 import UIKit
 
 final class PositionOptionControl: UIControl {
-    let position: BrowserPreferences.AddressBarPosition
+    let position: AddressBarPosition
     private let imageView = UIImageView()
     private let titleLabel = UILabel()
     private let radioView = UIImageView()
     
-    init(position: BrowserPreferences.AddressBarPosition, symbolName: String, title: String) {
+    init(position: AddressBarPosition, symbolName: String, title: String) {
         self.position = position
         super.init(frame: .zero)
         isAccessibilityElement = true
@@ -76,8 +76,8 @@ final class PositionOptionControl: UIControl {
 }
 
 final class AddressBarPositionPickerCell: UITableViewCell {
-    var onSelectionChanged: ((BrowserPreferences.AddressBarPosition) -> Void)?
-    private(set) var selectedPosition: BrowserPreferences.AddressBarPosition = .bottom
+    var onSelectionChanged: ((AddressBarPosition) -> Void)?
+    private(set) var selectedPosition: AddressBarPosition = .bottom
     
     private let bottomOption = PositionOptionControl(
         position: .bottom,
@@ -113,7 +113,7 @@ final class AddressBarPositionPickerCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func configure(selectedPosition: BrowserPreferences.AddressBarPosition) {
+    func configure(selectedPosition: AddressBarPosition) {
         self.selectedPosition = selectedPosition
         bottomOption.updateAppearance(selected: selectedPosition == .bottom)
         topOption.updateAppearance(selected: selectedPosition == .top)
@@ -182,9 +182,9 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         
         if indexPath.row == 0 {
             let cell = AddressBarPositionPickerCell(style: .default, reuseIdentifier: nil)
-            cell.configure(selectedPosition: preferences.addressBarPosition)
+            cell.configure(selectedPosition: Prefs.AppearanceSettings.addressBarPosition)
             cell.onSelectionChanged = { [weak self] position in
-                self?.preferences.addressBarPosition = position
+                Prefs.AppearanceSettings.addressBarPosition = position
             }
             return cell
         }
@@ -197,10 +197,10 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     }
     
     private func refreshControls() {
-        landscapeTabBarSwitch.isOn = preferences.showsLandscapeTabBar
+        landscapeTabBarSwitch.isOn = Prefs.AppearanceSettings.showsLandscapeTabBar
     }
     
     @objc private func landscapeTabBarSwitchChanged() {
-        preferences.showsLandscapeTabBar = landscapeTabBarSwitch.isOn
+        Prefs.AppearanceSettings.showsLandscapeTabBar = landscapeTabBarSwitch.isOn
     }
 }

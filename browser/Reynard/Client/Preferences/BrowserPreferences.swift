@@ -8,209 +8,176 @@
 import Foundation
 import UIKit
 
+typealias Prefs = BrowserPreferences
+
 final class BrowserPreferences {
-    enum SearchEngine: String, CaseIterable {
-        case google
-        case yahoo
-        case bing
-        case brave
-        case duckDuckGo
-        case ecosia
-        case startpage
-        case custom
-        
-        var displayName: String {
-            switch self {
-            case .google:
-                return "Google"
-            case .yahoo:
-                return "Yahoo"
-            case .bing:
-                return "Bing"
-            case .brave:
-                return "Brave"
-            case .duckDuckGo:
-                return "DuckDuckGo"
-            case .ecosia:
-                return "Ecosia"
-            case .startpage:
-                return "Startpage"
-            case .custom:
-                return "Custom"
-            }
-        }
-        
-        var searchTemplate: String? {
-            switch self {
-            case .google:
-                return "https://www.google.com/search?q=%s"
-            case .yahoo:
-                return "https://search.yahoo.com/search?p=%s"
-            case .bing:
-                return "https://www.bing.com/search?q=%s"
-            case .brave:
-                return "https://search.brave.com/search?q=%s"
-            case .duckDuckGo:
-                return "https://duckduckgo.com/?q=%s"
-            case .ecosia:
-                return "https://www.ecosia.org/search?q=%s"
-            case .startpage:
-                return "https://www.startpage.com/sp/search?query=%s"
-            case .custom:
-                return nil
-            }
-        }
-    }
+    static var shared = BrowserPreferences()
     
-    enum AddressBarPosition: String {
-        case bottom
-        case top
-    }
+    let profile: String
     
-    private enum Keys {
-        static let searchEngine = "BrowserPreferences.searchEngine"
-        static let customSearchTemplate = "BrowserPreferences.customSearchTemplate"
-        static let jitEnabled = "BrowserPreferences.jitEnabled"
-        static let androidUserAgentDomains = "BrowserPreferences.androidUserAgentDomains"
-        static let useAndroidUserAgent = "BrowserPreferences.useAndroidUserAgent"
-        static let requestDesktopWebsite = "BrowserPreferences.requestDesktopWebsite"
-        static let addressBarPosition = "BrowserPreferences.addressBarPosition"
-        static let showsLandscapeTabBar = "BrowserPreferences.showsLandscapeTabBar"
-    }
-    
-    static let shared = BrowserPreferences()
-    
-    private let defaults: UserDefaults
-    private let fileManager: FileManager
-    
-    init(defaults: UserDefaults = .standard, fileManager: FileManager = .default) {
-        self.defaults = defaults
-        self.fileManager = fileManager
+    init(profile: String = "default") {
+        self.profile = profile
         registerDefaults()
     }
     
-    var searchEngine: SearchEngine {
-        get {
-            let rawValue = defaults.string(forKey: Keys.searchEngine) ?? SearchEngine.google.rawValue
-            return SearchEngine(rawValue: rawValue) ?? .google
-        }
-        set {
-            defaults.set(newValue.rawValue, forKey: Keys.searchEngine)
-        }
+    // Possible future work
+    static func useProfile(_ name: String) {
+        shared = BrowserPreferences(profile: name)
     }
     
-    var customSearchTemplate: String {
-        get { defaults.string(forKey: Keys.customSearchTemplate) ?? "" }
-        set { defaults.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: Keys.customSearchTemplate) }
+    func key(_ setting: String, _ name: String) -> String {
+        "\(profile).\(setting).\(name)"
     }
     
-    var isCustomSearchTemplateValid: Bool {
-        isValidCustomSearchTemplate(customSearchTemplate)
-    }
-    
-    var hasPairingFile: Bool {
-        fileManager.fileExists(atPath: pairingFileURL.path)
-    }
-    
-    var hasEntitledJIT: Bool {
-        getEntitlementValue("com.apple.private.security.no-sandbox")
-    }
-    
-    var isJITEnabled: Bool {
-        get {
-            guard hasEntitledJIT || hasPairingFile else {
-                return false
-            }
-            return defaults.bool(forKey: Keys.jitEnabled)
-        }
-        set {
-            defaults.set((hasEntitledJIT || hasPairingFile) && newValue, forKey: Keys.jitEnabled)
-        }
-    }
-    
-    var androidUserAgentDomains: [String] {
-        get {
-            guard let data = defaults.data(forKey: Keys.androidUserAgentDomains),
-                  let list = try? JSONDecoder().decode([String].self, from: data) else { return [] }
-            return list
-        }
-        set {
-            let data = try? JSONEncoder().encode(newValue)
-            defaults.set(data, forKey: Keys.androidUserAgentDomains)
-        }
-    }
-    
-    var useAndroidUserAgent: Bool {
-        get { defaults.bool(forKey: Keys.useAndroidUserAgent) }
-        set { defaults.set(newValue, forKey: Keys.useAndroidUserAgent) }
-    }
-    
-    var requestDesktopWebsite: Bool {
-        get { defaults.bool(forKey: Keys.requestDesktopWebsite) }
-        set { defaults.set(newValue, forKey: Keys.requestDesktopWebsite) }
-    }
-    
-    var addressBarPosition: AddressBarPosition {
-        get {
-            let rawValue = defaults.string(forKey: Keys.addressBarPosition) ?? AddressBarPosition.bottom.rawValue
-            return AddressBarPosition(rawValue: rawValue) ?? .bottom
-        }
-        set {
-            defaults.set(newValue.rawValue, forKey: Keys.addressBarPosition)
-            NotificationCenter.default.post(name: Notification.Name("addressBarPositionChanged"), object: nil)
-        }
-    }
-    
-    var showsLandscapeTabBar: Bool {
-        get { defaults.object(forKey: Keys.showsLandscapeTabBar) as? Bool ?? true }
-        set {
-            defaults.set(newValue, forKey: Keys.showsLandscapeTabBar)
-            NotificationCenter.default.post(name: Notification.Name("landscapeTabBarChanged"), object: nil)
-        }
-    }
-    
-    var pairingFileURL: URL {
-        documentsDirectory.appendingPathComponent("pairingFile.plist", isDirectory: false)
-    }
-    
-    var searchEngineSummary: String {
-        searchEngine.displayName
-    }
-    
-    func installPairingFile(from sourceURL: URL) throws {
-        let destinationURL = pairingFileURL
-        try fileManager.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        
-        let normalizedSourceURL = sourceURL.standardizedFileURL
-        let normalizedDestinationURL = destinationURL.standardizedFileURL
-        
-        guard normalizedSourceURL != normalizedDestinationURL else {
-            isJITEnabled = false
-            return
-        }
-        
-        if fileManager.fileExists(atPath: normalizedDestinationURL.path) {
-            try fileManager.removeItem(at: normalizedDestinationURL)
-        }
-        
-        try fileManager.copyItem(at: normalizedSourceURL, to: normalizedDestinationURL)
-        isJITEnabled = false
-    }
-    
-    private var documentsDirectory: URL {
-        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    }
-    
-    private func registerDefaults() {
-        defaults.register(defaults: [
-            Keys.searchEngine: SearchEngine.google.rawValue,
-            Keys.customSearchTemplate: "",
-            Keys.jitEnabled: false,
-            Keys.androidUserAgentDomains: [],
-            Keys.useAndroidUserAgent: true,
-            Keys.requestDesktopWebsite: UIDevice.current.userInterfaceIdiom == .pad,
-            Keys.addressBarPosition: AddressBarPosition.bottom.rawValue,
-            Keys.showsLandscapeTabBar: true,
+    func registerDefaults() {
+        UserDefaults.standard.register(defaults: [
+            // Search
+            key("SearchSettings", "searchEngine"): SearchEngine.google.rawValue,
+            key("SearchSettings", "customSearchTemplate"): "",
+            
+            // JIT
+            key("JITSettings", "isJITEnabled"): false,
+            
+            // Compatibility
+            key("CompatibilitySettings", "androidUserAgentDomains"): [],
+            key("CompatibilitySettings", "useAndroidUserAgent"): true,
+            
+            // Browsing
+            key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
+            
+            // Appearance
+            key("AppearanceSettings", "addressBarPosition"): AddressBarPosition.bottom.rawValue,
+            key("AppearanceSettings", "showsLandscapeTabBar"): true,
         ])
     }
+    
+    func bool(forSetting setting: String, key name: String) -> Bool {
+        UserDefaults.standard.bool(forKey: key(setting, name))
+    }
+    
+    func string(forSetting setting: String, key name: String) -> String? {
+        UserDefaults.standard.string(forKey: key(setting, name))
+    }
+    
+    func data(forSetting setting: String, key name: String) -> Data? {
+        UserDefaults.standard.data(forKey: key(setting, name))
+    }
+    
+    func set(_ value: Bool, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+    
+    func set(_ value: String?, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+    
+    func set(_ value: Data?, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+    
+    // MARK: - Search
+    struct SearchSettings {
+        static var searchEngine: SearchEngine {
+            get {
+                let rawValue = prefs.string(forSetting: "SearchSettings", key: "searchEngine") ?? SearchEngine.google.rawValue
+                return SearchEngine(rawValue: rawValue) ?? .google
+            }
+            set {
+                prefs.set(newValue.rawValue, forSetting: "SearchSettings", key: "searchEngine")
+            }
+        }
+        
+        static var customSearchTemplate: String {
+            get {
+                return prefs.string(forSetting: "SearchSettings", key: "customSearchTemplate") ?? ""
+            }
+            set {
+                prefs.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forSetting: "SearchSettings", key: "customSearchTemplate")
+            }
+        }
+    }
+    
+    // MARK: - Browsing
+    struct BrowsingSettings {
+        static var requestDesktopWebsite: Bool {
+            get {
+                prefs.bool(forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
+            }
+        }
+    }
+    
+    // MARK: - Compatibility
+    struct CompatibilitySettings {
+        static var androidUserAgentDomains: [String] {
+            get {
+                guard let data = prefs.data(forSetting: "CompatibilitySettings", key: "androidUserAgentDomains"),
+                      let list = try? JSONDecoder().decode([String].self, from: data) else {
+                    return []
+                }
+                return list
+            }
+            set {
+                let data = try? JSONEncoder().encode(newValue)
+                prefs.set(data, forSetting: "CompatibilitySettings", key: "androidUserAgentDomains")
+            }
+        }
+        
+        static var useAndroidUserAgent: Bool {
+            get {
+                prefs.bool(forSetting: "CompatibilitySettings", key: "useAndroidUserAgent")
+            }
+            set {
+                prefs.set(newValue, forSetting: "CompatibilitySettings", key: "useAndroidUserAgent")
+            }
+        }
+    }
+    
+    // MARK: - Appearance
+    struct AppearanceSettings {
+        static var addressBarPosition: AddressBarPosition {
+            get {
+                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "addressBarPosition") ?? AddressBarPosition.bottom.rawValue
+                return AddressBarPosition(rawValue: rawValue) ?? .bottom
+            }
+            set {
+                prefs.set(newValue.rawValue, forSetting: "AppearanceSettings", key: "addressBarPosition")
+                NotificationCenter.default.post(name: Notification.Name("addressBarPositionChanged"), object: nil)
+            }
+        }
+        
+        static var showsLandscapeTabBar: Bool {
+            get {
+                prefs.bool(forSetting: "AppearanceSettings", key: "showsLandscapeTabBar")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AppearanceSettings", key: "showsLandscapeTabBar")
+                NotificationCenter.default.post(name: Notification.Name("landscapeTabBarChanged"), object: nil)
+            }
+        }
+    }
+    
+    // MARK: - JIT
+    struct JITSettings {
+        static var hasPairingFile: Bool {
+            FileManager.default.fileExists(atPath: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("pairingFile.plist", isDirectory: false).path)
+        }
+        
+        static var isJITEnabled: Bool {
+            get {
+                guard hasPairingFile else {
+                    return false
+                }
+                return prefs.bool(forSetting: "JITSettings", key: "isJITEnabled")
+            }
+            set {
+                prefs.set(hasPairingFile && newValue, forSetting: "JITSettings", key: "isJITEnabled")
+            }
+        }
+    }
 }
+
+private var prefs: BrowserPreferences { BrowserPreferences.shared }

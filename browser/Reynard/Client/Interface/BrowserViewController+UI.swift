@@ -106,7 +106,7 @@ extension BrowserViewController {
             isLandscape = view.bounds.width > view.bounds.height
         }
         guard !isLandscape else { return false }
-        return BrowserPreferences.shared.addressBarPosition == .top
+        return Prefs.AppearanceSettings.addressBarPosition == .top
     }
     
     var usesBottomPhoneOverview: Bool {
@@ -168,7 +168,7 @@ extension BrowserViewController {
         }
         
         if !isPad {
-            guard BrowserPreferences.shared.showsLandscapeTabBar else {
+            guard Prefs.AppearanceSettings.showsLandscapeTabBar else {
                 return 0
             }
             let isLandscape: Bool
@@ -691,7 +691,7 @@ final class BrowserUI {
         ui.tabOverviewCollection.topPadConstraint.isActive = !phoneOverview
         ui.tabOverviewCollection.bottomPadConstraint.isActive = !phoneOverview
         
-        let showsTabBar = pad && !controller.tabOverviewPresentation.isVisible && controller.tabManager.tabs.count > 1 && (!controller.isPad ? BrowserPreferences.shared.showsLandscapeTabBar && isLandscape : true)
+        let showsTabBar = pad && !controller.tabOverviewPresentation.isVisible && controller.tabManager.tabs.count > 1 && (!controller.isPad ? Prefs.AppearanceSettings.showsLandscapeTabBar && isLandscape : true)
         let showsCompactPadBottomToolbar = compactPad && !controller.tabOverviewPresentation.isVisible
         ui.topBar.barView.isHidden = !pad
         ui.topBar.safeAreaFillView.isHidden = !pad

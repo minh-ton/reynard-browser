@@ -59,7 +59,7 @@ final class JITController {
     }
     
     private func isDDIMissing() -> Bool {
-        BrowserPreferences.shared.isJITEnabled && !DDIManager.shared.hasRequiredDDIFiles()
+        Prefs.JITSettings.isJITEnabled && !DDIManager.shared.hasRequiredDDIFiles()
     }
     
     private func shouldAttach(to processType: String) -> Bool {
@@ -100,7 +100,7 @@ final class JITController {
             return
         }
         
-        guard usePtraceJIT() || BrowserPreferences.shared.isJITEnabled else {
+        guard usePtraceJIT() || Prefs.JITSettings.isJITEnabled else {
             ReportJITStatusForChild(pid, false, hasTXM26())
             return
         }
@@ -259,7 +259,7 @@ final class JITController {
     }
     
     private func disableJITAndQuit() {
-        BrowserPreferences.shared.isJITEnabled = false
+        Prefs.JITSettings.isJITEnabled = false
         quitApp()
     }
     
@@ -343,7 +343,7 @@ final class JITController {
     }
     
     @objc private func handleJITDisconnectNotification(_ notification: Notification) {
-        guard BrowserPreferences.shared.isJITEnabled, !isJITLessModeActive else {
+        guard Prefs.JITSettings.isJITEnabled, !isJITLessModeActive else {
             return
         }
         

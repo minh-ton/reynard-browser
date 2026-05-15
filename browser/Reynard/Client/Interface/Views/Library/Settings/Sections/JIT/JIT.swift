@@ -92,7 +92,7 @@ extension SettingsRootViewController {
         backgroundQueue.async { [weak self] in
             guard let self else { return }
             do {
-                try self.preferences.installPairingFile(from: url)
+                try installPairingFile(from: url)
                 DispatchQueue.main.async { self.refreshControls() }
             } catch {
                 DispatchQueue.main.async {
@@ -103,7 +103,7 @@ extension SettingsRootViewController {
     }
     
     @objc func jitSwitchChanged(_ sender: UISwitch) {
-        preferences.isJITEnabled = sender.isOn
+        Prefs.JITSettings.isJITEnabled = sender.isOn
         guard sender.isOn else { presentJITRestartAlert(); return }
         guard !DDIManager.shared.hasRequiredDDIFiles() else { presentJITRestartAlert(); return }
         presentDDIDownloadAlert(for: sender)
@@ -171,12 +171,12 @@ extension SettingsRootViewController {
             completion: { [weak self] result in
                 guard let self, self.activeDDIDownloadToken == token else { return }
                 self.activeDDIDownloadToken = nil
-                sender.isEnabled = self.hasEntitledJIT || self.preferences.hasPairingFile
+                sender.isEnabled = Prefs.JITSettings.hasPairingFile
                 switch result {
                 case .success:
                     self.dismissAlertIfPresented(alert) { self.presentJITRestartAlert() }
                 case .failure(let error):
-                    self.preferences.isJITEnabled = false
+                    Prefs.JITSettings.isJITEnabled = false
                     sender.setOn(false, animated: true)
                     self.dismissAlertIfPresented(alert) {
                         self.presentAlert(title: "Download Failed", message: error.localizedDescription)
@@ -190,9 +190,9 @@ extension SettingsRootViewController {
         guard activeDDIDownloadToken == token else { return }
         activeDDIDownloadToken = nil
         DDIManager.shared.cancelActiveDownload()
-        preferences.isJITEnabled = false
+        Prefs.JITSettings.isJITEnabled = false
         sender.setOn(false, animated: true)
-        sender.isEnabled = hasEntitledJIT || preferences.hasPairingFile
+        sender.isEnabled = Prefs.JITSettings.hasPairingFile
     }
     
     func dismissAlertIfPresented(_ alert: UIAlertController, completion: @escaping () -> Void) {
@@ -240,4 +240,26 @@ func allowedPairingDocumentTypeIdentifiers() -> [String] {
         }
     }
     return identifiers
+}
+
+func installPairingFile(from sourceURL: URL) throws {
+    let fileManager = FileManager.default
+    let destinationURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("pairingFile.plist", isDirectory: false)
+    try fileManager.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    
+    let normalizedSourceURL = sourceURL.standardizedFileURL
+    let normalizedDestinationURL = destinationURL.standardizedFileURL
+    
+    guard normalizedSourceURL != normalizedDestinationURL else {
+        Prefs.JITSettings.isJITEnabled = false
+        return
+    }
+    
+    if fileManager.fileExists(atPath: normalizedDestinationURL.path) {
+        try fileManager.removeItem(at: normalizedDestinationURL)
+    }
+    
+    try fileManager.copyItem(at: normalizedSourceURL, to: normalizedDestinationURL)
+    Prefs.JITSettings.isJITEnabled = false
 }
