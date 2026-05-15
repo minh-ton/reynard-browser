@@ -241,7 +241,6 @@ func allowedPairingDocumentTypeIdentifiers() -> [String] {
     }
     return identifiers
 }
-
 func installPairingFile(from sourceURL: URL) throws {
     let fileManager = FileManager.default
     let destinationURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]

@@ -88,7 +88,7 @@ final class SettingsRootViewController: SettingsTableViewController {
     }
     
     func refreshControls() {
-        jitSwitch.isEnabled = hasEntitledJIT || Prefs.JITSettings.hasPairingFile
+        jitSwitch.isEnabled = Prefs.JITSettings.hasPairingFile
         jitSwitch.isOn = Prefs.JITSettings.isJITEnabled
         isJITLessModeActive = JITController.shared.isJITLessModeActive
     }
