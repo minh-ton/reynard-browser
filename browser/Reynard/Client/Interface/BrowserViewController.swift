@@ -86,15 +86,16 @@ final class BrowserViewController: UIViewController {
             applyUpdateMenuButtonBadge()
         }
         
+        tabManager.createInitialTab()
+        refreshAddressBar()
+        
         Task { @MainActor [weak self] in
             guard let self else {
                 return
             }
             
             await self.addonsController.start()
-            self.tabManager.createInitialTab()
             self.tabManager.selectedTab?.session.setAddonTabActive(true)
-            self.refreshAddressBar()
         }
         
         browserUI.applyChromeLayout(animated: false)
@@ -204,26 +205,43 @@ final class BrowserViewController: UIViewController {
     func openExternalURL(_ url: URL) {
         let targetController = activeContentController
         targetController.loadViewIfNeeded()
-        targetController.prepareTabForExternalLoad()
-        targetController.browse(to: url.absoluteString)
+        let targetTab = targetController.prepareTabForExternalLoad()
+        targetController.tabManager.browse(to: url.absoluteString, in: targetTab)
     }
     
     private var activeContentController: BrowserViewController {
         embeddedSplitController?.contentBrowserViewController ?? self
     }
     
-    private func prepareTabForExternalLoad() {
-        let activeTabs = tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
+    private func prepareTabForExternalLoad() -> Tab {
+        let targetMode = tabManager.selectedTabMode
+        let targetIsPrivate = targetMode == .private
+        let activeTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
+        
         guard !activeTabs.isEmpty else {
-            _ = createTab(selecting: true, at: 0)
-            return
+            let createdIndex = createTab(selecting: true, at: 0, isPrivate: targetIsPrivate)
+            let updatedTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
+            return updatedTabs[createdIndex]
         }
         
-        if activeTabs.count == 1 && activeTabs[0].url == nil {
-            return
+        if let selectedTab = tabManager.selectedTab,
+           selectedTab.isPrivate == targetIsPrivate,
+           isBlankTab(selectedTab) {
+            return selectedTab
         }
         
-        _ = createTab(selecting: true, at: activeTabs.count)
+        let createdIndex = createTab(selecting: true, at: activeTabs.count, isPrivate: targetIsPrivate)
+        let updatedTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
+        return updatedTabs[createdIndex]
+    }
+    
+    private func isBlankTab(_ tab: Tab) -> Bool {
+        guard let url = tab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !url.isEmpty else {
+            return true
+        }
+        
+        return url.lowercased().hasPrefix("about:blank")
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
