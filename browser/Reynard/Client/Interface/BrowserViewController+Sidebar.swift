@@ -108,6 +108,10 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
         return navigationController
     }()
     
+    override var childForStatusBarHidden: UIViewController? {
+        browserNavigationController
+    }
+    
     init(browserViewController: BrowserViewController) {
         self.browserViewController = browserViewController
         if #available(iOS 14.0, *) {

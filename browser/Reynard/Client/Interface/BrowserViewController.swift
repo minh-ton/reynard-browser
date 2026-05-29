@@ -10,8 +10,21 @@ import UIKit
 
 final class BrowserViewController: UIViewController {
     lazy var tabManager: TabManager = TabManagerImplementation(delegate: self)
-    private(set) var isInFullscreenMedia = false
     private var orientationBeforeFullscreen: UIInterfaceOrientation?
+    
+    private(set) var isInFullscreenMedia = false {
+        didSet {
+            setNeedsStatusBarAppearanceUpdate()
+        }
+    }
+    
+    override var prefersStatusBarHidden: Bool {
+        return isInFullscreenMedia
+    }
+    
+    override var childForStatusBarHidden: UIViewController? {
+        shouldEmbedSidebarContainer ? embeddedSplitController : nil
+    }
     
     init(isSidebarContainerHost: Bool = true) {
         super.init(nibName: nil, bundle: nil)
@@ -363,4 +376,5 @@ final class BrowserViewController: UIViewController {
         UIDevice.current.setValue(deviceOrientation.rawValue, forKey: "orientation")
         UIViewController.attemptRotationToDeviceOrientation()
     }
+    
 }
