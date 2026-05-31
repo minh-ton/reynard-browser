@@ -118,11 +118,12 @@ private func menuAnchorRect(from selectionRect: CGRect, in bounds: CGRect) -> CG
     
     // Okay so for some reasons that idk, the selection action menu on iOS 26
     // overlap the selection badly, so shift it up by 40 points. On older
-    // iOS versions, the menu is wayyy above the selection, so shift it
-    // down by 35 points. ¯\_(ツ)_/¯
+    // iOS versions, the menu is wayyy above the selection but they don't
+    // seem to be consistent on different devices so... no shift ¯\_(ツ)_/¯
     var verticalOffset: CGFloat = 40
+    
     if #unavailable(iOS 26.0) {
-        verticalOffset = -35
+        verticalOffset = 0
     }
     
     if selectionRect.minY >= verticalOffset {
