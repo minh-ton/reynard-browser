@@ -21,7 +21,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Compatibility"
+        title = L("Compatibility")
     }
     
     required init?(coder: NSCoder) {
@@ -57,13 +57,13 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         switch row {
         case .useAndroidUserAgent:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Use Android User Agent"
+            cell.textLabel?.text = L("Use Android User Agent")
             cell.selectionStyle = .none
             cell.accessoryView = androidUASwitch
             return cell
         case .userAgentOverrides:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "User Agent Overrides"
+            cell.textLabel?.text = L("User Agent Overrides")
             cell.accessoryType = .disclosureIndicator
             return cell
         }
@@ -82,11 +82,11 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if Prefs.CompatibilitySettings.useAndroidUserAgent {
             return Prefs.BrowsingSettings.requestDesktopWebsite
-            ? "The browser will use a desktop Firefox user agent for navigating the web."
-            : "To maximize compatibility, the browser will use the Firefox for Android user agent for navigating the web. As a result, websites may identify your device as an Android device."
+            ? L("The browser will use a desktop Firefox user agent for navigating the web.")
+            : L("To maximize compatibility, the browser will use the Firefox for Android user agent for navigating the web. As a result, websites may identify your device as an Android device.")
         }
         
-        return "If you encounter issues such as sign-in failures, human verification challenges, or other incorrect site behavior, adding the site's URL to this user agent override list may help resolve the problem."
+        return L("If you encounter issues such as sign-in failures, human verification challenges, or other incorrect site behavior, adding the site's URL to this user agent override list may help resolve the problem.")
     }
     
     private func refreshControls() {
@@ -124,7 +124,7 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "User Agent Overrides"
+        title = L("User Agent Overrides")
     }
     
     required init?(coder: NSCoder) {
@@ -155,7 +155,7 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
                 cell.textLabel?.text = domains[indexPath.row]
                 cell.selectionStyle = .default
             } else {
-                cell.textLabel?.text = "Add Website..."
+                cell.textLabel?.text = L("Add Website...")
                 cell.textLabel?.textColor = tableView.tintColor
             }
             return cell
@@ -189,23 +189,23 @@ final class UserAgentOverridesPreferencesViewController: UITableViewController {
             return nil
         }
         
-        return "Navigations to these websites will use the browser's compatibility user agent. Depending on your Request Desktop Website setting, these websites may identify your device as either an Android device or a desktop Linux device."
+        return L("Navigations to these websites will use the browser's compatibility user agent. Depending on your Request Desktop Website setting, these websites may identify your device as either an Android device or a desktop Linux device.")
     }
     
     private func showAddDomainAlert() {
-        let alert = UIAlertController(title: "Add Website", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: L("Add Website"), message: nil, preferredStyle: .alert)
         alert.addTextField { field in
-            field.placeholder = "e.g. youtube.com"
+            field.placeholder = L("e.g. youtube.com")
             field.autocorrectionType = .no
             field.autocapitalizationType = .none
             field.keyboardType = .URL
             field.clearButtonMode = .whileEditing
         }
-        let addAction = UIAlertAction(title: "Add", style: .default) { [weak self, weak alert] _ in
+        let addAction = UIAlertAction(title: L("Add"), style: .default) { [weak self, weak alert] _ in
             guard let text = alert?.textFields?.first?.text else { return }
             self?.insertDomain(text)
         }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: L("Cancel"), style: .cancel))
         alert.addAction(addAction)
         present(alert, animated: true)
     }

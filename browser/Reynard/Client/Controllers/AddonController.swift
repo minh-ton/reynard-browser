@@ -208,7 +208,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
         Task { @MainActor [weak self] in
             self?.presentPopupAfterMenuDismissal(
                 url: popupURL,
-                title: action.title ?? addon.metaData.name ?? "Extension"
+                title: action.title ?? addon.metaData.name ?? L("Extension")
             )
         }
     }
@@ -366,7 +366,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
         }
         
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: L("OK"), style: .default))
         presenter.present(alert, animated: true)
     }
     

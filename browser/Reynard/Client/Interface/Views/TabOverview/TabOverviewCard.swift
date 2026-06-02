@@ -232,7 +232,7 @@ final class TabOverviewCard: UICollectionViewCell {
     }
     
     func configure(tab: Tab) {
-        titleLabel.text = tab.title.isEmpty ? "Homepage" : tab.title
+        titleLabel.text = tab.title.isEmpty ? L("Homepage") : tab.title
         previewImageView.image = tab.thumbnail
         faviconImageView.image = tab.favicon ?? Self.fallbackFavicon
     }

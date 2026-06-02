@@ -33,7 +33,7 @@ final class JITFailureView: UIView {
     }
     
     func updateError(code: Int, description: String) {
-        errorLabel.text = "Error \(code): \(description)"
+        errorLabel.text = String(format: L("Error %d: %@"), code, description)
         errorScrollView.setContentOffset(.zero, animated: false)
     }
     
@@ -231,7 +231,7 @@ final class JITFailureViewController: UIViewController {
         onPrimaryAction: (() -> Void)? = nil
     ) {
         self.errorCode = errorCode
-        self.errorDescriptionText = errorDescription.isEmpty ? "Unknown error." : errorDescription
+        self.errorDescriptionText = errorDescription.isEmpty ? L("Unknown error.") : errorDescription
         self.showsErrorDetails = showsErrorDetails
         self.titleText = titleText
         self.messageText = messageText

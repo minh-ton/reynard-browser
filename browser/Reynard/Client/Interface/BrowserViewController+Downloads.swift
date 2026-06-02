@@ -129,14 +129,14 @@ extension BrowserViewController {
         isPresentingDownloadConfirmation = true
         
         let alert = UIAlertController(
-            title: "Do you want to download \"\(download.fileName)\"?",
+            title: String(format: L("Do you want to download \"%@\"?"), download.fileName),
             message: nil,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: L("Cancel"), style: .cancel) { [weak self] _ in
             self?.finishDownloadConfirmation(startDownload: false)
         })
-        alert.addAction(UIAlertAction(title: "Download", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: L("Download"), style: .default) { [weak self] _ in
             self?.downloadHaptic.notificationOccurred(.success)
             self?.finishDownloadConfirmation(startDownload: true)
         })

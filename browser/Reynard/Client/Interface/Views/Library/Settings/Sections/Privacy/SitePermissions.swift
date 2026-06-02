@@ -30,21 +30,21 @@ final class SitePermissionsViewController: SettingsTableViewController {
         var title: String {
             switch self {
             case .autoplay:
-                return "Autoplay"
+                return L("Autoplay")
             case .camera:
-                return "Camera"
+                return L("Camera")
             case .microphone:
-                return "Microphone"
+                return L("Microphone")
             case .location:
-                return "Location"
+                return L("Location")
             case .persistentStorage:
-                return "Persistent Storage"
+                return L("Persistent Storage")
             case .crossSiteCookies:
-                return "Cross-site Cookies"
+                return L("Cross-site Cookies")
             case .localDeviceAccess:
-                return "Device Apps and Services"
+                return L("Device Apps and Services")
             case .localNetworkAccess:
-                return "Local Network Devices"
+                return L("Local Network Devices")
             }
         }
         
@@ -86,13 +86,13 @@ final class SitePermissionsViewController: SettingsTableViewController {
         var permissions: [String] = []
         
         if isCameraPermissionDisabled() {
-            permissions.append("Camera")
+            permissions.append(L("Camera"))
         }
         if isMicrophonePermissionDisabled() {
-            permissions.append("Microphone")
+            permissions.append(L("Microphone"))
         }
         if isLocationPermissionDisabled() {
-            permissions.append("Location")
+            permissions.append(L("Location"))
         }
         
         return permissions
@@ -112,7 +112,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Site Permissions"
+        title = L("Site Permissions")
     }
     
     required init?(coder: NSCoder) {
@@ -161,7 +161,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
             }
             
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Open Settings"
+            cell.textLabel?.text = L("Open Settings")
             cell.textLabel?.textColor = view.tintColor
             cell.accessoryType = .none
             return cell
@@ -192,10 +192,10 @@ final class SitePermissionsViewController: SettingsTableViewController {
             return cell
         case .websiteActions:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            cell.textLabel?.text = "Reset Permissions for all Sites"
+            cell.textLabel?.text = L("Reset Permissions for all Sites")
             cell.textLabel?.textColor = .systemRed
             if didResetPermissionsForAllSites {
-                cell.detailTextLabel?.text = "Successfully reset permissions for all sites."
+                cell.detailTextLabel?.text = L("Successfully reset permissions for all sites.")
             } else {
                 cell.detailTextLabel?.text = nil
             }
@@ -298,10 +298,10 @@ final class SitePermissionsViewController: SettingsTableViewController {
         let permissionList = formattedPermissionList(names)
         
         if names.count == 1 {
-            return "\(permissionList) is currently disabled for Reynard. Open the Settings app to enable this permission."
+            return String(format: L("%@ is currently disabled for Reynard. Open the Settings app to enable this permission."), permissionList)
         }
         
-        return "\(permissionList) are currently disabled for Reynard. Open the Settings app to enable these permissions."
+        return String(format: L("%@ are currently disabled for Reynard. Open the Settings app to enable these permissions."), permissionList)
     }
     
     private func formattedPermissionList(_ names: [String]) -> String {
@@ -314,12 +314,12 @@ final class SitePermissionsViewController: SettingsTableViewController {
         }
         
         if names.count == 2 {
-            return "\(names[0]) and \(names[1])"
+            return String(format: L("%@ and %@"), names[0], names[1])
         }
         
-        let head = names.dropLast().joined(separator: ", ")
+        let head = names.dropLast().joined(separator: L(", "))
         let tail = names[names.count - 1]
-        return "\(head), and \(tail)"
+        return String(format: L("%@, and %@"), head, tail)
     }
     
     private func openAppSettings() {
@@ -414,13 +414,13 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         
         switch visibleSections[section] {
         case .defaultBehavior:
-            return "Default Behavior"
+            return L("Default Behavior")
         case .allowedSites:
-            return "Allowed Sites"
+            return L("Allowed Sites")
         case .deniedSites:
-            return "Denied Sites"
+            return L("Denied Sites")
         case .changedSites:
-            return "Changed Sites"
+            return L("Changed Sites")
         }
     }
     
@@ -442,7 +442,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         case .allowedSites:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             if allowedSites.isEmpty {
-                cell.textLabel?.text = "No Sites Added"
+                cell.textLabel?.text = L("No Sites Added")
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.detailTextLabel?.text = nil
                 cell.selectionStyle = .none
@@ -461,7 +461,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         case .deniedSites:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             if deniedSites.isEmpty {
-                cell.textLabel?.text = "No Sites Added"
+                cell.textLabel?.text = L("No Sites Added")
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.detailTextLabel?.text = nil
                 cell.selectionStyle = .none
@@ -480,7 +480,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         case .changedSites:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             if changedSites.isEmpty {
-                cell.textLabel?.text = "No Sites Added"
+                cell.textLabel?.text = L("No Sites Added")
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.detailTextLabel?.text = nil
                 cell.selectionStyle = .none
@@ -585,15 +585,15 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         switch permission {
         case .autoplay:
             return [
-                PermissionOption(title: "Allow Audio and Video", action: .allowed),
-                PermissionOption(title: "Block Audio only", action: .askToAllow),
-                PermissionOption(title: "Block Audio and Video", action: .blocked),
+                PermissionOption(title: L("Allow Audio and Video"), action: .allowed),
+                PermissionOption(title: L("Block Audio only"), action: .askToAllow),
+                PermissionOption(title: L("Block Audio and Video"), action: .blocked),
             ]
         default:
             return [
-                PermissionOption(title: "Ask", action: .askToAllow),
-                PermissionOption(title: "Allow", action: .allowed),
-                PermissionOption(title: "Deny", action: .blocked),
+                PermissionOption(title: L("Ask"), action: .askToAllow),
+                PermissionOption(title: L("Allow"), action: .allowed),
+                PermissionOption(title: L("Deny"), action: .blocked),
             ]
         }
     }
@@ -655,7 +655,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
     }
     
     private func makeClearConfiguration(for host: String) -> UISwipeActionsConfiguration {
-        let clearAction = UIContextualAction(style: .destructive, title: "Clear") { [weak self] _, _, completion in
+        let clearAction = UIContextualAction(style: .destructive, title: L("Clear")) { [weak self] _, _, completion in
             guard let self else {
                 completion(false)
                 return
@@ -677,11 +677,11 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         let timestamp = timestampFormatter.string(from: date)
         switch action {
         case .allowed:
-            return "Allowed on \(timestamp)"
+            return String(format: L("Allowed on %@"), timestamp)
         case .blocked:
-            return "Denied on \(timestamp)"
+            return String(format: L("Denied on %@"), timestamp)
         case .askToAllow:
-            return "Changed on \(timestamp)"
+            return String(format: L("Changed on %@"), timestamp)
         }
     }
     
@@ -692,20 +692,20 @@ private func permissionActionTitle(for action: SitePermissionAction, permission:
     case .autoplay:
         switch action {
         case .allowed:
-            return "Allow Audio and Video"
+            return L("Allow Audio and Video")
         case .askToAllow:
-            return "Block Audio only"
+            return L("Block Audio only")
         case .blocked:
-            return "Block Audio and Video"
+            return L("Block Audio and Video")
         }
     default:
         switch action {
         case .allowed:
-            return "Allow"
+            return L("Allow")
         case .askToAllow:
-            return "Ask"
+            return L("Ask")
         case .blocked:
-            return "Deny"
+            return L("Deny")
         }
     }
 }

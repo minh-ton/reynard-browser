@@ -30,13 +30,13 @@ enum AddressBarMenu {
         let url = selectedURL.flatMap(URL.init(string:))
         if let url,
            url.host != nil {
-            let title = BookmarkStore.shared.bookmark(for: url) == nil ? "Add Bookmark" : "Edit Bookmark"
+            let title = BookmarkStore.shared.bookmark(for: url) == nil ? L("Add Bookmark") : L("Edit Bookmark")
             tabActions.append(UIAction(title: title, image: UIImage(systemName: "book")) { _ in
                 NotificationCenter.default.post(name: addBookmarkNotification, object: nil)
             })
             
             if !BookmarkStore.shared.containsBookmarkInFavoritesHierarchy(for: url) {
-                tabActions.append(UIAction(title: "Add to Favorites", image: UIImage(systemName: "star")) { _ in
+                tabActions.append(UIAction(title: L("Add to Favorites"), image: UIImage(systemName: "star")) { _ in
                     NotificationCenter.default.post(
                         name: addBookmarkNotification,
                         object: nil,
@@ -50,7 +50,7 @@ enum AddressBarMenu {
         if addonItems.isEmpty {
             addonsChildren = [
                 UIAction(
-                    title: "No Add-ons",
+                    title: L("No Add-ons"),
                     image: UIImage(systemName: "puzzlepiece.extension"),
                     attributes: .disabled
                 ) { _ in }
@@ -69,7 +69,7 @@ enum AddressBarMenu {
         
         var pageActions: [UIMenuElement] = [
             UIMenu(
-                title: "Manage Add-ons",
+                title: L("Manage Add-ons"),
                 image: UIImage(systemName: "puzzlepiece.extension"),
                 identifier: manageAddonsIdentifier,
                 children: addonsChildren
@@ -79,7 +79,7 @@ enum AddressBarMenu {
         if let selectedTab,
            let selectedURL,
            let isDesktop = GeckoSessionController.shared.isDesktopMode(for: selectedURL, tabID: selectedTab.id) {
-            let title = isDesktop ? "Request Mobile Website" : "Request Desktop Website"
+            let title = isDesktop ? L("Request Mobile Website") : L("Request Desktop Website")
             let imageName = isDesktop ? "iphone" : "desktopcomputer"
             pageActions.append(UIAction(title: title, image: UIImage(systemName: imageName)) { _ in
                 NotificationCenter.default.post(name: changeWebsiteModeNotification, object: nil)
@@ -88,7 +88,7 @@ enum AddressBarMenu {
         
         var settingsActions: [UIMenuElement] = []
         if url?.host != nil {
-            settingsActions.append(UIAction(title: "Website Settings", image: UIImage(systemName: "gear")) { _ in
+            settingsActions.append(UIAction(title: L("Website Settings"), image: UIImage(systemName: "gear")) { _ in
                 NotificationCenter.default.post(name: presentWebsiteSettingsNotification, object: nil)
             })
         }

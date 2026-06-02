@@ -145,7 +145,7 @@ final class AddonUpdateController {
         
         for addon in addons {
             await MainActor.run {
-                status(addon.id, "Updating...")
+                status(addon.id, L("Updating..."))
             }
             
             do {
@@ -154,20 +154,20 @@ final class AddonUpdateController {
                     noUpdateCount += 1
                     removePendingApprovalAddonID(addon.id)
                     await MainActor.run {
-                        status(addon.id, "No update available")
+                        status(addon.id, L("No update available"))
                     }
                 } else {
                     updatedCount += 1
                     removePendingApprovalAddonID(addon.id)
                     await MainActor.run {
-                        status(addon.id, "Successfully updated")
+                        status(addon.id, L("Successfully updated"))
                     }
                 }
             } catch {
                 if AddonErrors.updateRequiresPermissions(error) {
                     addPendingApprovalAddonID(addon.id)
                     await MainActor.run {
-                        status(addon.id, "Needs permission to update")
+                        status(addon.id, L("Needs permission to update"))
                     }
                     continue
                 }

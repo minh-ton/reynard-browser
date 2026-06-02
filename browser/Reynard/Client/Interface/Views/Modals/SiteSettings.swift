@@ -30,21 +30,21 @@ final class SiteSettingsViewController: UITableViewController {
         var title: String {
             switch self {
             case .camera:
-                return "Camera"
+                return L("Camera")
             case .microphone:
-                return "Microphone"
+                return L("Microphone")
             case .location:
-                return "Location"
+                return L("Location")
             case .persistentStorage:
-                return "Persistent Storage"
+                return L("Persistent Storage")
             case .crossSiteCookies:
-                return "Cross-site Cookies"
+                return L("Cross-site Cookies")
             case .localDeviceAccess:
-                return "Device Apps and Services"
+                return L("Device Apps and Services")
             case .localNetworkAccess:
-                return "Local Network Devices"
+                return L("Local Network Devices")
             case .autoplay:
-                return "Autoplay"
+                return L("Autoplay")
             }
         }
         
@@ -83,13 +83,13 @@ final class SiteSettingsViewController: UITableViewController {
         var permissions: [String] = []
         
         if isCameraPermissionDisabled() {
-            permissions.append("Camera")
+            permissions.append(L("Camera"))
         }
         if isMicrophonePermissionDisabled() {
-            permissions.append("Microphone")
+            permissions.append(L("Microphone"))
         }
         if isLocationPermissionDisabled() {
-            permissions.append("Location")
+            permissions.append(L("Location"))
         }
         
         return permissions
@@ -118,7 +118,7 @@ final class SiteSettingsViewController: UITableViewController {
         self.session = session
         self.store = store
         super.init(style: .insetGrouped)
-        title = "Settings for \(host)"
+        title = String(format: L("Settings for %@"), host)
     }
     
     required init?(coder: NSCoder) {
@@ -172,9 +172,9 @@ final class SiteSettingsViewController: UITableViewController {
         case .availability:
             return nil
         case .permissions:
-            return "Permissions"
+            return L("Permissions")
         case .websiteActions:
-            return "Actions"
+            return L("Actions")
         }
     }
     
@@ -197,7 +197,7 @@ final class SiteSettingsViewController: UITableViewController {
             }
             
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Open Settings"
+            cell.textLabel?.text = L("Open Settings")
             cell.textLabel?.textColor = view.tintColor
             cell.accessoryType = .none
             return cell
@@ -205,10 +205,10 @@ final class SiteSettingsViewController: UITableViewController {
         
         if visibleSections[indexPath.section] == .websiteActions {
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            cell.textLabel?.text = "Reset Permissions for this Site"
+            cell.textLabel?.text = L("Reset Permissions for this Site")
             cell.textLabel?.textColor = .systemRed
             if didResetPermissions {
-                cell.detailTextLabel?.text = "Successfully reset permissions for this site."
+                cell.detailTextLabel?.text = L("Successfully reset permissions for this site.")
             } else {
                 cell.detailTextLabel?.text = nil
             }
@@ -391,13 +391,13 @@ final class SiteSettingsViewController: UITableViewController {
     private func options(for row: Row) -> [String] {
         if row == .autoplay {
             return [
-                "Allow Audio and Video",
-                "Block Audio only",
-                "Block Audio and Video",
+                L("Allow Audio and Video"),
+                L("Block Audio only"),
+                L("Block Audio and Video"),
             ]
         }
         
-        return ["Allow", "Ask", "Deny"]
+        return [L("Allow"), L("Ask"), L("Deny")]
     }
     
     private func selectedIndex(for row: Row) -> Int {
@@ -488,10 +488,10 @@ final class SiteSettingsViewController: UITableViewController {
         let permissionList = formattedPermissionList(names)
         
         if names.count == 1 {
-            return "\(permissionList) is currently disabled for Reynard. Open the Settings app to enable this permission."
+            return String(format: L("%@ is currently disabled for Reynard. Open the Settings app to enable this permission."), permissionList)
         }
         
-        return "\(permissionList) are currently disabled for Reynard. Open the Settings app to enable these permissions."
+        return String(format: L("%@ are currently disabled for Reynard. Open the Settings app to enable these permissions."), permissionList)
     }
     
     private func formattedPermissionList(_ names: [String]) -> String {
@@ -504,12 +504,12 @@ final class SiteSettingsViewController: UITableViewController {
         }
         
         if names.count == 2 {
-            return "\(names[0]) and \(names[1])"
+            return String(format: L("%@ and %@"), names[0], names[1])
         }
         
-        let head = names.dropLast().joined(separator: ", ")
+        let head = names.dropLast().joined(separator: L(", "))
         let tail = names[names.count - 1]
-        return "\(head), and \(tail)"
+        return String(format: L("%@, and %@"), head, tail)
     }
     
     private func openAppSettings() {

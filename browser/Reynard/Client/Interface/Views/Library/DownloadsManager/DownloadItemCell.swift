@@ -138,14 +138,14 @@ final class DownloadItemCell: UITableViewCell {
             let sizeText = item.totalBytes.map { Self.formattedByteCount($0) }
             let speedText: String?
             if item.bytesPerSecond > 0 {
-                speedText = "\(Self.formattedByteCount(item.bytesPerSecond))/sec"
+                speedText = String(format: L("%@/sec"), Self.formattedByteCount(item.bytesPerSecond))
             } else {
                 speedText = nil
             }
             
             var detailsText = downloadedText
             if let sizeText {
-                detailsText += " of \(sizeText)"
+                detailsText += String(format: L(" of %@"), sizeText)
             }
             if let speedText {
                 detailsText += " (\(speedText))"
@@ -170,7 +170,7 @@ final class DownloadItemCell: UITableViewCell {
         case .completed:
             representedItemID = item.id
             lastDetailsLabelUpdateTime = 0
-            detailsLabel.text = item.fileExists ? (item.totalBytes.map { Self.formattedByteCount($0) } ?? "Unknown size") : "Deleted"
+            detailsLabel.text = item.fileExists ? (item.totalBytes.map { Self.formattedByteCount($0) } ?? L("Unknown size")) : L("Deleted")
             progressView.isHidden = true
             progressView.progress = 0
             iconView.transform = .identity
@@ -204,7 +204,7 @@ final class DownloadItemCell: UITableViewCell {
     }
     
     private static func formattedByteCount(_ byteCount: Int64) -> String {
-        let units = ["bytes", "KB", "MB", "GB", "TB"]
+        let units = [L("bytes"), "KB", "MB", "GB", "TB"]
         var value = Double(abs(byteCount))
         var unitIndex = 0
         
@@ -260,7 +260,7 @@ private final class DownloadFileIconProvider {
               let image = documentInteractionIcon(
                 for: placeholderURL,
                 uti: kUTTypeData as String,
-                name: "Downloading"
+                name: L("Downloading")
               ) else {
             return nil
         }

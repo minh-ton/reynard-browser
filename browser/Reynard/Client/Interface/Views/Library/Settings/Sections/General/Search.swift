@@ -10,7 +10,7 @@ import UIKit
 final class SearchPreferencesViewController: SettingsTableViewController {
     init() {
         super.init(style: .insetGrouped)
-        title = "Search"
+        title = L("Search")
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -28,7 +28,7 @@ final class SearchPreferencesViewController: SettingsTableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-        cell.textLabel?.text = "Search Engine"
+        cell.textLabel?.text = L("Search Engine")
         cell.detailTextLabel?.text = Prefs.SearchSettings.searchEngine.displayName
         cell.detailTextLabel?.textColor = .secondaryLabel
         cell.accessoryType = .disclosureIndicator
@@ -70,7 +70,7 @@ final class SettingsTextFieldCell: UITableViewCell {
 final class SearchEnginePreferencesViewController: SettingsTableViewController, UITextFieldDelegate {
     init() {
         super.init(style: .insetGrouped)
-        title = "Search Engine"
+        title = L("Search Engine")
     }
     
     required init?(coder: NSCoder) {
@@ -134,15 +134,15 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        section == 0 ? "Search Engine" : nil
+        section == 0 ? L("Search Engine") : nil
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         guard section == 1 else { return nil }
-        let baseText = "Enter URL with %s in place of query"
+        let baseText = L("Enter URL with %s in place of query")
         guard !Prefs.SearchSettings.customSearchTemplate.isEmpty,
               isValidCustomSearchTemplate(Prefs.SearchSettings.customSearchTemplate) else { return baseText }
-        return "\(baseText). The current value must be a valid http(s) URL."
+        return "\(baseText) \(L("The current value must be a valid http(s) URL."))"
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
@@ -151,8 +151,8 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         let value = Prefs.SearchSettings.customSearchTemplate
         guard !value.isEmpty, !isValidCustomSearchTemplate(value) else { return }
         presentAlert(
-            title: "Invalid Search URL",
-            message: "Enter a valid http(s) URL containing %s where the search query should go."
+            title: L("Invalid Search URL"),
+            message: L("Enter a valid http(s) URL containing %s where the search query should go.")
         )
     }
     

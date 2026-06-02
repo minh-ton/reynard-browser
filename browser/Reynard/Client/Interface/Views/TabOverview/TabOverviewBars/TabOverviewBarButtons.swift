@@ -55,7 +55,7 @@ final class TabOverviewBarButtons {
     }()
     
     lazy var modeControl: UISegmentedControl = {
-        let control = UISegmentedControl(items: ["Private", "0 Tabs"])
+        let control = UISegmentedControl(items: [L("Private"), String(format: L("%d Tabs"), 0)])
         control.translatesAutoresizingMaskIntoConstraints = false
         control.selectedSegmentIndex = TabOverviewCollection.Mode.regularTabs.rawValue
         control.addTarget(controller, action: #selector(BrowserViewController.tabOverviewModeChanged(_:)), for: .valueChanged)
@@ -176,7 +176,8 @@ final class TabOverviewBarButtons {
     }
     
     func setTabCount(_ tabCount: Int) {
-        modeControl.setTitle("\(tabCount)" + (tabCount == 1 ? " Tab" : " Tabs"), forSegmentAt: TabOverviewCollection.Mode.regularTabs.rawValue)
+        let tabCountTitle = tabCount == 1 ? L("1 Tab") : String(format: L("%d Tabs"), tabCount)
+        modeControl.setTitle(tabCountTitle, forSegmentAt: TabOverviewCollection.Mode.regularTabs.rawValue)
         
         // Unrelated, too lazy to make a separate func
         let hasVisibleTab: Bool

@@ -102,7 +102,7 @@ final class BookmarkItemCell: UITableViewCell {
         representedURL = nil
         faviconTask?.cancel()
         faviconTask = nil
-        titleLabel.text = folder.title
+        titleLabel.text = folder.isProtected && folder.title == "Favorites" ? L("Favorites") : folder.title
         countLabel.text = "\(folder.childCount)"
         countLabel.isHidden = false
         

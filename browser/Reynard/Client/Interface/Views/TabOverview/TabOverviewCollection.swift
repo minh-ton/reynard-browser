@@ -66,7 +66,7 @@ final class TabOverviewCollection {
         
         let titleLabel = UILabel()
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "Private Browsing"
+        titleLabel.text = L("Private Browsing")
         titleLabel.textAlignment = .center
         titleLabel.textColor = .secondaryLabel
         titleLabel.font = .preferredFont(forTextStyle: .title2)
@@ -74,7 +74,7 @@ final class TabOverviewCollection {
         
         let subtitleLabel = UILabel()
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = "Reynard won't remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved."
+        subtitleLabel.text = L("Reynard won't remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved.")
         subtitleLabel.textAlignment = .center
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)

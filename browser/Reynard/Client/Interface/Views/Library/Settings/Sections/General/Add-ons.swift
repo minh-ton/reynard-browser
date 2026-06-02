@@ -55,18 +55,18 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     private var updateActionTitle: String {
         if isUpdatingAddons {
-            return "Updating Add-ons..."
+            return L("Updating Add-ons...")
         }
         if let browserViewController = resolvedBrowserViewController(),
            browserViewController.addonController.updateController.hasPendingApprovals {
-            return "Complete Add-on Updates"
+            return L("Complete Add-on Updates")
         }
-        return "Update All Add-ons"
+        return L("Update All Add-ons")
     }
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Add-ons"
+        title = L("Add-ons")
     }
     
     required init?(coder: NSCoder) {
@@ -120,7 +120,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             if installedAddons.isEmpty {
                 let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
                 cell.selectionStyle = .none
-                cell.textLabel?.text = isLoadingAddons ? "Loading Add-ons..." : "No Add-ons Installed"
+                cell.textLabel?.text = isLoadingAddons ? L("Loading Add-ons...") : L("No Add-ons Installed")
                 cell.textLabel?.textColor = .secondaryLabel
                 return cell
             }
@@ -146,7 +146,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             
             let addon = unsupportedAddons[indexPath.row]
-            let statusText = displayedStatusText(for: addon) ?? "Unsupported"
+            let statusText = displayedStatusText(for: addon) ?? L("Unsupported")
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             cell.textLabel?.text = addon.metaData.name ?? addon.id
             cell.detailTextLabel?.text = statusText
@@ -160,10 +160,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             switch indexPath.row {
             case 0:
-                cell.textLabel?.text = "Discover Add-ons..."
+                cell.textLabel?.text = L("Discover Add-ons...")
                 cell.textLabel?.textColor = view.tintColor
             case 1:
-                cell.textLabel?.text = isInstallingAddonFromFile ? "Installing Add-on..." : "Install Add-on From File..."
+                cell.textLabel?.text = isInstallingAddonFromFile ? L("Installing Add-on...") : L("Install Add-on From File...")
                 cell.textLabel?.textColor = isInstallingAddonFromFile ? .secondaryLabel : view.tintColor
                 if isInstallingAddonFromFile {
                     cell.selectionStyle = .none
@@ -225,9 +225,9 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         
         switch visibleSections[section] {
         case .installed:
-            return installedAddons.isEmpty ? nil : "Installed Add-ons"
+            return installedAddons.isEmpty ? nil : L("Installed Add-ons")
         case .unsupported:
-            return unsupportedAddons.isEmpty ? nil : "Unsupported Add-ons"
+            return unsupportedAddons.isEmpty ? nil : L("Unsupported Add-ons")
         case .more:
             return nil
         }
@@ -244,7 +244,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return footerSummaryText
         }
         if let lastGlobalCheckAt = Prefs.AddonSettings.lastGlobalCheckAt {
-            return "Last checked on \(lastCheckedDateFormatter.string(from: lastGlobalCheckAt))."
+            return String(format: L("Last checked on %@."), lastCheckedDateFormatter.string(from: lastGlobalCheckAt))
         }
         return nil
     }
@@ -434,7 +434,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return statusText
         }
         if addon.metaData.isUnsupported {
-            return "Unsupported"
+            return L("Unsupported")
         }
         return nil
     }
@@ -461,10 +461,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return
         }
         
-        pendingApprovalAddonIDs.forEach { addonStatusTextByID[$0] = "Needs permission to update" }
+        pendingApprovalAddonIDs.forEach { addonStatusTextByID[$0] = L("Needs permission to update") }
         footerSummaryText = pendingApprovalAddonIDs.count == 1
-        ? "1 add-on needs permission to update."
-        : "\(pendingApprovalAddonIDs.count) add-ons need permission to update."
+        ? L("1 add-on needs permission to update.")
+        : String(format: L("%d add-ons need permission to update."), pendingApprovalAddonIDs.count)
     }
     
     private func performUpdateAction() {
@@ -523,7 +523,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 self.isUpdatingAddons = false
                 
                 let pendingApprovalAddonIDs = Prefs.AddonSettings.pendingApprovalAddonIDs
-                pendingApprovalAddonIDs.forEach { self.addonStatusTextByID[$0] = "Needs permission to update" }
+                pendingApprovalAddonIDs.forEach { self.addonStatusTextByID[$0] = L("Needs permission to update") }
                 self.footerSummaryText = self.footerSummary(for: result)
                 self.tableView.reloadData()
             }
@@ -534,23 +534,23 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         var parts: [String] = []
         
         if result.updatedCount > 0 {
-            parts.append(result.updatedCount == 1 ? "1 add-on updated." : "\(result.updatedCount) add-ons updated.")
+            parts.append(result.updatedCount == 1 ? L("1 add-on updated.") : String(format: L("%d add-ons updated."), result.updatedCount))
         }
         
         if result.pendingApprovalCount > 0 {
             parts.append(
                 result.pendingApprovalCount == 1
-                ? "1 add-on needs permission to update."
-                : "\(result.pendingApprovalCount) add-ons need permission to update."
+                ? L("1 add-on needs permission to update.")
+                : String(format: L("%d add-ons need permission to update."), result.pendingApprovalCount)
             )
         }
         
         if result.failedCount > 0 {
-            parts.append(result.failedCount == 1 ? "1 add-on failed to update." : "\(result.failedCount) add-ons failed to update.")
+            parts.append(result.failedCount == 1 ? L("1 add-on failed to update.") : String(format: L("%d add-ons failed to update."), result.failedCount))
         }
         
         if parts.isEmpty, result.noUpdateCount > 0 {
-            return "No updates found."
+            return L("No updates found.")
         }
         
         return parts.isEmpty ? nil : parts.joined(separator: " ")
@@ -689,7 +689,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isIncompatible {
             let addonName = metaData.name ?? addon.id
             return StatusMessage(
-                text: "\(addonName) is not compatible with this version of Reynard.",
+                text: String(format: L("%@ is not compatible with this version of Reynard."), addonName),
                 color: .systemOrange
             )
         }
@@ -697,8 +697,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isSoftBlocked {
             return StatusMessage(
                 text: metaData.enabled
-                ? "This extension is restricted. Using it may be risky."
-                : "This extension is restricted and has been disabled. You can enable it, but this may be risky.",
+                ? L("This extension is restricted. Using it may be risky.")
+                : L("This extension is restricted and has been disabled. You can enable it, but this may be risky."),
                 color: .systemOrange
             )
         }
@@ -709,7 +709,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        title = "Add-on"
+        title = L("Add-on")
     }
     
     required init?(coder: NSCoder) {
@@ -838,7 +838,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.apply(addon: addon)
-                    self.presentAlert(title: "Failed to update private browsing access", message: "\(error)")
+                    self.presentAlert(title: L("Failed to update private browsing access"), message: "\(error)")
                 }
             }
         }
@@ -873,7 +873,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.apply(addon: addon)
-                    self.presentAlert(title: "Failed to \(desiredState ? "enable" : "disable") add-on", message: "\(error)")
+                    let actionText = desiredState ? L("enable") : L("disable")
+                    self.presentAlert(title: String(format: L("Failed to %@ add-on"), actionText), message: "\(error)")
                 }
             }
         }
@@ -892,7 +893,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         } catch {
             await MainActor.run {
-                self.presentAlert(title: "Failed to reload add-on", message: "\(error)")
+                self.presentAlert(title: L("Failed to reload add-on"), message: "\(error)")
             }
         }
     }
@@ -930,18 +931,18 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         
         switch actionRows[indexPath.row] {
         case .enabled:
-            cell.textLabel?.text = "Enabled"
+            cell.textLabel?.text = L("Enabled")
             cell.selectionStyle = .none
             cell.accessoryView = enableSwitch
         case .privateBrowsing:
             cell.textLabel?.text = addon?.metaData.incognito == .notAllowed
-            ? "Not Allowed in Private Browsing"
-            : "Allow in Private Browsing"
+            ? L("Not Allowed in Private Browsing")
+            : L("Allow in Private Browsing")
             cell.textLabel?.textColor = addon?.metaData.incognito == .notAllowed ? .secondaryLabel : .label
             cell.selectionStyle = .none
             cell.accessoryView = privateBrowsingSwitch
         case .remove:
-            cell.textLabel?.text = "Remove"
+            cell.textLabel?.text = L("Remove")
             cell.textLabel?.textColor = addon == nil || isUpdatingAddon ? .secondaryLabel : .systemRed
         case .settings, .details, .permissions:
             break
@@ -966,13 +967,13 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         
         switch navigationRows[indexPath.row] {
         case .settings:
-            cell.textLabel?.text = "Settings"
+            cell.textLabel?.text = L("Settings")
         case .details:
-            cell.textLabel?.text = "Details"
+            cell.textLabel?.text = L("Details")
         case .permissions:
-            cell.textLabel?.text = "Permissions"
+            cell.textLabel?.text = L("Permissions")
         case .remove:
-            cell.textLabel?.text = "Remove"
+            cell.textLabel?.text = L("Remove")
             cell.textLabel?.textColor = addon == nil || isUpdatingAddon ? .secondaryLabel : .systemRed
             cell.accessoryType = .none
         case .enabled, .privateBrowsing:
@@ -989,12 +990,12 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     private func presentRemoveConfirmation() {
         let addonName = addon?.metaData.name ?? addonID
         let alert = UIAlertController(
-            title: "Do you want to remove \(addonName)?",
+            title: String(format: L("Do you want to remove %@?"), addonName),
             message: nil,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: L("Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: L("Remove"), style: .destructive) { [weak self] _ in
             self?.removeAddon()
         })
         present(alert, animated: true)
@@ -1020,7 +1021,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.apply(addon: addon)
-                    self.presentAlert(title: "Failed to remove add-on", message: "\(error)")
+                    self.presentAlert(title: L("Failed to remove add-on"), message: "\(error)")
                 }
             }
         }
@@ -1092,17 +1093,17 @@ private final class AddonInformationPreferencesViewController: SettingsTableView
         
         if let creatorName = metaData.creatorName?.trimmingCharacters(in: .whitespacesAndNewlines),
            !creatorName.isEmpty {
-            rows.append(InformationRow(title: "Author", value: creatorName, link: validatedURLString(metaData.creatorURL)))
+            rows.append(InformationRow(title: L("Author"), value: creatorName, link: validatedURLString(metaData.creatorURL)))
         }
         
-        rows.append(InformationRow(title: "Version", value: metaData.version, link: nil))
+        rows.append(InformationRow(title: L("Version"), value: metaData.version, link: nil))
         
         if let updateDate = formattedUpdateDate(metaData.updateDate) {
-            rows.append(InformationRow(title: "Last updated", value: updateDate, link: nil))
+            rows.append(InformationRow(title: L("Last updated"), value: updateDate, link: nil))
         }
         
         if let ratingText = formattedRating(metaData) {
-            rows.append(InformationRow(title: "Rating", value: ratingText, link: validatedURLString(metaData.reviewURL)))
+            rows.append(InformationRow(title: L("Rating"), value: ratingText, link: validatedURLString(metaData.reviewURL)))
         }
         
         return rows
@@ -1116,11 +1117,11 @@ private final class AddonInformationPreferencesViewController: SettingsTableView
         var rows: [InformationRow] = []
         
         if let homepageURL = validatedURLString(metaData.homepageURL) {
-            rows.append(InformationRow(title: "Homepage", value: homepageURL, link: homepageURL))
+            rows.append(InformationRow(title: L("Homepage"), value: homepageURL, link: homepageURL))
         }
         
         if let listingURL = validatedURLString(metaData.amoListingURL) {
-            rows.append(InformationRow(title: "More about this extension", value: listingURL, link: listingURL))
+            rows.append(InformationRow(title: L("More about this extension"), value: listingURL, link: listingURL))
         }
         
         return rows
@@ -1129,7 +1130,7 @@ private final class AddonInformationPreferencesViewController: SettingsTableView
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        title = "Details"
+        title = L("Details")
     }
     
     required init?(coder: NSCoder) {
@@ -1171,9 +1172,9 @@ private final class AddonInformationPreferencesViewController: SettingsTableView
         case .description:
             return nil
         case .information:
-            return informationRows.isEmpty ? nil : "Information"
+            return informationRows.isEmpty ? nil : L("Information")
         case .links:
-            return linkRows.isEmpty ? nil : "Links"
+            return linkRows.isEmpty ? nil : L("Links")
         }
     }
     
@@ -1255,7 +1256,7 @@ private final class AddonInformationPreferencesViewController: SettingsTableView
             }
         } catch {
             await MainActor.run {
-                self.presentAlert(title: "Failed to reload add-on", message: "\(error)")
+                self.presentAlert(title: L("Failed to reload add-on"), message: "\(error)")
             }
         }
     }
@@ -1363,7 +1364,7 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
         if !requiredPermissions.isEmpty {
             sections.append(
                 SectionModel(
-                    title: "Required Permissions",
+                    title: L("Required Permissions"),
                     rows: requiredPermissions.map(Row.message)
                 )
             )
@@ -1411,13 +1412,13 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
         }
         
         if !optionalRows.isEmpty {
-            sections.append(SectionModel(title: "Optional Permissions", rows: optionalRows))
+            sections.append(SectionModel(title: L("Optional Permissions"), rows: optionalRows))
         }
         
         if let requiredDataCollectionDescription = AddonPermissionSupport.requiredDataCollectionDescription(for: metaData.requiredDataCollectionPermissions) {
             sections.append(
                 SectionModel(
-                    title: "Required Data Collection",
+                    title: L("Required Data Collection"),
                     rows: [.message(requiredDataCollectionDescription)]
                 )
             )
@@ -1426,7 +1427,7 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
         if !optionalDataCollectionPermissions.isEmpty {
             sections.append(
                 SectionModel(
-                    title: "Optional Data Collection",
+                    title: L("Optional Data Collection"),
                     rows: optionalDataCollectionPermissions.map {
                         .toggle(
                             title: $0.localizedName,
@@ -1446,7 +1447,7 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        title = "Permissions"
+        title = L("Permissions")
     }
     
     required init?(coder: NSCoder) {
@@ -1572,7 +1573,7 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
                     self.isUpdatingPermissions = false
                     self.addon = addon
                     self.tableView.reloadData()
-                    self.presentAlert(title: "Failed to update permissions", message: "\(error)")
+                    self.presentAlert(title: L("Failed to update permissions"), message: "\(error)")
                 }
             }
         }
@@ -1593,7 +1594,7 @@ private final class AddonPermissionsPreferencesViewController: SettingsTableView
             }
         } catch {
             await MainActor.run {
-                self.presentAlert(title: "Failed to reload add-on", message: "\(error)")
+                self.presentAlert(title: L("Failed to reload add-on"), message: "\(error)")
             }
         }
     }

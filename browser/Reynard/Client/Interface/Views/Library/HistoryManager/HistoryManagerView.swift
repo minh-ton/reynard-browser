@@ -72,7 +72,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         searchBar.autocapitalizationType = .none
         searchBar.autocorrectionType = .no
         searchBar.searchBarStyle = .minimal
-        searchBar.placeholder = "Search History"
+        searchBar.placeholder = L("Search History")
         searchBar.delegate = self
         return searchBar
     }()
@@ -122,7 +122,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         return view
     }()
     
-    private let emptyStateView = LibraryEmptyBackgroundView(message: "Your browsing history appears here")
+    private let emptyStateView = LibraryEmptyBackgroundView(message: L("Your browsing history appears here"))
     private var sections: [Section] = []
     private var historyObserver: NSObjectProtocol?
     private var currentFetchOffset = 0
@@ -482,7 +482,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
     
     private func updateBackgroundView() {
         let hasHistory = !sections.isEmpty
-        emptyStateView.message = currentSearchTerm.isEmpty ? "Your browsing history appears here" : "No matching history"
+        emptyStateView.message = currentSearchTerm.isEmpty ? L("Your browsing history appears here") : L("No matching history")
         tableView.backgroundView = hasHistory ? nil : emptyStateView
         emptyStateView.updateContentInsets(from: tableView)
     }
@@ -510,11 +510,11 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
     private func sectionTitle(for date: Date) -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
-            return "Today"
+            return L("Today")
         }
         
         if calendar.isDateInYesterday(date) {
-            return "Yesterday"
+            return L("Yesterday")
         }
         
         let formatter = DateFormatter()
@@ -689,7 +689,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         _ tableView: UITableView,
         trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
-        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive, title: L("Delete")) { [weak self] _, _, completion in
             guard let self, let item = self.item(at: indexPath) else {
                 completion(false)
                 return

@@ -26,7 +26,7 @@ extension SettingsRootViewController {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.selectionStyle = .none
         
-        var appName = "Reynard Browser"
+        var appName = L("Reynard Browser")
         var latestVersionStr = AppUpdates.shared.latestVersion
         var sizeStr = ""
         
@@ -58,7 +58,7 @@ extension SettingsRootViewController {
         nameLabel.numberOfLines = 1
         
         let versionLabel = UILabel()
-        versionLabel.text = "Version \(latestVersionStr)"
+        versionLabel.text = String(format: L("Version %@"), latestVersionStr)
         versionLabel.font = UIFont.preferredFont(forTextStyle: .footnote)
         versionLabel.textColor = .secondaryLabel
         
@@ -133,7 +133,7 @@ extension SettingsRootViewController {
         label.font = UIFont.preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
         label.textColor = .secondaryLabel
-        label.text = "Make sure TrollStore's URL Scheme is enabled."
+        label.text = L("Make sure TrollStore's URL Scheme is enabled.")
         
         footerView.contentView.addSubview(label)
         NSLayoutConstraint.activate([
@@ -148,7 +148,7 @@ extension SettingsRootViewController {
     
     func makeUpdateNowCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = "Update Now"
+        cell.textLabel?.text = L("Update Now")
         cell.textLabel?.textColor = view.tintColor
         cell.textLabel?.textAlignment = .center
         return cell
@@ -162,7 +162,7 @@ extension SettingsRootViewController {
               let versions = firstApp["versions"] as? [[String: Any]],
               let latestEntry = versions.first,
               let desc = latestEntry["localizedDescription"] as? String else {
-            return NSAttributedString(string: "No release notes available.",
+            return NSAttributedString(string: L("No release notes available."),
                                       attributes: [.font: UIFont.preferredFont(forTextStyle: .footnote)])
         }
         
@@ -274,7 +274,7 @@ extension SettingsRootViewController {
               let latestEntry = versions.first,
               let downloadURLStr = latestEntry["downloadURL"] as? String,
               let downloadURL = URL(string: downloadURLStr) else {
-            presentAlert(title: "Update Unavailable", message: "Could not retrieve the download URL.")
+            presentAlert(title: L("Update Unavailable"), message: L("Could not retrieve the download URL."))
             return
         }
         
@@ -293,7 +293,7 @@ extension SettingsRootViewController {
                 from: downloadURL,
                 fileName: "Reynard.ipa",
                 expectedSize: expectedSize,
-                message: "When the download finishes, choose the app that you used to sideload Reynard in the share sheet to install the update."
+                message: L("When the download finishes, choose the app that you used to sideload Reynard in the share sheet to install the update.")
             )
         }
     }
@@ -308,7 +308,7 @@ extension SettingsRootViewController {
         }
         
         let alert = UIAlertController(
-            title: "Downloading Update",
+            title: L("Downloading Update"),
             message: message,
             preferredStyle: .alert
         )
@@ -326,7 +326,7 @@ extension SettingsRootViewController {
                     let nsErr = error as NSError
                     guard nsErr.domain != NSURLErrorDomain || nsErr.code != NSURLErrorCancelled else { return }
                     self?.dismissAlertIfPresented(alert) {
-                        self?.presentAlert(title: "Download Failed", message: error.localizedDescription)
+                        self?.presentAlert(title: L("Download Failed"), message: error.localizedDescription)
                     }
                     return
                 }
@@ -340,7 +340,7 @@ extension SettingsRootViewController {
         }
         activeUpdateTask = task
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: L("Cancel"), style: .cancel) { [weak self] _ in
             self?.activeUpdateTask?.cancel()
             self?.activeUpdateTask = nil
             self?.updateProgressObservation = nil

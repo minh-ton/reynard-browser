@@ -82,12 +82,12 @@ final class AddressBarPositionPickerCell: UITableViewCell {
     private let bottomOption = PositionOptionControl(
         position: .bottom,
         symbolName: "platter.filled.bottom.iphone",
-        title: "Bottom"
+        title: L("Bottom")
     )
     private let topOption = PositionOptionControl(
         position: .top,
         symbolName: "platter.filled.top.iphone",
-        title: "Top"
+        title: L("Top")
     )
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -141,7 +141,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Appearance"
+        title = L("Appearance")
     }
     
     required init?(coder: NSCoder) {
@@ -172,7 +172,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        showsTabsSection ? "Tabs" : nil
+        showsTabsSection ? L("Tabs") : nil
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -190,7 +190,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         }
         
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = "Landscape Tab Bar"
+        cell.textLabel?.text = L("Landscape Tab Bar")
         cell.selectionStyle = .none
         cell.accessoryView = landscapeTabBarSwitch
         return cell

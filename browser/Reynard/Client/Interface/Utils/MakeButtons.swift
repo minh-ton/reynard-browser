@@ -236,7 +236,7 @@ final class DownloadToolbarButton: UIButton {
         progressTrackView.isHidden = !showsProgress
         progressFillView.isHidden = !showsProgress
         progressFillWidthConstraint.constant = progressTrackWidth * progress
-        accessibilityLabel = "Downloads"
+        accessibilityLabel = L("Downloads")
     }
     
     private func playBounceAnimation() {

@@ -18,7 +18,7 @@ final class ClearDownloadsViewController: UITableViewController {
         button.layer.cornerRadius = 25
         button.layer.cornerCurve = .continuous
         button.titleLabel?.font = .preferredFont(forTextStyle: .headline)
-        button.setTitle("Clear Downloads", for: .normal)
+        button.setTitle(L("Clear Downloads"), for: .normal)
         button.addTarget(self, action: #selector(clearDownloadsHistory), for: .touchUpInside)
         return button
     }()
@@ -27,7 +27,7 @@ final class ClearDownloadsViewController: UITableViewController {
     init(onClear: @escaping (Date?) -> Void) {
         self.onClear = onClear
         super.init(style: .insetGrouped)
-        title = "Clear Downloads"
+        title = L("Clear Downloads")
     }
     
     required init?(coder: NSCoder) {
@@ -87,11 +87,11 @@ final class ClearDownloadsViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        "Clear Timeframe"
+        L("Clear Timeframe")
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        "Clearing downloads history does not delete files in your Downloads folder."
+        L("Clearing downloads history does not delete files in your Downloads folder.")
     }
     
     override func tableView(
@@ -100,7 +100,7 @@ final class ClearDownloadsViewController: UITableViewController {
     ) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell")
         ?? UITableViewCell(style: .default, reuseIdentifier: "Cell")
-        cell.textLabel?.text = ["Last hour", "Today", "Today and yesterday", "All history"][indexPath.row]
+        cell.textLabel?.text = [L("Last hour"), L("Today"), L("Today and yesterday"), L("All history")][indexPath.row]
         cell.accessoryView = nil
         cell.accessoryType = indexPath.row == selectedTimeframeIndex ? .checkmark : .none
         cell.selectionStyle = .default
