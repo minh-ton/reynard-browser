@@ -73,9 +73,9 @@ extension BrowserViewController {
         restoreSearchChrome(clearSuggestions: true)
         view.endEditing(true)
         
-        if tabOverviewPresentation.isVisible {
-            let overviewMode = browserUI.tabOverviewCollection.mode
-            prepareOverviewFakeInsertionSlot(for: overviewMode) { [weak self] in
+        if browserUI.tabOverview.isPresented {
+            let overviewMode = browserUI.tabOverview.mode
+            browserUI.tabOverview.prepareNewTabInsertion { [weak self] in
                 guard let self else {
                     return
                 }
@@ -151,8 +151,8 @@ extension BrowserViewController {
     }
     
     @objc func doneTapped() {
-        if tabOverviewPresentation.isVisible {
-            let targetMode: TabMode = browserUI.tabOverviewCollection.mode == .privateTabs ? .private : .regular
+        if browserUI.tabOverview.isPresented {
+            let targetMode = browserUI.tabOverview.mode.tabMode
             let targetTabs = targetMode == .private ? tabManager.privateTabs : tabManager.regularTabs
             guard !targetTabs.isEmpty else {
                 return
@@ -180,15 +180,15 @@ extension BrowserViewController {
     }
     
     @objc func clearAllTabsTapped() {
-        if tabOverviewPresentation.isVisible,
-           browserUI.tabOverviewCollection.mode == .privateTabs {
+        if browserUI.tabOverview.isPresented,
+           browserUI.tabOverview.mode == .privateTabs {
             pendingExpandedTabBarIndex = nil
             tabManager.removeAllTabs(mode: .private)
             return
         }
         
-        if tabOverviewPresentation.isVisible,
-           browserUI.tabOverviewCollection.mode == .regularTabs {
+        if browserUI.tabOverview.isPresented,
+           browserUI.tabOverview.mode == .regularTabs {
             pendingExpandedTabBarIndex = nil
             tabManager.removeAllTabs(mode: .regular)
             return
@@ -255,5 +255,42 @@ extension BrowserViewController {
         let navigationController = UINavigationController(rootViewController: viewController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
+    }
+}
+
+extension BrowserViewController: TabOverviewDataSource, TabOverviewDelegate {
+    var tabOverviewSelectedMode: TabMode { tabManager.selectedTabMode }
+    var tabOverviewRegularTabs: [Tab] { tabManager.regularTabs }
+    var tabOverviewPrivateTabs: [Tab] { tabManager.privateTabs }
+
+    func tabOverview(_ tabOverview: TabOverview, didSelectTabAt index: Int, mode: TabMode, previewImage: UIImage?) {
+        tabOverview.prepareDismissSelection(to: index, mode: mode, previewImage: previewImage)
+        tabOverview.reloadTabs()
+        setTabOverviewVisible(false, animated: true)
+    }
+
+    func tabOverview(_ tabOverview: TabOverview, didCloseTabAt index: Int, mode: TabMode) {
+        pendingExpandedTabBarIndex = nil
+        tabManager.removeTab(at: index, mode: mode)
+    }
+
+    func tabOverview(_ tabOverview: TabOverview, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int, mode: TabMode) {
+        tabManager.moveTab(from: sourceIndex, to: destinationIndex, mode: mode)
+    }
+
+    func tabOverviewDidRequestNewTab(_ tabOverview: TabOverview) {
+        createNewTab()
+    }
+
+    func tabOverviewDidRequestDone(_ tabOverview: TabOverview) {
+        doneTapped()
+    }
+
+    func tabOverviewDidRequestClear(_ tabOverview: TabOverview) {
+        clearAllTabsTapped()
+    }
+
+    func tabOverview(_ tabOverview: TabOverview, didChangeMode mode: TabMode) {
+        TabManagementStore.shared.saveLastTabOverview(mode == .private ? .private : .regular)
     }
 }

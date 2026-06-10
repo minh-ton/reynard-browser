@@ -32,7 +32,7 @@ final class TabBar {
         view.delegate = tabCollectionHandler
         let reorderGesture = UILongPressGestureRecognizer(
             target: tabCollectionHandler as AnyObject,
-            action: #selector(BrowserViewController.handleOverviewReorderLongPress(_:))
+            action: #selector(BrowserViewController.handleTabBarReorderLongPress(_:))
         )
         reorderGesture.minimumPressDuration = 0.35
         reorderGesture.delegate = tabCollectionHandler as? UIGestureRecognizerDelegate

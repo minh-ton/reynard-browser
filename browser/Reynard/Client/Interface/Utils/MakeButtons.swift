@@ -71,29 +71,6 @@ enum MakeButtons {
         navigationItem.leftBarButtonItems = remainingItems?.isEmpty == true ? nil : remainingItems
     }
     
-    static func makeTabOverviewBarButton(controller: BrowserViewController, imageName: String, isFilled: Bool, action: Selector) -> UIButton {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(toolbarImage(for: imageName), for: .normal)
-        button.setPreferredSymbolConfiguration(
-            UIImage.SymbolConfiguration(pointSize: 17, weight: .regular),
-            forImageIn: .normal
-        )
-        button.tintColor = isFilled ? .systemBackground : .label
-        button.backgroundColor = isFilled ? .label : .quaternarySystemFill
-        button.layer.borderWidth = isFilled ? 0 : 1
-        button.layer.borderColor = isFilled ? UIColor.clear.cgColor : UIColor.systemFill.cgColor
-        button.layer.cornerCurve = .continuous
-        button.layer.cornerRadius = 21
-        button.addTarget(controller, action: action, for: .touchUpInside)
-        return button
-    }
-    
-    static func makeTabOverviewBarButtonItem(controller: BrowserViewController, systemItem: UIBarButtonItem.SystemItem, action: Selector) -> UIBarButtonItem {
-        let item = UIBarButtonItem(barButtonSystemItem: systemItem, target: controller, action: action)
-        item.tintColor = .label
-        return item
-    }
 }
 
 private final class LibraryActionsButton: UIButton {

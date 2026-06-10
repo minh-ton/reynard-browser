@@ -104,8 +104,8 @@ final class AddressBarGestures: NSObject {
 
     func animateAutomaticNewTabTransition(completion: @escaping () -> Void) {
         guard !controller.usesPadChrome,
-              !controller.tabOverviewPresentation.isVisible,
-              !controller.tabOverviewPresentation.isTransitionRunning else {
+              !controller.browserUI.tabOverview.isPresented,
+              !controller.browserUI.tabOverview.isTransitionRunning else {
             DispatchQueue.main.async(execute: completion)
             return
         }
@@ -131,8 +131,8 @@ final class AddressBarGestures: NSObject {
 
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
         guard !controller.usesPadChrome,
-              !controller.tabOverviewPresentation.isVisible,
-              !controller.tabOverviewPresentation.isTransitionRunning else {
+              !controller.browserUI.tabOverview.isPresented,
+              !controller.browserUI.tabOverview.isTransitionRunning else {
             DispatchQueue.main.async(execute: completion)
             return
         }
@@ -415,7 +415,7 @@ final class AddressBarGestures: NSObject {
                 }
                 
                 if abs(translation.x) > abs(translation.y) {
-                    let newMode: SearchPanMode = (!controller.tabOverviewPresentation.isVisible && !controller.isSearchFocused) ? .horizontalTabs : .blocked
+                    let newMode: SearchPanMode = (!controller.browserUI.tabOverview.isPresented && !controller.isSearchFocused) ? .horizontalTabs : .blocked
                     searchPanMode = newMode
                     if newMode == .horizontalTabs {
                         swipeHaptic.impactOccurred()
@@ -446,8 +446,8 @@ final class AddressBarGestures: NSObject {
         guard recognizer.state == .ended,
               !controller.usesPadChrome,
               !controller.isSearchFocused,
-              !controller.tabOverviewPresentation.isVisible,
-              !controller.tabOverviewPresentation.isTransitionRunning else {
+              !controller.browserUI.tabOverview.isPresented,
+              !controller.browserUI.tabOverview.isTransitionRunning else {
             return
         }
         

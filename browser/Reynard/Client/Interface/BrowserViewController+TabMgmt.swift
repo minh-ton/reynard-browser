@@ -13,7 +13,6 @@ private enum TabMgmtAssociatedKeys {
     static var pendingSelectionAnimation = 0
     static var pendingExpandedTabBarIndex = 0
     static var activeFullscreenSession = 0
-    static var tabOverviewPresentation = 0
 }
 
 private final class WeakSessionBox {
@@ -25,21 +24,6 @@ private final class WeakSessionBox {
 }
 
 extension BrowserViewController {
-    var tabOverviewPresentation: TabOverviewPresentation {
-        get {
-            if let presentation = objc_getAssociatedObject(self, &TabMgmtAssociatedKeys.tabOverviewPresentation) as? TabOverviewPresentation {
-                return presentation
-            }
-            
-            let presentation = TabOverviewPresentation(controller: self)
-            objc_setAssociatedObject(self, &TabMgmtAssociatedKeys.tabOverviewPresentation, presentation, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            return presentation
-        }
-        set {
-            objc_setAssociatedObject(self, &TabMgmtAssociatedKeys.tabOverviewPresentation, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-    
     var pendingSelectionAnimation: Bool {
         get {
             (objc_getAssociatedObject(self, &TabMgmtAssociatedKeys.pendingSelectionAnimation) as? NSNumber)?.boolValue ?? false
@@ -102,13 +86,11 @@ extension BrowserViewController: TabManagerDelegate {
         }
         refreshAddressBar()
         
-        if !tabOverviewPresentation.isVisible {
-            let overviewMode: TabOverviewCollection.Mode = tabManager.selectedTabMode == .private ? .privateTabs : .regularTabs
-            browserUI.tabOverviewBarButtons.modeControl.selectedSegmentIndex = overviewMode.rawValue
-            browserUI.tabOverviewCollection.setMode(overviewMode, in: browserUI.tabOverview.containerView, animated: false)
+        if !browserUI.tabOverview.isPresented {
+            let overviewMode: TabOverview.Mode = tabManager.selectedTabMode == .private ? .privateTabs : .regularTabs
+            browserUI.tabOverview.setMode(overviewMode, animated: false)
         }
-        browserUI.tabOverviewBarButtons.setTabCount(regularTabCount())
-        applyOverviewTabChanges()
+        browserUI.tabOverview.applyPendingTabChanges()
         browserUI.tabBar.collectionView.reloadData()
         browserUI.applyChromeLayout(animated: false)
         browserUI.tabBar.refreshLayout(
@@ -138,14 +120,12 @@ extension BrowserViewController: TabManagerDelegate {
         refreshAddressBar()
         
         updateNavigationButtons()
-        if !tabOverviewPresentation.isVisible {
-            let overviewMode: TabOverviewCollection.Mode = tabManager.selectedTabMode == .private ? .privateTabs : .regularTabs
-            browserUI.tabOverviewBarButtons.modeControl.selectedSegmentIndex = overviewMode.rawValue
-            browserUI.tabOverviewCollection.setMode(overviewMode, in: browserUI.tabOverview.containerView, animated: false)
+        if !browserUI.tabOverview.isPresented {
+            let overviewMode: TabOverview.Mode = tabManager.selectedTabMode == .private ? .privateTabs : .regularTabs
+            browserUI.tabOverview.setMode(overviewMode, animated: false)
         }
-        browserUI.tabOverviewBarButtons.setTabCount(regularTabCount())
-        if !tabOverviewPresentation.isVisible {
-            reloadOverviewCollections()
+        if !browserUI.tabOverview.isPresented {
+            browserUI.tabOverview.reloadTabs()
         }
         browserUI.tabBar.collectionView.reloadData()
         browserUI.tabBar.refreshLayout(
@@ -201,10 +181,10 @@ extension BrowserViewController: TabManagerDelegate {
                 refreshAddressBar()
             }
             browserUI.tabBar.collectionView.reloadData()
-            if tabOverviewPresentation.isVisible {
-                refreshVisibleOverviewCard(at: index, mode: tabManager.selectedTabMode)
+            if browserUI.tabOverview.isPresented {
+                browserUI.tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
             } else {
-                reloadOverviewCollections()
+                browserUI.tabOverview.reloadTabs()
             }
             
         case .location:
@@ -215,10 +195,10 @@ extension BrowserViewController: TabManagerDelegate {
             
         case .favicon:
             browserUI.tabBar.collectionView.reloadData()
-            if tabOverviewPresentation.isVisible {
-                refreshVisibleOverviewCard(at: index, mode: tabManager.selectedTabMode)
+            if browserUI.tabOverview.isPresented {
+                browserUI.tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
             } else {
-                reloadOverviewCollections()
+                browserUI.tabOverview.reloadTabs()
             }
             
         case .navigationState:
@@ -236,10 +216,10 @@ extension BrowserViewController: TabManagerDelegate {
             if index == tabManager.selectedTabIndex {
                 captureThumbnail(for: index)
             }
-            if tabOverviewPresentation.isVisible {
-                refreshVisibleOverviewCard(at: index, mode: tabManager.selectedTabMode)
+            if browserUI.tabOverview.isPresented {
+                browserUI.tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
             } else {
-                reloadOverviewCollections()
+                browserUI.tabOverview.reloadTabs()
             }
         }
     }

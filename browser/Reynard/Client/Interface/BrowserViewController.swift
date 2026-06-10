@@ -138,10 +138,9 @@ final class BrowserViewController: UIViewController {
         refreshAddressBar()
         browserUI.applyChromeLayout(animated: false)
         updateSuggestionsLayoutIfNeeded()
-        browserUI.tabOverviewCollection.tabsCollection.collectionViewLayout.invalidateLayout()
-        browserUI.tabOverviewCollection.privateTabsCollection.collectionViewLayout.invalidateLayout()
+        browserUI.tabOverview.invalidateCollectionLayouts()
         browserUI.tabBar.collectionView.collectionViewLayout.invalidateLayout()
-        tabOverviewPresentation.refreshForCurrentOrientation()
+        browserUI.tabOverview.refreshForCurrentOrientation()
     }
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -153,15 +152,14 @@ final class BrowserViewController: UIViewController {
         coordinator.animate { _ in
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
-            self.browserUI.tabOverviewCollection.tabsCollection.collectionViewLayout.invalidateLayout()
-            self.browserUI.tabOverviewCollection.privateTabsCollection.collectionViewLayout.invalidateLayout()
+            self.browserUI.tabOverview.invalidateCollectionLayouts()
             self.browserUI.tabBar.collectionView.collectionViewLayout.invalidateLayout()
         } completion: { _ in
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
             self.browserUI.geckoView.transform = .identity
             self.browserUI.browserChrome.resetHorizontalTransition()
-            self.tabOverviewPresentation.refreshForCurrentOrientation()
+            self.browserUI.tabOverview.refreshForCurrentOrientation()
             DispatchQueue.main.async {
                 guard self.isViewLoaded, self.view.window != nil else {
                     return
@@ -273,8 +271,8 @@ final class BrowserViewController: UIViewController {
         }
         
         if fullScreen {
-            if tabOverviewPresentation.isVisible {
-                tabOverviewPresentation.setVisible(false, animated: false)
+            if browserUI.tabOverview.isPresented {
+                browserUI.tabOverview.setPresented(false, animated: false)
             }
             setSearchFocused(false, animated: false)
             view.endEditing(true)
