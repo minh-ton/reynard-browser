@@ -7,27 +7,67 @@
 
 import UIKit
 
+protocol AddressBarGesturesDelegate: AnyObject {
+    var addressBarGestureController: BrowserViewController { get }
+}
+
 final class AddressBarGestures: NSObject {
+    // MARK: - UX
+
+    private enum UX {
+        static let addressBarAutomaticNewTabTransitionDuration: TimeInterval = 0.2
+        static let addressBarTabSwitchTransitionDuration: TimeInterval = 0.24
+        static let addressBarTabSwitchCancellationDuration: TimeInterval = 0.22
+        static let addressBarAutomaticNewTabTranslationRatio: CGFloat = 0.34
+        static let addressBarPreviewOutsidePadding: CGFloat = 24
+        static let addressBarPreviewCornerRadius: CGFloat = 16
+        static let addressBarPreviewShadowOpacity: Float = 0.12
+        static let addressBarPreviewShadowRadius: CGFloat = 10
+        static let addressBarPreviewShadowOffset = CGSize(width: 0, height: 2)
+        static let addressBarPreviewHorizontalInset: CGFloat = 12
+        static let addressBarPreviewButtonSpacing: CGFloat = 8
+        static let addressBarPreviewButtonSize: CGFloat = 18
+        static let addressBarPreviewFontSize: CGFloat = 17
+        static let addressBarEdgeSwipeTranslationDamping: CGFloat = 0.18
+        static let addressBarTabSwitchCompletionDistanceRatio: CGFloat = 0.28
+        static let addressBarTabSwitchVelocityThreshold: CGFloat = 700
+        static let addressBarPanDirectionDetectionThreshold: CGFloat = 6
+    }
+
     private enum SearchPanMode {
         case undecided
         case horizontalTabs
         case blocked
     }
     
-    private unowned let controller: BrowserViewController
+    weak var delegate: AddressBarGesturesDelegate?
+    private unowned let addressBar: AddressBar
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .rigid)
+
+    private var controller: BrowserViewController {
+        guard let controller = delegate?.addressBarGestureController else {
+            preconditionFailure("AddressBarGestures requires a delegate")
+        }
+        return controller
+    }
     
     private var searchPanMode: SearchPanMode = .blocked
+
+    // Preview views are disposable snapshots; the actual tab selection changes only after completion.
     private var horizontalDirection = 0
     private var horizontalTargetIndex: Int?
     private var horizontalTargetContentView: UIView?
     private var horizontalTargetBarView: UIView?
+
+    // MARK: - Lifecycle
     
-    init(controller: BrowserViewController) {
-        self.controller = controller
+    init(addressBar: AddressBar) {
+        self.addressBar = addressBar
     }
+
+    // MARK: - Configuration
     
-    func configureGestures() {
+    func configure() {
         let phonePan = UIPanGestureRecognizer(target: self, action: #selector(handleSearchPan(_:)))
         phonePan.maximumNumberOfTouches = 1
         phonePan.cancelsTouchesInView = false
@@ -39,15 +79,19 @@ final class AddressBarGestures: NSObject {
         phoneSwipeUp.cancelsTouchesInView = false
         phoneSwipeUp.delegate = self
         
+        // Give the explicit overview swipe priority before interpreting movement as a tab switch.
         phonePan.require(toFail: phoneSwipeUp)
         
-        controller.browserUI.addressBar.addGestureRecognizer(phoneSwipeUp)
-        controller.browserUI.addressBar.addGestureRecognizer(phonePan)
+        addressBar.addGestureRecognizer(phoneSwipeUp)
+        addressBar.addGestureRecognizer(phonePan)
     }
+
+    // MARK: - Transition Lifecycle
     
     func resetHorizontalTransition() {
+        // Every exit path funnels through here to avoid leaving transformed chrome or orphan previews.
         controller.browserUI.geckoView.transform = .identity
-        controller.activeAddressBar.transform = .identity
+        addressBar.transform = .identity
         
         horizontalTargetContentView?.removeFromSuperview()
         horizontalTargetBarView?.removeFromSuperview()
@@ -57,7 +101,7 @@ final class AddressBarGestures: NSObject {
         horizontalTargetIndex = nil
         horizontalDirection = 0
     }
-    
+
     func animateAutomaticNewTabTransition(completion: @escaping () -> Void) {
         guard !controller.usesPadChrome,
               !controller.tabOverviewPresentation.isVisible,
@@ -65,26 +109,26 @@ final class AddressBarGestures: NSObject {
             DispatchQueue.main.async(execute: completion)
             return
         }
-        
+
         let width = controller.browserUI.geckoView.bounds.width
         guard width > 1 else {
             DispatchQueue.main.async(execute: completion)
             return
         }
-        
+
         searchPanMode = .blocked
         resetHorizontalTransition()
-        
-        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut]) {
-            let transform = CGAffineTransform(translationX: -width * 0.34, y: 0)
+
+        UIView.animate(withDuration: UX.addressBarAutomaticNewTabTransitionDuration, delay: 0, options: [.curveEaseOut]) {
+            let transform = CGAffineTransform(translationX: -width * UX.addressBarAutomaticNewTabTranslationRatio, y: 0)
             self.controller.browserUI.geckoView.transform = transform
-            self.controller.activeAddressBar.transform = transform
+            self.addressBar.transform = transform
         } completion: { _ in
             self.resetHorizontalTransition()
             completion()
         }
     }
-    
+
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
         guard !controller.usesPadChrome,
               !controller.tabOverviewPresentation.isVisible,
@@ -108,19 +152,18 @@ final class AddressBarGestures: NSObject {
         controller.view.insertSubview(targetContent, belowSubview: controller.browserUI.geckoView)
         horizontalTargetContentView = targetContent
         
-        if let barHost = controller.activeAddressBar.superview {
+        if let barHost = addressBar.superview {
             let targetBar = createAddressBarPreview(for: tab)
-            let outsidePadding: CGFloat = 24
-            let horizontalOffset = controller.activeAddressBar.bounds.width + outsidePadding
-            targetBar.frame = controller.activeAddressBar.frame.offsetBy(dx: horizontalOffset, dy: 0)
+            let horizontalOffset = addressBar.bounds.width + UX.addressBarPreviewOutsidePadding
+            targetBar.frame = addressBar.frame.offsetBy(dx: horizontalOffset, dy: 0)
             barHost.addSubview(targetBar)
             horizontalTargetBarView = targetBar
         }
         
-        UIView.animate(withDuration: 0.24, delay: 0, options: [.curveEaseOut]) {
+        UIView.animate(withDuration: UX.addressBarTabSwitchTransitionDuration, delay: 0, options: [.curveEaseOut]) {
             let transform = CGAffineTransform(translationX: -width, y: 0)
             self.controller.browserUI.geckoView.transform = transform
-            self.controller.activeAddressBar.transform = transform
+            self.addressBar.transform = transform
             self.horizontalTargetContentView?.transform = transform
             self.horizontalTargetBarView?.transform = transform
         } completion: { _ in
@@ -128,18 +171,21 @@ final class AddressBarGestures: NSObject {
             completion()
         }
     }
+
+    // MARK: - Previews
     
     private func createAddressBarPreview(for tab: Tab) -> UIView {
+        // A lightweight replica avoids reparenting or mutating the live AddressBar during the swipe.
         let container = UIView()
         container.backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? .tertiarySystemBackground : .systemBackground
         }
-        container.layer.cornerRadius = 16
+        container.layer.cornerRadius = UX.addressBarPreviewCornerRadius
         container.layer.cornerCurve = .continuous
         container.layer.shadowColor = UIColor.black.cgColor
-        container.layer.shadowOpacity = 0.12
-        container.layer.shadowRadius = 10
-        container.layer.shadowOffset = CGSize(width: 0, height: 2)
+        container.layer.shadowOpacity = UX.addressBarPreviewShadowOpacity
+        container.layer.shadowRadius = UX.addressBarPreviewShadowRadius
+        container.layer.shadowOffset = UX.addressBarPreviewShadowOffset
         container.clipsToBounds = false
         
         let leadingButton = AddressBarButton(type: .system)
@@ -160,7 +206,7 @@ final class AddressBarGestures: NSObject {
         
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 17, weight: .regular)
+        label.font = .systemFont(ofSize: UX.addressBarPreviewFontSize, weight: .regular)
         label.textAlignment = .left
         label.textColor = .label
         label.numberOfLines = 1
@@ -172,18 +218,18 @@ final class AddressBarGestures: NSObject {
         container.addSubview(trailingButton)
         
         NSLayoutConstraint.activate([
-            leadingButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            leadingButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: UX.addressBarPreviewHorizontalInset),
             leadingButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            leadingButton.widthAnchor.constraint(equalToConstant: 18),
-            leadingButton.heightAnchor.constraint(equalToConstant: 18),
+            leadingButton.widthAnchor.constraint(equalToConstant: UX.addressBarPreviewButtonSize),
+            leadingButton.heightAnchor.constraint(equalToConstant: UX.addressBarPreviewButtonSize),
             
-            trailingButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            trailingButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -UX.addressBarPreviewHorizontalInset),
             trailingButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            trailingButton.widthAnchor.constraint(equalToConstant: 18),
-            trailingButton.heightAnchor.constraint(equalToConstant: 18),
+            trailingButton.widthAnchor.constraint(equalToConstant: UX.addressBarPreviewButtonSize),
+            trailingButton.heightAnchor.constraint(equalToConstant: UX.addressBarPreviewButtonSize),
             
-            label.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: 8),
-            label.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -8),
+            label.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarPreviewButtonSpacing),
+            label.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.addressBarPreviewButtonSpacing),
             label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
         ])
         
@@ -234,6 +280,7 @@ final class AddressBarGestures: NSObject {
     }
     
     private func createContentPreview(for tab: Tab) -> UIView {
+        // Thumbnails are sufficient for the transition; Gecko remains attached only to the selected tab.
         let preview = UIView()
         preview.backgroundColor = .systemBackground
         
@@ -248,11 +295,14 @@ final class AddressBarGestures: NSObject {
         
         return preview
     }
+
+    // MARK: - Interactive Tab Switching
     
     private func updateHorizontalTabInteraction(translationX: CGFloat) {
         let direction = translationX < 0 ? 1 : -1
         
         if horizontalDirection != direction {
+            // Crossing the origin invalidates the preview created for the opposite neighbor.
             resetHorizontalTransition()
             horizontalDirection = direction
         }
@@ -270,11 +320,10 @@ final class AddressBarGestures: NSObject {
                 controller.view.insertSubview(targetContent, belowSubview: controller.browserUI.geckoView)
                 horizontalTargetContentView = targetContent
                 
-                if let barHost = controller.activeAddressBar.superview {
+                if let barHost = addressBar.superview {
                     let targetBar = createAddressBarPreview(for: targetTab)
-                    let outsidePadding: CGFloat = 24
-                    let horizontalOffset = CGFloat(direction) * (controller.activeAddressBar.bounds.width + outsidePadding)
-                    targetBar.frame = controller.activeAddressBar.frame.offsetBy(dx: horizontalOffset, dy: 0)
+                    let horizontalOffset = CGFloat(direction) * (addressBar.bounds.width + UX.addressBarPreviewOutsidePadding)
+                    targetBar.frame = addressBar.frame.offsetBy(dx: horizontalOffset, dy: 0)
                     barHost.addSubview(targetBar)
                     horizontalTargetBarView = targetBar
                 }
@@ -282,34 +331,36 @@ final class AddressBarGestures: NSObject {
         }
         
         if horizontalTargetIndex == nil {
-            let damped = translationX * 0.18
+            // No neighboring tab means an edge drag; damp it until new-tab threshold evaluation.
+            let damped = translationX * UX.addressBarEdgeSwipeTranslationDamping
             controller.browserUI.geckoView.transform = CGAffineTransform(translationX: damped, y: 0)
-            controller.activeAddressBar.transform = CGAffineTransform(translationX: damped, y: 0)
+            addressBar.transform = CGAffineTransform(translationX: damped, y: 0)
             return
         }
         
         let transform = CGAffineTransform(translationX: translationX, y: 0)
         controller.browserUI.geckoView.transform = transform
-        controller.activeAddressBar.transform = transform
+        addressBar.transform = transform
         horizontalTargetContentView?.transform = transform
         horizontalTargetBarView?.transform = transform
     }
     
     private func finishHorizontalTabInteraction(translationX: CGFloat, velocityX: CGFloat) {
         let width = controller.browserUI.geckoView.bounds.width
-        let shouldSwitch = horizontalTargetIndex != nil && (abs(translationX) > width * 0.28 || abs(velocityX) > 700)
+        let shouldSwitch = horizontalTargetIndex != nil && (abs(translationX) > width * UX.addressBarTabSwitchCompletionDistanceRatio || abs(velocityX) > UX.addressBarTabSwitchVelocityThreshold)
+        // A leftward edge swipe from the final phone tab is the only gesture that creates a tab.
         let shouldCreateNewTab = !controller.usesPadChrome
         && horizontalTargetIndex == nil
         && controller.tabManager.selectedTabIndex == (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).count - 1
         && horizontalDirection == 1
-        && (abs(translationX) > width * 0.28 || velocityX < -700)
+        && (abs(translationX) > width * UX.addressBarTabSwitchCompletionDistanceRatio || velocityX < -UX.addressBarTabSwitchVelocityThreshold)
         
         if shouldSwitch, let targetIndex = horizontalTargetIndex {
             let finalTranslation = CGFloat(-horizontalDirection) * width
-            UIView.animate(withDuration: 0.24, delay: 0, options: [.curveEaseOut]) {
+            UIView.animate(withDuration: UX.addressBarTabSwitchTransitionDuration, delay: 0, options: [.curveEaseOut]) {
                 let transform = CGAffineTransform(translationX: finalTranslation, y: 0)
                 self.controller.browserUI.geckoView.transform = transform
-                self.controller.activeAddressBar.transform = transform
+                self.addressBar.transform = transform
                 self.horizontalTargetContentView?.transform = transform
                 self.horizontalTargetBarView?.transform = transform
             } completion: { _ in
@@ -322,9 +373,9 @@ final class AddressBarGestures: NSObject {
                 _ = self.controller.createTab(selecting: true)
             }
         } else {
-            UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) {
+            UIView.animate(withDuration: UX.addressBarTabSwitchCancellationDuration, delay: 0, options: [.curveEaseOut]) {
                 self.controller.browserUI.geckoView.transform = .identity
-                self.controller.activeAddressBar.transform = .identity
+                self.addressBar.transform = .identity
                 self.horizontalTargetContentView?.transform = .identity
                 self.horizontalTargetBarView?.transform = .identity
             } completion: { _ in
@@ -332,6 +383,8 @@ final class AddressBarGestures: NSObject {
             }
         }
     }
+
+    // MARK: - Gesture Actions
     
     @objc private func handleSearchPan(_ recognizer: UIPanGestureRecognizer) {
         if controller.usesPadChrome {
@@ -355,7 +408,9 @@ final class AddressBarGestures: NSObject {
             
         case .changed:
             if searchPanMode == .undecided {
-                if abs(translation.x) < 6, abs(translation.y) < 6 {
+                // Wait for deliberate motion before locking the recognizer to horizontal or blocked.
+                if abs(translation.x) < UX.addressBarPanDirectionDetectionThreshold,
+                   abs(translation.y) < UX.addressBarPanDirectionDetectionThreshold {
                     return
                 }
                 
@@ -399,6 +454,8 @@ final class AddressBarGestures: NSObject {
         controller.setTabOverviewVisible(true, animated: true)
     }
 }
+
+// MARK: - UIGestureRecognizerDelegate
 
 extension AddressBarGestures: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {

@@ -51,7 +51,7 @@ extension BrowserViewController {
     }
     
     func syncSidebarButtonItem() {
-        browserUI.topBarButtons.syncSidebarButton(splitViewController: splitViewController)
+        browserUI.browserChrome.syncSidebarButton(splitViewController: splitViewController)
     }
     
     func setupEmbeddedSidebarContainer() {
@@ -176,7 +176,6 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
             return
         }
         
-        let destinationButton = browserViewController.browserUI.topBarButtons.sidebarButton
         let sourceFrame = sourceView.convert(sourceView.bounds, to: containerView)
         snapshot.frame = sourceFrame
         containerView.addSubview(snapshot)
@@ -186,16 +185,15 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
         containerView.layoutIfNeeded()
         browserViewController.view.layoutIfNeeded()
         
-        let destinationFrame = destinationButton.convert(destinationButton.bounds, to: containerView)
-        destinationButton.alpha = 0
-        destinationButton.isHidden = false
+        let destinationFrame = browserViewController.browserUI.browserChrome.sidebarButtonFrame(in: containerView)
+        browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
         
         UIView.animate(withDuration: 0.14, delay: 0, options: [.curveEaseOut]) {
             snapshot.frame = destinationFrame
-            destinationButton.alpha = 1
+            self.browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
         } completion: { _ in
             sourceView.isHidden = false
-            destinationButton.alpha = 1
+            self.browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
             snapshot.removeFromSuperview()
         }
     }

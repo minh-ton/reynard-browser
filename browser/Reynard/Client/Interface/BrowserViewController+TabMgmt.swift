@@ -251,7 +251,7 @@ extension BrowserViewController: TabManagerDelegate {
             return
         }
         
-        addressBarGestures.animateAutomaticNewTabTransition(to: activeTabs[index], completion: completion)
+        browserUI.browserChrome.animateAutomaticNewTabTransition(to: activeTabs[index], completion: completion)
     }
     
     func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {

@@ -53,7 +53,7 @@ extension BrowserViewController {
         
         let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let popover = sheet.popoverPresentationController {
-            let sourceView = usesCompactPadChrome ? browserUI.bottomToolbar : (usesPadChrome ? browserUI.topBar.barView : browserUI.bottomToolbar)
+            let sourceView = browserUI.browserChrome.sharePopoverSourceView()
             popover.sourceView = sourceView
             popover.sourceRect = sourceView.bounds
         }
@@ -69,7 +69,7 @@ extension BrowserViewController {
     }
     
     func createNewTab() {
-        browserUI.addressBar.resetOverlayState()
+        browserUI.browserChrome.clearAddressBarAutocomplete()
         restoreSearchChrome(clearSuggestions: true)
         view.endEditing(true)
         
@@ -93,7 +93,7 @@ extension BrowserViewController {
             return
         }
         
-        browserUI.addressBar.resetOverlayState()
+        browserUI.browserChrome.clearAddressBarAutocomplete()
         view.endEditing(true)
     }
     
@@ -124,10 +124,6 @@ extension BrowserViewController {
         }
         
         refreshAddressBar()
-    }
-    
-    @objc func changeWebsiteModeRequested() {
-        changeWebsiteMode()
     }
     
     func backButtonClicked() {
@@ -217,18 +213,6 @@ extension BrowserViewController {
         presentMenuSheet()
     }
     
-    @objc func dismissKeyboardTapped() {
-        dismissKeyboard()
-    }
-    
-    @objc func presentAddonSettingsRequested(_ notification: Notification) {
-        guard let item = notification.userInfo?["addonItem"] as? AddonMenuItem else {
-            return
-        }
-        
-        addonController.presentCurrentSiteSettings(for: item)
-    }
-    
     @objc func presentWebsiteSettingsRequested() {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -242,7 +226,7 @@ extension BrowserViewController {
         present(navigationController, animated: true)
     }
     
-    @objc func presentAddBookmarkRequested(_ notification: Notification) {
+    func presentBookmark(addToFavorites: Bool) {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: urlString) else {
@@ -250,7 +234,7 @@ extension BrowserViewController {
         }
         
         let title = selectedTab.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if notification.userInfo?["addToFavorites"] as? Bool == true {
+        if addToFavorites {
             let viewController = EditBookmarkViewController(
                 title: title,
                 url: url,

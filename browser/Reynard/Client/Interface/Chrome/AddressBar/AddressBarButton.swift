@@ -8,12 +8,21 @@
 import UIKit
 
 final class AddressBarButton: UIButton {
-    var hitArea: CGFloat = 2
+    // MARK: - UX
+
+    private enum UX {
+        static let addressBarButtonTouchTargetScale: CGFloat = 2
+        static let addressBarButtonSymbolPointSize: CGFloat = 14
+    }
+
     private var isMenuVisible = false
+
+    // UIKit cannot replace every visible submenu in place, so a full replacement may be deferred.
     private var pendingMenuAfterDismissal: UIMenu?
     private var pendingMenuDismissalHandlers: [() -> Void] = []
-    private var contextMenuModel: UIMenu?
     private var legacyMenuDelegate: LegacyContextMenuDelegate?
+
+    // MARK: - Lifecycle
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -24,28 +33,31 @@ final class AddressBarButton: UIButton {
         super.init(coder: coder)
         configureAppearance()
     }
+
+    // MARK: - Configuration
     
     private func configureAppearance() {
         imageView?.contentMode = .scaleAspectFit
         contentHorizontalAlignment = .fill
         contentVerticalAlignment = .fill
         contentEdgeInsets = .zero
-        setPreferredSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: 14, weight: .regular), forImageIn: .normal)
-        if #available(iOS 13.0, *) {
-            if #unavailable(iOS 14.0) {
-                let delegate = LegacyContextMenuDelegate(owner: self)
-                addInteraction(UIContextMenuInteraction(delegate: delegate))
-                legacyMenuDelegate = delegate
-                addTarget(self, action: #selector(handleLegacyPrimaryTap), for: .touchUpInside)
-            }
+        setPreferredSymbolConfiguration(
+            UIImage.SymbolConfiguration(pointSize: UX.addressBarButtonSymbolPointSize, weight: .regular),
+            forImageIn: .normal
+        )
+        if #unavailable(iOS 14.0) {
+            let delegate = LegacyContextMenuDelegate(owner: self)
+            addInteraction(UIContextMenuInteraction(delegate: delegate))
+            legacyMenuDelegate = delegate
+            addTarget(self, action: #selector(handleLegacyPrimaryTap), for: .touchUpInside)
         }
     }
     
-    @available(iOS 13.0, *)
     @objc private func handleLegacyPrimaryTap() {
         guard let interaction = interactions.compactMap({ $0 as? UIContextMenuInteraction }).first else {
             return
         }
+        // iOS 13 has no showsMenuAsPrimaryAction; invoke the interaction's private presenter directly.
         let selector = NSSelectorFromString("_presentMenuAtLocation:")
         guard interaction.responds(to: selector) else {
             return
@@ -53,14 +65,16 @@ final class AddressBarButton: UIButton {
         let center = NSValue(cgPoint: CGPoint(x: bounds.midX, y: bounds.midY))
         _ = interaction.perform(selector, with: center)
     }
+
+    // MARK: - Menu Updates
     
     func setMenuPreservingPresentation(_ menu: UIMenu?) {
-        contextMenuModel = menu
         legacyMenuDelegate?.menu = menu
         if #available(iOS 14.0, *) {
             if isMenuVisible,
                let menu,
                let contextMenuInteraction = self.contextMenuInteraction {
+                // Keep the currently presented submenu stable, then install the full menu after dismissal.
                 pendingMenuAfterDismissal = menu
                 contextMenuInteraction.updateVisibleMenu { visibleMenu in
                     if let replacementMenu = self.replacementMenu(for: visibleMenu, in: menu) {
@@ -78,6 +92,7 @@ final class AddressBarButton: UIButton {
     }
     
     func performAfterMenuDismissal(_ action: @escaping () -> Void) {
+        // Actions that present another controller must wait until UIKit has finished dismissing the menu.
         guard isMenuVisible else {
             action()
             return
@@ -107,6 +122,8 @@ final class AddressBarButton: UIButton {
         
         return nil
     }
+
+    // MARK: - Context Menu Lifecycle
     
     @available(iOS 14.0, *)
     override func contextMenuInteraction(
@@ -150,12 +167,10 @@ final class AddressBarButton: UIButton {
         finalizeDismissal()
     }
     
-    @available(iOS 13.0, *)
     fileprivate func legacyContextMenuWillDisplay() {
         isMenuVisible = true
     }
     
-    @available(iOS 13.0, *)
     fileprivate func legacyContextMenuWillEnd(animator: UIContextMenuInteractionAnimating?) {
         isMenuVisible = false
         let finalizeDismissal = { [weak self] in
@@ -175,22 +190,26 @@ final class AddressBarButton: UIButton {
         
         finalizeDismissal()
     }
+
+    // MARK: - Hit Testing
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         guard isUserInteractionEnabled, !isHidden, alpha > 0 else {
             return false
         }
         
+        // The visible icons are intentionally small, but retain a full-size practical touch target.
         let bounds = self.bounds
-        let widthIncrease  = bounds.width  * (hitArea - 1) / 2
-        let heightIncrease = bounds.height * (hitArea - 1) / 2
+        let widthIncrease = bounds.width * (UX.addressBarButtonTouchTargetScale - 1) / 2
+        let heightIncrease = bounds.height * (UX.addressBarButtonTouchTargetScale - 1) / 2
         let hitFrame = bounds.insetBy(dx: -widthIncrease, dy: -heightIncrease)
         
         return hitFrame.contains(point)
     }
 }
 
-@available(iOS 13.0, *)
+// MARK: - iOS 13 Context Menu Support
+
 private final class LegacyContextMenuDelegate: NSObject, UIContextMenuInteractionDelegate {
     weak var owner: AddressBarButton?
     var menu: UIMenu?

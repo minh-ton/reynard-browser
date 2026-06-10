@@ -11,7 +11,6 @@ import UIKit
 
 private enum UIAssociatedKeys {
     static var browserUI = 0
-    static var addressBarGestures = 0
     static var searchController = 0
     static var searchViewController = 0
     static var isSearchFocused = 0
@@ -44,7 +43,7 @@ private final class TabOverviewCardAnimationState {
     var fakeInsertionMode: TabOverviewCollection.Mode?
 }
 
-extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
+extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, AddressBarGesturesDelegate, BottomToolbarDelegate {
     var overviewInset: CGFloat {
         16
     }
@@ -65,21 +64,6 @@ extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
         }
         set {
             objc_setAssociatedObject(self, &UIAssociatedKeys.browserUI, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-    
-    var addressBarGestures: AddressBarGestures {
-        get {
-            if let gestures = objc_getAssociatedObject(self, &UIAssociatedKeys.addressBarGestures) as? AddressBarGestures {
-                return gestures
-            }
-            
-            let gestures = AddressBarGestures(controller: self)
-            objc_setAssociatedObject(self, &UIAssociatedKeys.addressBarGestures, gestures, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            return gestures
-        }
-        set {
-            objc_setAssociatedObject(self, &UIAssociatedKeys.addressBarGestures, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
     
@@ -152,13 +136,12 @@ extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
         return usesTopPhoneAddressBar || !usesPadChrome
     }
     
-    var activeAddressBar: AddressBar {
-        browserUI.addressBar
+    var addressBarGestureController: BrowserViewController {
+        self
     }
     
     @objc func applyUpdateMenuButtonBadge() {
-        browserUI.bottomToolbar.setMenuButtonIndicatesUpdate(true)
-        browserUI.topBarButtons.setMenuButtonIndicatesUpdate(true)
+        browserUI.browserChrome.setMenuButtonIndicatesUpdate(true)
     }
     
     func setSearchFocused(_ focused: Bool, animated: Bool) {
@@ -174,13 +157,12 @@ extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
             return
         }
         
-        browserUI.bottomToolbar.updateBackButton(canGoBack: tab.canNavigateBack)
-        browserUI.bottomToolbar.updateForwardButton(canGoForward: tab.canNavigateForward)
         let shareEnabled = tabManager.shareableURL(for: tab) != nil
-        browserUI.bottomToolbar.updateShareButton(isEnabled: shareEnabled)
-        browserUI.topBarButtons.shareButton.isEnabled = shareEnabled
-        browserUI.topBarButtons.backButton.isEnabled = tab.canNavigateBack
-        browserUI.topBarButtons.forwardButton.isEnabled = tab.canNavigateForward
+        browserUI.browserChrome.updateNavigation(
+            canGoBack: tab.canNavigateBack,
+            canGoForward: tab.canNavigateForward,
+            canShare: shareEnabled
+        )
     }
     
     @objc func addressBarPositionDidChange() {
@@ -277,7 +259,7 @@ extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
     }
     
     func syncAddressBarLoadingState(progress: Float, isLoading: Bool) {
-        browserUI.addressBar.setLoadingProgress(progress, isLoading: isLoading)
+        browserUI.browserChrome.setAddressBarLoadingProgress(progress, isLoading: isLoading)
     }
     
     func refreshAddressBar() {
@@ -287,26 +269,23 @@ extension BrowserViewController: AddressBarDelegate, BottomToolbarDelegate {
         let selectedURL = selectedTab?.url
         let displayedText = hasPendingDisplayText ? pendingDisplayText : selectedURL
         let shouldPreserveSearchComposingText = isSearchScrollMode && searchViewController.parent != nil
-        if !browserUI.addressBar.isEditingText && !shouldPreserveSearchComposingText {
-            browserUI.addressBar.setText(
+        if !browserUI.browserChrome.isAddressBarEditing && !shouldPreserveSearchComposingText {
+            browserUI.browserChrome.setAddressBarText(
                 displayedText,
                 locationText: selectedURL,
                 locationTitle: selectedTab?.title,
                 showsBarMenu: !hasPendingDisplayText && selectedURL?.isEmpty == false
             )
         }
-        browserUI.addressBar.setLoadingProgress(selectedTab?.progress ?? 0, isLoading: selectedTab?.isLoading ?? false)
+        browserUI.browserChrome.setAddressBarLoadingProgress(selectedTab?.progress ?? 0, isLoading: selectedTab?.isLoading ?? false)
         addonController.prepareVisibleAddonIcons()
-        let addonItems = addonController.visibleMenuItemsForCurrentSite().map { item in
+        browserUI.browserChrome.updateAddressBarMenu(selectedTab: selectedTab, url: selectedURL)
+    }
+
+    func addonItems(for addressBar: AddressBar) -> [AddressBarMenu.AddonItem] {
+        addonController.visibleMenuItemsForCurrentSite().map { item in
             AddressBarMenu.AddonItem(menuItem: item, image: addonController.iconImage(for: item.addon))
         }
-        browserUI.addressBar.setAddonsMenu(
-            AddressBarMenu.makeMenu(
-                selectedTab: selectedTab,
-                selectedURL: selectedURL,
-                addonItems: addonItems
-            )
-        )
     }
     func addressBarDidTapTrailingButton(_ addressBar: AddressBar) {
         guard let selectedTab = tabManager.selectedTab else {
@@ -331,24 +310,7 @@ final class BrowserUI {
         return view
     }()
     
-    let bottomContainer = BottomContainer()
-    
-    let addressBar: AddressBar = {
-        let bar = AddressBar()
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        return bar
-    }()
-    
-    let keyboardDismissButton = KeyboardDismissButton()
-    
-    let bottomToolbar: BottomToolbar = {
-        let bar = BottomToolbar()
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        return bar
-    }()
-    
-    let topBar = TopBar()
-    let topBarButtons: TopBarButtons
+    let browserChrome: BrowserChrome
     let tabBar: TabBar
     
     let tabOverview = TabOverview()
@@ -371,23 +333,6 @@ final class BrowserUI {
     var geckoTopFullscreenConstraint: NSLayoutConstraint!
     var geckoBottomFullscreenConstraint: NSLayoutConstraint!
     
-    var bottomContainerBottomConstraint: NSLayoutConstraint!
-    var bottomContainerHeightConstraint: NSLayoutConstraint!
-    var bottomToolbarHeightConstraint: NSLayoutConstraint!
-    var bottomToolbarTopConstraint: NSLayoutConstraint!
-    var bottomToolbarCompactPadTopConstraint: NSLayoutConstraint!
-    var addressBarPhoneLeadingConstraint: NSLayoutConstraint!
-    var addressBarPhoneTrailingFullConstraint: NSLayoutConstraint!
-    var addressBarPhoneTrailingFocusedConstraint: NSLayoutConstraint!
-    var addressBarPhoneTopConstraint: NSLayoutConstraint!
-    var addressBarPhoneHeightConstraint: NSLayoutConstraint!
-    var addressBarPadLeadingConstraint: NSLayoutConstraint!
-    var addressBarPadTrailingConstraint: NSLayoutConstraint!
-    var addressBarCompactPadLeadingConstraint: NSLayoutConstraint!
-    var addressBarCompactPadTrailingConstraint: NSLayoutConstraint!
-    var addressBarPadCenterYConstraint: NSLayoutConstraint!
-    var addressBarPadHeightConstraint: NSLayoutConstraint!
-    
     private unowned let controller: BrowserViewController
     private let tabCollectionHandler: TabCollectionHandler
     private var keyboardHeight: CGFloat = 0
@@ -403,7 +348,7 @@ final class BrowserUI {
         self.controller = controller
         self.tabCollectionHandler = tabCollectionHandler
         
-        topBarButtons = TopBarButtons(controller: controller)
+        browserChrome = BrowserChrome(controller: controller)
         tabBar = TabBar(tabCollectionHandler: tabCollectionHandler)
         tabOverviewCollection = TabOverviewCollection(
             overviewInset: controller.overviewInset,
@@ -412,9 +357,6 @@ final class BrowserUI {
         )
         tabOverviewBarButtons = TabOverviewBarButtons(controller: controller)
         
-        addressBar.configure(delegate: controller)
-        keyboardDismissButton.button.addTarget(controller, action: #selector(BrowserViewController.dismissKeyboardTapped), for: .touchUpInside)
-        bottomToolbar.delegate = controller
     }
     
     deinit {
@@ -426,23 +368,9 @@ final class BrowserUI {
         let ui = controller.browserUI
         let view = controller.view!
         
-        view.addSubview(ui.bottomContainer.bottomSafeAreaFillView)
         view.addSubview(ui.geckoView)
-        view.addSubview(ui.bottomContainer.containerView)
-        view.addSubview(ui.topBar.safeAreaFillView)
-        ui.bottomContainer.containerView.addSubview(ui.addressBar)
-        
-        ui.bottomContainer.containerView.addSubview(ui.bottomToolbar)
-        
-        view.addSubview(ui.topBar.barView)
-        ui.topBar.barView.addSubview(ui.topBar.contentView)
-        ui.topBar.contentView.addSubview(ui.topBarButtons.leftStack)
-        ui.topBar.contentView.addSubview(ui.topBarButtons.rightStack)
-        
-        setAddressBarHost(isPad: controller.usesPadChrome)
-        setKeyboardDismissButtonHost(isPad: controller.usesPadChrome)
-        
-        ui.topBar.barView.addSubview(ui.tabBar.collectionView)
+        view.addSubview(ui.tabBar.collectionView)
+        view.addSubview(ui.browserChrome)
         
         view.addSubview(ui.tabOverview.containerView)
         ui.tabOverview.containerView.addSubview(ui.tabOverviewCollection.privateTabsCollection)
@@ -452,55 +380,18 @@ final class BrowserUI {
         ui.tabOverviewBarButtons.attach(to: ui.tabOverviewBottomBar.barView, verticalPhoneMode: true)
         
         ui.geckoTopPhoneConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor)
-        ui.geckoTopPadConstraint = ui.geckoView.topAnchor.constraint(equalTo: ui.topBar.barView.bottomAnchor)
-        ui.geckoBottomPhoneConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.bottomContainer.containerView.topAnchor)
+        ui.geckoTopPadConstraint = ui.geckoView.topAnchor.constraint(equalTo: ui.tabBar.collectionView.bottomAnchor)
+        ui.geckoBottomPhoneConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor)
         ui.geckoBottomPhoneSearchPinnedConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -94)
         ui.geckoBottomPhoneKeyboardOverlayConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ui.geckoBottomPadConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ui.geckoBottomCompactPadConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.bottomContainer.containerView.topAnchor)
+        ui.geckoBottomCompactPadConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor)
         ui.geckoLeadingPhoneConstraint = ui.geckoView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
         ui.geckoTrailingPhoneConstraint = ui.geckoView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ui.geckoLeadingPadConstraint = ui.geckoView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
         ui.geckoTrailingPadConstraint = ui.geckoView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ui.geckoTopFullscreenConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.topAnchor)
         ui.geckoBottomFullscreenConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        
-        ui.bottomContainerBottomConstraint = ui.bottomContainer.containerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-        ui.bottomContainerHeightConstraint = ui.bottomContainer.containerView.heightAnchor.constraint(equalToConstant: 94)
-        ui.bottomToolbarHeightConstraint = ui.bottomToolbar.heightAnchor.constraint(equalToConstant: 30)
-        ui.bottomToolbarTopConstraint = ui.bottomToolbar.topAnchor.constraint(equalTo: ui.addressBar.bottomAnchor, constant: 7)
-        ui.bottomToolbarCompactPadTopConstraint = ui.bottomToolbar.topAnchor.constraint(equalTo: ui.bottomContainer.containerView.topAnchor, constant: 7)
-        
-        ui.addressBarPhoneLeadingConstraint = ui.addressBar.leadingAnchor.constraint(equalTo: ui.bottomContainer.containerView.leadingAnchor, constant: 12)
-        ui.addressBarPhoneTrailingFullConstraint = ui.addressBar.trailingAnchor.constraint(equalTo: ui.bottomContainer.containerView.trailingAnchor, constant: -12)
-        ui.addressBarPhoneTrailingFocusedConstraint = ui.addressBar.trailingAnchor.constraint(equalTo: ui.keyboardDismissButton.button.leadingAnchor, constant: -9)
-        ui.addressBarPhoneTopConstraint = ui.addressBar.topAnchor.constraint(equalTo: ui.bottomContainer.containerView.topAnchor, constant: 8)
-        ui.addressBarPhoneHeightConstraint = ui.addressBar.heightAnchor.constraint(equalToConstant: 42)
-        
-        ui.addressBarPadLeadingConstraint = ui.addressBar.leadingAnchor.constraint(equalTo: ui.topBarButtons.leftStack.trailingAnchor, constant: 12)
-        ui.addressBarPadTrailingConstraint = ui.addressBar.trailingAnchor.constraint(equalTo: ui.topBarButtons.rightStack.leadingAnchor, constant: -12)
-        ui.addressBarCompactPadLeadingConstraint = ui.addressBar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12)
-        ui.addressBarCompactPadTrailingConstraint = ui.addressBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12)
-        ui.addressBarPadCenterYConstraint = ui.addressBar.centerYAnchor.constraint(equalTo: ui.topBar.contentView.centerYAnchor)
-        ui.addressBarPadHeightConstraint = ui.addressBar.heightAnchor.constraint(equalToConstant: 38)
-        
-        ui.keyboardDismissButton.trailingPhoneConstraint = ui.keyboardDismissButton.button.trailingAnchor.constraint(equalTo: ui.bottomContainer.containerView.trailingAnchor, constant: -12)
-        ui.keyboardDismissButton.trailingPadConstraint = ui.keyboardDismissButton.button.trailingAnchor.constraint(equalTo: ui.topBarButtons.rightStack.leadingAnchor, constant: -12)
-        ui.keyboardDismissButton.trailingCompactPadConstraint = ui.keyboardDismissButton.button.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12)
-        ui.keyboardDismissButton.centerYConstraint = ui.keyboardDismissButton.button.centerYAnchor.constraint(equalTo: ui.addressBar.centerYAnchor)
-        ui.keyboardDismissButton.widthConstraint = ui.keyboardDismissButton.button.widthAnchor.constraint(equalToConstant: 42)
-        ui.keyboardDismissButton.heightConstraint = ui.keyboardDismissButton.button.heightAnchor.constraint(equalToConstant: 42)
-        
-        ui.topBar.heightConstraint = ui.topBar.barView.heightAnchor.constraint(equalToConstant: 52)
-        ui.topBar.topConstraint = ui.topBar.barView.topAnchor.constraint(equalTo: view.topAnchor)
-        ui.topBar.contentHeightConstraint = ui.topBar.contentView.heightAnchor.constraint(equalToConstant: 52)
-        
-        ui.topBarButtons.leftLeadingConstraint = ui.topBarButtons.leftStack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12)
-        ui.topBarButtons.rightTrailingConstraint = ui.topBarButtons.rightStack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12)
-        ui.topBarButtons.leftWidthConstraint = ui.topBarButtons.leftStack.widthAnchor.constraint(equalToConstant: 126)
-        ui.topBarButtons.rightWidthConstraint = ui.topBarButtons.rightStack.widthAnchor.constraint(equalToConstant: 126)
-        ui.topBarButtons.leftHeightConstraint = ui.topBarButtons.leftStack.heightAnchor.constraint(equalToConstant: 30)
-        ui.topBarButtons.rightHeightConstraint = ui.topBarButtons.rightStack.heightAnchor.constraint(equalToConstant: 30)
         
         ui.tabBar.heightConstraint = ui.tabBar.collectionView.heightAnchor.constraint(equalToConstant: 36)
         
@@ -523,59 +414,14 @@ final class BrowserUI {
             ui.geckoTopPhoneConstraint,
             ui.geckoBottomPhoneConstraint,
             
-            ui.bottomContainer.containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            ui.bottomContainer.containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            ui.bottomContainerBottomConstraint,
-            ui.bottomContainerHeightConstraint,
+            ui.browserChrome.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            ui.browserChrome.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            ui.browserChrome.topAnchor.constraint(equalTo: view.topAnchor),
+            ui.browserChrome.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
-            ui.bottomContainer.bottomSafeAreaFillView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            ui.bottomContainer.bottomSafeAreaFillView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            ui.bottomContainer.bottomSafeAreaFillView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
-            ui.bottomContainer.bottomSafeAreaFillView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            ui.addressBarPhoneLeadingConstraint,
-            ui.addressBarPhoneTrailingFullConstraint,
-            ui.addressBarPhoneTopConstraint,
-            ui.addressBarPhoneHeightConstraint,
-            
-            ui.keyboardDismissButton.trailingPhoneConstraint,
-            ui.keyboardDismissButton.centerYConstraint,
-            ui.keyboardDismissButton.widthConstraint,
-            ui.keyboardDismissButton.heightConstraint,
-            
-            ui.bottomToolbar.leadingAnchor.constraint(equalTo: ui.bottomContainer.containerView.leadingAnchor, constant: 24),
-            ui.bottomToolbar.trailingAnchor.constraint(equalTo: ui.bottomContainer.containerView.trailingAnchor, constant: -24),
-            ui.bottomToolbarTopConstraint,
-            ui.bottomToolbarHeightConstraint,
-            
-            ui.topBar.barView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            ui.topBar.barView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            ui.topBar.topConstraint,
-            ui.topBar.heightConstraint,
-            
-            ui.topBar.contentView.leadingAnchor.constraint(equalTo: ui.topBar.barView.leadingAnchor),
-            ui.topBar.contentView.trailingAnchor.constraint(equalTo: ui.topBar.barView.trailingAnchor),
-            ui.topBar.contentView.topAnchor.constraint(equalTo: ui.topBar.barView.topAnchor),
-            ui.topBar.contentHeightConstraint,
-            
-            ui.topBar.safeAreaFillView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            ui.topBar.safeAreaFillView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            ui.topBar.safeAreaFillView.topAnchor.constraint(equalTo: view.topAnchor),
-            ui.topBar.safeAreaFillView.bottomAnchor.constraint(equalTo: ui.topBar.barView.topAnchor),
-            
-            ui.topBarButtons.leftLeadingConstraint,
-            ui.topBarButtons.leftStack.centerYAnchor.constraint(equalTo: ui.topBar.contentView.centerYAnchor),
-            ui.topBarButtons.leftWidthConstraint,
-            ui.topBarButtons.leftHeightConstraint,
-            
-            ui.topBarButtons.rightTrailingConstraint,
-            ui.topBarButtons.rightStack.centerYAnchor.constraint(equalTo: ui.topBar.contentView.centerYAnchor),
-            ui.topBarButtons.rightWidthConstraint,
-            ui.topBarButtons.rightHeightConstraint,
-            
-            ui.tabBar.collectionView.leadingAnchor.constraint(equalTo: ui.topBar.barView.leadingAnchor),
-            ui.tabBar.collectionView.trailingAnchor.constraint(equalTo: ui.topBar.barView.trailingAnchor),
-            ui.tabBar.collectionView.topAnchor.constraint(equalTo: ui.topBar.contentView.bottomAnchor),
+            ui.tabBar.collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            ui.tabBar.collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            ui.tabBar.collectionView.topAnchor.constraint(equalTo: ui.browserChrome.topToolbarBottomAnchor),
             ui.tabBar.heightConstraint,
             
             ui.tabOverview.containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -604,22 +450,12 @@ final class BrowserUI {
             ui.tabOverviewTopBar.heightConstraint,
         ].compactMap { $0 })
         
-        ui.addressBarPadLeadingConstraint.isActive = false
-        ui.addressBarPadTrailingConstraint.isActive = false
-        ui.addressBarCompactPadLeadingConstraint.isActive = false
-        ui.addressBarCompactPadTrailingConstraint.isActive = false
-        ui.addressBarPadCenterYConstraint.isActive = false
-        ui.addressBarPadHeightConstraint.isActive = false
-        ui.bottomToolbarCompactPadTopConstraint.isActive = false
         ui.tabOverviewCollection.topPadConstraint.isActive = false
         ui.tabOverviewCollection.bottomPadConstraint.isActive = false
         ui.tabOverviewCollection.privateTopPadConstraint.isActive = false
         ui.tabOverviewCollection.privateBottomPadConstraint.isActive = false
         ui.geckoBottomCompactPadConstraint.isActive = false
-        ui.keyboardDismissButton.trailingPadConstraint.isActive = false
-        ui.keyboardDismissButton.trailingCompactPadConstraint.isActive = false
         
-        view.sendSubviewToBack(ui.bottomContainer.bottomSafeAreaFillView)
     }
     
     func observeKeyboard() {
@@ -643,7 +479,6 @@ final class BrowserUI {
         let layoutBlock = {
             self.controller.view.layoutIfNeeded()
             self.controller.browserUI.tabOverviewCollection.applyTransforms()
-            self.updatePhoneDismissKeyboardButtonShadowPath()
         }
         
         if animated {
@@ -665,9 +500,6 @@ final class BrowserUI {
             return
         }
         
-        setAddressBarHost(isPad: pad)
-        setKeyboardDismissButtonHost(isPad: pad)
-        ui.topBar.topConstraint.constant = resolvedPadTopInset()
         let shouldShowGeckoBehindKeyboard = !pad
         && controller.isSearchFocused
         && keyboardHeight > 0
@@ -719,87 +551,22 @@ final class BrowserUI {
         
         let activeTabs = controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs
         let showsTabBar = pad && !controller.tabOverviewPresentation.isVisible && activeTabs.count > 1 && (!controller.isPad ? Prefs.AppearanceSettings.showsLandscapeTabBar && isLandscape : true)
-        let showsCompactPadBottomToolbar = compactPad && !controller.tabOverviewPresentation.isVisible
-        ui.topBar.barView.isHidden = !pad
-        ui.topBar.safeAreaFillView.isHidden = !pad
         ui.tabBar.collectionView.isHidden = !showsTabBar
-        ui.topBar.heightConstraint.constant = 52 + (showsTabBar ? 36 : 0)
         ui.tabBar.heightConstraint.constant = showsTabBar ? 36 : 0
-        
-        ui.bottomContainer.containerView.isHidden = (!showsCompactPadBottomToolbar && pad) || controller.tabOverviewPresentation.isVisible
-        ui.bottomContainer.bottomSafeAreaFillView.isHidden = (!showsCompactPadBottomToolbar && pad) || controller.tabOverviewPresentation.isVisible
-        ui.bottomContainerHeightConstraint.constant = compactPad ? 44 : (controller.isSearchFocused ? 58 : 94)
-        ui.bottomContainer.containerView.backgroundColor = controller.isSearchFocused && !pad ? .clear : .systemGray6
-        ui.bottomContainer.bottomSafeAreaFillView.backgroundColor = controller.isSearchFocused && !pad ? .clear : .systemGray6
-        ui.bottomToolbar.alpha = compactPad ? 1 : (controller.isSearchFocused ? 0 : 1)
-        ui.bottomToolbar.setButtonsHidden(false)
         
         ui.tabOverviewTopBar.barView.isHidden = phoneOverview
         ui.tabOverviewBottomBar.barView.isHidden = !phoneOverview
         ui.tabOverviewBarButtons.attach(to: phoneOverview ? ui.tabOverviewBottomBar.barView : ui.tabOverviewTopBar.barView, verticalPhoneMode: phoneOverview)
         ui.tabOverviewBarButtons.setTabCount(controller.regularTabCount())
-        ui.topBarButtons.updateLayout(isPadLayout: controller.isPad, showsCompactPadChrome: compactPad, sidebarVisible: controller.isLibrarySidebarVisible)
-        ui.topBarButtons.leftStack.isHidden = compactPad
-        ui.topBarButtons.rightStack.isHidden = compactPad
-        ui.topBarButtons.leftWidthConstraint.constant = compactPad ? 0 : resolvedTopBarLeftWidth(
+        ui.browserChrome.apply(state: BrowserChrome.State(
+            position: controller.usesTopPhoneAddressBar ? .top : .bottom,
+            mode: compactPad ? .compact : (pad ? .pad : .phone),
+            presentation: controller.tabOverviewPresentation.isVisible ? .tabOverview : .browsing,
+            search: resolvedChromeSearchState(),
+            topInset: resolvedPadTopInset(),
             isPadLayout: controller.isPad,
-            sidebarVisible: controller.isLibrarySidebarVisible,
-            showsDownloads: ui.topBarButtons.downloadButton.isShowingDownloads
-        )
-        ui.topBarButtons.rightWidthConstraint.constant = compactPad ? 0 : 126
-        
-        let showDismissButton = controller.isSearchFocused && !controller.tabOverviewPresentation.isVisible
-        ui.addressBarPhoneLeadingConstraint.isActive = !pad
-        ui.addressBarPhoneTopConstraint.isActive = !pad
-        ui.addressBarPhoneHeightConstraint.isActive = !pad
-        ui.addressBarPhoneTrailingFullConstraint.isActive = !pad && !showDismissButton
-        ui.addressBarPhoneTrailingFocusedConstraint.isActive = showDismissButton
-        
-        ui.addressBarPadLeadingConstraint.isActive = pad && !compactPad
-        ui.addressBarPadTrailingConstraint.isActive = pad && !compactPad && !showDismissButton
-        ui.addressBarCompactPadLeadingConstraint.isActive = pad && compactPad
-        ui.addressBarCompactPadTrailingConstraint.isActive = pad && compactPad && !showDismissButton
-        ui.addressBarPadCenterYConstraint.isActive = pad
-        ui.addressBarPadHeightConstraint.isActive = pad
-        ui.keyboardDismissButton.trailingPhoneConstraint.isActive = !pad
-        ui.keyboardDismissButton.trailingPadConstraint.isActive = pad && !compactPad
-        ui.keyboardDismissButton.trailingCompactPadConstraint.isActive = pad && compactPad
-        
-        ui.bottomToolbarTopConstraint.isActive = !pad && !compactPad
-        ui.bottomToolbarCompactPadTopConstraint.isActive = compactPad
-        ui.keyboardDismissButton.centerYConstraint.isActive = true
-        
-        ui.keyboardDismissButton.button.isHidden = !showDismissButton
-        let dismissButtonSize = pad ? ui.addressBarPadHeightConstraint.constant : ui.addressBarPhoneHeightConstraint.constant
-        ui.keyboardDismissButton.widthConstraint.constant = dismissButtonSize
-        ui.keyboardDismissButton.heightConstraint.constant = dismissButtonSize
-        ui.keyboardDismissButton.button.layer.cornerRadius = dismissButtonSize / 2
-        ui.keyboardDismissButton.button.layer.shadowOpacity = pad ? 0 : 0.2
-        ui.addressBar.setShadowEnabled(!pad)
-        ui.addressBar.setHidePlaceholderIcon(controller.usesTopPhoneAddressBar || controller.usesPadChrome)
-        
-        if controller.isSearchScrollMode && controller.searchViewController.parent != nil {
-            if controller.usesDetachedSuggestions {
-                ui.bottomToolbar.alpha = 0
-                ui.bottomToolbar.setButtonsHidden(false)
-                ui.bottomContainer.containerView.isHidden = true
-                ui.bottomContainer.bottomSafeAreaFillView.isHidden = true
-            } else {
-                ui.bottomToolbar.alpha = 1
-                ui.bottomToolbar.setButtonsHidden(true)
-            }
-            if controller.usesTopPhoneAddressBar || controller.usesPadChrome {
-                ui.bottomContainer.containerView.isHidden = true
-                ui.bottomContainer.containerView.backgroundColor = .clear
-                ui.bottomContainer.bottomSafeAreaFillView.backgroundColor = .clear
-                ui.bottomContainer.bottomSafeAreaFillView.isHidden = true
-            } else if !controller.usesDetachedSuggestions {
-                ui.bottomContainer.containerView.isHidden = false
-                ui.bottomContainer.containerView.backgroundColor = .systemGray6
-                ui.bottomContainer.bottomSafeAreaFillView.backgroundColor = .systemGray6
-                ui.bottomContainer.bottomSafeAreaFillView.isHidden = false
-            }
-        }
+            sidebarVisible: controller.isLibrarySidebarVisible
+        ))
         
         controller.updateNavigationButtons()
     }
@@ -807,10 +574,6 @@ final class BrowserUI {
     private func applyMediaFullscreenLayoutState() {
         let ui = controller.browserUI
         let pad = controller.usesPadChrome
-        
-        setAddressBarHost(isPad: pad)
-        setKeyboardDismissButtonHost(isPad: pad)
-        ui.topBar.topConstraint.constant = resolvedPadTopInset()
         
         ui.geckoTopPhoneConstraint.isActive = false
         ui.geckoBottomPhoneConstraint.isActive = false
@@ -826,48 +589,20 @@ final class BrowserUI {
         ui.geckoTopFullscreenConstraint.isActive = true
         ui.geckoBottomFullscreenConstraint.isActive = true
         
-        ui.topBar.barView.isHidden = true
-        ui.topBar.safeAreaFillView.isHidden = true
         ui.tabBar.collectionView.isHidden = true
-        ui.topBar.heightConstraint.constant = 52
         ui.tabBar.heightConstraint.constant = 0
-        
-        ui.bottomContainer.containerView.isHidden = true
-        ui.bottomContainer.bottomSafeAreaFillView.isHidden = true
-        ui.bottomContainerBottomConstraint.constant = 0
-        ui.bottomContainer.containerView.backgroundColor = .systemGray6
-        ui.bottomContainer.bottomSafeAreaFillView.backgroundColor = .systemGray6
-        
-        ui.keyboardDismissButton.button.isHidden = true
-        ui.keyboardDismissButton.button.alpha = 0
-        ui.keyboardDismissButton.centerYConstraint.isActive = true
-        ui.keyboardDismissButton.trailingPhoneConstraint.isActive = !pad
-        ui.keyboardDismissButton.trailingPadConstraint.isActive = pad && !controller.usesCompactPadChrome
-        ui.keyboardDismissButton.trailingCompactPadConstraint.isActive = pad && controller.usesCompactPadChrome
-        
-        ui.addressBarPhoneLeadingConstraint.isActive = !pad
-        ui.addressBarPhoneTopConstraint.isActive = !pad
-        ui.addressBarPhoneHeightConstraint.isActive = !pad
-        ui.addressBarPhoneTrailingFullConstraint.isActive = !pad
-        ui.addressBarPhoneTrailingFocusedConstraint.isActive = false
-        ui.addressBarPadLeadingConstraint.isActive = pad && !controller.usesCompactPadChrome
-        ui.addressBarPadTrailingConstraint.isActive = pad && !controller.usesCompactPadChrome
-        ui.addressBarCompactPadLeadingConstraint.isActive = pad && controller.usesCompactPadChrome
-        ui.addressBarCompactPadTrailingConstraint.isActive = pad && controller.usesCompactPadChrome
-        ui.addressBarPadCenterYConstraint.isActive = pad
-        ui.addressBarPadHeightConstraint.isActive = pad
         
         ui.tabOverviewTopBar.barView.isHidden = controller.usesBottomPhoneOverview
         ui.tabOverviewBottomBar.barView.isHidden = !controller.usesBottomPhoneOverview
-        ui.topBarButtons.leftStack.isHidden = controller.usesCompactPadChrome
-        ui.topBarButtons.rightStack.isHidden = controller.usesCompactPadChrome
-        ui.bottomToolbarTopConstraint.isActive = !pad && !controller.usesCompactPadChrome
-        ui.bottomToolbarCompactPadTopConstraint.isActive = controller.usesCompactPadChrome
-        
-        ui.bottomToolbar.alpha = 1
-        ui.bottomToolbar.setButtonsHidden(false)
-        ui.addressBar.setShadowEnabled(!pad)
-        ui.addressBar.setHidePlaceholderIcon(controller.usesTopPhoneAddressBar || controller.usesPadChrome)
+        ui.browserChrome.apply(state: BrowserChrome.State(
+            position: controller.usesTopPhoneAddressBar ? .top : .bottom,
+            mode: controller.usesCompactPadChrome ? .compact : (pad ? .pad : .phone),
+            presentation: .fullscreenMedia,
+            search: .inactive,
+            topInset: resolvedPadTopInset(),
+            isPadLayout: controller.isPad,
+            sidebarVisible: controller.isLibrarySidebarVisible
+        ))
     }
     
     private func resolvedPadTopInset() -> CGFloat {
@@ -884,58 +619,32 @@ final class BrowserUI {
         return 24
     }
     
-    private func resolvedTopBarLeftWidth(isPadLayout: Bool, sidebarVisible: Bool, showsDownloads: Bool) -> CGFloat {
-        guard isPadLayout else {
-            return 126
+    private func resolvedChromeSearchState() -> BrowserChrome.SearchState {
+        guard controller.isSearchFocused else { return .inactive }
+        guard controller.isSearchScrollMode,
+              controller.searchViewController.parent != nil else {
+            return .focused
         }
-        
-        let visibleButtonCount = (sidebarVisible ? 2 : 3) + (showsDownloads ? 1 : 0)
-        let buttonWidth: CGFloat = 30
-        let spacing: CGFloat = 10
-        return (CGFloat(visibleButtonCount) * buttonWidth) + (CGFloat(max(visibleButtonCount - 1, 0)) * spacing)
+        return controller.usesDetachedSuggestions
+            ? .scrollingDetachedSuggestions
+            : .scrollingEmbeddedSuggestions
     }
     
     func setSearchFocused(_ focused: Bool, animated: Bool) {
-        let ui = controller.browserUI
-        let usesPadChrome = controller.usesPadChrome
-        
         controller.isSearchFocused = focused
         if focused {
             resetFocusedInputRelocation()
         }
-        if !usesPadChrome {
-            ui.bottomToolbarHeightConstraint.constant = focused ? 0 : 30
-            ui.bottomContainerHeightConstraint.constant = focused ? 58 : 94
-            ui.bottomContainer.containerView.backgroundColor = focused ? .clear : .systemGray6
-            ui.bottomContainer.bottomSafeAreaFillView.backgroundColor = focused ? .clear : .systemGray6
-        }
         updateChromeLayoutState()
         
-        let dismissButtonTargetAlpha: CGFloat = focused ? 1 : 0
-        if focused {
-            ui.keyboardDismissButton.button.isHidden = false
-        }
-        
         let animations = {
-            if !usesPadChrome {
-                ui.bottomToolbar.alpha = focused ? 0 : 1
-            }
-            ui.keyboardDismissButton.button.alpha = dismissButtonTargetAlpha
             self.controller.view.layoutIfNeeded()
-            self.updatePhoneDismissKeyboardButtonShadowPath()
-        }
-        
-        let completion: (Bool) -> Void = { _ in
-            if !focused {
-                ui.keyboardDismissButton.button.isHidden = true
-            }
         }
         
         if animated {
-            UIView.animate(withDuration: 0.2, animations: animations, completion: completion)
+            UIView.animate(withDuration: 0.2, animations: animations)
         } else {
             animations()
-            completion(true)
         }
     }
     
@@ -945,7 +654,6 @@ final class BrowserUI {
             return
         }
         
-        let ui = controller.browserUI
         updateKeyboardState(screenFrame: frameValue.cgRectValue)
         let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
         let curveRaw = info[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? 7
@@ -956,22 +664,19 @@ final class BrowserUI {
         && controller.isSearchFocused
         && !controller.tabOverviewPresentation.isVisible
         && keyboardHeight > 0
-        ui.bottomContainerBottomConstraint.constant = shouldDockChromeToKeyboard ? -keyboardHeight : 0
+        controller.browserUI.browserChrome.setBottomOffset(shouldDockChromeToKeyboard ? -keyboardHeight : 0)
         updateChromeLayoutState()
         
         UIView.animate(withDuration: duration, delay: 0, options: [curve]) {
             self.controller.view.layoutIfNeeded()
-            self.updatePhoneDismissKeyboardButtonShadowPath()
         }
     }
     
     @objc private func keyboardWillHide(_ notification: Notification) {
-        let ui = controller.browserUI
-        
         keyboardHeight = 0
         keyboardFrame = .zero
         resetFocusedInputRelocation()
-        ui.bottomContainerBottomConstraint.constant = 0
+        controller.browserUI.browserChrome.setBottomOffset(0)
         updateChromeLayoutState()
         
         let duration = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval) ?? 0.25
@@ -979,21 +684,7 @@ final class BrowserUI {
         let curve = UIView.AnimationOptions(rawValue: curveRaw << 16)
         UIView.animate(withDuration: duration, delay: 0, options: [curve]) {
             self.controller.view.layoutIfNeeded()
-            self.updatePhoneDismissKeyboardButtonShadowPath()
         }
-    }
-    
-    private func updatePhoneDismissKeyboardButtonShadowPath() {
-        let button = controller.browserUI.keyboardDismissButton.button
-        guard !controller.usesPadChrome else {
-            button.layer.shadowPath = nil
-            return
-        }
-        guard button.bounds.width > 1, button.bounds.height > 1 else {
-            button.layer.shadowPath = nil
-            return
-        }
-        button.layer.shadowPath = UIBezierPath(roundedRect: button.bounds, cornerRadius: button.layer.cornerRadius).cgPath
     }
     
     private func updateKeyboardState(screenFrame: CGRect) {
@@ -1001,28 +692,6 @@ final class BrowserUI {
         let overlap = max(0, controller.view.bounds.maxY - keyboardFrame.minY)
         let safeBottom = controller.view.safeAreaInsets.bottom
         keyboardHeight = max(0, overlap - safeBottom)
-    }
-    
-    private func setAddressBarHost(isPad: Bool) {
-        let ui = controller.browserUI
-        let targetHost = isPad ? ui.topBar.contentView : ui.bottomContainer.containerView
-        guard ui.addressBar.superview !== targetHost else {
-            return
-        }
-        
-        ui.addressBar.removeFromSuperview()
-        targetHost.addSubview(ui.addressBar)
-    }
-    
-    private func setKeyboardDismissButtonHost(isPad: Bool) {
-        let ui = controller.browserUI
-        let targetHost = isPad ? ui.topBar.contentView : ui.bottomContainer.containerView
-        guard ui.keyboardDismissButton.button.superview !== targetHost else {
-            return
-        }
-        
-        ui.keyboardDismissButton.button.removeFromSuperview()
-        targetHost.addSubview(ui.keyboardDismissButton.button)
     }
     
     private func requestFocusedInputMetricsIfNeeded(duration: TimeInterval, curve: UIView.AnimationOptions) {
@@ -1065,7 +734,6 @@ final class BrowserUI {
         updateChromeLayoutState()
         UIView.animate(withDuration: duration, delay: 0, options: [curve, .beginFromCurrentState, .allowUserInteraction]) {
             self.controller.view.layoutIfNeeded()
-            self.updatePhoneDismissKeyboardButtonShadowPath()
         }
     }
     
@@ -1095,7 +763,7 @@ final class BrowserUI {
         
         let unshiftedGeckoMinY: CGFloat
         if controller.usesPadChrome {
-            unshiftedGeckoMinY = controller.browserUI.topBar.barView.frame.maxY
+            unshiftedGeckoMinY = controller.browserUI.tabBar.collectionView.frame.maxY
         } else {
             unshiftedGeckoMinY = controller.view.safeAreaLayoutGuide.layoutFrame.minY
         }
@@ -2182,11 +1850,29 @@ extension BrowserViewController: SearchViewControllerDelegate {
         browse(to: searchTerm)
         view.endEditing(true)
     }
+
+    func addressBarDidTapDismiss(_ addressBar: AddressBar) {
+        dismissKeyboard()
+    }
+
+    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
+        addonController.presentCurrentSiteSettings(for: item)
+    }
+
+    func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
+        changeWebsiteMode()
+    }
+
+    func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
+        presentWebsiteSettingsRequested()
+    }
+
+    func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool) {
+        presentBookmark(addToFavorites: favorites)
+    }
     
     func addressBarDidBeginEditing(_ addressBar: AddressBar) {
         refreshAddressBar()
-        browserUI.addressBar.setForceComposingAppearanceWhenUnfocused(false)
-        browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(false)
         isSearchScrollMode = false
         updateSuggestionsLayoutIfNeeded()
         if preserveSuggestionsOnFocus {
@@ -2223,32 +1909,30 @@ extension BrowserViewController: SearchViewControllerDelegate {
             isSuggestionScrollDismissal = false
             preserveSuggestionsOnFocus = true
             isSearchScrollMode = true
-            browserUI.addressBar.setForceComposingAppearanceWhenUnfocused(true)
-            browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(true)
+            browserUI.browserChrome.setAddressBarEditingState(.composing)
+            browserUI.browserChrome.setPreservesAddressBarAutocompleteAfterResign(true)
             updateSuggestionsLayoutIfNeeded()
             browserUI.applyChromeLayout(animated: false)
             return
         }
         
-        browserUI.addressBar.setForceComposingAppearanceWhenUnfocused(false)
-        browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(false)
         refreshAddressBar()
         hideSuggestionsIfNeeded {
             self.searchController.clearSuggestions()
         }
-        if !browserUI.addressBar.isEditingText {
+        if !browserUI.browserChrome.isAddressBarEditing {
             setSearchFocused(false, animated: true)
         }
     }
     
     func searchViewControllerDidStartScrolling(_ controller: SearchViewController) {
-        guard browserUI.addressBar.isEditingText else {
+        guard browserUI.browserChrome.isAddressBarEditing else {
             return
         }
         
         isSuggestionScrollDismissal = true
-        browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(browserUI.addressBar.isShowingAutocomplete)
-        _ = browserUI.addressBar.resignFirstResponder()
+        browserUI.browserChrome.setPreservesAddressBarAutocompleteAfterResign(browserUI.browserChrome.isShowingAddressBarAutocomplete)
+        browserUI.browserChrome.resignAddressBarFirstResponder()
     }
     
     func searchViewController(_ controller: SearchViewController, didSelectSuggestion suggestion: String, match: SearchAuxiliaryMatch?) {
@@ -2268,22 +1952,22 @@ extension BrowserViewController: SearchViewControllerDelegate {
     }
     
     func updateAddressBarAutocomplete(for query: String, primaryMatch: SearchAuxiliaryMatch?) {
-        guard browserUI.addressBar.isEditingText else {
-            browserUI.addressBar.clearAutocomplete()
+        guard browserUI.browserChrome.isAddressBarEditing else {
+            browserUI.browserChrome.clearAddressBarAutocomplete()
             return
         }
         
-        let currentText = browserUI.addressBar.getText() ?? ""
+        let currentText = browserUI.browserChrome.addressBarText() ?? ""
         guard !query.isEmpty,
               currentText == query,
               autocompleteDeleteText != query,
               let primaryMatch,
               let autocomplete = autocompletePresentation(for: primaryMatch, query: query) else {
-            browserUI.addressBar.clearAutocomplete()
+            browserUI.browserChrome.clearAddressBarAutocomplete()
             return
         }
         
-        browserUI.addressBar.setAutocomplete(
+        browserUI.browserChrome.setAddressBarAutocomplete(
             displayText: autocomplete.displayText,
             committedText: autocomplete.committedText,
             submissionText: autocomplete.submissionText
@@ -2293,14 +1977,14 @@ extension BrowserViewController: SearchViewControllerDelegate {
     func restoreSearchChrome(clearSuggestions: Bool) {
         preserveSuggestionsOnFocus = false
         isSearchScrollMode = false
-        browserUI.addressBar.setForceComposingAppearanceWhenUnfocused(false)
-        browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(false)
+        browserUI.browserChrome.setAddressBarEditingState(.inactive)
+        browserUI.browserChrome.setPreservesAddressBarAutocompleteAfterResign(false)
         hideSuggestionsIfNeeded {
             if clearSuggestions {
                 self.searchController.clearSuggestions()
             }
         }
-        if !browserUI.addressBar.isEditingText {
+        if !browserUI.browserChrome.isAddressBarEditing {
             setSearchFocused(false, animated: true)
         }
         refreshAddressBar()
@@ -2308,7 +1992,7 @@ extension BrowserViewController: SearchViewControllerDelegate {
     
     private func showSuggestionsIfNeeded() {
         let overlayController = searchViewController
-        let text = browserUI.addressBar.getText() ?? ""
+        let text = browserUI.browserChrome.addressBarText() ?? ""
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               overlayController.parent == nil else {
             return
@@ -2387,11 +2071,8 @@ extension BrowserViewController: SearchViewControllerDelegate {
             }
             
             view.layoutIfNeeded()
-            let top = overlayController.view.topAnchor.constraint(equalTo: browserUI.addressBar.bottomAnchor, constant: 12)
-            let dismissFrame = browserUI.keyboardDismissButton.button.isHidden
-            ? browserUI.addressBar.frame
-            : browserUI.keyboardDismissButton.button.convert(browserUI.keyboardDismissButton.button.bounds, to: view)
-            let barFrame = browserUI.addressBar.frame.union(dismissFrame)
+            let top = overlayController.view.topAnchor.constraint(equalTo: browserUI.browserChrome.addressBarBottomAnchor, constant: 12)
+            let barFrame = browserUI.browserChrome.addressBarFrame(in: view)
             let centerX = overlayController.view.centerXAnchor.constraint(
                 equalTo: view.leadingAnchor,
                 constant: barFrame.midX
@@ -2482,8 +2163,8 @@ extension BrowserViewController: SearchViewControllerDelegate {
         suggestionsCenterX = nil
         suggestionsWidth = nil
         suggestionsHeight = nil
-        browserUI.addressBar.setForceComposingAppearanceWhenUnfocused(false)
-        browserUI.addressBar.setPreservesAutocompleteWhenUnfocused(false)
+        browserUI.browserChrome.setAddressBarEditingState(.inactive)
+        browserUI.browserChrome.setPreservesAddressBarAutocompleteAfterResign(false)
         if isSearchScrollMode {
             isSearchScrollMode = false
             browserUI.applyChromeLayout(animated: false)
@@ -2500,7 +2181,7 @@ extension BrowserViewController: SearchViewControllerDelegate {
     }
     
     private func suggestionsTopAnchor() -> NSLayoutYAxisAnchor {
-        usesTopPhoneAddressBar || usesCompactPadChrome ? browserUI.topBar.barView.bottomAnchor : view.topAnchor
+        usesTopPhoneAddressBar || usesCompactPadChrome ? browserUI.browserChrome.topToolbarBottomAnchor : view.topAnchor
     }
     
     private func suggestionsBottomAnchor() -> NSLayoutYAxisAnchor {
@@ -2508,7 +2189,7 @@ extension BrowserViewController: SearchViewControllerDelegate {
             return view.bottomAnchor
         }
         
-        return isSearchScrollMode ? browserUI.bottomContainer.containerView.topAnchor : view.bottomAnchor
+        return isSearchScrollMode ? browserUI.browserChrome.bottomToolbarTopAnchor : view.bottomAnchor
     }
     
     private func detachedSuggestionsHeight() -> CGFloat {

@@ -332,7 +332,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
     
     @MainActor
     private func presentPopupAfterMenuDismissal(url: String, title: String) {
-        controller?.browserUI.addressBar.performAfterMenuDismissal { [weak self] in
+        controller?.browserUI.browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
             self?.presentModalPopup(url: url, title: title)
         }
     }

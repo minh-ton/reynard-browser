@@ -8,12 +8,12 @@
 import UIKit
 
 final class PositionOptionControl: UIControl {
-    let position: AddressBarPosition
+    let position: ChromePosition
     private let imageView = UIImageView()
     private let titleLabel = UILabel()
     private let radioView = UIImageView()
     
-    init(position: AddressBarPosition, symbolName: String, title: String) {
+    init(position: ChromePosition, symbolName: String, title: String) {
         self.position = position
         super.init(frame: .zero)
         isAccessibilityElement = true
@@ -76,8 +76,8 @@ final class PositionOptionControl: UIControl {
 }
 
 final class AddressBarPositionPickerCell: UITableViewCell {
-    var onSelectionChanged: ((AddressBarPosition) -> Void)?
-    private(set) var selectedPosition: AddressBarPosition = .bottom
+    var onSelectionChanged: ((ChromePosition) -> Void)?
+    private(set) var selectedPosition: ChromePosition = .bottom
     
     private let bottomOption = PositionOptionControl(
         position: .bottom,
@@ -113,7 +113,7 @@ final class AddressBarPositionPickerCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func configure(selectedPosition: AddressBarPosition) {
+    func configure(selectedPosition: ChromePosition) {
         self.selectedPosition = selectedPosition
         bottomOption.updateAppearance(selected: selectedPosition == .bottom)
         topOption.updateAppearance(selected: selectedPosition == .top)

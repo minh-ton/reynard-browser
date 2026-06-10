@@ -128,11 +128,13 @@ final class TabOverviewPresentation {
         controller.browserUI.geckoView.transform = CGAffineTransform(scaleX: pageScale, y: pageScale)
         
         if controller.usesPadChrome {
-            controller.browserUI.topBar.barView.alpha = 1 - clamped
-            controller.browserUI.topBar.safeAreaFillView.alpha = 1 - clamped
+            controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1 - clamped, bottomAlpha: 1)
         } else {
-            controller.browserUI.bottomContainer.containerView.alpha = 1 - clamped
-            controller.browserUI.bottomContainer.containerView.transform = CGAffineTransform(translationX: 0, y: 24 * clamped)
+            controller.browserUI.browserChrome.setChromeTransition(
+                topAlpha: 1,
+                bottomAlpha: 1 - clamped,
+                bottomTranslationY: 24 * clamped
+            )
         }
     }
     
@@ -146,7 +148,7 @@ final class TabOverviewPresentation {
         controller.browserUI.tabOverviewCollection.setMode(overviewMode, in: controller.browserUI.tabOverview.containerView, animated: false)
         let selectedIndex = controller.tabManager.selectedTabIndex
         controller.view.layoutIfNeeded()
-        let bottomSnapshot = controller.browserUI.bottomToolbar.snapshotView(afterScreenUpdates: false)
+        let bottomSnapshot = controller.browserUI.browserChrome.bottomToolbarSnapshot()
         controller.applyChromeLayout(animated: false)
         controller.captureThumbnail(for: selectedIndex)
         controller.browserUI.tabOverviewCollection.tabsCollection.collectionViewLayout.invalidateLayout()
@@ -196,7 +198,7 @@ final class TabOverviewPresentation {
         controller.browserUI.tabOverview.containerView.alpha = 1
         selectedCollection.transform = standardCollectionTransform.scaledBy(x: 0.65, y: 0.65)
         
-        bottomSnapshot.frame = controller.browserUI.bottomToolbar.convert(controller.browserUI.bottomToolbar.bounds, to: controller.view)
+        bottomSnapshot.frame = controller.browserUI.browserChrome.bottomToolbarFrame(in: controller.view)
         
         transitionView.frame = finalContentFrame
         transitionView.transform = transitionTransform(
@@ -208,8 +210,7 @@ final class TabOverviewPresentation {
         controller.view.addSubview(bottomSnapshot)
         
         controller.browserUI.geckoView.isHidden = true
-        controller.browserUI.bottomContainer.containerView.isHidden = true
-        controller.browserUI.bottomContainer.bottomSafeAreaFillView.isHidden = true
+        controller.browserUI.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: 0.60, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
             transitionView.transform = .identity
@@ -289,8 +290,7 @@ final class TabOverviewPresentation {
             pendingExpandedIndex: controller.pendingExpandedTabBarIndex
         )
         
-        controller.browserUI.bottomContainer.containerView.alpha = 0
-        controller.browserUI.bottomContainer.bottomSafeAreaFillView.alpha = 0
+        controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 0)
         controller.browserUI.geckoView.isHidden = true
         controller.browserUI.tabOverviewBottomBar.barView.alpha = 0
         bringBrowserChromeToFrontForDismissal()
@@ -304,8 +304,7 @@ final class TabOverviewPresentation {
                 collectionView.alpha = 0
             }
             selectedCollection.transform = standardCollectionTransform.scaledBy(x: 0.65, y: 0.65)
-            self.controller.browserUI.bottomContainer.containerView.alpha = 1
-            self.controller.browserUI.bottomContainer.bottomSafeAreaFillView.alpha = 1
+            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             bottomSnapshot.removeFromSuperview()
@@ -392,8 +391,7 @@ final class TabOverviewPresentation {
         )
         controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.geckoView)
         controller.browserUI.geckoView.isHidden = true
-        controller.browserUI.bottomContainer.containerView.isHidden = true
-        controller.browserUI.bottomContainer.bottomSafeAreaFillView.isHidden = true
+        controller.browserUI.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: 0.60, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
             transitionView.transform = .identity
@@ -403,8 +401,7 @@ final class TabOverviewPresentation {
                 self.controller.browserUI.tabOverviewTopBar.barView.alpha = 1
             }
             selectedCollection.transform = standardCollectionTransform
-            self.controller.browserUI.topBar.barView.alpha = 0
-            self.controller.browserUI.topBar.safeAreaFillView.alpha = 0
+            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 1)
         } completion: { _ in
             transitionView.removeFromSuperview()
             selectedCell.setTransitionHidden(false)
@@ -482,9 +479,7 @@ final class TabOverviewPresentation {
         )
         
         controller.browserUI.geckoView.isHidden = true
-        controller.browserUI.bottomContainer.bottomSafeAreaFillView.alpha = 0
-        controller.browserUI.topBar.barView.alpha = 0
-        controller.browserUI.topBar.safeAreaFillView.alpha = 0
+        controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 0)
         controller.browserUI.tabBar.collectionView.alpha = 0
         bringBrowserChromeToFrontForDismissal()
         
@@ -501,9 +496,7 @@ final class TabOverviewPresentation {
             } else {
                 self.controller.browserUI.tabOverviewTopBar.barView.alpha = 0
             }
-            self.controller.browserUI.bottomContainer.bottomSafeAreaFillView.alpha = 1
-            self.controller.browserUI.topBar.barView.alpha = 1
-            self.controller.browserUI.topBar.safeAreaFillView.alpha = 1
+            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
             self.controller.browserUI.tabBar.collectionView.alpha = 1
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
@@ -542,10 +535,7 @@ final class TabOverviewPresentation {
     }
     
     private func bringBrowserChromeToFrontForDismissal() {
-        controller.view.bringSubviewToFront(controller.browserUI.bottomContainer.bottomSafeAreaFillView)
-        controller.view.bringSubviewToFront(controller.browserUI.bottomContainer.containerView)
-        controller.view.bringSubviewToFront(controller.browserUI.topBar.safeAreaFillView)
-        controller.view.bringSubviewToFront(controller.browserUI.topBar.barView)
+        controller.view.bringSubviewToFront(controller.browserUI.browserChrome)
     }
     
     private func transitionTransform(contentFrame: CGRect, previewFrame: CGRect, sourceFrame: CGRect) -> CGAffineTransform {

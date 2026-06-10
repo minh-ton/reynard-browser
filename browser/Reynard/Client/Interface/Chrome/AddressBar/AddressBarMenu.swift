@@ -8,23 +8,30 @@
 import UIKit
 
 enum AddressBarMenu {
+    // MARK: - UX
+
+    private enum UX {
+        static let addressBarMenuIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu")
+        static let manageAddonsMenuIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu.manage-addons")
+    }
+
     struct AddonItem {
         let menuItem: AddonMenuItem
         let image: UIImage?
     }
-    
-    private static let rootIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu")
-    private static let manageAddonsIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu.manage-addons")
-    static let presentAddonSettingsNotification = Notification.Name("me.minh-ton.reynard.address-bar-menu.present-addon-settings")
-    static let presentWebsiteSettingsNotification = Notification.Name("me.minh-ton.reynard.address-bar-menu.present-website-settings")
-    static let changeWebsiteModeNotification = Notification.Name("me.minh-ton.reynard.address-bar-menu.toggle-website-mode")
-    static let addBookmarkNotification = Notification.Name("me.minh-ton.reynard.address-bar-menu.add-bookmark")
+
+    // MARK: - Menu Construction
     
     static func makeMenu(
         selectedTab: Tab?,
         selectedURL: String?,
-        addonItems: [AddonItem]
-    ) -> UIMenu? {
+        addonItems: [AddonItem],
+        onAddonSelected: @escaping (AddonMenuItem) -> Void,
+        onChangeWebsiteMode: @escaping () -> Void,
+        onWebsiteSettings: @escaping () -> Void,
+        onBookmark: @escaping (Bool) -> Void
+    ) -> UIMenu {
+        // Menu actions stay view-owned and report intent through closures instead of global notifications.
         var tabActions: [UIMenuElement] = []
         
         let url = selectedURL.flatMap(URL.init(string:))
@@ -32,22 +39,19 @@ enum AddressBarMenu {
            url.host != nil {
             let title = BookmarkStore.shared.bookmark(for: url) == nil ? "Add Bookmark" : "Edit Bookmark"
             tabActions.append(UIAction(title: title, image: UIImage(systemName: "book")) { _ in
-                NotificationCenter.default.post(name: addBookmarkNotification, object: nil)
+                onBookmark(false)
             })
             
             if !BookmarkStore.shared.containsBookmarkInFavoritesHierarchy(for: url) {
                 tabActions.append(UIAction(title: "Add to Favorites", image: UIImage(systemName: "star")) { _ in
-                    NotificationCenter.default.post(
-                        name: addBookmarkNotification,
-                        object: nil,
-                        userInfo: ["addToFavorites": true]
-                    )
+                    onBookmark(true)
                 })
             }
         }
         
         let addonsChildren: [UIMenuElement]
         if addonItems.isEmpty {
+            // Keep Manage Add-ons visible even when the current page exposes no add-on actions.
             addonsChildren = [
                 UIAction(
                     title: "No Add-ons",
@@ -58,11 +62,7 @@ enum AddressBarMenu {
         } else {
             addonsChildren = addonItems.map { item in
                 UIAction(title: item.menuItem.title, image: item.image) { _ in
-                    NotificationCenter.default.post(
-                        name: presentAddonSettingsNotification,
-                        object: nil,
-                        userInfo: ["addonItem": item.menuItem]
-                    )
+                    onAddonSelected(item.menuItem)
                 }
             }
         }
@@ -71,7 +71,7 @@ enum AddressBarMenu {
             UIMenu(
                 title: "Manage Add-ons",
                 image: UIImage(systemName: "puzzlepiece.extension"),
-                identifier: manageAddonsIdentifier,
+                identifier: UX.manageAddonsMenuIdentifier,
                 children: addonsChildren
             )
         ]
@@ -82,23 +82,19 @@ enum AddressBarMenu {
             let title = isDesktop ? "Request Mobile Website" : "Request Desktop Website"
             let imageName = isDesktop ? "iphone" : "desktopcomputer"
             pageActions.append(UIAction(title: title, image: UIImage(systemName: imageName)) { _ in
-                NotificationCenter.default.post(name: changeWebsiteModeNotification, object: nil)
+                onChangeWebsiteMode()
             })
         }
         
         var settingsActions: [UIMenuElement] = []
         if url?.host != nil {
             settingsActions.append(UIAction(title: "Website Settings", image: UIImage(systemName: "gear")) { _ in
-                NotificationCenter.default.post(name: presentWebsiteSettingsNotification, object: nil)
+                onWebsiteSettings()
             })
         }
         
         let children = tabActions + [UIMenu(options: .displayInline, children: pageActions)] + [UIMenu(options: .displayInline, children: settingsActions)]
         
-        guard !children.isEmpty else {
-            return nil
-        }
-        
-        return UIMenu(title: "", image: nil, identifier: rootIdentifier, options: [], children: children)
+        return UIMenu(title: "", image: nil, identifier: UX.addressBarMenuIdentifier, options: [], children: children)
     }
 }

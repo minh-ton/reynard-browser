@@ -209,7 +209,7 @@ private final class LibrarySidebarCell: UICollectionViewCell {
 }
 
 private func makeLibrarySidebarButton(target: AnyObject, action: Selector) -> UIButton {
-    let button = MakeButtons.makeToolbarButton(target: target, imageName: "sidebar.left", action: action)
+    let button = ToolBarButton(buttonType: .sidebar, target: target, action: action)
     button.widthAnchor.constraint(equalToConstant: 30).isActive = true
     button.heightAnchor.constraint(equalToConstant: 30).isActive = true
     return button

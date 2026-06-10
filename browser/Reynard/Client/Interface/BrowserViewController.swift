@@ -65,30 +65,6 @@ final class BrowserViewController: UIViewController {
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(changeWebsiteModeRequested),
-            name: AddressBarMenu.changeWebsiteModeNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(presentAddonSettingsRequested(_:)),
-            name: AddressBarMenu.presentAddonSettingsNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(presentWebsiteSettingsRequested),
-            name: AddressBarMenu.presentWebsiteSettingsNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(presentAddBookmarkRequested(_:)),
-            name: AddressBarMenu.addBookmarkNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
             selector: #selector(applyUpdateMenuButtonBadge),
             name: AppUpdates.updateAvailableNotification,
             object: nil
@@ -99,7 +75,6 @@ final class BrowserViewController: UIViewController {
         syncDownloadButtonState()
         browserUI.configureLayout()
         browserUI.observeKeyboard()
-        addressBarGestures.configureGestures()
         restoreTabOverviewMode()
         syncBrowserNavigationChrome(animated: false)
         syncSidebarButtonItem()
@@ -185,7 +160,7 @@ final class BrowserViewController: UIViewController {
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
             self.browserUI.geckoView.transform = .identity
-            self.addressBarGestures.resetHorizontalTransition()
+            self.browserUI.browserChrome.resetHorizontalTransition()
             self.tabOverviewPresentation.refreshForCurrentOrientation()
             DispatchQueue.main.async {
                 guard self.isViewLoaded, self.view.window != nil else {
