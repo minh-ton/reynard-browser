@@ -82,11 +82,11 @@ extension BrowserViewController: TabBarDataSource, TabBarDelegate {
 extension BrowserViewController: TabManagerDelegate {
     func tabManagerDidChangeTabs(_ tabManager: TabManager) {
         if let selectedTab = tabManager.selectedTab {
-            if browserUI.geckoView.session !== selectedTab.session {
-                browserUI.geckoView.session = selectedTab.session
+            if !browserUI.contentView.isDisplaying(session: selectedTab.session) {
+                browserUI.contentView.setSession(selectedTab.session)
             }
         } else {
-            browserUI.geckoView.session = nil
+            browserUI.contentView.setSession(nil)
         }
         refreshAddressBar()
         
@@ -112,7 +112,7 @@ extension BrowserViewController: TabManagerDelegate {
         }
         
         let selectedTab = activeTabs[index]
-        browserUI.geckoView.session = selectedTab.session
+        browserUI.contentView.setSession(selectedTab.session)
         addonController.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
         
         syncAddressBarLoadingState(progress: selectedTab.progress, isLoading: selectedTab.isLoading)
@@ -136,7 +136,7 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, didRequestContextMenuAt point: CGPoint, for element: ContextElement, in session: GeckoSession) {
-        guard browserUI.geckoView.session === session else {
+        guard browserUI.contentView.isDisplaying(session: session) else {
             return
         }
         

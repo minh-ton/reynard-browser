@@ -157,7 +157,7 @@ final class BrowserViewController: UIViewController {
         } completion: { _ in
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
-            self.browserUI.geckoView.transform = .identity
+            self.browserUI.contentView.setTransitionTransform(.identity)
             self.browserUI.browserChrome.resetHorizontalTransition()
             self.browserUI.tabOverview.refreshForCurrentOrientation()
             DispatchQueue.main.async {

@@ -485,9 +485,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
                 return
             }
             
-            controller.browserUI.geckoView.session = session
-            session.setActive(true)
-            session.setFocused(true)
+            controller.browserUI.contentView.restoreInteraction(for: session)
         }
     }
     

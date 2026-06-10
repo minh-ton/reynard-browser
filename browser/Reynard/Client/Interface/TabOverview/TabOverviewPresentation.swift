@@ -170,7 +170,7 @@ final class TabOverviewPresentation {
         tabOverview.collection.setPresentationVerticalOffset(collectionOffset)
         
         let pageScale = 1 - (UX.presentedPageScaleReduction * clamped)
-        controller.browserUI.geckoView.transform = CGAffineTransform(scaleX: pageScale, y: pageScale)
+        controller.browserUI.contentView.setTransitionTransform(CGAffineTransform(scaleX: pageScale, y: pageScale))
         
         if controller.usesPadChrome {
             controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1 - clamped, bottomAlpha: 1)
@@ -201,7 +201,7 @@ final class TabOverviewPresentation {
         tabOverview.isHidden = false
         tabOverview.alpha = 0
         tabOverview.bottomToolbar.alpha = 0
-        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.geckoView)
+        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.contentView)
         controller.view.endEditing(true)
         controller.setSearchFocused(false, animated: false)
         controller.view.layoutIfNeeded()
@@ -232,7 +232,7 @@ final class TabOverviewPresentation {
         
         let finalContentFrame = selectedCell.transitionSnapshotFrame(in: controller.view)
         let finalPreviewFrame = selectedCell.webpagePreviewImageFrame(in: controller.view)
-        let geckoFrame = controller.browserUI.geckoView.convert(controller.browserUI.geckoView.bounds, to: controller.view)
+        let contentFrame = controller.browserUI.contentView.frame(in: controller.view)
         
         selectedCell.setTransitionState(.hiddenForAnimation)
         tabOverview.alpha = 1
@@ -244,12 +244,12 @@ final class TabOverviewPresentation {
         transitionView.transform = webpagePreviewTransitionTransform(
             contentFrame: finalContentFrame,
             previewFrame: finalPreviewFrame,
-            sourceFrame: geckoFrame
+            sourceFrame: contentFrame
         )
-        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.geckoView)
+        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.contentView)
         controller.view.addSubview(bottomSnapshot)
         
-        controller.browserUI.geckoView.isHidden = true
+        controller.browserUI.contentView.setTransitionHidden(true)
         controller.browserUI.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: UX.presentationAnimationDuration, delay: 0, usingSpringWithDamping: UX.presentationSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
@@ -263,7 +263,7 @@ final class TabOverviewPresentation {
             selectedCell.setTransitionState(.visible)
             
             self.controller.view.bringSubviewToFront(self.tabOverview)
-            self.controller.browserUI.geckoView.isHidden = false
+            self.controller.browserUI.contentView.setTransitionHidden(false)
             self.controller.applyChromeLayout(animated: false)
             self.state = .presented
         }
@@ -324,7 +324,7 @@ final class TabOverviewPresentation {
         controller.browserUI.tabBar.updateLayout()
         
         controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 0)
-        controller.browserUI.geckoView.isHidden = true
+        controller.browserUI.contentView.setTransitionHidden(true)
         tabOverview.bottomToolbar.alpha = 0
         bringBrowserChromeToFrontForDismissal()
         
@@ -344,7 +344,7 @@ final class TabOverviewPresentation {
             selectedCell.setTransitionState(.visible)
             selectedCollection.transform = standardCollectionTransform
             
-            self.controller.browserUI.geckoView.isHidden = false
+            self.controller.browserUI.contentView.setTransitionHidden(false)
             for collectionView in self.tabOverview.collection.allCollectionViews {
                 collectionView.alpha = 1
             }
@@ -376,7 +376,7 @@ final class TabOverviewPresentation {
         } else {
             tabOverview.topToolbar.alpha = 0
         }
-        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.geckoView)
+        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.contentView)
         controller.view.endEditing(true)
         controller.view.layoutIfNeeded()
         
@@ -405,7 +405,7 @@ final class TabOverviewPresentation {
         
         let finalContentFrame = selectedCell.transitionSnapshotFrame(in: controller.view)
         let finalPreviewFrame = selectedCell.webpagePreviewImageFrame(in: controller.view)
-        let geckoFrame = controller.browserUI.geckoView.convert(controller.browserUI.geckoView.bounds, to: controller.view)
+        let contentFrame = controller.browserUI.contentView.frame(in: controller.view)
         
         selectedCell.setTransitionState(.hiddenForAnimation)
         tabOverview.alpha = 1
@@ -415,10 +415,10 @@ final class TabOverviewPresentation {
         transitionView.transform = webpagePreviewTransitionTransform(
             contentFrame: finalContentFrame,
             previewFrame: finalPreviewFrame,
-            sourceFrame: geckoFrame
+            sourceFrame: contentFrame
         )
-        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.geckoView)
-        controller.browserUI.geckoView.isHidden = true
+        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.contentView)
+        controller.browserUI.contentView.setTransitionHidden(true)
         controller.browserUI.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: UX.presentationAnimationDuration, delay: 0, usingSpringWithDamping: UX.presentationSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
@@ -435,7 +435,7 @@ final class TabOverviewPresentation {
             selectedCell.setTransitionState(.visible)
             
             self.controller.view.bringSubviewToFront(self.tabOverview)
-            self.controller.browserUI.geckoView.isHidden = false
+            self.controller.browserUI.contentView.setTransitionHidden(false)
             self.controller.applyChromeLayout(animated: false)
             self.state = .presented
         }
@@ -499,7 +499,7 @@ final class TabOverviewPresentation {
         controller.applyChromeLayout(animated: false)
         controller.browserUI.tabBar.updateLayout()
         
-        controller.browserUI.geckoView.isHidden = true
+        controller.browserUI.contentView.setTransitionHidden(true)
         controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 0)
         controller.browserUI.tabBar.setPresentationAlpha(0)
         bringBrowserChromeToFrontForDismissal()
@@ -524,7 +524,7 @@ final class TabOverviewPresentation {
             selectedCell.setTransitionState(.visible)
             selectedCollection.transform = standardCollectionTransform
             
-            self.controller.browserUI.geckoView.isHidden = false
+            self.controller.browserUI.contentView.setTransitionHidden(false)
             for collectionView in self.tabOverview.collection.allCollectionViews {
                 collectionView.alpha = 1
             }

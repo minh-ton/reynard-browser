@@ -104,7 +104,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
         }
         
         let interaction = UIContextMenuInteraction(delegate: self)
-        browserUI.geckoView.addInteraction(interaction)
+        browserUI.contentView.addWebViewInteraction(interaction)
         contextMenuInteraction = interaction
     }
     
@@ -149,7 +149,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
         if let imageConfiguration = ImagePreviewMenu.configuration(
             for: context,
             presentingController: self,
-            sourceView: browserUI.geckoView
+            sourceView: browserUI.contentView
         ) {
             return imageConfiguration
         }
@@ -298,10 +298,10 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
     
     private func makeTargetedPreview() -> UITargetedPreview {
         let sourcePoint = pendingContextMenuContext?.point ?? CGPoint(
-            x: browserUI.geckoView.bounds.midX,
-            y: browserUI.geckoView.bounds.midY
+            x: browserUI.contentView.bounds.midX,
+            y: browserUI.contentView.bounds.midY
         )
-        let target = UIPreviewTarget(container: browserUI.geckoView, center: sourcePoint)
+        let target = UIPreviewTarget(container: browserUI.contentView, center: sourcePoint)
         let parameters = UIPreviewParameters()
         parameters.backgroundColor = .clear
         parameters.visiblePath = UIBezierPath(rect: CGRect(x: 0, y: 0, width: 1, height: 1))
@@ -323,9 +323,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
                 return
             }
             
-            self.browserUI.geckoView.session = session
-            session.setActive(true)
-            session.setFocused(true)
+            self.browserUI.contentView.restoreInteraction(for: session)
         }
     }
 }

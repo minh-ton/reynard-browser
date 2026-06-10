@@ -27,6 +27,13 @@ private enum UIAssociatedKeys {
     static var searchScrollMode = 0
     static var autocompleteDeleteText = 0
 }
+
+private extension NSLayoutConstraint {
+    func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
+        self.priority = priority
+        return self
+    }
+}
 extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, AddressBarGesturesDelegate, BottomToolbarDelegate {
     var browserUI: BrowserUI {
         get {
@@ -164,7 +171,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
     }
     
     func tabPreviewAspectRatio() -> CGFloat {
-        let bounds = browserUI.geckoView.bounds
+        let bounds = browserUI.contentView.bounds
         let width = max(bounds.width, 1)
         let height = max(bounds.height, 1)
         return height / width
@@ -172,28 +179,20 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
     
     func captureThumbnail(for index: Int) {
         let activeTabs = tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard !browserUI.geckoView.isHidden,
+        guard !browserUI.contentView.isHidden,
               let tab = activeTabs[safe: index],
-              browserUI.geckoView.session === tab.session else {
+              browserUI.contentView.isDisplaying(session: tab.session) else {
             return
         }
-        
-        let bounds = browserUI.geckoView.bounds
-        guard bounds.width > 1, bounds.height > 1 else {
+
+        guard let image = browserUI.contentView.makeThumbnail() else {
             return
-        }
-        
-        browserUI.geckoView.layoutIfNeeded()
-        
-        let renderer = UIGraphicsImageRenderer(size: bounds.size)
-        let image = renderer.image { context in
-            browserUI.geckoView.layer.render(in: context.cgContext)
         }
         tabManager.updateThumbnail(image, forTabAt: index)
     }
     
     func dismissalContentFrame() -> CGRect {
-        browserUI.geckoView.frame
+        browserUI.contentView.frame
     }
     
     func syncAddressBarLoadingState(progress: Float, isLoading: Bool) {
@@ -240,36 +239,17 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
 }
 
 final class BrowserUI {
-    let geckoView: GeckoView = {
-        let view = GeckoView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-    
+    let contentView = ContentView()
     let browserChrome: BrowserChrome
     let tabBar: TabBar
     
     let tabOverview = TabOverview()
 
-    var geckoTopPhoneConstraint: NSLayoutConstraint!
-    var geckoTopPadConstraint: NSLayoutConstraint!
-    var geckoBottomPhoneConstraint: NSLayoutConstraint!
-    var geckoBottomPhoneSearchPinnedConstraint: NSLayoutConstraint!
-    var geckoBottomPhoneKeyboardOverlayConstraint: NSLayoutConstraint!
-    var geckoBottomPadConstraint: NSLayoutConstraint!
-    var geckoBottomCompactPadConstraint: NSLayoutConstraint!
-    var geckoLeadingPhoneConstraint: NSLayoutConstraint!
-    var geckoTrailingPhoneConstraint: NSLayoutConstraint!
-    var geckoLeadingPadConstraint: NSLayoutConstraint!
-    var geckoTrailingPadConstraint: NSLayoutConstraint!
-    var geckoTopFullscreenConstraint: NSLayoutConstraint!
-    var geckoBottomFullscreenConstraint: NSLayoutConstraint!
-    
     private unowned let controller: BrowserViewController
     private var keyboardHeight: CGFloat = 0
     private var keyboardFrame: CGRect = .zero
     private var focusedInputBottomRatio: CGFloat?
-    private var geckoPhoneVerticalOffset: CGFloat = 0
+    private var contentPhoneVerticalOffset: CGFloat = 0
     private var focusedInputMetricsTask: Task<Void, Never>?
     
     init(controller: BrowserViewController) {
@@ -291,32 +271,17 @@ final class BrowserUI {
         let ui = controller.browserUI
         let view = controller.view!
         
-        view.addSubview(ui.geckoView)
+        view.addSubview(ui.contentView)
         view.addSubview(ui.tabBar)
         view.addSubview(ui.browserChrome)
-        
         view.addSubview(ui.tabOverview)
-        
-        ui.geckoTopPhoneConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor)
-        ui.geckoTopPadConstraint = ui.geckoView.topAnchor.constraint(equalTo: ui.tabBar.bottomAnchor)
-        ui.geckoBottomPhoneConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor)
-        ui.geckoBottomPhoneSearchPinnedConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -94)
-        ui.geckoBottomPhoneKeyboardOverlayConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ui.geckoBottomPadConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ui.geckoBottomCompactPadConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor)
-        ui.geckoLeadingPhoneConstraint = ui.geckoView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
-        ui.geckoTrailingPhoneConstraint = ui.geckoView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-        ui.geckoLeadingPadConstraint = ui.geckoView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
-        ui.geckoTrailingPadConstraint = ui.geckoView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-        ui.geckoTopFullscreenConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.topAnchor)
-        ui.geckoBottomFullscreenConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        
+
         NSLayoutConstraint.activate([
-            ui.geckoLeadingPhoneConstraint,
-            ui.geckoTrailingPhoneConstraint,
-            ui.geckoTopPhoneConstraint,
-            ui.geckoBottomPhoneConstraint,
-            
+            ui.contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            ui.contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            ui.contentView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).withPriority(.defaultHigh),
+            ui.contentView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor).withPriority(.defaultHigh),
+
             ui.browserChrome.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             ui.browserChrome.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             ui.browserChrome.topAnchor.constraint(equalTo: view.topAnchor),
@@ -331,8 +296,6 @@ final class BrowserUI {
             ui.tabOverview.topAnchor.constraint(equalTo: view.topAnchor),
             ui.tabOverview.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ].compactMap { $0 })
-        ui.geckoBottomCompactPadConstraint.isActive = false
-        
     }
     
     func observeKeyboard() {
@@ -377,15 +340,15 @@ final class BrowserUI {
             return
         }
         
-        let shouldShowGeckoBehindKeyboard = !pad
+        let shouldShowContentBehindKeyboard = !pad
         && controller.isSearchFocused
         && keyboardHeight > 0
         && !controller.browserUI.tabOverview.isPresented
-        let shouldPinSearchFocusedGeckoFrame = !pad
+        let shouldPinSearchFocusedContentFrame = !pad
         && controller.isSearchFocused
         && !controller.browserUI.tabOverview.isPresented
-        let geckoPhoneOffset = resolvedGeckoPhoneVerticalOffset(
-            shouldShowGeckoBehindKeyboard: shouldShowGeckoBehindKeyboard
+        let contentPhoneOffset = resolvedContentPhoneVerticalOffset(
+            shouldShowContentBehindKeyboard: shouldShowContentBehindKeyboard
         )
         let isLandscape: Bool
         if let orientation = controller.view.window?.windowScene?.interfaceOrientation {
@@ -394,27 +357,30 @@ final class BrowserUI {
             isLandscape = controller.view.bounds.width > controller.view.bounds.height
         }
         
-        ui.geckoTopPhoneConstraint.constant = !pad ? -geckoPhoneOffset : 0
-        ui.geckoBottomPhoneConstraint.constant = !pad ? -geckoPhoneOffset : 0
-        ui.geckoBottomPhoneSearchPinnedConstraint.constant = -94
-        ui.geckoBottomPhoneKeyboardOverlayConstraint.constant = 0
-        ui.geckoTopPadConstraint.constant = pad ? -geckoPhoneOffset : 0
-        ui.geckoBottomCompactPadConstraint.constant = pad && compactPad ? -geckoPhoneOffset : 0
-        ui.geckoBottomPadConstraint.constant = pad && !compactPad ? -geckoPhoneOffset : 0
-        
-        ui.geckoTopPhoneConstraint.isActive = !pad
-        ui.geckoBottomPhoneConstraint.isActive = !pad && !shouldPinSearchFocusedGeckoFrame && !shouldShowGeckoBehindKeyboard
-        ui.geckoBottomPhoneSearchPinnedConstraint.isActive = shouldPinSearchFocusedGeckoFrame
-        ui.geckoBottomPhoneKeyboardOverlayConstraint.isActive = shouldShowGeckoBehindKeyboard && !shouldPinSearchFocusedGeckoFrame
-        ui.geckoLeadingPhoneConstraint.isActive = !pad
-        ui.geckoTrailingPhoneConstraint.isActive = !pad
-        ui.geckoTopPadConstraint.isActive = pad
-        ui.geckoBottomPadConstraint.isActive = pad && !compactPad
-        ui.geckoBottomCompactPadConstraint.isActive = compactPad
-        ui.geckoLeadingPadConstraint.isActive = pad
-        ui.geckoTrailingPadConstraint.isActive = pad
-        ui.geckoTopFullscreenConstraint.isActive = false
-        ui.geckoBottomFullscreenConstraint.isActive = false
+        let contentLayoutMode: ContentView.LayoutState.Mode
+        let contentTopAnchor: NSLayoutYAxisAnchor
+        let contentBottomAnchor: NSLayoutYAxisAnchor
+        if pad {
+            contentLayoutMode = .standard
+            contentTopAnchor = ui.tabBar.bottomAnchor
+            contentBottomAnchor = compactPad ? ui.browserChrome.bottomToolbarTopAnchor : controller.view.bottomAnchor
+        } else {
+            contentLayoutMode = shouldPinSearchFocusedContentFrame ? .searchFocused : .standard
+            contentTopAnchor = controller.view.safeAreaLayoutGuide.topAnchor
+            contentBottomAnchor = shouldShowContentBehindKeyboard && !shouldPinSearchFocusedContentFrame
+                ? controller.view.bottomAnchor
+                : (shouldPinSearchFocusedContentFrame
+                    ? controller.view.safeAreaLayoutGuide.bottomAnchor
+                    : ui.browserChrome.bottomToolbarTopAnchor)
+        }
+        ui.contentView.applyLayout(
+            ContentView.LayoutState(
+                mode: contentLayoutMode,
+                verticalOffset: contentPhoneOffset
+            ),
+            topAnchor: contentTopAnchor,
+            bottomAnchor: contentBottomAnchor
+        )
         
         let phoneOverview = controller.usesBottomPhoneOverview
         let activeTabs = controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs
@@ -445,19 +411,14 @@ final class BrowserUI {
         let ui = controller.browserUI
         let pad = controller.usesPadChrome
         
-        ui.geckoTopPhoneConstraint.isActive = false
-        ui.geckoBottomPhoneConstraint.isActive = false
-        ui.geckoBottomPhoneSearchPinnedConstraint.isActive = false
-        ui.geckoBottomPhoneKeyboardOverlayConstraint.isActive = false
-        ui.geckoTopPadConstraint.isActive = false
-        ui.geckoBottomPadConstraint.isActive = false
-        ui.geckoBottomCompactPadConstraint.isActive = false
-        ui.geckoLeadingPhoneConstraint.isActive = !pad
-        ui.geckoTrailingPhoneConstraint.isActive = !pad
-        ui.geckoLeadingPadConstraint.isActive = pad
-        ui.geckoTrailingPadConstraint.isActive = pad
-        ui.geckoTopFullscreenConstraint.isActive = true
-        ui.geckoBottomFullscreenConstraint.isActive = true
+        ui.contentView.applyLayout(
+            ContentView.LayoutState(
+                mode: .fullscreen,
+                verticalOffset: 0
+            ),
+            topAnchor: controller.view.topAnchor,
+            bottomAnchor: controller.view.bottomAnchor
+        )
         
         ui.tabBar.setVisibility(.hidden, animated: false)
         
@@ -591,14 +552,14 @@ final class BrowserUI {
     }
     
     private func applyFocusedInputRelocation(duration: TimeInterval, curve: UIView.AnimationOptions) {
-        let nextOffset = resolvedGeckoPhoneVerticalOffset(
-            shouldShowGeckoBehindKeyboard: false
+        let nextOffset = resolvedContentPhoneVerticalOffset(
+            shouldShowContentBehindKeyboard: false
         )
-        guard abs(nextOffset - geckoPhoneVerticalOffset) > 0.5 else {
+        guard abs(nextOffset - contentPhoneVerticalOffset) > 0.5 else {
             return
         }
         
-        geckoPhoneVerticalOffset = nextOffset
+        contentPhoneVerticalOffset = nextOffset
         updateChromeLayoutState()
         UIView.animate(withDuration: duration, delay: 0, options: [curve, .beginFromCurrentState, .allowUserInteraction]) {
             self.controller.view.layoutIfNeeded()
@@ -609,42 +570,42 @@ final class BrowserUI {
         focusedInputMetricsTask?.cancel()
         focusedInputMetricsTask = nil
         focusedInputBottomRatio = nil
-        geckoPhoneVerticalOffset = 0
+        contentPhoneVerticalOffset = 0
     }
     
-    private func resolvedGeckoPhoneVerticalOffset(
-        shouldShowGeckoBehindKeyboard: Bool
+    private func resolvedContentPhoneVerticalOffset(
+        shouldShowContentBehindKeyboard: Bool
     ) -> CGFloat {
         guard !controller.isSearchFocused,
               !controller.browserUI.tabOverview.isPresented,
-              !shouldShowGeckoBehindKeyboard,
+              !shouldShowContentBehindKeyboard,
               keyboardHeight > 0,
               let bottomRatio = focusedInputBottomRatio else {
             return 0
         }
         
         controller.view.layoutIfNeeded()
-        let geckoFrame = controller.browserUI.geckoView.frame
-        guard geckoFrame.height > 1 else {
+        let contentFrame = controller.browserUI.contentView.frame
+        guard contentFrame.height > 1 else {
             return 0
         }
         
-        let unshiftedGeckoMinY: CGFloat
+        let unshiftedContentMinY: CGFloat
         if controller.usesPadChrome {
-            unshiftedGeckoMinY = controller.browserUI.tabBar.frame.maxY
+            unshiftedContentMinY = controller.browserUI.tabBar.frame.maxY
         } else {
-            unshiftedGeckoMinY = controller.view.safeAreaLayoutGuide.layoutFrame.minY
+            unshiftedContentMinY = controller.view.safeAreaLayoutGuide.layoutFrame.minY
         }
         
-        let currentGeckoShift = max(0, unshiftedGeckoMinY - geckoFrame.minY)
-        let unshiftedGeckoMaxY = geckoFrame.maxY + currentGeckoShift
-        let keyboardOverlap = max(0, unshiftedGeckoMaxY - keyboardFrame.minY)
+        let currentContentShift = max(0, unshiftedContentMinY - contentFrame.minY)
+        let unshiftedContentMaxY = contentFrame.maxY + currentContentShift
+        let keyboardOverlap = max(0, unshiftedContentMaxY - keyboardFrame.minY)
         guard keyboardOverlap > 0 else {
             return 0
         }
         
-        let focusBottom = geckoFrame.height * bottomRatio
-        let visibleBottom = max(0, geckoFrame.height - keyboardOverlap - 12)
+        let focusBottom = contentFrame.height * bottomRatio
+        let visibleBottom = max(0, contentFrame.height - keyboardOverlap - 12)
         return min(keyboardOverlap, max(0, focusBottom - visibleBottom))
     }
 }
@@ -964,7 +925,7 @@ extension BrowserViewController: SearchViewControllerDelegate {
         if usesDetachedSuggestions {
             view.addSubview(overlayController.view)
         } else {
-            view.insertSubview(overlayController.view, aboveSubview: browserUI.geckoView)
+            view.insertSubview(overlayController.view, aboveSubview: browserUI.contentView)
         }
         overlayController.didMove(toParent: self)
         updateSuggestionsLayoutIfNeeded()
@@ -1150,7 +1111,7 @@ extension BrowserViewController: SearchViewControllerDelegate {
     }
     
     private func detachedSuggestionsHeight() -> CGFloat {
-        let maximumHeight = browserUI.geckoView.bounds.height * (9.0 / 10.0)
+        let maximumHeight = browserUI.contentView.bounds.height * (9.0 / 10.0)
         return min(suggestionsContentHeight, maximumHeight)
     }
     
