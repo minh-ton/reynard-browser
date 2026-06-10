@@ -1,5 +1,5 @@
 //
-//  ToolBarButton.swift
+//  ToolbarButton.swift
 //  Reynard
 //
 //  Created by Minh Ton on 10/6/26.
@@ -7,11 +7,11 @@
 
 import UIKit
 
-final class ToolBarButton: UIButton {
+final class ToolbarButton: UIButton {
     // MARK: - UX
 
     private enum UX {
-        static let toolBarButtonCornerRadius: CGFloat = 10
+        static let toolbarButtonCornerRadius: CGFloat = 10
         static let downloadButtonSideLength: CGFloat = 40
         static let downloadIconSize: CGFloat = 24
         static let downloadIconVerticalOffset: CGFloat = -1
@@ -73,13 +73,13 @@ final class ToolBarButton: UIButton {
 
     // MARK: - State
 
-    private let toolBarButtonType: ButtonType
+    private let toolbarButtonType: ButtonType
     private(set) var isShowingDownloads = false
 
     // MARK: - Lifecycle
 
     init(buttonType: ButtonType, target: AnyObject, action: Selector) {
-        toolBarButtonType = buttonType
+        toolbarButtonType = buttonType
         super.init(frame: .zero)
         configureAppearance()
         configureImage()
@@ -92,7 +92,7 @@ final class ToolBarButton: UIButton {
     }
 
     override var intrinsicContentSize: CGSize {
-        let sideLength = toolBarButtonType == .download
+        let sideLength = toolbarButtonType == .download
             ? UX.downloadButtonSideLength
             : UX.standardButtonSideLength
         return CGSize(width: sideLength, height: sideLength)
@@ -102,7 +102,7 @@ final class ToolBarButton: UIButton {
 
     func applyDownloadSummary(_ summary: DownloadStoreSummary) {
         // Only the download variant owns progress views; standard buttons remain simple symbol buttons.
-        guard toolBarButtonType == .download else {
+        guard toolbarButtonType == .download else {
             return
         }
 
@@ -130,16 +130,16 @@ final class ToolBarButton: UIButton {
     private func configureAppearance() {
         translatesAutoresizingMaskIntoConstraints = false
         tintColor = .label
-        layer.cornerRadius = UX.toolBarButtonCornerRadius
+        layer.cornerRadius = UX.toolbarButtonCornerRadius
         layer.cornerCurve = .continuous
     }
 
     private func configureImage() {
-        guard toolBarButtonType != .download else {
+        guard toolbarButtonType != .download else {
             return
         }
         setImage(UIImage(systemName: symbolName), for: .normal)
-        let pointSize = toolBarButtonType == .newTab
+        let pointSize = toolbarButtonType == .newTab
             ? UX.newTabSymbolPointSize
             : UX.standardSymbolPointSize
         setPreferredSymbolConfiguration(
@@ -154,7 +154,7 @@ final class ToolBarButton: UIButton {
 
     private func configureDownloadViewsIfNeeded() {
         // Download subviews are lazy so other toolbar buttons do not allocate unused progress UI.
-        guard toolBarButtonType == .download else {
+        guard toolbarButtonType == .download else {
             return
         }
 
@@ -190,7 +190,7 @@ final class ToolBarButton: UIButton {
     // MARK: - Button Type
 
     private var symbolName: String {
-        switch toolBarButtonType {
+        switch toolbarButtonType {
         case .back: return "chevron.backward"
         case .forward: return "chevron.forward"
         case .share: return "square.and.arrow.up"

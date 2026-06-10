@@ -47,12 +47,12 @@ final class BottomToolbar: UIView {
         return view
     }()
 
-    private lazy var backButton = ToolBarButton(buttonType: .back, target: self, action: #selector(backButtonClicked))
-    private lazy var forwardButton = ToolBarButton(buttonType: .forward, target: self, action: #selector(forwardButtonClicked))
-    private lazy var shareButton = ToolBarButton(buttonType: .share, target: self, action: #selector(shareButtonClicked))
-    private lazy var libraryButton = ToolBarButton(buttonType: .library, target: self, action: #selector(menuButtonClicked))
-    private lazy var downloadButton = ToolBarButton(buttonType: .download, target: self, action: #selector(downloadsButtonClicked))
-    private lazy var tabOverviewButton = ToolBarButton(buttonType: .tabOverview, target: self, action: #selector(tabsButtonClicked))
+    private lazy var backButton = ToolbarButton(buttonType: .back, target: self, action: #selector(backButtonClicked))
+    private lazy var forwardButton = ToolbarButton(buttonType: .forward, target: self, action: #selector(forwardButtonClicked))
+    private lazy var shareButton = ToolbarButton(buttonType: .share, target: self, action: #selector(shareButtonClicked))
+    private lazy var libraryButton = ToolbarButton(buttonType: .library, target: self, action: #selector(menuButtonClicked))
+    private lazy var downloadButton = ToolbarButton(buttonType: .download, target: self, action: #selector(downloadsButtonClicked))
+    private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: self, action: #selector(tabsButtonClicked))
 
     private lazy var buttons: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, libraryButton, downloadButton, tabOverviewButton])

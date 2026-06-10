@@ -34,42 +34,42 @@ final class TopToolbar: UIView {
         return view
     }()
 
-    private lazy var sidebarButton = ToolBarButton(
+    private lazy var sidebarButton = ToolbarButton(
         buttonType: .sidebar,
         target: controller,
         action: #selector(BrowserViewController.librarySidebarTapped)
     )
-    private lazy var backButton = ToolBarButton(
+    private lazy var backButton = ToolbarButton(
         buttonType: .back,
         target: controller,
         action: #selector(BrowserViewController.padBackTapped)
     )
-    private lazy var forwardButton = ToolBarButton(
+    private lazy var forwardButton = ToolbarButton(
         buttonType: .forward,
         target: controller,
         action: #selector(BrowserViewController.padForwardTapped)
     )
-    private lazy var libraryButton = ToolBarButton(
+    private lazy var libraryButton = ToolbarButton(
         buttonType: .library,
         target: controller,
         action: #selector(BrowserViewController.topBarMenuTapped)
     )
-    private lazy var downloadButton = ToolBarButton(
+    private lazy var downloadButton = ToolbarButton(
         buttonType: .download,
         target: controller,
         action: #selector(BrowserViewController.topBarDownloadsTapped)
     )
-    private lazy var shareButton = ToolBarButton(
+    private lazy var shareButton = ToolbarButton(
         buttonType: .share,
         target: controller,
         action: #selector(BrowserViewController.shareTapped)
     )
-    private lazy var newTabButton = ToolBarButton(
+    private lazy var newTabButton = ToolbarButton(
         buttonType: .newTab,
         target: controller,
         action: #selector(BrowserViewController.newTabTapped)
     )
-    private lazy var tabOverviewButton = ToolBarButton(
+    private lazy var tabOverviewButton = ToolbarButton(
         buttonType: .tabOverview,
         target: controller,
         action: #selector(BrowserViewController.tabsTapped)
