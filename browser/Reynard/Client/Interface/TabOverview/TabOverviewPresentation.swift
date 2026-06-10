@@ -155,12 +155,7 @@ final class TabOverviewPresentation {
             applyPresentationProgress(0)
         }
         controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.refreshLayout(
-            fallbackWidth: controller.view.bounds.width,
-            tabCount: (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).count,
-            selectedIndex: controller.tabManager.selectedTabIndex,
-            pendingExpandedIndex: controller.pendingExpandedTabBarIndex
-        )
+        controller.browserUI.tabBar.updateLayout()
     }
 
     // MARK: - Presentation Progress
@@ -326,12 +321,7 @@ final class TabOverviewPresentation {
         state = .dismissing
         presentationProgress = 0
         controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.refreshLayout(
-            fallbackWidth: controller.view.bounds.width,
-            tabCount: (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).count,
-            selectedIndex: controller.tabManager.selectedTabIndex,
-            pendingExpandedIndex: controller.pendingExpandedTabBarIndex
-        )
+        controller.browserUI.tabBar.updateLayout()
         
         controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 0)
         controller.browserUI.geckoView.isHidden = true
@@ -507,16 +497,11 @@ final class TabOverviewPresentation {
         state = .dismissing
         presentationProgress = 0
         controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.refreshLayout(
-            fallbackWidth: controller.view.bounds.width,
-            tabCount: (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).count,
-            selectedIndex: controller.tabManager.selectedTabIndex,
-            pendingExpandedIndex: controller.pendingExpandedTabBarIndex
-        )
+        controller.browserUI.tabBar.updateLayout()
         
         controller.browserUI.geckoView.isHidden = true
         controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 0)
-        controller.browserUI.tabBar.collectionView.alpha = 0
+        controller.browserUI.tabBar.setPresentationAlpha(0)
         bringBrowserChromeToFrontForDismissal()
         
         UIView.animate(withDuration: UX.dismissalAnimationDuration, delay: 0, usingSpringWithDamping: UX.dismissalSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
@@ -533,7 +518,7 @@ final class TabOverviewPresentation {
                 self.tabOverview.topToolbar.alpha = 0
             }
             self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
-            self.controller.browserUI.tabBar.collectionView.alpha = 1
+            self.controller.browserUI.tabBar.setPresentationAlpha(1)
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             selectedCell.setTransitionState(.visible)

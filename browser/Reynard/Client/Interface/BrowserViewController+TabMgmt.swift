@@ -11,7 +11,6 @@ import UIKit
 
 private enum TabMgmtAssociatedKeys {
     static var pendingSelectionAnimation = 0
-    static var pendingExpandedTabBarIndex = 0
     static var activeFullscreenSession = 0
 }
 
@@ -38,21 +37,6 @@ extension BrowserViewController {
         }
     }
     
-    var pendingExpandedTabBarIndex: Int? {
-        get {
-            (objc_getAssociatedObject(self, &TabMgmtAssociatedKeys.pendingExpandedTabBarIndex) as? NSNumber)?.intValue
-        }
-        set {
-            let boxedValue = newValue.map { NSNumber(value: $0) }
-            objc_setAssociatedObject(
-                self,
-                &TabMgmtAssociatedKeys.pendingExpandedTabBarIndex,
-                boxedValue,
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-    
     var activeFullscreenSession: GeckoSession? {
         get {
             (objc_getAssociatedObject(self, &TabMgmtAssociatedKeys.activeFullscreenSession) as? WeakSessionBox)?.value
@@ -69,14 +53,34 @@ extension BrowserViewController {
     
 }
 
+extension BrowserViewController: TabBarDataSource, TabBarDelegate {
+    var tabsForTabBar: [Tab] {
+        tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
+    }
+
+    var selectedTabForTabBar: Tab? {
+        tabManager.selectedTab
+    }
+
+    func tabBar(_ tabBar: TabBar, didSelectTabAt index: Int) {
+        selectTab(at: index, animated: true)
+    }
+
+    func tabBar(_ tabBar: TabBar, didCloseTabAt index: Int) {
+        closeTab(at: index)
+    }
+
+    func tabBar(_ tabBar: TabBar, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int) {
+        tabManager.moveTab(
+            from: sourceIndex,
+            to: destinationIndex,
+            mode: tabManager.selectedTabMode
+        )
+    }
+}
+
 extension BrowserViewController: TabManagerDelegate {
     func tabManagerDidChangeTabs(_ tabManager: TabManager) {
-        let activeTabs = tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        if let pendingExpandedTabBarIndex,
-           !activeTabs.indices.contains(pendingExpandedTabBarIndex) {
-            self.pendingExpandedTabBarIndex = nil
-        }
-        
         if let selectedTab = tabManager.selectedTab {
             if browserUI.geckoView.session !== selectedTab.session {
                 browserUI.geckoView.session = selectedTab.session
@@ -91,19 +95,14 @@ extension BrowserViewController: TabManagerDelegate {
             browserUI.tabOverview.setMode(overviewMode, animated: false)
         }
         browserUI.tabOverview.applyPendingTabChanges()
-        browserUI.tabBar.collectionView.reloadData()
+        browserUI.tabBar.reloadTabs()
         browserUI.applyChromeLayout(animated: false)
-        browserUI.tabBar.refreshLayout(
-            fallbackWidth: view.bounds.width,
-            tabCount: activeTabs.count,
-            selectedIndex: tabManager.selectedTabIndex,
-            pendingExpandedIndex: pendingExpandedTabBarIndex
-        )
+        browserUI.tabBar.updateLayout()
     }
     
     func tabManager(_ tabManager: TabManager, didSelectTabAt index: Int, previousIndex: Int?) {
         let activeTabs = tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        pendingExpandedTabBarIndex = nil
+        browserUI.tabBar.setPendingExpansion(at: nil)
         if let previousIndex {
             captureThumbnail(for: previousIndex)
         }
@@ -127,13 +126,7 @@ extension BrowserViewController: TabManagerDelegate {
         if !browserUI.tabOverview.isPresented {
             browserUI.tabOverview.reloadTabs()
         }
-        browserUI.tabBar.collectionView.reloadData()
-        browserUI.tabBar.refreshLayout(
-            fallbackWidth: view.bounds.width,
-            tabCount: activeTabs.count,
-            selectedIndex: tabManager.selectedTabIndex,
-            pendingExpandedIndex: pendingExpandedTabBarIndex
-        )
+        browserUI.tabBar.reloadTabs()
         
         if isInFullscreenMedia,
            activeFullscreenSession !== selectedTab.session {
@@ -180,7 +173,7 @@ extension BrowserViewController: TabManagerDelegate {
             if index == tabManager.selectedTabIndex {
                 refreshAddressBar()
             }
-            browserUI.tabBar.collectionView.reloadData()
+            browserUI.tabBar.reloadTab(at: index)
             if browserUI.tabOverview.isPresented {
                 browserUI.tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
             } else {
@@ -194,7 +187,7 @@ extension BrowserViewController: TabManagerDelegate {
             }
             
         case .favicon:
-            browserUI.tabBar.collectionView.reloadData()
+            browserUI.tabBar.reloadTab(at: index)
             if browserUI.tabOverview.isPresented {
                 browserUI.tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
             } else {

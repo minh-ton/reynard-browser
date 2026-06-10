@@ -139,7 +139,7 @@ final class BrowserViewController: UIViewController {
         browserUI.applyChromeLayout(animated: false)
         updateSuggestionsLayoutIfNeeded()
         browserUI.tabOverview.invalidateCollectionLayouts()
-        browserUI.tabBar.collectionView.collectionViewLayout.invalidateLayout()
+        browserUI.tabBar.invalidateLayout()
         browserUI.tabOverview.refreshForCurrentOrientation()
     }
     
@@ -153,7 +153,7 @@ final class BrowserViewController: UIViewController {
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
             self.browserUI.tabOverview.invalidateCollectionLayouts()
-            self.browserUI.tabBar.collectionView.collectionViewLayout.invalidateLayout()
+            self.browserUI.tabBar.invalidateLayout()
         } completion: { _ in
             self.syncBrowserNavigationChrome(animated: false)
             self.syncSidebarButtonItem()
@@ -174,7 +174,7 @@ final class BrowserViewController: UIViewController {
     func createTab(selecting: Bool, windowId: String? = nil, at index: Int? = nil, isPrivate: Bool? = nil) -> Int {
         let shouldCreatePrivate = isPrivate ?? (tabManager.selectedTabMode == .private)
         let createdIndex = tabManager.addTab(selecting: selecting, windowId: windowId, at: index, isPrivate: shouldCreatePrivate)
-        pendingExpandedTabBarIndex = selecting ? createdIndex : nil
+        browserUI.tabBar.setPendingExpansion(at: selecting ? createdIndex : nil)
         return createdIndex
     }
     
@@ -188,12 +188,12 @@ final class BrowserViewController: UIViewController {
     }
     
     func closeTab(at index: Int) {
-        pendingExpandedTabBarIndex = nil
+        browserUI.tabBar.setPendingExpansion(at: nil)
         tabManager.removeTab(at: index, mode: nil)
     }
     
     func clearAllTabs() {
-        pendingExpandedTabBarIndex = nil
+        browserUI.tabBar.setPendingExpansion(at: nil)
         tabManager.removeAllTabs(mode: nil)
     }
     

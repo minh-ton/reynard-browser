@@ -14,13 +14,6 @@ private enum UIAssociatedKeys {
     static var searchController = 0
     static var searchViewController = 0
     static var isSearchFocused = 0
-    static var activeReorderingCell = 0
-    static var activeDragSnapshotView = 0
-    static var pendingReorderStartWorkItem = 0
-    static var isInteractiveReorderActive = 0
-    static var activeDragOffset = 0
-    static var activeTabBarReorderSourceIndex = 0
-    static var activeTabBarReorderTargetIndex = 0
     static var searchScrollDismissal = 0
     static var preserveSuggestions = 0
     static var suggestionsTop = 0
@@ -34,7 +27,6 @@ private enum UIAssociatedKeys {
     static var searchScrollMode = 0
     static var autocompleteDeleteText = 0
 }
-
 extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, AddressBarGesturesDelegate, BottomToolbarDelegate {
     var browserUI: BrowserUI {
         get {
@@ -42,7 +34,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
                 return ui
             }
             
-            let ui = BrowserUI(controller: self, tabCollectionHandler: self)
+            let ui = BrowserUI(controller: self)
             objc_setAssociatedObject(self, &UIAssociatedKeys.browserUI, ui, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             return ui
         }
@@ -171,35 +163,10 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
         navigationItem.leftBarButtonItem = nil
     }
     
-    private func activeTabBarHeight() -> CGFloat {
-        let activeTabs = tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard usesPadChrome,
-              activeTabs.count > 1 else {
-            return 0
-        }
-        
-        if !isPad {
-            guard Prefs.AppearanceSettings.showsLandscapeTabBar else {
-                return 0
-            }
-            let isLandscape: Bool
-            if let orientation = view.window?.windowScene?.interfaceOrientation {
-                isLandscape = orientation.isLandscape
-            } else {
-                isLandscape = view.bounds.width > view.bounds.height
-            }
-            guard isLandscape else {
-                return 0
-            }
-        }
-        
-        return 36
-    }
-    
     func tabPreviewAspectRatio() -> CGFloat {
         let bounds = browserUI.geckoView.bounds
         let width = max(bounds.width, 1)
-        let height = max(bounds.height + activeTabBarHeight(), 1)
+        let height = max(bounds.height, 1)
         return height / width
     }
     
@@ -226,20 +193,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
     }
     
     func dismissalContentFrame() -> CGRect {
-        let frame = browserUI.geckoView.frame
-        let tabBarHeight = activeTabBarHeight()
-        guard tabBarHeight > 0,
-              usesPadChrome,
-              browserUI.tabOverview.isPresented else {
-            return frame
-        }
-        
-        return CGRect(
-            x: frame.minX,
-            y: frame.minY + tabBarHeight,
-            width: frame.width,
-            height: max(1, frame.height - tabBarHeight)
-        )
+        browserUI.geckoView.frame
     }
     
     func syncAddressBarLoadingState(progress: Float, isLoading: Bool) {
@@ -286,8 +240,6 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, Addre
 }
 
 final class BrowserUI {
-    typealias TabCollectionHandler = UICollectionViewDataSource & UICollectionViewDelegate & UICollectionViewDelegateFlowLayout
-    
     let geckoView: GeckoView = {
         let view = GeckoView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -320,13 +272,12 @@ final class BrowserUI {
     private var geckoPhoneVerticalOffset: CGFloat = 0
     private var focusedInputMetricsTask: Task<Void, Never>?
     
-    init(
-        controller: BrowserViewController,
-        tabCollectionHandler: TabCollectionHandler
-    ) {
+    init(controller: BrowserViewController) {
         self.controller = controller
         browserChrome = BrowserChrome(controller: controller)
-        tabBar = TabBar(tabCollectionHandler: tabCollectionHandler)
+        tabBar = TabBar()
+        tabBar.dataSource = controller
+        tabBar.delegate = controller
         tabOverview.dataSource = controller
         tabOverview.delegate = controller
     }
@@ -341,13 +292,13 @@ final class BrowserUI {
         let view = controller.view!
         
         view.addSubview(ui.geckoView)
-        view.addSubview(ui.tabBar.collectionView)
+        view.addSubview(ui.tabBar)
         view.addSubview(ui.browserChrome)
         
         view.addSubview(ui.tabOverview)
         
         ui.geckoTopPhoneConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor)
-        ui.geckoTopPadConstraint = ui.geckoView.topAnchor.constraint(equalTo: ui.tabBar.collectionView.bottomAnchor)
+        ui.geckoTopPadConstraint = ui.geckoView.topAnchor.constraint(equalTo: ui.tabBar.bottomAnchor)
         ui.geckoBottomPhoneConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: ui.browserChrome.bottomToolbarTopAnchor)
         ui.geckoBottomPhoneSearchPinnedConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -94)
         ui.geckoBottomPhoneKeyboardOverlayConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -360,8 +311,6 @@ final class BrowserUI {
         ui.geckoTopFullscreenConstraint = ui.geckoView.topAnchor.constraint(equalTo: view.topAnchor)
         ui.geckoBottomFullscreenConstraint = ui.geckoView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         
-        ui.tabBar.heightConstraint = ui.tabBar.collectionView.heightAnchor.constraint(equalToConstant: 36)
-        
         NSLayoutConstraint.activate([
             ui.geckoLeadingPhoneConstraint,
             ui.geckoTrailingPhoneConstraint,
@@ -373,10 +322,9 @@ final class BrowserUI {
             ui.browserChrome.topAnchor.constraint(equalTo: view.topAnchor),
             ui.browserChrome.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
-            ui.tabBar.collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            ui.tabBar.collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            ui.tabBar.collectionView.topAnchor.constraint(equalTo: ui.browserChrome.topToolbarBottomAnchor),
-            ui.tabBar.heightConstraint,
+            ui.tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            ui.tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            ui.tabBar.topAnchor.constraint(equalTo: ui.browserChrome.topToolbarBottomAnchor),
             
             ui.tabOverview.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             ui.tabOverview.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -470,9 +418,14 @@ final class BrowserUI {
         
         let phoneOverview = controller.usesBottomPhoneOverview
         let activeTabs = controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs
-        let showsTabBar = pad && !controller.browserUI.tabOverview.isPresented && activeTabs.count > 1 && (!controller.isPad ? Prefs.AppearanceSettings.showsLandscapeTabBar && isLandscape : true)
-        ui.tabBar.collectionView.isHidden = !showsTabBar
-        ui.tabBar.heightConstraint.constant = showsTabBar ? 36 : 0
+        let supportsTabBar = pad && activeTabs.count > 1 && (!controller.isPad ? Prefs.AppearanceSettings.showsLandscapeTabBar && isLandscape : true)
+        let tabBarVisibility: TabBar.Visibility
+        if supportsTabBar {
+            tabBarVisibility = controller.browserUI.tabOverview.isPresented ? .layoutReserved : .visible
+        } else {
+            tabBarVisibility = .hidden
+        }
+        ui.tabBar.setVisibility(tabBarVisibility, animated: false)
         
         ui.tabOverview.applyLayout(toolbarPosition: phoneOverview ? .bottom : .top, animated: false)
         ui.browserChrome.apply(state: BrowserChrome.State(
@@ -506,8 +459,7 @@ final class BrowserUI {
         ui.geckoTopFullscreenConstraint.isActive = true
         ui.geckoBottomFullscreenConstraint.isActive = true
         
-        ui.tabBar.collectionView.isHidden = true
-        ui.tabBar.heightConstraint.constant = 0
+        ui.tabBar.setVisibility(.hidden, animated: false)
         
         ui.tabOverview.applyLayout(toolbarPosition: controller.usesBottomPhoneOverview ? .bottom : .top, animated: false)
         ui.browserChrome.apply(state: BrowserChrome.State(
@@ -679,7 +631,7 @@ final class BrowserUI {
         
         let unshiftedGeckoMinY: CGFloat
         if controller.usesPadChrome {
-            unshiftedGeckoMinY = controller.browserUI.tabBar.collectionView.frame.maxY
+            unshiftedGeckoMinY = controller.browserUI.tabBar.frame.maxY
         } else {
             unshiftedGeckoMinY = controller.view.safeAreaLayoutGuide.layoutFrame.minY
         }
@@ -697,119 +649,7 @@ final class BrowserUI {
     }
 }
 
-@objc
-private final class WeakObjectBox: NSObject {
-    weak var value: AnyObject?
-    
-    init(_ value: AnyObject?) {
-        self.value = value
-    }
-}
-
-// Tab Bar
-extension BrowserViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout, UIGestureRecognizerDelegate {
-    // MARK: - Reorder State
-
-    var activeReorderingCell: UICollectionViewCell? {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.activeReorderingCell) as? WeakObjectBox)?
-                .value as? UICollectionViewCell
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.activeReorderingCell,
-                WeakObjectBox(newValue),
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var activeDragSnapshotView: UIView? {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.activeDragSnapshotView) as? WeakObjectBox)?
-                .value as? UIView
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.activeDragSnapshotView,
-                WeakObjectBox(newValue),
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var pendingReorderStartWorkItem: DispatchWorkItem? {
-        get {
-            objc_getAssociatedObject(self, &UIAssociatedKeys.pendingReorderStartWorkItem) as? DispatchWorkItem
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.pendingReorderStartWorkItem,
-                newValue,
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var isInteractiveReorderActive: Bool {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.isInteractiveReorderActive) as? NSNumber)?.boolValue ?? false
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.isInteractiveReorderActive,
-                NSNumber(value: newValue),
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var activeDragOffset: CGPoint {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.activeDragOffset) as? NSValue)?.cgPointValue ?? .zero
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.activeDragOffset,
-                NSValue(cgPoint: newValue),
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var activeTabBarReorderSourceIndex: Int? {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.activeTabBarReorderSourceIndex) as? NSNumber)?.intValue
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.activeTabBarReorderSourceIndex,
-                newValue.map { NSNumber(value: $0) },
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
-    var activeTabBarReorderTargetIndex: Int? {
-        get {
-            (objc_getAssociatedObject(self, &UIAssociatedKeys.activeTabBarReorderTargetIndex) as? NSNumber)?.intValue
-        }
-        set {
-            objc_setAssociatedObject(
-                self,
-                &UIAssociatedKeys.activeTabBarReorderTargetIndex,
-                newValue.map { NSNumber(value: $0) },
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
-    }
-
+extension BrowserViewController {
     // MARK: - Tab Overview Forwarding
 
     func restoreTabOverviewMode() {
@@ -835,275 +675,8 @@ extension BrowserViewController: UICollectionViewDataSource, UICollectionViewDel
         }
         browserUI.tabOverview.setPresented(visible, animated: animated)
     }
-
-    // MARK: - Tab Bar Data Source
-
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        activeTabBarTabs.count
-    }
-
-    func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
-        collectionView === browserUI.tabBar.collectionView
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard collectionView === browserUI.tabBar.collectionView,
-              activeTabBarTabs.indices.contains(indexPath.item),
-              let tabBarCell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: TabBarCell.reuseIdentifier,
-                for: indexPath
-              ) as? TabBarCell else {
-            return UICollectionViewCell()
-        }
-
-        let tab = activeTabBarTabs[indexPath.item]
-        let layoutMetrics = browserUI.tabBar.layoutMetrics(
-            for: indexPath.item,
-            fallbackWidth: view.bounds.width,
-            tabCount: activeTabBarTabs.count,
-            usesExpandedWidth: usesExpandedTabBarWidthForLayoutIndex
-        )
-        tabBarCell.configure(
-            tab: tab,
-            selected: tab.id == tabManager.selectedTab?.id,
-            layoutMode: layoutMetrics.mode,
-            itemWidth: layoutMetrics.width
-        )
-        tabBarCell.onClose = { [weak self, weak collectionView, weak tabBarCell] in
-            guard let self,
-                  let collectionView,
-                  let tabBarCell,
-                  let currentIndexPath = collectionView.indexPath(for: tabBarCell) else {
-                return
-            }
-            self.closeTab(at: currentIndexPath.item)
-        }
-        return tabBarCell
-    }
-
-    // MARK: - Tab Bar Delegate
-
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard collectionView === browserUI.tabBar.collectionView else { return }
-        selectTab(at: indexPath.item, animated: true)
-    }
-
-    func collectionView(
-        _ collectionView: UICollectionView,
-        moveItemAt sourceIndexPath: IndexPath,
-        to destinationIndexPath: IndexPath
-    ) {
-        guard collectionView === browserUI.tabBar.collectionView else { return }
-        tabManager.moveTab(
-            from: sourceIndexPath.item,
-            to: destinationIndexPath.item,
-            mode: tabManager.selectedTabMode
-        )
-    }
-
-    func collectionView(
-        _ collectionView: UICollectionView,
-        layout collectionViewLayout: UICollectionViewLayout,
-        sizeForItemAt indexPath: IndexPath
-    ) -> CGSize {
-        guard collectionView === browserUI.tabBar.collectionView else { return .zero }
-        let layoutMetrics = browserUI.tabBar.layoutMetrics(
-            for: indexPath.item,
-            fallbackWidth: view.bounds.width,
-            tabCount: activeTabBarTabs.count,
-            usesExpandedWidth: usesExpandedTabBarWidthForLayoutIndex
-        )
-        return CGSize(width: layoutMetrics.width, height: collectionView.bounds.height)
-    }
-
-    // MARK: - Tab Bar Layout
-
-    func usesExpandedTabBarWidth(for tab: Tab) -> Bool {
-        let selectedTabID = tabManager.selectedTab?.id
-        let pendingTabID = pendingExpandedTabBarIndex.flatMap { activeTabBarTabs[safe: $0]?.id }
-        return tab.id == selectedTabID || tab.id == pendingTabID
-    }
-
-    private var activeTabBarTabs: [Tab] {
-        tabManager.selectedTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-    }
-
-    private func tabForCurrentTabBarLayout(at index: Int) -> Tab? {
-        guard activeTabBarTabs.indices.contains(index) else { return nil }
-        guard let sourceIndex = activeTabBarReorderSourceIndex,
-              let targetIndex = activeTabBarReorderTargetIndex,
-              activeTabBarTabs.indices.contains(sourceIndex),
-              activeTabBarTabs.indices.contains(targetIndex),
-              sourceIndex != targetIndex else {
-            return activeTabBarTabs[index]
-        }
-
-        var reorderedTabs = activeTabBarTabs
-        let movedTab = reorderedTabs.remove(at: sourceIndex)
-        reorderedTabs.insert(movedTab, at: targetIndex)
-        return reorderedTabs[index]
-    }
-
-    private func usesExpandedTabBarWidthForLayoutIndex(_ index: Int) -> Bool {
-        guard let tab = tabForCurrentTabBarLayout(at: index) else { return false }
-        return usesExpandedTabBarWidth(for: tab)
-    }
-
-    // MARK: - UIGestureRecognizerDelegate
-
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let longPressGesture = gestureRecognizer as? UILongPressGestureRecognizer,
-              let collectionView = longPressGesture.view as? UICollectionView,
-              collectionView === browserUI.tabBar.collectionView,
-              let indexPath = collectionView.indexPathForItem(at: longPressGesture.location(in: collectionView)),
-              let tabBarCell = collectionView.cellForItem(at: indexPath) as? TabBarCell else {
-            return false
-        }
-
-        let locationInCell = collectionView.convert(longPressGesture.location(in: collectionView), to: tabBarCell)
-        return !tabBarCell.containsCloseButton(point: locationInCell)
-    }
-
-    // MARK: - Tab Bar Reordering
-
-    @objc func handleTabBarReorderLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        guard let collectionView = gestureRecognizer.view as? UICollectionView,
-              collectionView === browserUI.tabBar.collectionView else {
-            return
-        }
-
-        let location = gestureRecognizer.location(in: collectionView)
-        switch gestureRecognizer.state {
-        case .began:
-            beginTabBarReordering(at: location, in: collectionView)
-        case .changed:
-            updateTabBarReordering(at: location, in: collectionView)
-        case .ended:
-            finishTabBarReordering(in: collectionView, cancelled: false)
-        default:
-            finishTabBarReordering(in: collectionView, cancelled: true)
-        }
-    }
-
-    private func beginTabBarReordering(at location: CGPoint, in collectionView: UICollectionView) {
-        guard let indexPath = collectionView.indexPathForItem(at: location),
-              let tabBarCell = collectionView.cellForItem(at: indexPath) as? TabBarCell,
-              !tabBarCell.containsCloseButton(point: collectionView.convert(location, to: tabBarCell)) else {
-            return
-        }
-
-        activeReorderingCell = tabBarCell
-        activeTabBarReorderSourceIndex = indexPath.item
-        activeTabBarReorderTargetIndex = indexPath.item
-        cancelPendingTabBarReorderStart()
-        beginTabBarDragSnapshot(for: tabBarCell, in: collectionView, at: location)
-
-        let workItem = DispatchWorkItem { [weak self, weak collectionView, weak tabBarCell] in
-            guard let self,
-                  let collectionView,
-                  let tabBarCell,
-                  self.activeReorderingCell === tabBarCell,
-                  !self.isInteractiveReorderActive else {
-                return
-            }
-            guard collectionView.beginInteractiveMovementForItem(at: indexPath) else {
-                self.endTabBarDragSnapshot()
-                self.clearTabBarReorderState()
-                self.activeReorderingCell = nil
-                return
-            }
-            self.isInteractiveReorderActive = true
-        }
-        pendingReorderStartWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: workItem)
-    }
-
-    private func updateTabBarReordering(at location: CGPoint, in collectionView: UICollectionView) {
-        guard isInteractiveReorderActive else { return }
-        updateTabBarReorderTarget(at: location, in: collectionView)
-        collectionView.updateInteractiveMovementTargetPosition(location)
-        updateTabBarDragSnapshotPosition(location, in: collectionView)
-    }
-
-    private func finishTabBarReordering(in collectionView: UICollectionView, cancelled: Bool) {
-        cancelPendingTabBarReorderStart()
-        if isInteractiveReorderActive {
-            cancelled ? collectionView.cancelInteractiveMovement() : collectionView.endInteractiveMovement()
-            isInteractiveReorderActive = false
-        }
-        clearTabBarReorderState()
-        collectionView.collectionViewLayout.invalidateLayout()
-        collectionView.layoutIfNeeded()
-        endTabBarDragSnapshot()
-        activeReorderingCell = nil
-    }
-
-    private func cancelPendingTabBarReorderStart() {
-        pendingReorderStartWorkItem?.cancel()
-        pendingReorderStartWorkItem = nil
-    }
-
-    private func updateTabBarReorderTarget(at location: CGPoint, in collectionView: UICollectionView) {
-        guard let targetIndex = collectionView.indexPathForItem(at: location)?.item,
-              activeTabBarTabs.indices.contains(targetIndex),
-              activeTabBarReorderTargetIndex != targetIndex else {
-            return
-        }
-        activeTabBarReorderTargetIndex = targetIndex
-        collectionView.collectionViewLayout.invalidateLayout()
-    }
-
-    private func clearTabBarReorderState() {
-        activeTabBarReorderSourceIndex = nil
-        activeTabBarReorderTargetIndex = nil
-    }
-
-    private func beginTabBarDragSnapshot(
-        for tabBarCell: UICollectionViewCell,
-        in collectionView: UICollectionView,
-        at location: CGPoint
-    ) {
-        guard let dragSnapshot = tabBarCell.snapshotView(afterScreenUpdates: false) else { return }
-        dragSnapshot.frame = tabBarCell.convert(tabBarCell.bounds, to: view)
-        dragSnapshot.isUserInteractionEnabled = false
-        dragSnapshot.layer.masksToBounds = false
-        dragSnapshot.layer.shadowColor = UITraitCollection.current.userInterfaceStyle == .dark
-            ? UIColor.white.cgColor
-            : UIColor.black.cgColor
-        dragSnapshot.layer.shadowOpacity = 0.18
-        dragSnapshot.layer.shadowRadius = 10
-        dragSnapshot.layer.shadowOffset = CGSize(width: 0, height: 6)
-        view.addSubview(dragSnapshot)
-        view.bringSubviewToFront(dragSnapshot)
-        UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseOut, .beginFromCurrentState]) {
-            dragSnapshot.transform = CGAffineTransform(scaleX: 1.04, y: 1.04)
-        }
-
-        tabBarCell.isHidden = true
-        activeDragSnapshotView = dragSnapshot
-        let locationInRootView = collectionView.convert(location, to: view)
-        activeDragOffset = CGPoint(
-            x: locationInRootView.x - dragSnapshot.center.x,
-            y: locationInRootView.y - dragSnapshot.center.y
-        )
-    }
-
-    private func updateTabBarDragSnapshotPosition(_ location: CGPoint, in collectionView: UICollectionView) {
-        guard let dragSnapshot = activeDragSnapshotView else { return }
-        let locationInRootView = collectionView.convert(location, to: view)
-        dragSnapshot.center = CGPoint(
-            x: locationInRootView.x - activeDragOffset.x,
-            y: locationInRootView.y - activeDragOffset.y
-        )
-    }
-
-    private func endTabBarDragSnapshot() {
-        activeDragSnapshotView?.removeFromSuperview()
-        activeDragSnapshotView = nil
-        activeReorderingCell?.isHidden = false
-        activeDragOffset = .zero
-    }
 }
+
 // Search Suggestions
 extension BrowserViewController: SearchViewControllerDelegate {
     var searchController: SearchController {

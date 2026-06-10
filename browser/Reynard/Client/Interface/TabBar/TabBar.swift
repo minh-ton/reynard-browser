@@ -7,132 +7,243 @@
 
 import UIKit
 
-final class TabBar {
-    typealias TabCollectionHandler = UICollectionViewDataSource & UICollectionViewDelegate & UICollectionViewDelegateFlowLayout
-    
-    struct LayoutMetrics {
+protocol TabBarDataSource: AnyObject {
+    var tabsForTabBar: [Tab] { get }
+    var selectedTabForTabBar: Tab? { get }
+}
+
+protocol TabBarDelegate: AnyObject {
+    func tabBar(_ tabBar: TabBar, didSelectTabAt index: Int)
+    func tabBar(_ tabBar: TabBar, didCloseTabAt index: Int)
+    func tabBar(_ tabBar: TabBar, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int)
+}
+
+final class TabBar: UIView {
+    // MARK: - UX
+
+    private enum UX {
+        static let tabBarHeight: CGFloat = 36
+        static let tabBarBackgroundColor = UIColor.systemGray6
+    }
+
+    enum Visibility: Equatable {
+        case hidden
+        case layoutReserved
+        case visible
+    }
+
+    enum ReorderState: Equatable {
+        case idle
+        case pending
+        case active
+    }
+
+    struct CellLayout {
         let width: CGFloat
         let mode: TabBarCell.LayoutMode
     }
-    
-    lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumLineSpacing = 0
-        layout.minimumInteritemSpacing = 0
-        layout.sectionInset = .zero
-        
-        let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemGray6
-        view.showsHorizontalScrollIndicator = false
-        view.contentInset = .zero
-        view.contentInsetAdjustmentBehavior = .never
-        view.dataSource = tabCollectionHandler
-        view.delegate = tabCollectionHandler
-        let reorderGesture = UILongPressGestureRecognizer(
-            target: tabCollectionHandler as AnyObject,
-            action: #selector(BrowserViewController.handleTabBarReorderLongPress(_:))
-        )
-        reorderGesture.minimumPressDuration = 0.35
-        reorderGesture.delegate = tabCollectionHandler as? UIGestureRecognizerDelegate
-        view.addGestureRecognizer(reorderGesture)
-        view.register(TabBarCell.self, forCellWithReuseIdentifier: TabBarCell.reuseIdentifier)
-        return view
-    }()
-    
-    var heightConstraint: NSLayoutConstraint!
-    
-    private let tabCollectionHandler: TabCollectionHandler
-    
-    init(tabCollectionHandler: TabCollectionHandler) {
-        self.tabCollectionHandler = tabCollectionHandler
+
+    // MARK: - State
+
+    weak var dataSource: TabBarDataSource?
+    weak var delegate: TabBarDelegate?
+
+    private(set) var visibility: Visibility = .hidden
+    private(set) var reorderState: ReorderState = .idle
+    private(set) var pendingExpandedTabIndex: Int?
+
+    var standardHeight: CGFloat {
+        UX.tabBarHeight
     }
-    
-    func layoutMetrics(
-        for index: Int,
-        fallbackWidth: CGFloat,
-        tabCount: Int,
-        usesExpandedWidth: (Int) -> Bool
-    ) -> LayoutMetrics {
-        let horizontalInsets = collectionView.adjustedContentInset.left + collectionView.adjustedContentInset.right
-        let baseWidth = collectionView.bounds.width > 1 ? collectionView.bounds.width : fallbackWidth
-        let availableWidth = max(0, baseWidth - horizontalInsets)
-        let safeTabCount = max(1, tabCount)
-        let equalWidth = floor(availableWidth / CGFloat(safeTabCount))
-        
-        if equalWidth >= TabBarCell.expandedMinimumWidth {
-            return LayoutMetrics(width: equalWidth, mode: .expanded)
+
+    // MARK: - Views
+
+    private let tabCollection = TabBarCollection()
+    private lazy var presentation = TabBarPresentation(tabBar: self)
+
+    // MARK: - Constraints
+
+    private var heightConstraint: NSLayoutConstraint!
+
+    // MARK: - Lifecycle
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        configureAppearance()
+        configureHierarchy()
+        configureConstraints()
+        configureTabCollection()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Layout
+
+    func setVisibility(_ visibility: Visibility, animated: Bool) {
+        presentation.setVisibility(visibility, animated: animated)
+    }
+
+    func invalidateLayout() {
+        tabCollection.invalidateLayout()
+    }
+
+    func updateLayout() {
+        clearInvalidPendingExpansion()
+        tabCollection.updateLayout()
+    }
+
+    func cellLayout(at index: Int) -> CellLayout {
+        let tabs = dataSource?.tabsForTabBar ?? []
+        let horizontalInset = tabCollection.adjustedContentInset.left + tabCollection.adjustedContentInset.right
+        let containerWidth = tabCollection.bounds.width > 1 ? tabCollection.bounds.width : bounds.width
+        let availableWidth = max(0, containerWidth - horizontalInset)
+        let layoutTabCount = max(1, tabs.count)
+        let equalTabWidth = floor(availableWidth / CGFloat(layoutTabCount))
+
+        if equalTabWidth >= TabBarCell.expandedMinimumWidth {
+            return CellLayout(width: equalTabWidth, mode: .expanded)
         }
-        
-        let isExpanded = usesExpandedWidth(index)
-        let expandedTabCount = max(1, (0..<safeTabCount).reduce(0) { count, tabIndex in
-            count + (usesExpandedWidth(tabIndex) ? 1 : 0)
+
+        let usesExpandedLayout = isExpandedTab(at: index, in: tabs)
+        let expandedTabCount = max(1, tabs.indices.reduce(0) { count, tabIndex in
+            count + (isExpandedTab(at: tabIndex, in: tabs) ? 1 : 0)
         })
-        let unselectedCount = max(0, safeTabCount - expandedTabCount)
-        
-        let widthForUnselected: CGFloat
-        let reachesCollapsedThreshold: Bool
-        if unselectedCount == 0 {
-            widthForUnselected = availableWidth
-            reachesCollapsedThreshold = false
+        let unselectedTabCount = max(0, layoutTabCount - expandedTabCount)
+
+        let unselectedTabWidth: CGFloat
+        let usesFaviconOnlyLayout: Bool
+        if unselectedTabCount == 0 {
+            unselectedTabWidth = availableWidth
+            usesFaviconOnlyLayout = false
         } else {
-            let remainingWidth = availableWidth - (TabBarCell.expandedMinimumWidth * CGFloat(expandedTabCount))
-            widthForUnselected = floor(remainingWidth / CGFloat(unselectedCount))
-            reachesCollapsedThreshold = widthForUnselected <= TabBarCell.collapsedMinimumWidth
+            let availableUnselectedWidth = availableWidth - (TabBarCell.expandedMinimumWidth * CGFloat(expandedTabCount))
+            unselectedTabWidth = floor(availableUnselectedWidth / CGFloat(unselectedTabCount))
+            usesFaviconOnlyLayout = unselectedTabWidth <= TabBarCell.collapsedMinimumWidth
         }
-        
-        if isExpanded {
-            return LayoutMetrics(width: TabBarCell.expandedMinimumWidth, mode: .expanded)
+
+        if usesExpandedLayout {
+            return CellLayout(width: TabBarCell.expandedMinimumWidth, mode: .expanded)
         }
-        
-        if reachesCollapsedThreshold {
-            return LayoutMetrics(width: TabBarCell.collapsedMinimumWidth, mode: .faviconOnly)
+
+        if usesFaviconOnlyLayout {
+            return CellLayout(width: TabBarCell.collapsedMinimumWidth, mode: .faviconOnly)
         }
-        
-        return LayoutMetrics(width: max(0, widthForUnselected), mode: .expanded)
+
+        return CellLayout(width: max(0, unselectedTabWidth), mode: .expanded)
     }
-    
-    func refreshLayout(
-        fallbackWidth: CGFloat,
-        tabCount: Int,
-        selectedIndex: Int,
-        pendingExpandedIndex: Int?
-    ) {
-        let horizontalInsets = collectionView.adjustedContentInset.left + collectionView.adjustedContentInset.right
-        let baseWidth = collectionView.bounds.width > 1 ? collectionView.bounds.width : fallbackWidth
-        let tabBarWidth = max(0, baseWidth - horizontalInsets)
-        
-        let shouldScroll: Bool = {
-            guard tabCount > 1 else {
-                return false
-            }
-            
-            let equalWidth = floor(tabBarWidth / CGFloat(tabCount))
-            guard equalWidth < TabBarCell.expandedMinimumWidth else {
-                return false
-            }
-            
-            let hasPendingExpanded = pendingExpandedIndex != nil
-            && pendingExpandedIndex != selectedIndex
-            && (0..<tabCount).contains(pendingExpandedIndex ?? -1)
-            let expandedCount = hasPendingExpanded ? 2 : 1
-            let otherCount = tabCount - expandedCount
-            guard otherCount > 0 else {
-                return false
-            }
-            
-            let remainingWidth = tabBarWidth - (TabBarCell.expandedMinimumWidth * CGFloat(expandedCount))
-            let otherWidth = floor(remainingWidth / CGFloat(otherCount))
-            return otherWidth <= TabBarCell.collapsedMinimumWidth
-        }()
-        
-        collectionView.isScrollEnabled = shouldScroll
-        collectionView.collectionViewLayout.invalidateLayout()
-        guard !collectionView.isHidden else {
+
+    // MARK: - Updates
+
+    func reloadTabs() {
+        clearInvalidPendingExpansion()
+        tabCollection.reloadTabs()
+    }
+
+    func reloadTab(at index: Int) {
+        tabCollection.reloadTab(at: index)
+    }
+
+    func setPendingExpansion(at index: Int?) {
+        pendingExpandedTabIndex = index
+    }
+
+    func setPresentationAlpha(_ alpha: CGFloat) {
+        presentation.setAlpha(alpha)
+    }
+
+    // MARK: - Collection Coordination
+
+    func updateReorderState(_ state: ReorderState) {
+        reorderState = state
+    }
+
+    func requestSelectTab(at index: Int) {
+        delegate?.tabBar(self, didSelectTabAt: index)
+    }
+
+    func requestCloseTab(at index: Int) {
+        pendingExpandedTabIndex = nil
+        delegate?.tabBar(self, didCloseTabAt: index)
+    }
+
+    func requestMoveTab(from sourceIndex: Int, to destinationIndex: Int) {
+        delegate?.tabBar(self, didMoveTabFrom: sourceIndex, to: destinationIndex)
+    }
+
+    // MARK: - View Setup
+
+    private func configureAppearance() {
+        translatesAutoresizingMaskIntoConstraints = false
+        backgroundColor = UX.tabBarBackgroundColor
+        isHidden = true
+    }
+
+    private func configureHierarchy() {
+        addSubview(tabCollection)
+    }
+
+    private func configureConstraints() {
+        heightConstraint = heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            tabCollection.leadingAnchor.constraint(equalTo: leadingAnchor),
+            tabCollection.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tabCollection.topAnchor.constraint(equalTo: topAnchor),
+            tabCollection.bottomAnchor.constraint(equalTo: bottomAnchor),
+            heightConstraint,
+        ])
+    }
+
+    private func configureTabCollection() {
+        tabCollection.attach(to: self)
+    }
+
+    // MARK: - Layout State
+
+    private func clearInvalidPendingExpansion() {
+        guard let pendingExpandedTabIndex else {
             return
         }
-        
-        collectionView.layoutIfNeeded()
+
+        if dataSource?.tabsForTabBar.indices.contains(pendingExpandedTabIndex) != true {
+            self.pendingExpandedTabIndex = nil
+        }
+    }
+
+    private func isExpandedTab(at index: Int, in tabs: [Tab]) -> Bool {
+        guard let tab = displayedTab(at: index, in: tabs) else {
+            return false
+        }
+
+        let selectedTabID = dataSource?.selectedTabForTabBar?.id
+        let pendingTabID = pendingExpandedTabIndex.flatMap { tabs[safe: $0]?.id }
+        return tab.id == selectedTabID || tab.id == pendingTabID
+    }
+
+    private func displayedTab(at index: Int, in tabs: [Tab]) -> Tab? {
+        guard tabs.indices.contains(index) else {
+            return nil
+        }
+
+        guard let sourceIndex = tabCollection.dragSourceIndex,
+              let targetIndex = tabCollection.dragDestinationIndex,
+              tabs.indices.contains(sourceIndex),
+              tabs.indices.contains(targetIndex),
+              sourceIndex != targetIndex else {
+            return tabs[index]
+        }
+
+        var reorderedTabs = tabs
+        let movedTab = reorderedTabs.remove(at: sourceIndex)
+        reorderedTabs.insert(movedTab, at: targetIndex)
+        return reorderedTabs[index]
+    }
+
+    // MARK: - Presentation Coordination
+
+    func applyVisibility(_ visibility: Visibility) {
+        self.visibility = visibility
+        heightConstraint.constant = visibility == .hidden ? 0 : UX.tabBarHeight
     }
 }

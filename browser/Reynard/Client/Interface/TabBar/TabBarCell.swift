@@ -8,20 +8,45 @@
 import UIKit
 
 final class TabBarCell: UICollectionViewCell {
+    // MARK: - UX
+
+    private enum UX {
+        static let expandedTabMinimumWidth: CGFloat = 220
+        static let collapsedTabMinimumWidth: CGFloat = 96
+        static let tabTitleFont = UIFont.systemFont(ofSize: 14, weight: .semibold)
+        static let tabTitleSpacing: CGFloat = 6
+        static let tabFaviconSideLength: CGFloat = 16
+        static let tabCloseButtonSideLength: CGFloat = 22
+        static let tabCloseButtonTrailingInset: CGFloat = 6
+        static let tabCloseButtonSymbolPointSize: CGFloat = 14
+        static let expandedTabContentLeadingInset: CGFloat = 10
+        static let expandedTabContentTrailingInset: CGFloat = 34
+        static let collapsedTabContentHorizontalInset: CGFloat = 8
+        static let expandedTabTitleWidthInset: CGFloat = 58
+        static let tabSeparatorWidth: CGFloat = 2 / UIScreen.main.scale
+        static let minimumVisibleTabTitle = "WWWWW"
+    }
+
     enum LayoutMode {
         case expanded
         case faviconOnly
     }
     
     static let reuseIdentifier = "TabBarCell"
-    static let expandedMinimumWidth: CGFloat = 220
-    static let collapsedMinimumWidth: CGFloat = 96
+
+    static var expandedMinimumWidth: CGFloat {
+        UX.expandedTabMinimumWidth
+    }
+
+    static var collapsedMinimumWidth: CGFloat {
+        UX.collapsedTabMinimumWidth
+    }
     
     private static let fallbackFavicon = UIImage(systemName: "globe")
     
-    var onClose: (() -> Void)?
+    var closeHandler: (() -> Void)?
     
-    private let faviconImageView: UIImageView = {
+    private let faviconView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
@@ -33,7 +58,7 @@ final class TabBarCell: UICollectionViewCell {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.font = UX.tabTitleFont
         label.textColor = .secondaryLabel
         label.numberOfLines = 1
         label.textAlignment = .center
@@ -45,7 +70,7 @@ final class TabBarCell: UICollectionViewCell {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(systemName: "x.square.fill"), for: .normal)
         button.setPreferredSymbolConfiguration(
-            UIImage.SymbolConfiguration(pointSize: 14, weight: .regular),
+            UIImage.SymbolConfiguration(pointSize: UX.tabCloseButtonSymbolPointSize, weight: .regular),
             forImageIn: .normal
         )
         button.tintColor = .secondaryLabel
@@ -53,126 +78,147 @@ final class TabBarCell: UICollectionViewCell {
         return button
     }()
     
-    private let separatorView: UIView = {
+    private let trailingSeparator: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .separator
         return view
     }()
     
-    private let titleStackView: UIStackView = {
+    private let titleStack: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .horizontal
         stackView.alignment = .center
         stackView.distribution = .fill
-        stackView.spacing = 6
+        stackView.spacing = UX.tabTitleSpacing
         return stackView
     }()
     
-    private var titleStackExpandedTrailingConstraint: NSLayoutConstraint!
-    private var titleStackCollapsedTrailingConstraint: NSLayoutConstraint!
-    private var titleStackExpandedLeadingConstraint: NSLayoutConstraint!
-    private var titleStackCollapsedLeadingConstraint: NSLayoutConstraint!
-    private var titleLabelExpandedWidthConstraint: NSLayoutConstraint!
+    private var expandedTrailingConstraint: NSLayoutConstraint!
+    private var collapsedTrailingConstraint: NSLayoutConstraint!
+    private var expandedLeadingConstraint: NSLayoutConstraint!
+    private var collapsedLeadingConstraint: NSLayoutConstraint!
+    private var expandedTitleWidthConstraint: NSLayoutConstraint!
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
-        contentView.layer.cornerRadius = 0
-        
-        contentView.addSubview(titleStackView)
-        titleStackView.addArrangedSubview(faviconImageView)
-        titleStackView.addArrangedSubview(titleLabel)
-        contentView.addSubview(closeButton)
-        contentView.addSubview(separatorView)
-        
-        faviconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
-        faviconImageView.setContentCompressionResistancePriority(.required, for: .vertical)
-        faviconImageView.setContentHuggingPriority(.required, for: .horizontal)
-        
-        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        
-        titleStackExpandedTrailingConstraint = titleStackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -34)
-        titleStackCollapsedTrailingConstraint = titleStackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -8)
-        titleStackExpandedLeadingConstraint = titleStackView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 10)
-        titleStackCollapsedLeadingConstraint = titleStackView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 8)
-        titleLabelExpandedWidthConstraint = titleLabel.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, constant: -58)
-        
-        NSLayoutConstraint.activate([
-            titleStackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            titleStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            titleStackExpandedLeadingConstraint,
-            titleStackExpandedTrailingConstraint,
-            
-            faviconImageView.widthAnchor.constraint(equalToConstant: 16),
-            faviconImageView.heightAnchor.constraint(equalToConstant: 16),
-            
-            titleLabelExpandedWidthConstraint,
-            
-            closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -6),
-            closeButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            closeButton.widthAnchor.constraint(equalToConstant: 22),
-            closeButton.heightAnchor.constraint(equalToConstant: 22),
-            
-            separatorView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            separatorView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            separatorView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            separatorView.widthAnchor.constraint(equalToConstant: 2 / UIScreen.main.scale),
-        ])
+        configureAppearance()
+        configureHierarchy()
+        configureContentPriorities()
+        configureActions()
+        configureConstraints()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     override func prepareForReuse() {
         super.prepareForReuse()
-        faviconImageView.image = Self.fallbackFavicon
+        faviconView.image = Self.fallbackFavicon
         titleLabel.isHidden = false
-        titleStackView.spacing = 6
-        titleStackExpandedLeadingConstraint.isActive = true
-        titleStackCollapsedLeadingConstraint.isActive = false
-        titleStackExpandedTrailingConstraint.isActive = true
-        titleStackCollapsedTrailingConstraint.isActive = false
-        titleLabelExpandedWidthConstraint.isActive = true
-        onClose = nil
+        titleStack.spacing = UX.tabTitleSpacing
+        expandedLeadingConstraint.isActive = true
+        collapsedLeadingConstraint.isActive = false
+        expandedTrailingConstraint.isActive = true
+        collapsedTrailingConstraint.isActive = false
+        expandedTitleWidthConstraint.isActive = true
+        closeHandler = nil
     }
-    
-    func configure(tab: Tab, selected: Bool, layoutMode: LayoutMode, itemWidth: CGFloat) {
+
+    // MARK: - Configuration
+
+    func configure(tab: Tab, isSelected: Bool, layoutMode: LayoutMode, cellWidth: CGFloat) {
         let displayTitle = tab.title.isEmpty ? "Homepage" : tab.title
         titleLabel.text = displayTitle
-        faviconImageView.image = tab.favicon ?? Self.fallbackFavicon
-        contentView.backgroundColor = selected ? .systemGray6 : .systemGray5
-        titleLabel.textColor = selected ? .label : .secondaryLabel
-        faviconImageView.tintColor = selected ? .label : .secondaryLabel
-        let minimumVisibleTitle = "WWWWW" as NSString
+        faviconView.image = tab.favicon ?? Self.fallbackFavicon
+        contentView.backgroundColor = isSelected ? .systemGray6 : .systemGray5
+        titleLabel.textColor = isSelected ? .label : .secondaryLabel
+        faviconView.tintColor = isSelected ? .label : .secondaryLabel
+        let minimumVisibleTitle = UX.minimumVisibleTabTitle as NSString
         let minimumTitleWidth = minimumVisibleTitle.size(withAttributes: [.font: titleLabel.font as Any]).width
-        let estimatedTitleBudget = itemWidth - 58
-        let isTooNarrowForTitle = estimatedTitleBudget < minimumTitleWidth
+        let availableTitleWidth = cellWidth - UX.expandedTabTitleWidthInset
+        let isTooNarrowForTitle = availableTitleWidth < minimumTitleWidth
         let isCollapsed = layoutMode == .faviconOnly || isTooNarrowForTitle
-        
+
         titleLabel.isHidden = isCollapsed
-        titleStackView.spacing = isCollapsed ? 0 : 6
-        titleStackExpandedLeadingConstraint.isActive = !isCollapsed
-        titleStackCollapsedLeadingConstraint.isActive = isCollapsed
-        titleStackExpandedTrailingConstraint.isActive = !isCollapsed
-        titleStackCollapsedTrailingConstraint.isActive = isCollapsed
-        titleLabelExpandedWidthConstraint.isActive = !isCollapsed
-        closeButton.isHidden = isCollapsed || !selected
-        separatorView.isHidden = selected
+        titleStack.spacing = isCollapsed ? 0 : UX.tabTitleSpacing
+        expandedLeadingConstraint.isActive = !isCollapsed
+        collapsedLeadingConstraint.isActive = isCollapsed
+        expandedTrailingConstraint.isActive = !isCollapsed
+        collapsedTrailingConstraint.isActive = isCollapsed
+        expandedTitleWidthConstraint.isActive = !isCollapsed
+        closeButton.isHidden = isCollapsed || !isSelected
+        trailingSeparator.isHidden = isSelected
     }
-    
-    func containsCloseButton(point: CGPoint) -> Bool {
+
+    func containsCloseButton(at point: CGPoint) -> Bool {
         guard !closeButton.isHidden else {
             return false
         }
-        
+
         let pointInContentView = convert(point, to: contentView)
         return closeButton.frame.contains(pointInContentView)
     }
-    
-    @objc private func closeTapped() {
-        onClose?()
+
+    // MARK: - View Setup
+
+    private func configureAppearance() {
+        contentView.layer.cornerRadius = 0
+    }
+
+    private func configureHierarchy() {
+        contentView.addSubview(titleStack)
+        titleStack.addArrangedSubview(faviconView)
+        titleStack.addArrangedSubview(titleLabel)
+        contentView.addSubview(closeButton)
+        contentView.addSubview(trailingSeparator)
+    }
+
+    private func configureContentPriorities() {
+        faviconView.setContentCompressionResistancePriority(.required, for: .horizontal)
+        faviconView.setContentCompressionResistancePriority(.required, for: .vertical)
+        faviconView.setContentHuggingPriority(.required, for: .horizontal)
+    }
+
+    private func configureActions() {
+        closeButton.addTarget(self, action: #selector(handleCloseTap), for: .touchUpInside)
+    }
+
+    private func configureConstraints() {
+        expandedTrailingConstraint = titleStack.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -UX.expandedTabContentTrailingInset)
+        collapsedTrailingConstraint = titleStack.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -UX.collapsedTabContentHorizontalInset)
+        expandedLeadingConstraint = titleStack.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: UX.expandedTabContentLeadingInset)
+        collapsedLeadingConstraint = titleStack.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: UX.collapsedTabContentHorizontalInset)
+        expandedTitleWidthConstraint = titleLabel.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, constant: -UX.expandedTabTitleWidthInset)
+
+        NSLayoutConstraint.activate([
+            titleStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            titleStack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            expandedLeadingConstraint,
+            expandedTrailingConstraint,
+
+            faviconView.widthAnchor.constraint(equalToConstant: UX.tabFaviconSideLength),
+            faviconView.heightAnchor.constraint(equalToConstant: UX.tabFaviconSideLength),
+
+            expandedTitleWidthConstraint,
+
+            closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -UX.tabCloseButtonTrailingInset),
+            closeButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            closeButton.widthAnchor.constraint(equalToConstant: UX.tabCloseButtonSideLength),
+            closeButton.heightAnchor.constraint(equalToConstant: UX.tabCloseButtonSideLength),
+
+            trailingSeparator.topAnchor.constraint(equalTo: contentView.topAnchor),
+            trailingSeparator.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            trailingSeparator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            trailingSeparator.widthAnchor.constraint(equalToConstant: UX.tabSeparatorWidth),
+        ])
+    }
+
+    // MARK: - Actions
+
+    @objc private func handleCloseTap() {
+        closeHandler?()
     }
 }

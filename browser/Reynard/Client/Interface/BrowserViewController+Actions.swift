@@ -182,14 +182,14 @@ extension BrowserViewController {
     @objc func clearAllTabsTapped() {
         if browserUI.tabOverview.isPresented,
            browserUI.tabOverview.mode == .privateTabs {
-            pendingExpandedTabBarIndex = nil
+            browserUI.tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .private)
             return
         }
         
         if browserUI.tabOverview.isPresented,
            browserUI.tabOverview.mode == .regularTabs {
-            pendingExpandedTabBarIndex = nil
+            browserUI.tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .regular)
             return
         }
@@ -270,7 +270,7 @@ extension BrowserViewController: TabOverviewDataSource, TabOverviewDelegate {
     }
 
     func tabOverview(_ tabOverview: TabOverview, didCloseTabAt index: Int, mode: TabMode) {
-        pendingExpandedTabBarIndex = nil
+        browserUI.tabBar.setPendingExpansion(at: nil)
         tabManager.removeTab(at: index, mode: mode)
     }
 
