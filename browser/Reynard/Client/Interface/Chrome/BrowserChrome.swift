@@ -44,10 +44,15 @@ final class BrowserChrome: UIView {
 
     private let topToolbar: TopToolbar
     private let bottomToolbar = BottomToolbar()
+    private let overlayContentView = ChromeOverlayContentView()
 
     // MARK: - Constraints
 
     private var bottomConstraint: NSLayoutConstraint!
+    private var overlayWidthConstraint: NSLayoutConstraint!
+    private var overlayHeightConstraint: NSLayoutConstraint!
+    private var overlayTopConstraint: NSLayoutConstraint?
+    private var overlayCenterXConstraint: NSLayoutConstraint?
 
     // MARK: - State
 
@@ -72,6 +77,11 @@ final class BrowserChrome: UIView {
         // BrowserChrome spans the screen for edge-to-edge backgrounds, but its empty center must not block Gecko.
         let hitView = super.hitTest(point, with: event)
         return hitView === self ? nil : hitView
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        overlayWidthConstraint.constant = max(addressBar.bounds.width + 32, bounds.width * (3.0 / 5.0))
     }
 
     // MARK: - Anchors And Frames
@@ -103,6 +113,7 @@ final class BrowserChrome: UIView {
         self.state = state
         addressBar.updateLayout(position: state.position, chromeMode: state.mode)
         attachAddressBar(for: state.mode)
+        configureOverlayPositioningIfNeeded()
 
         // Presentation state has final authority over visibility; layout mode only selects visible geometry.
         let topState: TopToolbar.LayoutState
@@ -134,6 +145,55 @@ final class BrowserChrome: UIView {
     func setBottomOffset(_ offset: CGFloat) {
         bottomConstraint.constant = offset
         bottomToolbar.setVerticalOffset(offset)
+    }
+
+    // MARK: - Overlay Content
+
+    func setOverlayPresentation(_ presentation: ChromeOverlayContentView.PresentationState) {
+        overlayContentView.setPresentation(presentation)
+    }
+
+    func setOverlayHeightMode(_ heightMode: ChromeOverlayContentView.HeightMode) {
+        overlayContentView.setHeightMode(heightMode)
+        updateOverlayHeight()
+    }
+
+    func setOverlayContentHeight(_ contentHeight: CGFloat) {
+        overlayContentView.setContentHeight(contentHeight)
+        updateOverlayHeight()
+    }
+
+    func setOverlayAvailableContentHeight(_ availableContentHeight: CGFloat) {
+        overlayContentView.setAvailableContentHeight(availableContentHeight)
+        updateOverlayHeight()
+    }
+
+    func setOverlayController(
+        _ viewController: UIViewController,
+        for page: ChromeOverlayContentView.Page,
+        in parentViewController: UIViewController
+    ) {
+        overlayContentView.setController(viewController, for: page, in: parentViewController)
+    }
+
+    func removeOverlayController(for page: ChromeOverlayContentView.Page) {
+        overlayContentView.removeController(for: page)
+    }
+
+    private func updateOverlayHeight() {
+        overlayHeightConstraint.constant = overlayContentView.resolvedHeight
+    }
+
+    private func configureOverlayPositioningIfNeeded() {
+        guard overlayTopConstraint == nil, overlayCenterXConstraint == nil else {
+            return
+        }
+
+        let topConstraint = overlayContentView.topAnchor.constraint(equalTo: addressBar.bottomAnchor, constant: 12)
+        let centerXConstraint = overlayContentView.centerXAnchor.constraint(equalTo: addressBar.centerXAnchor)
+        NSLayoutConstraint.activate([topConstraint, centerXConstraint])
+        overlayTopConstraint = topConstraint
+        overlayCenterXConstraint = centerXConstraint
     }
 
     // MARK: - Address Bar
@@ -251,11 +311,14 @@ final class BrowserChrome: UIView {
     private func configureHierarchy() {
         addSubview(topToolbar)
         addSubview(bottomToolbar)
+        addSubview(overlayContentView)
     }
 
     private func configureConstraints() {
         // Each toolbar owns its safe-area extension. BrowserChrome only pins them to physical screen edges.
         bottomConstraint = bottomToolbar.bottomAnchor.constraint(equalTo: bottomAnchor)
+        overlayWidthConstraint = overlayContentView.widthAnchor.constraint(equalToConstant: 0)
+        overlayHeightConstraint = overlayContentView.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             topToolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             topToolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -264,6 +327,9 @@ final class BrowserChrome: UIView {
             bottomToolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             bottomToolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             bottomConstraint,
+
+            overlayWidthConstraint,
+            overlayHeightConstraint,
         ])
         bottomToolbar.configureTopAnchor(to: safeAreaLayoutGuide.bottomAnchor)
     }

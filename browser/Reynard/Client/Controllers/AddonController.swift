@@ -502,13 +502,6 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
     }
 }
 
-private extension NSLayoutConstraint {
-    func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
-        self.priority = priority
-        return self
-    }
-}
-
 private final class AddonPopupViewController: UIViewController, ContentDelegate, NavigationDelegate {
     private let popupURL: String
     private let popupTitle: String
