@@ -28,12 +28,6 @@ private enum UIAssociatedKeys {
     static var autocompleteDeleteText = 0
 }
 
-private extension NSLayoutConstraint {
-    func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
-        self.priority = priority
-        return self
-    }
-}
 extension BrowserViewController: AddressBarDelegate, AddressBarDataSource, AddressBarGesturesDelegate, BottomToolbarDelegate {
     var browserUI: BrowserUI {
         get {
