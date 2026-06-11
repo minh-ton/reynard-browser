@@ -8,6 +8,12 @@
 import UIKit
 
 final class OverlayContentView: UIView {
+    // MARK: - UX
+
+    private enum UX {
+        static let presentationAnimationDuration: TimeInterval = 0.12
+    }
+
     enum Page: Hashable {
         case homepage
         case search
@@ -26,7 +32,7 @@ final class OverlayContentView: UIView {
     // MARK: - Views
 
     private let homepageView = UIView()
-    private let searchView = UIView()
+    private let searchSuggestionView = UIView()
 
     // MARK: - Lifecycle
 
@@ -45,11 +51,11 @@ final class OverlayContentView: UIView {
     // MARK: - Configuration
 
     private func configureAppearance() {
-        backgroundColor = .clear
+        backgroundColor = .systemBackground
     }
 
     private func configureHierarchy() {
-        [homepageView, searchView].forEach { contentView in
+        [homepageView, searchSuggestionView].forEach { contentView in
             contentView.translatesAutoresizingMaskIntoConstraints = false
             contentView.backgroundColor = .clear
             addSubview(contentView)
@@ -57,7 +63,7 @@ final class OverlayContentView: UIView {
     }
 
     private func configureConstraints() {
-        [homepageView, searchView].forEach { contentView in
+        [homepageView, searchSuggestionView].forEach { contentView in
             NSLayoutConstraint.activate([
                 contentView.topAnchor.constraint(equalTo: topAnchor),
                 contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -69,19 +75,75 @@ final class OverlayContentView: UIView {
 
     // MARK: - State
 
-    func setPresentation(_ presentation: PresentationState) {
+    func setPresentation(
+        _ presentation: PresentationState,
+        animated: Bool,
+        completion: (() -> Void)? = nil
+    ) {
         guard self.presentation != presentation else {
+            completion?()
             return
         }
 
+        let previousPresentation = self.presentation
         self.presentation = presentation
-        applyPresentation()
+        applyPresentation(
+            previousPresentation: previousPresentation,
+            animated: animated,
+            completion: completion
+        )
     }
 
     private func applyPresentation() {
-        isHidden = presentation == .hidden
+        applyPresentation(previousPresentation: nil, animated: false, completion: nil)
+    }
+
+    private func applyPresentation(
+        previousPresentation: PresentationState?,
+        animated: Bool,
+        completion: (() -> Void)?
+    ) {
+        layer.removeAllAnimations()
         homepageView.isHidden = presentation != .visible(.homepage)
-        searchView.isHidden = presentation != .visible(.search)
+        searchSuggestionView.isHidden = presentation != .visible(.search)
+
+        switch presentation {
+        case .hidden:
+            let finish = { [weak self] in
+                guard let self else { return }
+                self.isHidden = true
+                self.removeController(for: self.visiblePage(from: previousPresentation))
+                completion?()
+            }
+
+            guard animated else {
+                alpha = 0
+                finish()
+                return
+            }
+
+            UIView.animate(withDuration: UX.presentationAnimationDuration, animations: {
+                self.alpha = 0
+            }) { _ in
+                finish()
+            }
+        case .visible:
+            isHidden = false
+            let animations = {
+                self.alpha = 1
+            }
+
+            guard animated else {
+                animations()
+                completion?()
+                return
+            }
+
+            alpha = 0
+            UIView.animate(withDuration: UX.presentationAnimationDuration, animations: animations) { _ in
+                completion?()
+            }
+        }
     }
 
     // MARK: - Hosted Content
@@ -109,6 +171,14 @@ final class OverlayContentView: UIView {
     }
 
     func removeController(for page: Page) {
+        removeController(for: Optional(page))
+    }
+
+    private func removeController(for page: Page?) {
+        guard let page else {
+            return
+        }
+
         guard let viewController = pageControllers.removeValue(forKey: page) else {
             return
         }
@@ -133,7 +203,15 @@ final class OverlayContentView: UIView {
         case .homepage:
             return homepageView
         case .search:
-            return searchView
+            return searchSuggestionView
         }
+    }
+
+    private func visiblePage(from presentation: PresentationState?) -> Page? {
+        guard case let .visible(page) = presentation else {
+            return nil
+        }
+
+        return page
     }
 }

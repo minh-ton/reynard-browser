@@ -142,7 +142,7 @@ final class TabOverviewPresentation {
             tabOverview.isHidden = false
             controller.view.bringSubviewToFront(tabOverview)
             controller.view.endEditing(true)
-            controller.setSearchFocused(false, animated: true)
+            controller.browserUI.searchOverlayCoordinator.setFocused(false, animated: true)
         }
         
         let finalProgress: CGFloat = visible ? 1 : 0
@@ -203,7 +203,7 @@ final class TabOverviewPresentation {
         tabOverview.bottomToolbar.alpha = 0
         controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.contentView)
         controller.view.endEditing(true)
-        controller.setSearchFocused(false, animated: false)
+        controller.browserUI.searchOverlayCoordinator.setFocused(false, animated: false)
         controller.view.layoutIfNeeded()
         
         dismissalTargetTabIndex = selectedIndex

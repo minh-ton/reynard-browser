@@ -1,0 +1,123 @@
+//
+//  URLUtils.swift
+//  Reynard
+//
+//  Created by Minh Ton on 11/6/26.
+//
+
+import Foundation
+
+enum URLUtils {
+    static func displayString(for url: URL) -> String {
+        strippedURLString(url.absoluteString, trimsTrailingSlash: true)
+    }
+
+    static func hostDisplayString(for url: URL) -> String {
+        let host = strippedHostString(from: url.host ?? "")
+        guard !host.isEmpty else {
+            return displayString(for: url)
+        }
+
+        return host
+    }
+
+    static func strippedURLString(
+        _ value: String,
+        trimsWWW: Bool = true,
+        trimsTrailingSlash: Bool = false
+    ) -> String {
+        let lowered = value.lowercased()
+        var strippedValue: String
+        if lowered.hasPrefix("https://") {
+            strippedValue = String(value.dropFirst("https://".count))
+        } else if lowered.hasPrefix("http://") {
+            strippedValue = String(value.dropFirst("http://".count))
+        } else if lowered.hasPrefix("ftp://") {
+            strippedValue = String(value.dropFirst("ftp://".count))
+        } else {
+            strippedValue = value
+        }
+
+        if trimsWWW, strippedValue.lowercased().hasPrefix("www.") {
+            strippedValue = String(strippedValue.dropFirst("www.".count))
+        }
+
+        return trimsTrailingSlash ? trimmedTrailingSlash(strippedValue) : strippedValue
+    }
+
+    static func strippedURLMatchString(from value: String) -> String {
+        strippedURLString(value, trimsTrailingSlash: false).lowercased()
+    }
+
+    static func strippedHostString(from value: String) -> String {
+        let lowered = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard lowered.hasPrefix("www.") else {
+            return lowered
+        }
+
+        return String(lowered.dropFirst("www.".count))
+    }
+
+    static func normalizedTitle(_ title: String, fallbackURL: URL) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+
+        let host = fallbackURL.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !host.isEmpty {
+            return host
+        }
+
+        return fallbackURL.absoluteString
+    }
+
+    static func autocompleteURLString(for query: String, url: URL) -> String? {
+        let loweredQuery = query.lowercased()
+        for value in autocompleteURLVariants(for: url) {
+            if value.lowercased().hasPrefix(loweredQuery) {
+                return value
+            }
+        }
+
+        return nil
+    }
+
+    static func domainCompletion(for query: String, url: URL) -> String? {
+        let displayURL = strippedURLString(url.absoluteString, trimsTrailingSlash: true)
+        let host = strippedHostString(from: url.host ?? "")
+        guard !host.isEmpty,
+              displayURL.lowercased().hasPrefix(host.lowercased()) else {
+            return nil
+        }
+
+        let hostWithDotPrefix = ".\(host)"
+        guard let range = hostWithDotPrefix.range(of: ".\(query)", options: .caseInsensitive),
+              let dotRange = hostWithDotPrefix[range.lowerBound...].firstIndex(of: ".") else {
+            return nil
+        }
+
+        let matchedHost = String(hostWithDotPrefix[hostWithDotPrefix.index(after: dotRange)...])
+        guard matchedHost.contains(".") else {
+            return nil
+        }
+
+        let path = String(displayURL.dropFirst(host.count))
+        return matchedHost + path
+    }
+
+    private static func autocompleteURLVariants(for url: URL) -> [String] {
+        let fullURL = trimmedTrailingSlash(url.absoluteString)
+        let schemeStrippedURL = strippedURLString(url.absoluteString, trimsWWW: false, trimsTrailingSlash: true)
+        let normalizedURL = strippedURLString(url.absoluteString, trimsTrailingSlash: true)
+        return [fullURL, schemeStrippedURL, normalizedURL]
+    }
+
+    private static func trimmedTrailingSlash(_ value: String) -> String {
+        if value.count > 1, value.hasSuffix("/") {
+            return String(value.dropLast())
+        }
+
+        return value
+    }
+}

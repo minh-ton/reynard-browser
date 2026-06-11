@@ -149,8 +149,12 @@ final class BrowserChrome: UIView {
 
     // MARK: - Overlay Content
 
-    func setOverlayPresentation(_ presentation: ChromeOverlayContentView.PresentationState) {
-        overlayContentView.setPresentation(presentation)
+    func setOverlayPresentation(
+        _ presentation: ChromeOverlayContentView.PresentationState,
+        animated: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        overlayContentView.setPresentation(presentation, animated: animated, completion: completion)
     }
 
     func setOverlayHeightMode(_ heightMode: ChromeOverlayContentView.HeightMode) {
@@ -185,10 +189,12 @@ final class BrowserChrome: UIView {
     }
 
     private func configureOverlayPositioningIfNeeded() {
-        guard overlayTopConstraint == nil, overlayCenterXConstraint == nil else {
+        guard overlayTopConstraint?.isActive != true,
+              overlayCenterXConstraint?.isActive != true else {
             return
         }
 
+        NSLayoutConstraint.deactivate([overlayTopConstraint, overlayCenterXConstraint].compactMap { $0 })
         let topConstraint = overlayContentView.topAnchor.constraint(equalTo: addressBar.bottomAnchor, constant: 12)
         let centerXConstraint = overlayContentView.centerXAnchor.constraint(equalTo: addressBar.centerXAnchor)
         NSLayoutConstraint.activate([topConstraint, centerXConstraint])
@@ -197,6 +203,10 @@ final class BrowserChrome: UIView {
     }
 
     // MARK: - Address Bar
+
+    func configureAddressBarSearchDelegate(_ delegate: AddressBarSearchDelegate) {
+        addressBar.configureSearchDelegate(delegate)
+    }
 
     func setAddressBarText(
         _ text: String?,
@@ -228,16 +238,18 @@ final class BrowserChrome: UIView {
         addressBar.setPreservesAutocompleteAfterResign(preserves)
     }
 
-    func setAddressBarAutocomplete(displayText: NSAttributedString, committedText: String, submissionText: String) {
-        addressBar.setAutocomplete(
-            displayText: displayText,
-            committedText: committedText,
-            submissionText: submissionText
-        )
+    func clearAddressBarAutocomplete() {
+        addressBar.clearAutocomplete()
     }
 
-    func clearAddressBarAutocomplete() { addressBar.clearAutocomplete() }
-    func addressBarText() -> String? { addressBar.getText() }
+    func recordAddressBarEdit(previousText: String, currentText: String, isDelete: Bool) {
+        addressBar.recordEditForAutocomplete(previousText: previousText, currentText: currentText, isDelete: isDelete)
+    }
+
+    func applyAddressBarAutocomplete(query: String, result: UserDataSearchResult?) {
+        addressBar.applySearchAutocomplete(query: query, result: result)
+    }
+
     func resetHorizontalTransition() { addressBar.resetHorizontalTransition() }
     func resignAddressBarFirstResponder() { _ = addressBar.resignFirstResponder() }
 

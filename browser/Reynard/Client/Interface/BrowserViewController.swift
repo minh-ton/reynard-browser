@@ -137,7 +137,6 @@ final class BrowserViewController: UIViewController {
         syncSidebarButtonItem()
         refreshAddressBar()
         browserUI.applyChromeLayout(animated: false)
-        updateSuggestionsLayoutIfNeeded()
         browserUI.tabOverview.invalidateCollectionLayouts()
         browserUI.tabBar.invalidateLayout()
         browserUI.tabOverview.refreshForCurrentOrientation()
@@ -165,7 +164,6 @@ final class BrowserViewController: UIViewController {
                     return
                 }
                 self.browserUI.applyChromeLayout(animated: false)
-                self.updateSuggestionsLayoutIfNeeded()
             }
         }
     }
@@ -274,7 +272,7 @@ final class BrowserViewController: UIViewController {
             if browserUI.tabOverview.isPresented {
                 browserUI.tabOverview.setPresented(false, animated: false)
             }
-            setSearchFocused(false, animated: false)
+            browserUI.searchOverlayCoordinator.setFocused(false, animated: false)
             view.endEditing(true)
         }
         

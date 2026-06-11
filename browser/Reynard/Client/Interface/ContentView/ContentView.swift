@@ -140,9 +140,22 @@ final class ContentView: UIView {
         ))
     }
 
+    func setOverlayPresentation(
+        _ presentation: OverlayContentView.PresentationState,
+        animated: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        self.state = State(
+            webVisibility: state.webVisibility,
+            overlayPresentation: presentation
+        )
+        webContentView.setVisibility(state.webVisibility)
+        overlayContentView.setPresentation(presentation, animated: animated, completion: completion)
+    }
+
     private func applyState() {
         webContentView.setVisibility(state.webVisibility)
-        overlayContentView.setPresentation(state.overlayPresentation)
+        overlayContentView.setPresentation(state.overlayPresentation, animated: false)
     }
 
     // MARK: - Session

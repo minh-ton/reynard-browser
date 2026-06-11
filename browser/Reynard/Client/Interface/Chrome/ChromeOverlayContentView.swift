@@ -8,6 +8,18 @@
 import UIKit
 
 final class ChromeOverlayContentView: UIView {
+    // MARK: - UX
+
+    private enum UX {
+        static let presentationAnimationDuration: TimeInterval = 0.12
+        static let maximumContentHeightRatio: CGFloat = 9.0 / 10.0
+        static let modernCornerRadius: CGFloat = 36
+        static let cornerRadius: CGFloat = 12
+        static let backgroundAlpha: CGFloat = 0.28
+        static let shadowOpacity: Float = 0.16
+        static let shadowOffset = CGSize(width: 0, height: 8)
+    }
+
     enum Page: Hashable {
         case homepage
         case search
@@ -33,8 +45,17 @@ final class ChromeOverlayContentView: UIView {
 
     // MARK: - Views
 
+    private let backgroundView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.contentView.backgroundColor = UIColor.systemBackground.withAlphaComponent(UX.backgroundAlpha)
+        view.layer.cornerCurve = .continuous
+        view.layer.masksToBounds = true
+        return view
+    }()
+
     private let homepageView = UIView()
-    private let searchView = UIView()
+    private let searchSuggestionView = UIView()
 
     // MARK: - Lifecycle
 
@@ -52,7 +73,9 @@ final class ChromeOverlayContentView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: 24).cgPath
+        let cornerRadius = overlayCornerRadius
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
+        backgroundView.layer.cornerRadius = cornerRadius
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -71,21 +94,22 @@ final class ChromeOverlayContentView: UIView {
         backgroundColor = .clear
         clipsToBounds = false
         layer.cornerCurve = .continuous
-        layer.shadowOpacity = 0.16
-        layer.shadowOffset = CGSize(width: 0, height: 8)
+        layer.shadowOpacity = UX.shadowOpacity
+        layer.shadowOffset = UX.shadowOffset
         updateShadowColor()
 
         if #available(iOS 26.0, *) {
-            layer.cornerRadius = 36
-            layer.shadowRadius = 36
+            layer.cornerRadius = UX.modernCornerRadius
+            layer.shadowRadius = UX.modernCornerRadius
         } else {
-            layer.cornerRadius = 12
-            layer.shadowRadius = 12
+            layer.cornerRadius = UX.cornerRadius
+            layer.shadowRadius = UX.cornerRadius
         }
     }
 
     private func configureHierarchy() {
-        [homepageView, searchView].forEach { contentView in
+        addSubview(backgroundView)
+        [homepageView, searchSuggestionView].forEach { contentView in
             contentView.translatesAutoresizingMaskIntoConstraints = false
             contentView.backgroundColor = .clear
             addSubview(contentView)
@@ -93,7 +117,14 @@ final class ChromeOverlayContentView: UIView {
     }
 
     private func configureConstraints() {
-        [homepageView, searchView].forEach { contentView in
+        NSLayoutConstraint.activate([
+            backgroundView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+
+        [homepageView, searchSuggestionView].forEach { contentView in
             NSLayoutConstraint.activate([
                 contentView.topAnchor.constraint(equalTo: topAnchor),
                 contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -107,15 +138,33 @@ final class ChromeOverlayContentView: UIView {
         layer.shadowColor = (traitCollection.userInterfaceStyle == .dark ? UIColor.white : .black).cgColor
     }
 
+    private var overlayCornerRadius: CGFloat {
+        if #available(iOS 26.0, *) {
+            return UX.modernCornerRadius
+        }
+
+        return UX.cornerRadius
+    }
+
     // MARK: - State
 
-    func setPresentation(_ presentation: PresentationState) {
+    func setPresentation(
+        _ presentation: PresentationState,
+        animated: Bool,
+        completion: (() -> Void)? = nil
+    ) {
         guard self.presentation != presentation else {
+            completion?()
             return
         }
 
+        let previousPresentation = self.presentation
         self.presentation = presentation
-        applyPresentation()
+        applyPresentation(
+            previousPresentation: previousPresentation,
+            animated: animated,
+            completion: completion
+        )
     }
 
     func setHeightMode(_ heightMode: HeightMode) {
@@ -131,7 +180,7 @@ final class ChromeOverlayContentView: UIView {
     }
 
     var resolvedHeight: CGFloat {
-        let maximumHeight = availableContentHeight * (9.0 / 10.0)
+        let maximumHeight = availableContentHeight * UX.maximumContentHeightRatio
         switch heightMode {
         case .default:
             return maximumHeight
@@ -141,9 +190,55 @@ final class ChromeOverlayContentView: UIView {
     }
 
     private func applyPresentation() {
-        isHidden = presentation == .hidden
+        applyPresentation(previousPresentation: nil, animated: false, completion: nil)
+    }
+
+    private func applyPresentation(
+        previousPresentation: PresentationState?,
+        animated: Bool,
+        completion: (() -> Void)?
+    ) {
+        layer.removeAllAnimations()
         homepageView.isHidden = presentation != .visible(.homepage)
-        searchView.isHidden = presentation != .visible(.search)
+        searchSuggestionView.isHidden = presentation != .visible(.search)
+
+        switch presentation {
+        case .hidden:
+            let finish = { [weak self] in
+                guard let self else { return }
+                self.isHidden = true
+                self.removeController(for: self.visiblePage(from: previousPresentation))
+                completion?()
+            }
+
+            guard animated else {
+                alpha = 0
+                finish()
+                return
+            }
+
+            UIView.animate(withDuration: UX.presentationAnimationDuration, animations: {
+                self.alpha = 0
+            }) { _ in
+                finish()
+            }
+        case .visible:
+            isHidden = false
+            let animations = {
+                self.alpha = 1
+            }
+
+            guard animated else {
+                animations()
+                completion?()
+                return
+            }
+
+            alpha = 0
+            UIView.animate(withDuration: UX.presentationAnimationDuration, animations: animations) { _ in
+                completion?()
+            }
+        }
     }
 
     // MARK: - Hosted Content
@@ -171,6 +266,14 @@ final class ChromeOverlayContentView: UIView {
     }
 
     func removeController(for page: Page) {
+        removeController(for: Optional(page))
+    }
+
+    private func removeController(for page: Page?) {
+        guard let page else {
+            return
+        }
+
         guard let viewController = pageControllers.removeValue(forKey: page) else {
             return
         }
@@ -195,7 +298,15 @@ final class ChromeOverlayContentView: UIView {
         case .homepage:
             return homepageView
         case .search:
-            return searchView
+            return searchSuggestionView
         }
+    }
+
+    private func visiblePage(from presentation: PresentationState?) -> Page? {
+        guard case let .visible(page) = presentation else {
+            return nil
+        }
+
+        return page
     }
 }

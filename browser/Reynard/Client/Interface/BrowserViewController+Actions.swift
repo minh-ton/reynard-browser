@@ -70,7 +70,7 @@ extension BrowserViewController {
     
     func createNewTab() {
         browserUI.browserChrome.clearAddressBarAutocomplete()
-        restoreSearchChrome(clearSuggestions: true)
+        browserUI.searchOverlayCoordinator.endSearchSession()
         view.endEditing(true)
         
         if browserUI.tabOverview.isPresented {
@@ -85,16 +85,6 @@ extension BrowserViewController {
             _ = createTab(selecting: true)
             setTabOverviewVisible(false, animated: true)
         }
-    }
-    
-    func dismissKeyboard() {
-        if isSearchScrollMode && searchViewController.parent != nil {
-            restoreSearchChrome(clearSuggestions: true)
-            return
-        }
-        
-        browserUI.browserChrome.clearAddressBarAutocomplete()
-        view.endEditing(true)
     }
     
     func goBack() {

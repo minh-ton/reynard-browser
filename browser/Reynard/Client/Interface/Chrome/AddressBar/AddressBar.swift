@@ -8,12 +8,7 @@
 import UIKit
 
 protocol AddressBarDelegate: AnyObject {
-    func addressBarDidSubmit(_ searchTerm: String)
-    func addressBarDidBeginEditing(_ addressBar: AddressBar)
-    func addressBarDidEndEditing(_ addressBar: AddressBar)
-    func addressBar(_ addressBar: AddressBar, didChangeText text: String, previousText: String, isDelete: Bool)
     func addressBarDidTapTrailingButton(_ addressBar: AddressBar)
-    func addressBarDidTapDismiss(_ addressBar: AddressBar)
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
@@ -93,6 +88,7 @@ final class AddressBar: UIView {
     // MARK: - State
 
     private weak var delegate: AddressBarDelegate?
+    private weak var searchDelegate: AddressBarSearchDelegate?
     private weak var dataSource: AddressBarDataSource?
 
     // These states are intentionally orthogonal: loading, editing, and placement can change independently.
@@ -101,6 +97,7 @@ final class AddressBar: UIView {
     private var position: ChromePosition = .bottom
     private var chromeMode: ChromeMode = .phone
     private var autocompleteState: AutocompleteState = .none
+    private var autocompleteDeletedText: String?
 
     // Committed page content remains separate from textField.text, which may contain an in-progress query.
     private var currentText: String?
@@ -276,6 +273,10 @@ final class AddressBar: UIView {
         gestures.delegate = delegate as? AddressBarGesturesDelegate
     }
 
+    func configureSearchDelegate(_ searchDelegate: AddressBarSearchDelegate) {
+        self.searchDelegate = searchDelegate
+    }
+
     func setText(
         _ text: String?,
         locationText: String? = nil,
@@ -287,9 +288,12 @@ final class AddressBar: UIView {
         currentLocationText = locationText?.trimmingCharacters(in: .whitespacesAndNewlines)
         currentLocationTitle = locationTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
         canShowBarMenu = showsBarMenu
-        if !textField.isFirstResponder {
-            textField.text = currentText
+        guard editingState == .inactive else {
+            applyState()
+            return
         }
+
+        textField.text = currentText
         clearAutocomplete()
         applyState()
     }
@@ -369,7 +373,7 @@ final class AddressBar: UIView {
 
     // MARK: - Text And Autocomplete
     
-    func getText() -> String? {
+    private var editingText: String? {
         textField.text
     }
     
@@ -383,6 +387,33 @@ final class AddressBar: UIView {
         autocompleteLabel.attributedText = displayText
         autocompleteLabel.isHidden = false
         updateAutocompletePresentation()
+    }
+
+    func recordEditForAutocomplete(previousText: String, currentText: String, isDelete: Bool) {
+        autocompleteDeletedText = isDelete && previousText.count > currentText.count ? currentText : nil
+    }
+
+    func applySearchAutocomplete(query: String, result: UserDataSearchResult?) {
+        guard isEditingText else {
+            clearAutocomplete()
+            return
+        }
+
+        let currentText = editingText ?? ""
+        guard !query.isEmpty,
+              currentText == query,
+              autocompleteDeletedText != query,
+              let result,
+              let autocomplete = searchAutocompletePresentation(for: result, query: query) else {
+            clearAutocomplete()
+            return
+        }
+
+        setAutocomplete(
+            displayText: autocomplete.displayText,
+            committedText: autocomplete.committedText,
+            submissionText: autocomplete.submissionText
+        )
     }
     
     func clearAutocomplete() {
@@ -759,7 +790,7 @@ final class AddressBar: UIView {
         clearAutocomplete()
         let currentText = textField.text ?? ""
         lastEditingText = currentText
-        delegate?.addressBar(self, didChangeText: currentText, previousText: previousText, isDelete: lastEditWasDelete)
+        searchDelegate?.addressBar(self, didChangeText: currentText, previousText: previousText, isDelete: lastEditWasDelete)
         lastEditWasDelete = false
         if textField.isFirstResponder {
             applyState()
@@ -773,7 +804,7 @@ final class AddressBar: UIView {
 
     @objc
     private func handleDismissButtonTap() {
-        delegate?.addressBarDidTapDismiss(self)
+        searchDelegate?.addressBarDidTapDismiss(self)
     }
     
     @objc
@@ -829,6 +860,62 @@ final class AddressBar: UIView {
         autocompleteState = .focusPreview
         updateAutocompletePresentation()
     }
+
+    private func searchAutocompletePresentation(
+        for result: UserDataSearchResult,
+        query: String
+    ) -> (displayText: NSAttributedString, committedText: String, submissionText: String)? {
+        let title = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let strippedURL = URLUtils.strippedURLString(result.url.absoluteString, trimsTrailingSlash: true)
+        let queryAttributes: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.label]
+        let completionAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor.label,
+            .backgroundColor: UIColor.systemGray4
+        ]
+        let suffixAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor.systemBlue,
+            .backgroundColor: UIColor.systemGray4
+        ]
+
+        if title.hasPrefix(query) {
+            let attributed = NSMutableAttributedString(
+                string: String(title.prefix(query.count)),
+                attributes: queryAttributes
+            )
+            let completion = String(title.dropFirst(query.count))
+            if !completion.isEmpty {
+                attributed.append(NSAttributedString(string: completion, attributes: completionAttributes))
+            }
+            attributed.append(NSAttributedString(string: " — \(strippedURL)", attributes: suffixAttributes))
+            return (attributed, strippedURL, result.url.absoluteString)
+        }
+
+        let strippedQuery = URLUtils.strippedURLMatchString(from: query)
+        let strippedURLMatchValue = URLUtils.strippedURLMatchString(from: result.url.absoluteString)
+        guard !strippedQuery.isEmpty else {
+            return nil
+        }
+
+        let completedURL: String
+        if strippedURLMatchValue.hasPrefix(strippedQuery) {
+            completedURL = URLUtils.autocompleteURLString(for: query, url: result.url) ?? strippedURL
+        } else if let matchedDomain = URLUtils.domainCompletion(for: strippedQuery, url: result.url) {
+            completedURL = matchedDomain
+        } else {
+            return nil
+        }
+
+        let attributed = NSMutableAttributedString(
+            string: String(query.prefix(query.count)),
+            attributes: queryAttributes
+        )
+        let completion = String(completedURL.dropFirst(query.count))
+        if !completion.isEmpty {
+            attributed.append(NSAttributedString(string: completion, attributes: completionAttributes))
+        }
+        attributed.append(NSAttributedString(string: " — \(title)", attributes: suffixAttributes))
+        return (attributed, completedURL, result.url.absoluteString)
+    }
     
     private func clearFocusPreview() {
         autocompleteState = .none
@@ -877,7 +964,7 @@ extension AddressBar: UITextFieldDelegate {
             }
             let currentText = self.textField.text ?? ""
             lastEditingText = currentText
-            delegate?.addressBar(self, didChangeText: currentText, previousText: previousText, isDelete: lastEditWasDelete)
+            searchDelegate?.addressBar(self, didChangeText: currentText, previousText: previousText, isDelete: lastEditWasDelete)
             lastEditWasDelete = false
             if self.textField.isFirstResponder {
                 applyState()
@@ -910,7 +997,7 @@ extension AddressBar: UITextFieldDelegate {
             return false
         }
         
-        delegate?.addressBarDidSubmit(searchText)
+        searchDelegate?.addressBarDidSubmit(searchText)
         return true
     }
     
@@ -930,7 +1017,7 @@ extension AddressBar: UITextFieldDelegate {
             updateAutocompletePresentation()
         }
         applyState()
-        delegate?.addressBarDidBeginEditing(self)
+        searchDelegate?.addressBarDidBeginEditing(self)
         if !preservesAutocomplete {
             showFocusPreview()
         }
@@ -951,7 +1038,7 @@ extension AddressBar: UITextFieldDelegate {
         currentLocationTitle = nil
         canShowBarMenu = false
         applyState()
-        delegate?.addressBarDidEndEditing(self)
+        searchDelegate?.addressBarDidEndEditing(self)
     }
 }
 

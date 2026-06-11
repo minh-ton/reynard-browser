@@ -393,7 +393,7 @@ final class AddressBarGestures: NSObject {
             return
         }
         
-        if controller.isSearchFocused && recognizer.state == .began {
+        if controller.browserUI.searchOverlayCoordinator.isFocused && recognizer.state == .began {
             return
         }
         
@@ -415,7 +415,7 @@ final class AddressBarGestures: NSObject {
                 }
                 
                 if abs(translation.x) > abs(translation.y) {
-                    let newMode: SearchPanMode = (!controller.browserUI.tabOverview.isPresented && !controller.isSearchFocused) ? .horizontalTabs : .blocked
+                    let newMode: SearchPanMode = (!controller.browserUI.tabOverview.isPresented && !controller.browserUI.searchOverlayCoordinator.isFocused) ? .horizontalTabs : .blocked
                     searchPanMode = newMode
                     if newMode == .horizontalTabs {
                         swipeHaptic.impactOccurred()
@@ -445,7 +445,7 @@ final class AddressBarGestures: NSObject {
     @objc private func handleSearchSwipeUp(_ recognizer: UISwipeGestureRecognizer) {
         guard recognizer.state == .ended,
               !controller.usesPadChrome,
-              !controller.isSearchFocused,
+              !controller.browserUI.searchOverlayCoordinator.isFocused,
               !controller.browserUI.tabOverview.isPresented,
               !controller.browserUI.tabOverview.isTransitionRunning else {
             return
