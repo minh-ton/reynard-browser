@@ -331,6 +331,14 @@ final class BrowserViewController: UIViewController {
         animated: Bool,
         duration: TimeInterval = UX.layoutAnimationDuration
     ) {
+        if shouldEmbedSidebarContainer {
+            embeddedSplitController?.contentBrowserViewController.updateBrowserLayout(
+                animated: animated,
+                duration: duration
+            )
+            return
+        }
+
         browserLayout = resolveBrowserLayout()
         applyBrowserLayout()
         searchOverlayCoordinator.updateLayoutIfNeeded()

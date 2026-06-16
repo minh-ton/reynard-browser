@@ -114,15 +114,42 @@ final class ContentView: UIView {
         topAnchor: NSLayoutYAxisAnchor,
         bottomAnchor: NSLayoutYAxisAnchor
     ) {
+        let nextTopConstraint = self.topAnchor.constraint(equalTo: topAnchor)
+        let nextBottomConstraint = self.bottomAnchor.constraint(equalTo: bottomAnchor)
+        guard canActivateConstraints([nextTopConstraint, nextBottomConstraint]) else {
+            return
+        }
+
         topConstraint?.isActive = false
         bottomConstraint?.isActive = false
 
-        let nextTopConstraint = self.topAnchor.constraint(equalTo: topAnchor)
-        let nextBottomConstraint = self.bottomAnchor.constraint(equalTo: bottomAnchor)
         NSLayoutConstraint.activate([nextTopConstraint, nextBottomConstraint])
         topConstraint = nextTopConstraint
         bottomConstraint = nextBottomConstraint
         updateLayoutOffsets()
+    }
+
+    private func canActivateConstraints(_ constraints: [NSLayoutConstraint]) -> Bool {
+        constraints.allSatisfy { constraint in
+            guard let firstView = owningView(for: constraint.firstItem),
+                  let secondView = owningView(for: constraint.secondItem) else {
+                return true
+            }
+
+            return firstView.hasCommonAncestor(with: secondView)
+        }
+    }
+
+    private func owningView(for item: Any?) -> UIView? {
+        if let view = item as? UIView {
+            return view
+        }
+
+        if let layoutGuide = item as? UILayoutGuide {
+            return layoutGuide.owningView
+        }
+
+        return nil
     }
 
     private func updateLayoutOffsets() {
@@ -313,5 +340,27 @@ final class ContentView: UIView {
 
     func removeOverlayController(for page: OverlayContentView.Page) {
         overlayContentView.removeController(for: page)
+    }
+}
+
+private extension UIView {
+    func hasCommonAncestor(with view: UIView) -> Bool {
+        var ancestors = Set<ObjectIdentifier>()
+        var currentView: UIView? = self
+
+        while let view = currentView {
+            ancestors.insert(ObjectIdentifier(view))
+            currentView = view.superview
+        }
+
+        currentView = view
+        while let view = currentView {
+            if ancestors.contains(ObjectIdentifier(view)) {
+                return true
+            }
+            currentView = view.superview
+        }
+
+        return false
     }
 }

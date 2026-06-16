@@ -139,7 +139,7 @@ final class BottomToolbar: UIView {
             backgroundColor = state == .focused ? .clear : .systemGray6
 
             let isCompact = state == .compact
-            standardButtonsTopConstraint.isActive = !isCompact
+            standardButtonsTopConstraint?.isActive = !isCompact
             compactButtonsTopConstraint.isActive = isCompact
             buttonsHeightConstraint.constant = state == .focused ? 0 : UX.bottomToolbarButtonStackHeight
             buttons.alpha = state == .focused ? 0 : 1
