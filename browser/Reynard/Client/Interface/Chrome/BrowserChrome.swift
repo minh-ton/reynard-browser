@@ -34,6 +34,17 @@ final class BrowserChrome: UIView {
         let sidebarVisible: Bool
     }
 
+    // MARK: - Actions
+
+    var onSidebar: (() -> Void)?
+    var onBack: (() -> Void)?
+    var onForward: (() -> Void)?
+    var onShare: (() -> Void)?
+    var onLibrary: (() -> Void)?
+    var onDownloads: (() -> Void)?
+    var onNewTab: (() -> Void)?
+    var onTabOverview: (() -> Void)?
+
     // MARK: - Views
 
     private let addressBar: AddressBar = {
@@ -61,12 +72,13 @@ final class BrowserChrome: UIView {
     // MARK: - Lifecycle
 
     init(controller: BrowserViewController) {
-        topToolbar = TopToolbar(controller: controller)
-        bottomToolbar = BottomToolbar(controller: controller)
+        topToolbar = TopToolbar()
+        bottomToolbar = BottomToolbar()
         super.init(frame: .zero)
         configureAppearance()
         configureHierarchy()
         configureConstraints()
+        configureToolbarActions()
         addressBar.configure(controller: controller)
     }
 
@@ -284,6 +296,26 @@ final class BrowserChrome: UIView {
 
     func syncSidebarButton(splitViewController: UISplitViewController?) {
         topToolbar.syncSidebarButton(splitViewController: splitViewController)
+    }
+
+    // MARK: - Actions
+
+    private func configureToolbarActions() {
+        topToolbar.onSidebar = { [weak self] in self?.onSidebar?() }
+        topToolbar.onBack = { [weak self] in self?.onBack?() }
+        topToolbar.onForward = { [weak self] in self?.onForward?() }
+        topToolbar.onShare = { [weak self] in self?.onShare?() }
+        topToolbar.onLibrary = { [weak self] in self?.onLibrary?() }
+        topToolbar.onDownloads = { [weak self] in self?.onDownloads?() }
+        topToolbar.onNewTab = { [weak self] in self?.onNewTab?() }
+        topToolbar.onTabOverview = { [weak self] in self?.onTabOverview?() }
+
+        bottomToolbar.onBack = { [weak self] in self?.onBack?() }
+        bottomToolbar.onForward = { [weak self] in self?.onForward?() }
+        bottomToolbar.onShare = { [weak self] in self?.onShare?() }
+        bottomToolbar.onLibrary = { [weak self] in self?.onLibrary?() }
+        bottomToolbar.onDownloads = { [weak self] in self?.onDownloads?() }
+        bottomToolbar.onTabOverview = { [weak self] in self?.onTabOverview?() }
     }
 
     // MARK: - Transitions

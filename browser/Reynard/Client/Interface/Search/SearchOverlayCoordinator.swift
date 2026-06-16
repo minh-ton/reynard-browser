@@ -51,7 +51,7 @@ final class SearchOverlayCoordinator {
     var chromeState: BrowserChrome.SearchState {
         guard isFocused else { return .inactive }
         guard preservesAddressBarText else { return .focused }
-        return controller.browserLayout.overlayContentPlacement == .detached
+        return controller.browserLayout.overlayHost == .detached
             ? .scrollingDetachedSuggestions
             : .scrollingEmbeddedSuggestions
     }
@@ -149,7 +149,7 @@ final class SearchOverlayCoordinator {
             return
         }
 
-        let targetHost = resolvedHost
+        let targetHost = controller.browserLayout.overlayHost
         guard overlayCoordinator.host(for: .search) != targetHost else {
             configureOverlay()
             return
@@ -177,15 +177,8 @@ final class SearchOverlayCoordinator {
 
     // MARK: - Layout
 
-    private var resolvedHost: OverlayCoordinator.Host {
-        switch controller.browserLayout.overlayContentPlacement {
-        case .embedded: return .embedded
-        case .detached: return .detached
-        }
-    }
-
     private func show(animated: Bool) {
-        let targetHost = resolvedHost
+        let targetHost = controller.browserLayout.overlayHost
         overlayCoordinator.present(
             searchViewController,
             for: .search,
@@ -197,7 +190,7 @@ final class SearchOverlayCoordinator {
     }
 
     private func configureOverlay() {
-        searchViewController.setChromeMode(controller.browserLayout.browserChromeMode)
+        searchViewController.setChromeMode(controller.browserLayout.chromeMode)
         controller.browserChrome.setOverlayHeightMode(.content)
         controller.browserChrome.setOverlayAvailableContentHeight(controller.contentView.bounds.height)
     }
@@ -219,7 +212,7 @@ final class SearchOverlayCoordinator {
     }
 
     func tabOverviewWillPresent() {
-        if controller.browserLayout.overlayContentPlacement == .detached {
+        if controller.browserLayout.overlayHost == .detached {
             hideNow()
         }
     }

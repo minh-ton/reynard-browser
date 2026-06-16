@@ -93,7 +93,7 @@ final class AddressBarGestures: NSObject {
     }
 
     func animateAutomaticNewTabTransition(completion: @escaping () -> Void) {
-        guard controller.browserLayout.browserChromeMode == .phone,
+        guard controller.browserLayout.chromeMode == .phone,
               !controller.tabOverview.isPresented,
               !controller.tabOverview.isTransitionRunning else {
             DispatchQueue.main.async(execute: completion)
@@ -120,7 +120,7 @@ final class AddressBarGestures: NSObject {
     }
 
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
-        guard controller.browserLayout.browserChromeMode == .phone,
+        guard controller.browserLayout.chromeMode == .phone,
               !controller.tabOverview.isPresented,
               !controller.tabOverview.isTransitionRunning else {
             DispatchQueue.main.async(execute: completion)
@@ -338,7 +338,7 @@ final class AddressBarGestures: NSObject {
         let width = controller.contentView.bounds.width
         let shouldSwitch = horizontalTargetIndex != nil && (abs(translationX) > width * UX.addressBarTabSwitchCompletionDistanceRatio || abs(velocityX) > UX.addressBarTabSwitchVelocityThreshold)
         // A leftward edge swipe from the final phone tab is the only gesture that creates a tab.
-        let shouldCreateNewTab = controller.browserLayout.browserChromeMode == .phone
+        let shouldCreateNewTab = controller.browserLayout.chromeMode == .phone
         && horizontalTargetIndex == nil
         && controller.tabManager.selectedTabIndex == controller.tabManager.activeTabs.count - 1
         && horizontalDirection == 1
@@ -377,7 +377,7 @@ final class AddressBarGestures: NSObject {
     // MARK: - Gesture Actions
     
     @objc private func handleSearchPan(_ recognizer: UIPanGestureRecognizer) {
-        if controller.browserLayout.browserChromeMode != .phone {
+        if controller.browserLayout.chromeMode != .phone {
             resetHorizontalTransition()
             searchPanMode = .blocked
             return
@@ -434,7 +434,7 @@ final class AddressBarGestures: NSObject {
     
     @objc private func handleSearchSwipeUp(_ recognizer: UISwipeGestureRecognizer) {
         guard recognizer.state == .ended,
-              controller.browserLayout.browserChromeMode == .phone,
+              controller.browserLayout.chromeMode == .phone,
               !controller.searchOverlayCoordinator.isFocused,
               !controller.tabOverview.isPresented,
               !controller.tabOverview.isTransitionRunning else {

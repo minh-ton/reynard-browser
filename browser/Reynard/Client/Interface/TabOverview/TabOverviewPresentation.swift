@@ -76,7 +76,7 @@ final class TabOverviewPresentation {
         let availableWidth = collectionView.bounds.width - horizontalInsets
         let tabViewAspectRatio = max(UX.cardMinimumPreviewAspectRatio, browser.tabPreviewAspectRatio())
         
-        let targetWidth = browser.browserLayout.browserChromeMode == .phone
+        let targetWidth = browser.browserLayout.chromeMode == .phone
             ? UX.phoneCardTargetWidth
             : UX.padCardTargetWidth
         let computedColumns = Int((availableWidth + UX.cardCollectionItemSpacing) / (targetWidth + UX.cardCollectionItemSpacing))
@@ -124,7 +124,7 @@ final class TabOverviewPresentation {
         }
         
         if animated {
-            if browser.browserLayout.browserChromeMode != .phone {
+            if browser.browserLayout.chromeMode != .phone {
                 visible ? presentOnPad() : dismissOnPad()
             } else {
                 visible ? presentOnPhone() : dismissOnPhone()
@@ -174,7 +174,7 @@ final class TabOverviewPresentation {
         let pageScale = 1 - (UX.presentedPageScaleReduction * clamped)
         browser.contentView.setTransitionTransform(CGAffineTransform(scaleX: pageScale, y: pageScale))
         
-        if browser.browserLayout.browserChromeMode != .phone {
+        if browser.browserLayout.chromeMode != .phone {
             browser.browserChrome.setChromeTransition(topAlpha: 1 - clamped, bottomAlpha: 1, bottomTranslationY: 0)
         } else {
             browser.browserChrome.setChromeTransition(

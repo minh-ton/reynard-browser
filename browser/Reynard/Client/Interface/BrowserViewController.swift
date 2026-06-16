@@ -9,26 +9,26 @@ import GeckoView
 import UIKit
 
 struct BrowserLayout: Equatable {
-    enum Orientation: Equatable {
+    enum ViewportOrientation: Equatable {
         case portrait
         case landscape
     }
 
     let interfaceIdiom: UIUserInterfaceIdiom
-    let orientation: Orientation
-    let browserChromeMode: browserChromeMode
-    let browserChromePosition: browserChromePosition
+    let orientation: ViewportOrientation
+    let chromeMode: browserChromeMode
+    let chromePosition: browserChromePosition
     let tabOverviewToolbarPosition: TabOverview.ToolbarPosition
-    let overlayContentPlacement: SearchOverlayPlacement
+    let overlayHost: OverlayCoordinator.Host
 
     static func initial(interfaceIdiom: UIUserInterfaceIdiom) -> BrowserLayout {
         BrowserLayout(
             interfaceIdiom: interfaceIdiom,
             orientation: .portrait,
-            browserChromeMode: interfaceIdiom == .pad ? .pad : .phone,
-            browserChromePosition: .bottom,
+            chromeMode: interfaceIdiom == .pad ? .pad : .phone,
+            chromePosition: .bottom,
             tabOverviewToolbarPosition: interfaceIdiom == .pad ? .top : .bottom,
-            overlayContentPlacement: interfaceIdiom == .pad ? .detached : .embedded
+            overlayHost: interfaceIdiom == .pad ? .detached : .embedded
         )
     }
 }
@@ -51,9 +51,9 @@ final class BrowserViewController: UIViewController {
     // MARK: - State
 
     lazy var tabManager: TabManager = TabManagerImplementation(delegate: self)
-    private var orientationBeforeFullscreen: UIInterfaceOrientation?
-    weak var activeFullscreenSession: GeckoSession?
-    private let canHostSidebar: Bool
+    private var preFullscreenOrientation: UIInterfaceOrientation?
+    weak var fullscreenSession: GeckoSession?
+    private let allowsSidebarHosting: Bool
     private(set) var browserLayout = BrowserLayout.initial(
         interfaceIdiom: UIDevice.current.userInterfaceIdiom
     )
@@ -68,21 +68,23 @@ final class BrowserViewController: UIViewController {
         overlayCoordinator: overlayCoordinator
     )
     lazy var contextMenuCoordinator = ContextMenuCoordinator(browserViewController: self)
+    lazy var addonController = AddonController(controller: self)
+    lazy var downloadsCoordinator = DownloadsCoordinator(browserViewController: self)
     let tabBar = TabBar()
     let tabOverview = TabOverview()
     lazy var sidebarCoordinator = SidebarCoordinator(
         browserViewController: self,
-        canHostSidebar: canHostSidebar
+        canHostSidebar: allowsSidebarHosting
     )
     
-    private(set) var isInFullscreenMedia = false {
+    private(set) var isShowingFullscreenMedia = false {
         didSet {
             setNeedsStatusBarAppearanceUpdate()
         }
     }
     
     override var prefersStatusBarHidden: Bool {
-        return isInFullscreenMedia
+        return isShowingFullscreenMedia
     }
     
     override var childForStatusBarHidden: UIViewController? {
@@ -90,7 +92,7 @@ final class BrowserViewController: UIViewController {
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        if isInFullscreenMedia && browserLayout.interfaceIdiom == .phone {
+        if isShowingFullscreenMedia && browserLayout.interfaceIdiom == .phone {
             return .landscape
         }
 
@@ -98,7 +100,7 @@ final class BrowserViewController: UIViewController {
     }
 
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
-        if isInFullscreenMedia && browserLayout.interfaceIdiom == .phone {
+        if isShowingFullscreenMedia && browserLayout.interfaceIdiom == .phone {
             return .landscapeRight
         }
 
@@ -106,7 +108,7 @@ final class BrowserViewController: UIViewController {
     }
     
     init(canHostSidebar: Bool = true) {
-        self.canHostSidebar = canHostSidebar
+        self.allowsSidebarHosting = canHostSidebar
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -115,7 +117,7 @@ final class BrowserViewController: UIViewController {
     }
     
     deinit {
-        if isInFullscreenMedia {
+        if isShowingFullscreenMedia {
             UIApplication.shared.isIdleTimerDisabled = false
         }
         NotificationCenter.default.removeObserver(self)
@@ -129,11 +131,11 @@ final class BrowserViewController: UIViewController {
             return
         }
         
+        configureBrowserInterface()
         observeNotifications()
         contextMenuCoordinator.configure()
-        observeDownloadState()
-        syncDownloadButtonState()
-        configureBrowserInterface()
+        downloadsCoordinator.startObservingStore()
+        downloadsCoordinator.syncToolbarButtonState()
         tabOverview.restoreMode(TabOverview.Mode(tabMode: TabManagementStore.shared.restoredTabMode()))
         syncBrowserNavigationChrome(animated: false)
         browserChrome.syncSidebarButton(splitViewController: splitViewController)
@@ -175,7 +177,7 @@ final class BrowserViewController: UIViewController {
         performContentLifecycle {
             syncBrowserNavigationChrome(animated: false)
             browserChrome.syncSidebarButton(splitViewController: splitViewController)
-            syncDownloadButtonState()
+            downloadsCoordinator.syncToolbarButtonState()
             updateBrowserLayout(animated: false)
         }
     }
@@ -222,6 +224,7 @@ final class BrowserViewController: UIViewController {
 
     private func configureBrowserInterface() {
         browserChrome.configureAddressBarSearchDelegate(searchOverlayCoordinator)
+        configureBrowserChromeActions()
         tabBar.tabManager = tabManager
         tabOverview.configure(browserViewController: self)
 
@@ -252,6 +255,33 @@ final class BrowserViewController: UIViewController {
         ])
     }
 
+    private func configureBrowserChromeActions() {
+        browserChrome.onSidebar = { [weak self] in
+            self?.sidebarCoordinator.toggle(animated: true)
+        }
+        browserChrome.onBack = { [weak self] in
+            self?.tabManager.goBack()
+        }
+        browserChrome.onForward = { [weak self] in
+            self?.tabManager.goForward()
+        }
+        browserChrome.onShare = { [weak self] in
+            self?.presentShareSheet()
+        }
+        browserChrome.onLibrary = { [weak self] in
+            self?.presentMenuSheet()
+        }
+        browserChrome.onDownloads = { [weak self] in
+            self?.presentMenuSheet(initialSection: .downloads)
+        }
+        browserChrome.onNewTab = { [weak self] in
+            self?.createNewTab()
+        }
+        browserChrome.onTabOverview = { [weak self] in
+            self?.setTabOverviewVisible(true, animated: true)
+        }
+    }
+
     func updateBrowserLayout(
         animated: Bool,
         duration: TimeInterval = UX.layoutAnimationDuration
@@ -279,10 +309,10 @@ final class BrowserViewController: UIViewController {
     }
 
     func applyBrowserLayout() {
-        if isInFullscreenMedia {
+        if isShowingFullscreenMedia {
             applyFullscreenLayout()
         } else {
-            switch browserLayout.browserChromeMode {
+            switch browserLayout.chromeMode {
             case .phone:
                 applyPhoneLayout()
             case .compact:
@@ -325,7 +355,7 @@ final class BrowserViewController: UIViewController {
             bottomAnchor: browserChrome.bottomToolbarTopAnchor
         )
         setTabBarVisible(
-            browserLayout.interfaceIdiom == .pad && activeTabCount > 1
+            browserLayout.interfaceIdiom == .pad && visibleTabCount > 1
         )
     }
 
@@ -336,12 +366,12 @@ final class BrowserViewController: UIViewController {
             bottomAnchor: view.bottomAnchor
         )
         let showsTabBar = browserLayout.interfaceIdiom == .pad
-            ? activeTabCount > 1
-            : activeTabCount > 1 && Prefs.AppearanceSettings.showsLandscapeTabBar
+            ? visibleTabCount > 1
+            : visibleTabCount > 1 && Prefs.AppearanceSettings.showsLandscapeTabBar
         setTabBarVisible(showsTabBar)
     }
 
-    private var activeTabCount: Int {
+    private var visibleTabCount: Int {
         let tabs = tabManager.selectedTabMode == .private
             ? tabManager.privateTabs
             : tabManager.regularTabs
@@ -364,12 +394,12 @@ final class BrowserViewController: UIViewController {
 
     private func applyBrowserChromeLayout() {
         browserChrome.apply(state: BrowserChrome.State(
-            position: browserLayout.browserChromePosition,
-            mode: browserLayout.browserChromeMode,
-            presentation: isInFullscreenMedia
+            position: browserLayout.chromePosition,
+            mode: browserLayout.chromeMode,
+            presentation: isShowingFullscreenMedia
                 ? .fullscreenMedia
                 : (tabOverview.isPresented ? .tabOverview : .browsing),
-            search: isInFullscreenMedia ? .inactive : searchOverlayCoordinator.chromeState,
+            search: isShowingFullscreenMedia ? .inactive : searchOverlayCoordinator.chromeState,
             topInset: browserTopInset(),
             interfaceIdiom: browserLayout.interfaceIdiom,
             sidebarVisible: sidebarCoordinator.isVisible
@@ -378,7 +408,7 @@ final class BrowserViewController: UIViewController {
 
     private func resolveBrowserLayout() -> BrowserLayout {
         let interfaceIdiom = traitCollection.userInterfaceIdiom
-        let orientation = currentBrowserOrientation()
+        let orientation = currentViewportOrientation()
 
         if interfaceIdiom == .pad {
             return traitCollection.horizontalSizeClass == .compact
@@ -395,7 +425,7 @@ final class BrowserViewController: UIViewController {
             : resolvePhoneLayout()
     }
 
-    private func currentBrowserOrientation() -> BrowserLayout.Orientation {
+    private func currentViewportOrientation() -> BrowserLayout.ViewportOrientation {
         if let interfaceOrientation = view.window?.windowScene?.interfaceOrientation,
            interfaceOrientation != .unknown {
             return interfaceOrientation.isLandscape ? .landscape : .portrait
@@ -408,38 +438,38 @@ final class BrowserViewController: UIViewController {
         BrowserLayout(
             interfaceIdiom: .phone,
             orientation: .portrait,
-            browserChromeMode: .phone,
-            browserChromePosition: .bottom,
+            chromeMode: .phone,
+            chromePosition: .bottom,
             tabOverviewToolbarPosition: .bottom,
-            overlayContentPlacement: .embedded
+            overlayHost: .embedded
         )
     }
 
     private func resolveCompactLayout(
         interfaceIdiom: UIUserInterfaceIdiom,
-        orientation: BrowserLayout.Orientation
+        orientation: BrowserLayout.ViewportOrientation
     ) -> BrowserLayout {
         BrowserLayout(
             interfaceIdiom: interfaceIdiom,
             orientation: orientation,
-            browserChromeMode: .compact,
-            browserChromePosition: interfaceIdiom == .phone ? .top : .bottom,
+            chromeMode: .compact,
+            chromePosition: interfaceIdiom == .phone ? .top : .bottom,
             tabOverviewToolbarPosition: interfaceIdiom == .phone ? .bottom : .top,
-            overlayContentPlacement: .embedded
+            overlayHost: .embedded
         )
     }
 
     private func resolvePadLayout(
         interfaceIdiom: UIUserInterfaceIdiom,
-        orientation: BrowserLayout.Orientation
+        orientation: BrowserLayout.ViewportOrientation
     ) -> BrowserLayout {
         BrowserLayout(
             interfaceIdiom: interfaceIdiom,
             orientation: orientation,
-            browserChromeMode: .pad,
-            browserChromePosition: .bottom,
+            chromeMode: .pad,
+            chromePosition: .bottom,
             tabOverviewToolbarPosition: .top,
-            overlayContentPlacement: .detached
+            overlayHost: .detached
         )
     }
 
@@ -447,11 +477,158 @@ final class BrowserViewController: UIViewController {
         sidebarCoordinator.topInset(fallback: UX.fallbackTopInset)
     }
 
-    // MARK: - Sidebar
+    // MARK: - Browser Actions
 
-    @objc func librarySidebarTapped() {
-        sidebarCoordinator.toggle(animated: true)
+    func presentMenuSheet(initialSection: LibrarySection = .bookmarks) {
+        if initialSection == .downloads {
+            DownloadStore.shared.markCompletedDownloadsViewed()
+            if browserLayout.interfaceIdiom == .pad,
+               browserLayout.chromeMode == .pad {
+                sidebarCoordinator.showSection(.downloads)
+                return
+            }
+        }
+
+        let libraryController = LibraryViewController(
+            initialSection: initialSection,
+            isPrivateMode: tabManager.selectedTab?.isPrivate == true
+        ) { [weak self] in
+            self?.dismiss(animated: true)
+        }
+        let navigationController = UINavigationController(rootViewController: libraryController)
+        navigationController.modalPresentationStyle = .pageSheet
+        present(navigationController, animated: true)
     }
+
+    func presentShareSheet(url urlString: String? = nil) {
+        let urlToShare: URL?
+        if let urlString {
+            urlToShare = URL(string: urlString)
+        } else if let tab = tabManager.selectedTab {
+            urlToShare = tabManager.shareableURL(for: tab)
+        } else {
+            urlToShare = nil
+        }
+
+        guard let url = urlToShare else {
+            return
+        }
+
+        let activityController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let popover = activityController.popoverPresentationController {
+            let sourceView = browserChrome.sharePopoverSourceView()
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+        present(activityController, animated: true)
+    }
+
+    func createNewTab() {
+        browserChrome.clearAddressBarAutocomplete()
+        searchOverlayCoordinator.endSearchSession()
+        view.endEditing(true)
+
+        if tabOverview.isPresented {
+            let currentOverviewMode = tabOverview.mode
+            tabOverview.prepareNewTabInsertion { [weak self] in
+                guard let self else {
+                    return
+                }
+                let newTabIndex = self.tabManager.createTab(
+                    selecting: true,
+                    target: .end,
+                    mode: currentOverviewMode.tabMode
+                )
+                self.tabBar.setPendingExpansion(at: newTabIndex)
+            }
+        } else {
+            let newTabIndex = tabManager.createTab(selecting: true)
+            tabBar.setPendingExpansion(at: newTabIndex)
+            setTabOverviewVisible(false, animated: true)
+        }
+    }
+
+    func doneTapped() {
+        if tabOverview.isPresented {
+            let overviewTabMode = tabOverview.mode.tabMode
+            let overviewTabs = overviewTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
+            guard !overviewTabs.isEmpty else {
+                return
+            }
+
+            if tabManager.selectedTabMode != overviewTabMode,
+               let tabIndex = overviewTabs.indices.max(by: {
+                   overviewTabs[$0].state.selectionOrder < overviewTabs[$1].state.selectionOrder
+               }) {
+                tabManager.selectTab(at: tabIndex, mode: overviewTabMode)
+            }
+        }
+        setTabOverviewVisible(false, animated: true)
+    }
+
+    func clearAllTabsTapped() {
+        tabBar.setPendingExpansion(at: nil)
+
+        if tabOverview.isPresented,
+           tabOverview.mode == .privateTabs {
+            tabManager.removeAllTabs(mode: .private)
+            return
+        }
+
+        if tabOverview.isPresented,
+           tabOverview.mode == .regularTabs {
+            tabManager.removeAllTabs(mode: .regular)
+            return
+        }
+
+        tabManager.removeAllTabs(mode: nil)
+    }
+
+    func presentWebsiteSettingsRequested() {
+        guard let selectedTab = tabManager.selectedTab,
+              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: urlString),
+              let settingsController = SiteSettingsViewController(url: url, session: selectedTab.session) else {
+            return
+        }
+
+        let navigationController = UINavigationController(rootViewController: settingsController)
+        navigationController.modalPresentationStyle = .pageSheet
+        present(navigationController, animated: true)
+    }
+
+    func presentBookmark(addToFavorites: Bool) {
+        guard let selectedTab = tabManager.selectedTab,
+              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: urlString) else {
+            return
+        }
+
+        let title = selectedTab.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if addToFavorites {
+            let bookmarkController = EditBookmarkViewController(
+                title: title,
+                url: url,
+                showsFavoritesHierarchyOnly: true
+            )
+            let navigationController = UINavigationController(rootViewController: bookmarkController)
+            navigationController.modalPresentationStyle = .pageSheet
+            present(navigationController, animated: true)
+            return
+        }
+
+        let bookmarkController: EditBookmarkViewController
+        if let bookmark = BookmarkStore.shared.bookmark(for: url) {
+            bookmarkController = EditBookmarkViewController(bookmark: bookmark)
+        } else {
+            bookmarkController = EditBookmarkViewController(title: title, url: url)
+        }
+        let navigationController = UINavigationController(rootViewController: bookmarkController)
+        navigationController.modalPresentationStyle = .pageSheet
+        present(navigationController, animated: true)
+    }
+
+    // MARK: - Sidebar
 
     private func performContentLifecycle(_ action: () -> Void) {
         guard !sidebarCoordinator.hostsSidebar else {
@@ -522,7 +699,7 @@ final class BrowserViewController: UIViewController {
             )
         }
 
-        let shouldDockChrome = browserLayout.browserChromeMode == .phone
+        let shouldDockChrome = browserLayout.chromeMode == .phone
             && searchOverlayCoordinator.isFocused
             && !tabOverview.isPresented
             && keyboardInset > 0
@@ -639,12 +816,12 @@ final class BrowserViewController: UIViewController {
     
     func applyFullscreenState(_ fullScreen: Bool, for session: GeckoSession?) {
         if fullScreen {
-            activeFullscreenSession = session
-        } else if activeFullscreenSession === session || session == nil {
-            activeFullscreenSession = nil
+            fullscreenSession = session
+        } else if fullscreenSession === session || session == nil {
+            fullscreenSession = nil
         }
         
-        guard isInFullscreenMedia != fullScreen else {
+        guard isShowingFullscreenMedia != fullScreen else {
             return
         }
         
@@ -656,7 +833,7 @@ final class BrowserViewController: UIViewController {
             view.endEditing(true)
         }
         
-        isInFullscreenMedia = fullScreen
+        isShowingFullscreenMedia = fullScreen
         updateBrowserLayout(animated: true)
         updateFullscreenOrientation(fullScreen)
         UIApplication.shared.isIdleTimerDisabled = fullScreen
@@ -674,9 +851,9 @@ final class BrowserViewController: UIViewController {
         if fullScreen {
             if let currentOrientation = view.window?.windowScene?.interfaceOrientation,
                currentOrientation != .unknown {
-                orientationBeforeFullscreen = currentOrientation
-            } else if orientationBeforeFullscreen == nil {
-                orientationBeforeFullscreen = .portrait
+                preFullscreenOrientation = currentOrientation
+            } else if preFullscreenOrientation == nil {
+                preFullscreenOrientation = .portrait
             }
             
             let targetOrientation: UIInterfaceOrientation
@@ -688,9 +865,9 @@ final class BrowserViewController: UIViewController {
             }
             forceInterfaceOrientation(targetOrientation)
         } else {
-            let targetOrientation = orientationBeforeFullscreen ?? .portrait
+            let targetOrientation = preFullscreenOrientation ?? .portrait
             forceInterfaceOrientation(targetOrientation)
-            orientationBeforeFullscreen = nil
+            preFullscreenOrientation = nil
         }
     }
     

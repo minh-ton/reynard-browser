@@ -25,6 +25,17 @@ final class TopToolbar: UIView {
         case compact
     }
 
+    // MARK: - Actions
+
+    var onSidebar: (() -> Void)?
+    var onBack: (() -> Void)?
+    var onForward: (() -> Void)?
+    var onLibrary: (() -> Void)?
+    var onDownloads: (() -> Void)?
+    var onShare: (() -> Void)?
+    var onNewTab: (() -> Void)?
+    var onTabOverview: (() -> Void)?
+
     // MARK: - Views
 
     private let contentView: UIView = {
@@ -36,43 +47,43 @@ final class TopToolbar: UIView {
 
     private lazy var sidebarButton = ToolbarButton(
         buttonType: .sidebar,
-        target: controller,
-        action: #selector(BrowserViewController.librarySidebarTapped)
+        target: self,
+        action: #selector(sidebarTapped)
     )
     private lazy var backButton = ToolbarButton(
         buttonType: .back,
-        target: controller,
-        action: #selector(BrowserViewController.padBackTapped)
+        target: self,
+        action: #selector(backTapped)
     )
     private lazy var forwardButton = ToolbarButton(
         buttonType: .forward,
-        target: controller,
-        action: #selector(BrowserViewController.padForwardTapped)
+        target: self,
+        action: #selector(forwardTapped)
     )
     private lazy var libraryButton = ToolbarButton(
         buttonType: .library,
-        target: controller,
-        action: #selector(BrowserViewController.topBarMenuTapped)
+        target: self,
+        action: #selector(libraryTapped)
     )
     private lazy var downloadButton = ToolbarButton(
         buttonType: .download,
-        target: controller,
-        action: #selector(BrowserViewController.topBarDownloadsTapped)
+        target: self,
+        action: #selector(downloadsTapped)
     )
     private lazy var shareButton = ToolbarButton(
         buttonType: .share,
-        target: controller,
-        action: #selector(BrowserViewController.shareTapped)
+        target: self,
+        action: #selector(shareTapped)
     )
     private lazy var newTabButton = ToolbarButton(
         buttonType: .newTab,
-        target: controller,
-        action: #selector(BrowserViewController.newTabTapped)
+        target: self,
+        action: #selector(newTabTapped)
     )
     private lazy var tabOverviewButton = ToolbarButton(
         buttonType: .tabOverview,
-        target: controller,
-        action: #selector(BrowserViewController.tabsTapped)
+        target: self,
+        action: #selector(tabOverviewTapped)
     )
 
     private lazy var leadingButtons: UIStackView = {
@@ -103,13 +114,9 @@ final class TopToolbar: UIView {
     private var standardAddressBarConstraints: [NSLayoutConstraint] = []
     private var compactAddressBarConstraints: [NSLayoutConstraint] = []
 
-    // MARK: - State
-
-    private unowned let controller: BrowserViewController
     // MARK: - Lifecycle
 
-    init(controller: BrowserViewController) {
-        self.controller = controller
+    init() {
         super.init(frame: .zero)
         configureAppearance()
         configureHierarchy()
@@ -211,6 +218,17 @@ final class TopToolbar: UIView {
         sidebarButton.alpha = alpha
         sidebarButton.isHidden = hidden
     }
+
+    // MARK: - Actions
+
+    @objc private func sidebarTapped() { onSidebar?() }
+    @objc private func backTapped() { onBack?() }
+    @objc private func forwardTapped() { onForward?() }
+    @objc private func libraryTapped() { onLibrary?() }
+    @objc private func downloadsTapped() { onDownloads?() }
+    @objc private func shareTapped() { onShare?() }
+    @objc private func newTabTapped() { onNewTab?() }
+    @objc private func tabOverviewTapped() { onTabOverview?() }
 
     // MARK: - View Setup
 

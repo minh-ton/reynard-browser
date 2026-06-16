@@ -54,9 +54,9 @@ extension BrowserViewController: TabManagerDelegate {
         }
         tabBar.reloadTabs()
         
-        if isInFullscreenMedia,
-           activeFullscreenSession !== selectedTab.session {
-            applyFullscreenState(false, for: activeFullscreenSession)
+        if isShowingFullscreenMedia,
+           fullscreenSession !== selectedTab.session {
+            applyFullscreenState(false, for: fullscreenSession)
         }
     }
     
@@ -149,7 +149,7 @@ extension BrowserViewController: TabManagerDelegate {
     
     func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {
         DispatchQueue.main.async { [weak self] in
-            self?.enqueueDownloadConfirmation(download)
+            self?.downloadsCoordinator.enqueueConfirmation(download)
         }
     }
     
