@@ -1,5 +1,5 @@
 //
-//  BrowserViewController+TabManagerDelegate.swift
+//  BrowserViewController+TabManager.swift
 //  Reynard
 //
 //  Created by Minh Ton on 15/5/26.
