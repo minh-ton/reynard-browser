@@ -66,6 +66,7 @@ final class BrowserViewController: UIViewController {
         controller: self,
         overlayCoordinator: overlayCoordinator
     )
+    lazy var contextMenuCoordinator = ContextMenuCoordinator(browserViewController: self)
     let tabBar = TabBar()
     let tabOverview = TabOverview()
     lazy var sidebarCoordinator = SidebarCoordinator(
@@ -128,7 +129,7 @@ final class BrowserViewController: UIViewController {
         }
         
         observeNotifications()
-        configureContextMenu()
+        contextMenuCoordinator.configure()
         observeDownloadState()
         syncDownloadButtonState()
         configureBrowserInterface()

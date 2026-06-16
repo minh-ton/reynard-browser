@@ -1,0 +1,62 @@
+//
+//  ImagePreviewMenu.swift
+//  Reynard
+//
+//  Created by Minh Ton on 16/6/26.
+//
+
+import UIKit
+
+struct ImagePreviewMenu {
+    static func configuration(
+        for context: ContextMenuContext,
+        presentingController: UIViewController,
+        sourceView: UIView
+    ) -> UIContextMenuConfiguration? {
+        guard case .image(let url) = context.target else {
+            return nil
+        }
+
+        return UIContextMenuConfiguration(identifier: UUID().uuidString as NSString) {
+            ImagePreviewViewController(url: url)
+        } actionProvider: { _ in
+            UIMenu(title: "", children: [
+                UIAction(title: "Share Image", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+                    loadImage(from: url) { image in
+                        presentShareSheet(image: image, from: presentingController, sourceView: sourceView)
+                    }
+                },
+                UIAction(title: "Save to Photos", image: UIImage(systemName: "square.and.arrow.down")) { _ in
+                    loadImage(from: url) { image in
+                        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                    }
+                },
+                UIAction(title: "Copy", image: UIImage(systemName: "document.on.document")) { _ in
+                    loadImage(from: url) { image in
+                        UIPasteboard.general.image = image
+                    }
+                },
+            ])
+        }
+    }
+
+    private static func loadImage(from url: URL, completion: @escaping @MainActor (UIImage) -> Void) {
+        Task {
+            guard let image = await ImagePreviewLoader.image(from: url) else {
+                return
+            }
+            await MainActor.run {
+                completion(image)
+            }
+        }
+    }
+
+    private static func presentShareSheet(image: UIImage, from controller: UIViewController, sourceView: UIView) {
+        let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        if let popover = sheet.popoverPresentationController {
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+        controller.present(sheet, animated: true)
+    }
+}

@@ -143,7 +143,7 @@ extension BrowserViewController: TabManagerDelegate {
         if element.type == .image,
            let source = element.srcUri?.trimmingCharacters(in: .whitespacesAndNewlines),
            let url = URL(string: source) {
-            presentContextMenu(at: point, target: .image(url))
+            contextMenuCoordinator.present(at: point, target: .image(url))
             return
         }
         
@@ -152,7 +152,7 @@ extension BrowserViewController: TabManagerDelegate {
             return
         }
         
-        presentContextMenu(at: point, target: .link(url))
+        contextMenuCoordinator.present(at: point, target: .link(url))
     }
     
     func tabManager(_ tabManager: TabManager, didChangeFullscreen fullScreen: Bool, for session: GeckoSession) {
