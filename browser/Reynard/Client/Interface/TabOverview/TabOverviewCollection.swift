@@ -84,8 +84,8 @@ final class TabOverviewCollection: NSObject {
     }
 
     func tabs(for mode: TabOverview.Mode) -> [Tab] {
-        guard let tabManager = tabOverview?.browserViewController?.tabManager else { return [] }
-        return mode == .privateTabs ? tabManager.privateTabs : tabManager.regularTabs
+        guard let dataSource = tabOverview?.dataSource else { return [] }
+        return mode == .privateTabs ? dataSource.privateTabs : dataSource.regularTabs
     }
 
     func tabMode(for collectionView: UICollectionView) -> TabOverview.Mode? {
@@ -95,7 +95,7 @@ final class TabOverviewCollection: NSObject {
     }
 
     func itemIndex(forTabAt index: Int, mode: TabOverview.Mode? = nil) -> Int? {
-        guard let selectedMode = tabOverview?.browserViewController?.tabManager.selectedTabMode else { return nil }
+        guard let selectedMode = tabOverview?.dataSource?.selectedMode else { return nil }
         let resolvedMode = mode ?? self.mode
         guard selectedMode == resolvedMode.tabMode,
               tabs(for: resolvedMode).indices.contains(index) else {

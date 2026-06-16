@@ -836,7 +836,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
     
     private func resolvedBrowserViewController() -> BrowserViewController? {
         if let sidebarViewController = splitViewController as? SidebarViewController {
-            return sidebarViewController.contentBrowser
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
         }
         
         if let browserViewController = navigationController?.presentingViewController as? BrowserViewController {

@@ -7,10 +7,29 @@
 
 import UIKit
 
+protocol SidebarContentController: AnyObject {
+    var sidebarContentViewController: UIViewController { get }
+    var sidebarContentChrome: BrowserChrome { get }
+
+    func updateBrowserLayout(animated: Bool, duration: TimeInterval)
+    func openExternalURL(_ url: URL)
+}
+
+protocol SidebarCoordinatorHost: AnyObject {
+    var sidebarHostViewController: UIViewController { get }
+    var sidebarInterfaceIdiom: UIUserInterfaceIdiom { get }
+    var sidebarChromeMode: browserChromeMode { get }
+    var sidebarSplitViewController: UISplitViewController? { get }
+    var sidebarFallbackTopInsetSourceView: UIView { get }
+
+    func makeSidebarContentController() -> SidebarContentController
+    func sidebarCoordinatorDidChangeVisibility(_ coordinator: SidebarCoordinator, animated: Bool)
+}
+
 final class SidebarCoordinator {
     // MARK: - State
 
-    private unowned let browser: BrowserViewController
+    private weak var host: SidebarCoordinatorHost?
     private let canHostSidebar: Bool
     private var sidebar: SidebarViewController?
 
@@ -18,22 +37,22 @@ final class SidebarCoordinator {
         hostsSidebar ? sidebar : nil
     }
 
-    var contentBrowser: BrowserViewController {
-        sidebar?.contentBrowser ?? browser
+    var contentBrowser: SidebarContentController? {
+        sidebar?.contentBrowser ?? host as? SidebarContentController
     }
 
     var isVisible: Bool {
-        (browser.splitViewController as? SidebarViewController)?.isVisible ?? false
+        (host?.sidebarSplitViewController as? SidebarViewController)?.isVisible ?? false
     }
 
     var hostsSidebar: Bool {
-        canHostSidebar && browser.browserLayout.interfaceIdiom == .pad
+        canHostSidebar && host?.sidebarInterfaceIdiom == .pad
     }
 
     // MARK: - Lifecycle
 
-    init(browserViewController: BrowserViewController, canHostSidebar: Bool) {
-        self.browser = browserViewController
+    init(host: SidebarCoordinatorHost, canHostSidebar: Bool) {
+        self.host = host
         self.canHostSidebar = canHostSidebar
     }
 
@@ -49,18 +68,22 @@ final class SidebarCoordinator {
             return true
         }
 
-        let contentBrowser = BrowserViewController(canHostSidebar: false)
-        let sidebar = SidebarViewController(browserViewController: contentBrowser)
-        browser.addChild(sidebar)
+        guard let host else {
+            return false
+        }
+
+        let contentBrowser = host.makeSidebarContentController()
+        let sidebar = SidebarViewController(contentController: contentBrowser)
+        host.sidebarHostViewController.addChild(sidebar)
         sidebar.view.translatesAutoresizingMaskIntoConstraints = false
-        browser.view.addSubview(sidebar.view)
+        host.sidebarHostViewController.view.addSubview(sidebar.view)
         NSLayoutConstraint.activate([
-            sidebar.view.topAnchor.constraint(equalTo: browser.view.topAnchor),
-            sidebar.view.leadingAnchor.constraint(equalTo: browser.view.leadingAnchor),
-            sidebar.view.trailingAnchor.constraint(equalTo: browser.view.trailingAnchor),
-            sidebar.view.bottomAnchor.constraint(equalTo: browser.view.bottomAnchor),
+            sidebar.view.topAnchor.constraint(equalTo: host.sidebarHostViewController.view.topAnchor),
+            sidebar.view.leadingAnchor.constraint(equalTo: host.sidebarHostViewController.view.leadingAnchor),
+            sidebar.view.trailingAnchor.constraint(equalTo: host.sidebarHostViewController.view.trailingAnchor),
+            sidebar.view.bottomAnchor.constraint(equalTo: host.sidebarHostViewController.view.bottomAnchor),
         ])
-        sidebar.didMove(toParent: browser)
+        sidebar.didMove(toParent: host.sidebarHostViewController)
         self.sidebar = sidebar
         return true
     }
@@ -68,12 +91,12 @@ final class SidebarCoordinator {
     // MARK: - Visibility
 
     func toggle(animated: Bool) {
-        guard browser.browserLayout.interfaceIdiom == .pad else {
+        guard host?.sidebarInterfaceIdiom == .pad else {
             return
         }
 
-        (browser.splitViewController as? SidebarViewController)?.setVisible(!isVisible)
-        browser.updateBrowserLayout(animated: animated)
+        (host?.sidebarSplitViewController as? SidebarViewController)?.setVisible(!isVisible)
+        host?.sidebarCoordinatorDidChangeVisibility(self, animated: animated)
     }
 
     func refreshVisibility() {
@@ -93,20 +116,38 @@ final class SidebarCoordinator {
     // MARK: - Sections
 
     func showSection(_ section: LibrarySection) {
-        (browser.splitViewController as? SidebarViewController)?.showSection(section)
+        (host?.sidebarSplitViewController as? SidebarViewController)?.showSection(section)
     }
 
     func topInset(fallback: CGFloat) -> CGFloat {
-        guard browser.browserLayout.interfaceIdiom == .pad,
-              browser.splitViewController is SidebarViewController else {
-            return browser.view.safeAreaInsets.top
+        guard let host else {
+            return fallback
         }
 
-        if let statusBarHeight = browser.view.window?.windowScene?.statusBarManager?.statusBarFrame.height,
+        guard host.sidebarInterfaceIdiom == .pad,
+              host.sidebarSplitViewController is SidebarViewController else {
+            return host.sidebarFallbackTopInsetSourceView.safeAreaInsets.top
+        }
+
+        if let statusBarHeight = host.sidebarHostViewController.view.window?.windowScene?.statusBarManager?.statusBarFrame.height,
            statusBarHeight > 0 {
             return statusBarHeight
         }
 
         return fallback
+    }
+
+    // MARK: - Content
+
+    func loadContentIfNeeded() {
+        contentBrowser?.sidebarContentViewController.loadViewIfNeeded()
+    }
+
+    func updateContentLayout(animated: Bool, duration: TimeInterval) {
+        contentBrowser?.updateBrowserLayout(animated: animated, duration: duration)
+    }
+
+    func openExternalURL(_ url: URL) {
+        contentBrowser?.openExternalURL(url)
     }
 }

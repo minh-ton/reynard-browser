@@ -19,11 +19,11 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
 
     // MARK: - State
 
-    private let browser: BrowserViewController
+    private let contentController: SidebarContentController
     private var sidebarVisible = false
 
-    var contentBrowser: BrowserViewController {
-        browser
+    var contentBrowser: SidebarContentController {
+        contentController
     }
 
     var isVisible: Bool {
@@ -35,7 +35,7 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
     private lazy var menuController = SidebarMenuViewController()
 
     private lazy var browserNavigationController: UINavigationController = {
-        let navigationController = UINavigationController(rootViewController: browser)
+        let navigationController = UINavigationController(rootViewController: contentController.sidebarContentViewController)
         navigationController.setNavigationBarHidden(true, animated: false)
         return navigationController
     }()
@@ -52,8 +52,8 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         browserNavigationController
     }
 
-    init(browserViewController: BrowserViewController) {
-        self.browser = browserViewController
+    init(contentController: SidebarContentController) {
+        self.contentController = contentController
         if #available(iOS 14.0, *) {
             super.init(style: .doubleColumn)
         } else {
@@ -89,7 +89,7 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
 
     func collapse(from sourceView: UIView?) {
         guard let sourceView,
-              browser.isViewLoaded,
+              contentController.sidebarContentViewController.isViewLoaded,
               let containerView = viewIfLoaded,
               let snapshot = sourceView.snapshotView(afterScreenUpdates: false) else {
             setVisible(false)
@@ -103,17 +103,17 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         sourceView.isHidden = true
         setVisible(false)
         containerView.layoutIfNeeded()
-        browser.view.layoutIfNeeded()
+        contentController.sidebarContentViewController.view.layoutIfNeeded()
 
-        let destinationFrame = browser.browserChrome.sidebarButtonFrame(in: containerView)
-        browser.browserChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
+        let destinationFrame = contentController.sidebarContentChrome.sidebarButtonFrame(in: containerView)
+        contentController.sidebarContentChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
 
         UIView.animate(withDuration: UX.collapseAnimationDuration, delay: 0, options: [.curveEaseOut]) {
             snapshot.frame = destinationFrame
-            self.browser.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
+            self.contentController.sidebarContentChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
         } completion: { _ in
             sourceView.isHidden = false
-            self.browser.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
+            self.contentController.sidebarContentChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
             snapshot.removeFromSuperview()
         }
     }
@@ -176,8 +176,8 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
     }
 
     private func updateBrowserLayoutIfNeeded() {
-        if browser.isViewLoaded {
-            browser.updateBrowserLayout(animated: false)
+        if contentController.sidebarContentViewController.isViewLoaded {
+            contentController.updateBrowserLayout(animated: false, duration: 0.22)
         }
     }
 }

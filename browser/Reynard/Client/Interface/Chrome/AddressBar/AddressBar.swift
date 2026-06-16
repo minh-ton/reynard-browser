@@ -7,6 +7,15 @@
 
 import UIKit
 
+protocol AddressBarDelegate: AnyObject {
+    func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar)
+    func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
+    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
+    func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
+    func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
+    func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
+}
+
 final class AddressBar: UIView {
     // MARK: - UX
 
@@ -75,7 +84,7 @@ final class AddressBar: UIView {
 
     // MARK: - State
 
-    private weak var browserViewController: BrowserViewController?
+    private weak var delegate: AddressBarDelegate?
     private weak var searchDelegate: AddressBarSearchDelegate?
 
     // These states are intentionally orthogonal: loading, editing, and placement can change independently.
@@ -253,16 +262,13 @@ final class AddressBar: UIView {
 
     // MARK: - Configuration
 
-    func configure(controller: BrowserViewController) {
-        browserViewController = controller
+    func configure(delegate: AddressBarDelegate, searchDelegate: AddressBarSearchDelegate, gestureDelegate: AddressBarGestureDelegate) {
+        self.delegate = delegate
+        self.searchDelegate = searchDelegate
         textField.delegate = self
-        let gestures = AddressBarGestures(addressBar: self, controller: controller)
+        let gestures = AddressBarGestures(addressBar: self, delegate: gestureDelegate)
         self.gestures = gestures
         gestures.configure()
-    }
-
-    func configureSearchDelegate(_ searchDelegate: AddressBarSearchDelegate) {
-        self.searchDelegate = searchDelegate
     }
 
     func setText(
@@ -290,34 +296,25 @@ final class AddressBar: UIView {
         addonsMenu = AddressBarMenu.makeMenu(
             selectedTab: selectedTab,
             selectedURL: url,
-            addonItems: addonItems(),
+            addonItems: delegate?.addressBarAddonItems(self) ?? [],
             onAddonSelected: { [weak self] item in
-                self?.browserViewController?.addonController.presentCurrentSiteSettings(for: item)
+                guard let self else { return }
+                self.delegate?.addressBar(self, didSelectAddon: item)
             },
             onChangeWebsiteMode: { [weak self] in
-                guard let browserViewController = self?.browserViewController,
-                      browserViewController.tabManager.changeWebsiteModeForSelectedTab() else {
-                    return
-                }
-                browserViewController.refreshAddressBar()
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestWebsiteModeChange(self)
             },
             onWebsiteSettings: { [weak self] in
-                self?.browserViewController?.presentWebsiteSettingsRequested()
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestWebsiteSettings(self)
             },
             onBookmark: { [weak self] favorites in
-                self?.browserViewController?.presentBookmark(addToFavorites: favorites)
+                guard let self else { return }
+                self.delegate?.addressBar(self, didRequestBookmarkInFavorites: favorites)
             }
         )
         applyState()
-    }
-
-    private func addonItems() -> [AddressBarMenu.AddonItem] {
-        browserViewController?.addonController.visibleMenuItemsForCurrentSite().map { item in
-            AddressBarMenu.AddonItem(
-                menuItem: item,
-                image: browserViewController?.addonController.iconImage(for: item.addon)
-            )
-        } ?? []
     }
     
     func setEditingState(_ state: EditingState) {
@@ -795,7 +792,7 @@ final class AddressBar: UIView {
     
     @objc
     private func handleTrailingButtonTap() {
-        browserViewController?.tabManager.reloadOrStopSelectedTab()
+        delegate?.addressBarDidRequestReloadOrStop(self)
     }
 
     @objc

@@ -7,6 +7,12 @@
 
 import UIKit
 
+protocol ContentOverlayCoordinatorHost: AnyObject {
+    var overlayParentViewController: UIViewController { get }
+    var contentView: ContentView { get }
+    var browserChrome: BrowserChrome { get }
+}
+
 final class OverlayCoordinator {
     enum Page: Hashable {
         case homepage
@@ -21,16 +27,16 @@ final class OverlayCoordinator {
     private struct Entry {
         let page: Page
         let host: Host
-        let controller: UIViewController
+        let viewController: UIViewController
         let prepare: () -> Void
     }
 
-    private unowned let controller: BrowserViewController
+    private weak var host: ContentOverlayCoordinatorHost?
     private var activeEntry: Entry?
     private var previousEntry: Entry?
 
-    init(controller: BrowserViewController) {
-        self.controller = controller
+    init(host: ContentOverlayCoordinatorHost) {
+        self.host = host
     }
 
     func isPresented(_ page: Page) -> Bool {
@@ -52,7 +58,7 @@ final class OverlayCoordinator {
         animated: Bool,
         prepare: @escaping () -> Void = {}
     ) {
-        let entry = Entry(page: page, host: host, controller: viewController, prepare: prepare)
+        let entry = Entry(page: page, host: host, viewController: viewController, prepare: prepare)
         if activeEntry?.page == page {
             activate(entry, replacing: activeEntry, animated: animated)
             return
@@ -93,53 +99,66 @@ final class OverlayCoordinator {
         animated: Bool,
         completion: (() -> Void)? = nil
     ) {
-        let showEntry = {
+        let presentEntry = {
             entry.prepare()
-            self.setController(entry.controller, for: entry.page, on: entry.host)
+            self.setController(entry.viewController, for: entry.page, on: entry.host)
             self.show(entry.page, on: entry.host, animated: animated, completion: completion)
             self.activeEntry = entry
         }
 
         guard let currentEntry, currentEntry.host != entry.host else {
-            showEntry()
+            presentEntry()
             return
         }
 
-        hide(currentEntry.host, animated: false, completion: showEntry)
+        hide(currentEntry.host, animated: false, completion: presentEntry)
     }
 
     private func hide(_ host: Host, animated: Bool, completion: (() -> Void)?) {
+        guard let overlayHost = self.host else {
+            completion?()
+            return
+        }
+
         switch host {
         case .embedded:
-            controller.contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            overlayHost.contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         case .detached:
-            controller.browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            overlayHost.browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         }
     }
 
     private func setController(_ viewController: UIViewController, for page: Page, on host: Host) {
+        guard let overlayHost = self.host else {
+            return
+        }
+
         switch host {
         case .embedded:
-            controller.contentView.setOverlayController(
+            overlayHost.contentView.setOverlayController(
                 viewController,
                 for: embeddedPage(for: page),
-                in: controller
+                in: overlayHost.overlayParentViewController
             )
         case .detached:
-            controller.browserChrome.setOverlayController(
+            overlayHost.browserChrome.setOverlayController(
                 viewController,
                 for: detachedPage(for: page),
-                in: controller
+                in: overlayHost.overlayParentViewController
             )
         }
     }
 
     private func removeController(for page: Page, from host: Host) {
+        guard let overlayHost = self.host else {
+            return
+        }
+
         switch host {
         case .embedded:
-            controller.contentView.removeOverlayController(for: embeddedPage(for: page))
+            overlayHost.contentView.removeOverlayController(for: embeddedPage(for: page))
         case .detached:
-            controller.browserChrome.removeOverlayController(for: detachedPage(for: page))
+            overlayHost.browserChrome.removeOverlayController(for: detachedPage(for: page))
         }
     }
 
@@ -149,15 +168,20 @@ final class OverlayCoordinator {
         animated: Bool,
         completion: (() -> Void)?
     ) {
+        guard let overlayHost = self.host else {
+            completion?()
+            return
+        }
+
         switch host {
         case .embedded:
-            controller.contentView.setOverlayPresentation(
+            overlayHost.contentView.setOverlayPresentation(
                 .visible(embeddedPage(for: page)),
                 animated: animated,
                 completion: completion
             )
         case .detached:
-            controller.browserChrome.setOverlayPresentation(
+            overlayHost.browserChrome.setOverlayPresentation(
                 .visible(detachedPage(for: page)),
                 animated: animated,
                 completion: completion

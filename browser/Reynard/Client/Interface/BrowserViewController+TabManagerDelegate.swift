@@ -1,5 +1,5 @@
 //
-//  BrowserViewController+TabMgmt.swift
+//  BrowserViewController+TabManagerDelegate.swift
 //  Reynard
 //
 //  Created by Minh Ton on 15/5/26.
@@ -31,7 +31,7 @@ extension BrowserViewController: TabManagerDelegate {
     func tabManager(_ tabManager: TabManager, didSelectTabAt index: Int, previousIndex: Int?) {
         tabBar.setPendingExpansion(at: nil)
         if let previousIndex {
-            captureThumbnail(for: previousIndex)
+            captureThumbnailForVisibleTab(at: previousIndex)
         }
         
         guard let selectedTab = tabManager.activeTabs[safe: index] else {
@@ -130,7 +130,7 @@ extension BrowserViewController: TabManagerDelegate {
             
         case .thumbnail:
             if index == tabManager.selectedTabIndex {
-                captureThumbnail(for: index)
+                captureThumbnailForVisibleTab(at: index)
             }
             tabOverview.isPresented
                 ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
@@ -155,5 +155,20 @@ extension BrowserViewController: TabManagerDelegate {
     
     func tabManager(_ tabManager: TabManager, shouldHandleExternalResponse response: ExternalResponseInfo, for session: GeckoSession) -> Bool {
         addonController.handleExternalResponse(response)
+    }
+}
+
+extension BrowserViewController {
+    // MARK: - Tab Thumbnails
+
+    func captureThumbnailForVisibleTab(at index: Int) {
+        guard !contentView.isHidden,
+              let tab = tabManager.activeTabs[safe: index],
+              contentView.isDisplaying(session: tab.session),
+              let image = contentView.makeThumbnail() else {
+            return
+        }
+
+        tabManager.updateThumbnail(image, forTabAt: index)
     }
 }

@@ -61,19 +61,19 @@ final class BrowserViewController: UIViewController {
     // MARK: - Views And Coordinators
 
     let contentView = ContentView()
-    lazy var browserChrome = BrowserChrome(controller: self)
-    lazy var overlayCoordinator = OverlayCoordinator(controller: self)
+    lazy var browserChrome = BrowserChrome()
+    lazy var overlayCoordinator = OverlayCoordinator(host: self)
     lazy var searchOverlayCoordinator = SearchOverlayCoordinator(
-        controller: self,
+        delegate: self,
         overlayCoordinator: overlayCoordinator
     )
-    lazy var contextMenuCoordinator = ContextMenuCoordinator(browserViewController: self)
+    lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self)
     lazy var addonController = AddonController(controller: self)
-    lazy var downloadsCoordinator = DownloadsCoordinator(browserViewController: self)
+    lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
     let tabBar = TabBar()
     let tabOverview = TabOverview()
     lazy var sidebarCoordinator = SidebarCoordinator(
-        browserViewController: self,
+        host: self,
         canHostSidebar: allowsSidebarHosting
     )
     
@@ -223,10 +223,14 @@ final class BrowserViewController: UIViewController {
     // MARK: - Browser Layout
 
     private func configureBrowserInterface() {
-        browserChrome.configureAddressBarSearchDelegate(searchOverlayCoordinator)
+        browserChrome.configureAddressBar(
+            delegate: self,
+            searchDelegate: searchOverlayCoordinator,
+            gestureDelegate: self
+        )
         configureBrowserChromeActions()
-        tabBar.tabManager = tabManager
-        tabOverview.configure(browserViewController: self)
+        tabBar.dataSource = self
+        tabOverview.configure(dataSource: self, delegate: self, presentationContext: self)
 
         view.addSubview(contentView)
         view.addSubview(tabBar)
@@ -287,7 +291,7 @@ final class BrowserViewController: UIViewController {
         duration: TimeInterval = UX.layoutAnimationDuration
     ) {
         if sidebarCoordinator.hostsSidebar {
-            sidebarCoordinator.contentBrowser.updateBrowserLayout(
+            sidebarCoordinator.updateContentLayout(
                 animated: animated,
                 duration: duration
             )
@@ -477,157 +481,6 @@ final class BrowserViewController: UIViewController {
         sidebarCoordinator.topInset(fallback: UX.fallbackTopInset)
     }
 
-    // MARK: - Browser Actions
-
-    func presentMenuSheet(initialSection: LibrarySection = .bookmarks) {
-        if initialSection == .downloads {
-            DownloadStore.shared.markCompletedDownloadsViewed()
-            if browserLayout.interfaceIdiom == .pad,
-               browserLayout.chromeMode == .pad {
-                sidebarCoordinator.showSection(.downloads)
-                return
-            }
-        }
-
-        let libraryController = LibraryViewController(
-            initialSection: initialSection,
-            isPrivateMode: tabManager.selectedTab?.isPrivate == true
-        ) { [weak self] in
-            self?.dismiss(animated: true)
-        }
-        let navigationController = UINavigationController(rootViewController: libraryController)
-        navigationController.modalPresentationStyle = .pageSheet
-        present(navigationController, animated: true)
-    }
-
-    func presentShareSheet(url urlString: String? = nil) {
-        let urlToShare: URL?
-        if let urlString {
-            urlToShare = URL(string: urlString)
-        } else if let tab = tabManager.selectedTab {
-            urlToShare = tabManager.shareableURL(for: tab)
-        } else {
-            urlToShare = nil
-        }
-
-        guard let url = urlToShare else {
-            return
-        }
-
-        let activityController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        if let popover = activityController.popoverPresentationController {
-            let sourceView = browserChrome.sharePopoverSourceView()
-            popover.sourceView = sourceView
-            popover.sourceRect = sourceView.bounds
-        }
-        present(activityController, animated: true)
-    }
-
-    func createNewTab() {
-        browserChrome.clearAddressBarAutocomplete()
-        searchOverlayCoordinator.endSearchSession()
-        view.endEditing(true)
-
-        if tabOverview.isPresented {
-            let currentOverviewMode = tabOverview.mode
-            tabOverview.prepareNewTabInsertion { [weak self] in
-                guard let self else {
-                    return
-                }
-                let newTabIndex = self.tabManager.createTab(
-                    selecting: true,
-                    target: .end,
-                    mode: currentOverviewMode.tabMode
-                )
-                self.tabBar.setPendingExpansion(at: newTabIndex)
-            }
-        } else {
-            let newTabIndex = tabManager.createTab(selecting: true)
-            tabBar.setPendingExpansion(at: newTabIndex)
-            setTabOverviewVisible(false, animated: true)
-        }
-    }
-
-    func doneTapped() {
-        if tabOverview.isPresented {
-            let overviewTabMode = tabOverview.mode.tabMode
-            let overviewTabs = overviewTabMode == .private ? tabManager.privateTabs : tabManager.regularTabs
-            guard !overviewTabs.isEmpty else {
-                return
-            }
-
-            if tabManager.selectedTabMode != overviewTabMode,
-               let tabIndex = overviewTabs.indices.max(by: {
-                   overviewTabs[$0].state.selectionOrder < overviewTabs[$1].state.selectionOrder
-               }) {
-                tabManager.selectTab(at: tabIndex, mode: overviewTabMode)
-            }
-        }
-        setTabOverviewVisible(false, animated: true)
-    }
-
-    func clearAllTabsTapped() {
-        tabBar.setPendingExpansion(at: nil)
-
-        if tabOverview.isPresented,
-           tabOverview.mode == .privateTabs {
-            tabManager.removeAllTabs(mode: .private)
-            return
-        }
-
-        if tabOverview.isPresented,
-           tabOverview.mode == .regularTabs {
-            tabManager.removeAllTabs(mode: .regular)
-            return
-        }
-
-        tabManager.removeAllTabs(mode: nil)
-    }
-
-    func presentWebsiteSettingsRequested() {
-        guard let selectedTab = tabManager.selectedTab,
-              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: urlString),
-              let settingsController = SiteSettingsViewController(url: url, session: selectedTab.session) else {
-            return
-        }
-
-        let navigationController = UINavigationController(rootViewController: settingsController)
-        navigationController.modalPresentationStyle = .pageSheet
-        present(navigationController, animated: true)
-    }
-
-    func presentBookmark(addToFavorites: Bool) {
-        guard let selectedTab = tabManager.selectedTab,
-              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: urlString) else {
-            return
-        }
-
-        let title = selectedTab.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if addToFavorites {
-            let bookmarkController = EditBookmarkViewController(
-                title: title,
-                url: url,
-                showsFavoritesHierarchyOnly: true
-            )
-            let navigationController = UINavigationController(rootViewController: bookmarkController)
-            navigationController.modalPresentationStyle = .pageSheet
-            present(navigationController, animated: true)
-            return
-        }
-
-        let bookmarkController: EditBookmarkViewController
-        if let bookmark = BookmarkStore.shared.bookmark(for: url) {
-            bookmarkController = EditBookmarkViewController(bookmark: bookmark)
-        } else {
-            bookmarkController = EditBookmarkViewController(title: title, url: url)
-        }
-        let navigationController = UINavigationController(rootViewController: bookmarkController)
-        navigationController.modalPresentationStyle = .pageSheet
-        present(navigationController, animated: true)
-    }
-
     // MARK: - Sidebar
 
     private func performContentLifecycle(_ action: () -> Void) {
@@ -768,52 +621,6 @@ final class BrowserViewController: UIViewController {
         )
     }
 
-    func refreshAddressBar() {
-        let selectedTab = tabManager.selectedTab
-        let displayText: String?
-        if case let .pending(text) = selectedTab?.state.displayState {
-            displayText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        } else {
-            displayText = nil
-        }
-        let selectedURL = selectedTab?.url
-        browserChrome.setAddressBarText(
-            displayText?.isEmpty == false ? displayText : selectedURL,
-            locationText: selectedURL,
-            locationTitle: selectedTab?.title,
-            showsBarMenu: displayText?.isEmpty != false && selectedURL?.isEmpty == false
-        )
-        browserChrome.setAddressBarLoadingProgress(
-            selectedTab?.state.loadingState.progress ?? 0,
-            isLoading: selectedTab?.state.loadingState.isLoading ?? false
-        )
-        addonController.prepareVisibleAddonIcons()
-        browserChrome.updateAddressBarMenu(selectedTab: selectedTab, url: selectedURL)
-    }
-
-    func tabPreviewAspectRatio() -> CGFloat {
-        let width = max(contentView.bounds.width, 1)
-        return max(contentView.bounds.height, 1) / width
-    }
-
-    func captureThumbnail(for index: Int) {
-        guard !contentView.isHidden,
-              let tab = tabManager.activeTabs[safe: index],
-              contentView.isDisplaying(session: tab.session),
-              let image = contentView.makeThumbnail() else {
-            return
-        }
-        tabManager.updateThumbnail(image, forTabAt: index)
-    }
-
-    func setTabOverviewVisible(_ visible: Bool, animated: Bool) {
-        if visible {
-            contentView.resetFocusedInputRelocation()
-            searchOverlayCoordinator.tabOverviewWillPresent()
-        }
-        tabOverview.setPresented(visible, animated: animated)
-    }
-    
     func applyFullscreenState(_ fullScreen: Bool, for session: GeckoSession?) {
         if fullScreen {
             fullscreenSession = session

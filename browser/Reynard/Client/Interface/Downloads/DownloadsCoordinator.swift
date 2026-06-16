@@ -7,14 +7,26 @@
 
 import UIKit
 
+protocol DownloadsCoordinatorDelegate: AnyObject {
+    var downloadsAlertPresenter: UIViewController? { get }
+    var downloadsShouldRefreshLayoutForStoreChange: Bool { get }
+
+    func downloadsCoordinator(_ coordinator: DownloadsCoordinator, didUpdate summary: DownloadStoreSummary)
+    func downloadsCoordinatorDidRequestLayoutRefresh(_ coordinator: DownloadsCoordinator)
+}
+
 final class DownloadsCoordinator {
-    private weak var browser: BrowserViewController?
+    // MARK: - State
+
+    private weak var delegate: DownloadsCoordinatorDelegate?
     private var confirmationQueue: [DownloadStore.PendingDownload] = []
     private var isShowingConfirmationAlert = false
     private var storeObserver: NSObjectProtocol?
 
-    init(browserViewController: BrowserViewController) {
-        self.browser = browserViewController
+    // MARK: - Lifecycle
+
+    init(delegate: DownloadsCoordinatorDelegate) {
+        self.delegate = delegate
     }
 
     deinit {
@@ -38,16 +50,10 @@ final class DownloadsCoordinator {
     }
 
     func syncToolbarButtonState() {
-        guard let browser else {
-            return
-        }
-
         let summary = DownloadStore.shared.snapshot().summary
-        browser.browserChrome.updateDownload(summary)
-        if !browser.sidebarCoordinator.hostsSidebar,
-           browser.browserLayout.interfaceIdiom == .pad,
-           browser.browserLayout.chromeMode == .pad {
-            browser.updateBrowserLayout(animated: false)
+        delegate?.downloadsCoordinator(self, didUpdate: summary)
+        if delegate?.downloadsShouldRefreshLayoutForStoreChange == true {
+            delegate?.downloadsCoordinatorDidRequestLayoutRefresh(self)
         }
     }
 
@@ -59,7 +65,7 @@ final class DownloadsCoordinator {
     private func presentNextConfirmationAlertIfNeeded() {
         guard !isShowingConfirmationAlert,
               let pendingDownload = confirmationQueue.first,
-              let presenter = alertPresenter else {
+              let presenter = delegate?.downloadsAlertPresenter else {
             return
         }
 
@@ -99,13 +105,4 @@ final class DownloadsCoordinator {
         }
     }
 
-    private var alertPresenter: UIViewController? {
-        var presenter = browser as UIViewController?
-
-        while let presentedController = presenter?.presentedViewController {
-            presenter = presentedController
-        }
-
-        return presenter
-    }
 }

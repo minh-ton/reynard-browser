@@ -71,9 +71,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         DispatchQueue.main.async {
             browserViewController.loadViewIfNeeded()
-            let contentBrowser = browserViewController.sidebarCoordinator.contentBrowser
-            contentBrowser.loadViewIfNeeded()
-            contentBrowser.tabManager.openExternalURL(resolvedURL)
+            browserViewController.sidebarCoordinator.loadContentIfNeeded()
+            browserViewController.sidebarCoordinator.openExternalURL(resolvedURL)
         }
     }
     

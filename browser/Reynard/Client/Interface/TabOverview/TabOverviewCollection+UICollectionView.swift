@@ -49,8 +49,8 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
                   let tabOverview = self.tabOverview else {
                 return
             }
-            tabOverview.browserViewController?.tabBar.setPendingExpansion(at: nil)
-            tabOverview.browserViewController?.tabManager.removeTab(at: currentIndexPath.item, mode: currentTabMode.tabMode)
+            tabOverview.delegate?.tabOverviewDidRequestClearPendingTabExpansion(tabOverview)
+            tabOverview.dataSource?.closeTab(at: currentIndexPath.item, mode: currentTabMode.tabMode)
         }
         return tabCard
     }
@@ -68,7 +68,7 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
             ?? selectedTab.thumbnail
         tabOverview.prepareDismissSelection(to: indexPath.item, mode: tabMode.tabMode, previewImage: previewImage)
         tabOverview.reloadTabs()
-        tabOverview.browserViewController?.setTabOverviewVisible(false, animated: true)
+        tabOverview.delegate?.tabOverviewDidRequestDismiss(tabOverview, animated: true)
     }
 
     func collectionView(
@@ -77,7 +77,7 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         to destinationIndexPath: IndexPath
     ) {
         guard let tabMode = tabMode(for: collectionView) else { return }
-        tabOverview?.browserViewController?.tabManager.moveTab(
+        tabOverview?.dataSource?.moveTab(
             from: sourceIndexPath.item,
             to: destinationIndexPath.item,
             mode: tabMode.tabMode

@@ -565,7 +565,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
     
     private func resolvedBrowserViewController() -> BrowserViewController? {
         if let sidebarViewController = splitViewController as? SidebarViewController {
-            return sidebarViewController.contentBrowser
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
         }
         
         if let browserViewController = navigationController?.presentingViewController as? BrowserViewController {
@@ -590,7 +590,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         }
         
         if let sidebarViewController = controller as? SidebarViewController {
-            return sidebarViewController.contentBrowser
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
         }
         
         if let presentedViewController = controller.presentedViewController,

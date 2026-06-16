@@ -7,6 +7,38 @@
 
 import UIKit
 
+protocol TabOverviewDataSource: AnyObject {
+    var regularTabs: [Tab] { get }
+    var privateTabs: [Tab] { get }
+    var selectedMode: TabMode { get }
+    var selectedIndex: Int { get }
+
+    func selectTab(at index: Int, mode: TabMode)
+    func closeTab(at index: Int, mode: TabMode)
+    func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
+    func captureThumbnailForVisibleTab(at index: Int)
+}
+
+protocol TabOverviewDelegate: AnyObject {
+    func tabOverviewDidRequestClearTabs(_ tabOverview: TabOverview)
+    func tabOverviewDidRequestNewTab(_ tabOverview: TabOverview)
+    func tabOverviewDidRequestDone(_ tabOverview: TabOverview)
+    func tabOverviewDidRequestDismiss(_ tabOverview: TabOverview, animated: Bool)
+    func tabOverviewDidRequestClearPendingTabExpansion(_ tabOverview: TabOverview)
+}
+
+protocol TabOverviewPresentationContext: AnyObject {
+    var containerView: UIView { get }
+    var contentView: ContentView { get }
+    var browserChrome: BrowserChrome { get }
+    var tabBar: TabBar { get }
+    var browserLayout: BrowserLayout { get }
+
+    func setSearchFocused(_ focused: Bool, animated: Bool)
+    func endEditing()
+    func updateLayout(animated: Bool, duration: TimeInterval)
+}
+
 final class TabOverview: UIView {
     // MARK: - UX
 
@@ -38,7 +70,9 @@ final class TabOverview: UIView {
 
     // MARK: - State
 
-    weak var browserViewController: BrowserViewController?
+    weak var dataSource: TabOverviewDataSource?
+    weak var delegate: TabOverviewDelegate?
+    weak var presentationContext: TabOverviewPresentationContext?
 
     private(set) var toolbarPosition: ToolbarPosition = .bottom
 
@@ -52,6 +86,15 @@ final class TabOverview: UIView {
 
     var isTransitionRunning: Bool {
         presentation.isTransitionRunning
+    }
+
+    var previewAspectRatio: CGFloat {
+        guard let contentView = presentationContext?.contentView else {
+            return 1
+        }
+
+        let width = max(contentView.bounds.width, 1)
+        return max(contentView.bounds.height, 1) / width
     }
 
     // MARK: - Views
@@ -94,8 +137,14 @@ final class TabOverview: UIView {
 
     // MARK: - Configuration
 
-    func configure(browserViewController: BrowserViewController) {
-        self.browserViewController = browserViewController
+    func configure(
+        dataSource: TabOverviewDataSource,
+        delegate: TabOverviewDelegate,
+        presentationContext: TabOverviewPresentationContext
+    ) {
+        self.dataSource = dataSource
+        self.delegate = delegate
+        self.presentationContext = presentationContext
     }
 
     // MARK: - Updates
@@ -246,7 +295,7 @@ final class TabOverview: UIView {
     // MARK: - Actions
 
     private func requestClearTabs() {
-        browserViewController?.clearAllTabsTapped()
+        delegate?.tabOverviewDidRequestClearTabs(self)
     }
 
     private func handleTabModeChange(_ mode: Mode) {
@@ -255,17 +304,17 @@ final class TabOverview: UIView {
     }
 
     private func requestNewTab() {
-        browserViewController?.createNewTab()
+        delegate?.tabOverviewDidRequestNewTab(self)
     }
 
     private func requestDone() {
-        browserViewController?.doneTapped()
+        delegate?.tabOverviewDidRequestDone(self)
     }
 
     private func updateToolbarState() {
-        let regularCount = browserViewController?.tabManager.regularTabs.count ?? 0
+        let regularCount = dataSource?.regularTabs.count ?? 0
         let visibleCount = mode == .privateTabs
-            ? browserViewController?.tabManager.privateTabs.count ?? 0
+            ? dataSource?.privateTabs.count ?? 0
             : regularCount
         topToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)
         bottomToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)

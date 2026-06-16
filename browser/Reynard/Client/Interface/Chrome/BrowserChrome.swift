@@ -71,7 +71,7 @@ final class BrowserChrome: UIView {
 
     // MARK: - Lifecycle
 
-    init(controller: BrowserViewController) {
+    init() {
         topToolbar = TopToolbar()
         bottomToolbar = BottomToolbar()
         super.init(frame: .zero)
@@ -79,7 +79,6 @@ final class BrowserChrome: UIView {
         configureHierarchy()
         configureConstraints()
         configureToolbarActions()
-        addressBar.configure(controller: controller)
     }
 
     required init?(coder: NSCoder) {
@@ -217,8 +216,16 @@ final class BrowserChrome: UIView {
 
     // MARK: - Address Bar
 
-    func configureAddressBarSearchDelegate(_ delegate: AddressBarSearchDelegate) {
-        addressBar.configureSearchDelegate(delegate)
+    func configureAddressBar(
+        delegate: AddressBarDelegate,
+        searchDelegate: AddressBarSearchDelegate,
+        gestureDelegate: AddressBarGestureDelegate
+    ) {
+        addressBar.configure(
+            delegate: delegate,
+            searchDelegate: searchDelegate,
+            gestureDelegate: gestureDelegate
+        )
     }
 
     func setAddressBarText(
