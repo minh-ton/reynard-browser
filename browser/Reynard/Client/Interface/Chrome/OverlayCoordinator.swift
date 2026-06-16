@@ -111,22 +111,22 @@ final class OverlayCoordinator {
     private func hide(_ host: Host, animated: Bool, completion: (() -> Void)?) {
         switch host {
         case .embedded:
-            controller.browserUI.contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            controller.contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         case .detached:
-            controller.browserUI.browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            controller.browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         }
     }
 
     private func setController(_ viewController: UIViewController, for page: Page, on host: Host) {
         switch host {
         case .embedded:
-            controller.browserUI.contentView.setOverlayController(
+            controller.contentView.setOverlayController(
                 viewController,
                 for: embeddedPage(for: page),
                 in: controller
             )
         case .detached:
-            controller.browserUI.browserChrome.setOverlayController(
+            controller.browserChrome.setOverlayController(
                 viewController,
                 for: detachedPage(for: page),
                 in: controller
@@ -137,9 +137,9 @@ final class OverlayCoordinator {
     private func removeController(for page: Page, from host: Host) {
         switch host {
         case .embedded:
-            controller.browserUI.contentView.removeOverlayController(for: embeddedPage(for: page))
+            controller.contentView.removeOverlayController(for: embeddedPage(for: page))
         case .detached:
-            controller.browserUI.browserChrome.removeOverlayController(for: detachedPage(for: page))
+            controller.browserChrome.removeOverlayController(for: detachedPage(for: page))
         }
     }
 
@@ -151,13 +151,13 @@ final class OverlayCoordinator {
     ) {
         switch host {
         case .embedded:
-            controller.browserUI.contentView.setOverlayPresentation(
+            controller.contentView.setOverlayPresentation(
                 .visible(embeddedPage(for: page)),
                 animated: animated,
                 completion: completion
             )
         case .detached:
-            controller.browserUI.browserChrome.setOverlayPresentation(
+            controller.browserChrome.setOverlayPresentation(
                 .visible(detachedPage(for: page)),
                 animated: animated,
                 completion: completion

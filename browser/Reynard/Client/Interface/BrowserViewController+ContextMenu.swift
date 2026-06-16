@@ -30,7 +30,6 @@ private enum ContextMenuAssociatedKeys {
     static var contextMenuViewController = 0
     static var isCommittingContextMenu = 0
     static var isPresentingContextMenu = 0
-    static var haptic = 0
 }
 
 extension BrowserViewController: UIContextMenuInteractionDelegate {
@@ -89,22 +88,13 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
         }
     }
     
-    private var presentHaptic: UIImpactFeedbackGenerator {
-        if let existing = objc_getAssociatedObject(self, &ContextMenuAssociatedKeys.haptic) as? UIImpactFeedbackGenerator {
-            return existing
-        }
-        let generator = UIImpactFeedbackGenerator(style: .rigid)
-        objc_setAssociatedObject(self, &ContextMenuAssociatedKeys.haptic, generator, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        return generator
-    }
-    
     func configureContextMenu() {
         guard contextMenuInteraction == nil else {
             return
         }
         
         let interaction = UIContextMenuInteraction(delegate: self)
-        browserUI.contentView.addWebViewInteraction(interaction)
+        contentView.addWebViewInteraction(interaction)
         contextMenuInteraction = interaction
     }
     
@@ -118,7 +108,6 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
             return
         }
         
-        presentHaptic.prepare()
         closeContextMenu()
         pendingContextMenuContext = context
         isCommittingContextMenu = false
@@ -131,6 +120,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
             return
         }
         
+        let presentHaptic = UIImpactFeedbackGenerator(style: .rigid)
         presentHaptic.impactOccurred()
         _ = interaction.perform(selector, with: NSValue(cgPoint: context.point))
     }
@@ -149,7 +139,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
         if let imageConfiguration = ImagePreviewMenu.configuration(
             for: context,
             presentingController: self,
-            sourceView: browserUI.contentView
+            sourceView: contentView
         ) {
             return imageConfiguration
         }
@@ -298,10 +288,10 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
     
     private func makeTargetedPreview() -> UITargetedPreview {
         let sourcePoint = pendingContextMenuContext?.point ?? CGPoint(
-            x: browserUI.contentView.bounds.midX,
-            y: browserUI.contentView.bounds.midY
+            x: contentView.bounds.midX,
+            y: contentView.bounds.midY
         )
-        let target = UIPreviewTarget(container: browserUI.contentView, center: sourcePoint)
+        let target = UIPreviewTarget(container: contentView, center: sourcePoint)
         let parameters = UIPreviewParameters()
         parameters.backgroundColor = .clear
         parameters.visiblePath = UIBezierPath(rect: CGRect(x: 0, y: 0, width: 1, height: 1))
@@ -323,7 +313,7 @@ extension BrowserViewController: UIContextMenuInteractionDelegate {
                 return
             }
             
-            self.browserUI.contentView.restoreInteraction(for: session)
+            self.contentView.restoreInteraction(for: session)
         }
     }
 }

@@ -11,7 +11,6 @@ import UIKit
 private enum DownloadAssociatedKeys {
     static var pendingConfirmations = 0
     static var presentingConfirmation = 0
-    static var haptic = 0
 }
 
 private final class PendingDownloadConfirmationsBox {
@@ -53,15 +52,6 @@ extension BrowserViewController {
             )
         }
     }
-    
-    var downloadHaptic: UINotificationFeedbackGenerator {
-        if let existing = objc_getAssociatedObject(self, &DownloadAssociatedKeys.haptic) as? UINotificationFeedbackGenerator {
-            return existing
-        }
-        let generator = UINotificationFeedbackGenerator()
-        objc_setAssociatedObject(self, &DownloadAssociatedKeys.haptic, generator, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        return generator
-    }
 }
 
 extension BrowserViewController {
@@ -80,14 +70,12 @@ extension BrowserViewController {
     
     func syncDownloadButtonState() {
         let summary = DownloadStore.shared.snapshot().summary
-        browserUI.browserChrome.updateDownload(summary)
-        if !shouldEmbedSidebarContainer, isPad, !usesCompactPadChrome {
-            browserUI.applyChromeLayout(animated: false)
+        browserChrome.updateDownload(summary)
+        if !shouldEmbedSidebarContainer,
+           browserLayout.interfaceIdiom == .pad,
+           browserLayout.browserChromeMode == .pad {
+            updateBrowserLayout(animated: false)
         }
-    }
-    
-    func downloadsButtonClicked() {
-        presentDownloadsFromToolbar()
     }
     
     func enqueueDownloadConfirmation(_ download: DownloadStore.PendingDownload) {
@@ -101,8 +89,8 @@ extension BrowserViewController {
     
     private func presentDownloadsFromToolbar() {
         DownloadStore.shared.markCompletedDownloadsViewed()
-        if isPad,
-           !usesCompactPadChrome,
+        if browserLayout.interfaceIdiom == .pad,
+           browserLayout.browserChromeMode == .pad,
            let splitViewController = splitViewController as? BrowserSplitViewController {
             splitViewController.showLibrarySection(.downloads)
             return
@@ -112,7 +100,6 @@ extension BrowserViewController {
     }
     
     private func presentNextDownloadConfirmationIfNeeded() {
-        downloadHaptic.prepare()
         guard !isPresentingDownloadConfirmation,
               let download = pendingDownloadConfirmations.first,
               let presenter = topPresentedViewController else {
@@ -130,7 +117,8 @@ extension BrowserViewController {
             self?.finishDownloadConfirmation(startDownload: false)
         })
         alert.addAction(UIAlertAction(title: "Download", style: .default) { [weak self] _ in
-            self?.downloadHaptic.notificationOccurred(.success)
+            let downloadHaptic = UINotificationFeedbackGenerator()
+            downloadHaptic.notificationOccurred(.success)
             self?.finishDownloadConfirmation(startDownload: true)
         })
         

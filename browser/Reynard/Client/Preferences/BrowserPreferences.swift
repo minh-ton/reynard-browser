@@ -46,7 +46,7 @@ final class BrowserPreferences {
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
             
             // Appearance
-            key("AppearanceSettings", "addressBarPosition"): ChromePosition.bottom.rawValue,
+            key("AppearanceSettings", "addressBarPosition"): browserChromePosition.bottom.rawValue,
             key("AppearanceSettings", "showsLandscapeTabBar"): true,
             
             // Bookmarks
@@ -270,14 +270,14 @@ final class BrowserPreferences {
     
     // MARK: - Appearance
     struct AppearanceSettings {
-        static var addressBarPosition: ChromePosition {
+        static var addressBarPosition: browserChromePosition {
             get {
-                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "addressBarPosition") ?? ChromePosition.bottom.rawValue
-                return ChromePosition(rawValue: rawValue) ?? .bottom
+                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "addressBarPosition") ?? browserChromePosition.bottom.rawValue
+                return browserChromePosition(rawValue: rawValue) ?? .bottom
             }
             set {
                 prefs.set(newValue.rawValue, forSetting: "AppearanceSettings", key: "addressBarPosition")
-                NotificationCenter.default.post(name: Notification.Name("addressBarPositionChanged"), object: nil)
+                NotificationCenter.default.post(name: .addressBarPositionDidChange, object: nil)
             }
         }
         
@@ -287,7 +287,7 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "AppearanceSettings", key: "showsLandscapeTabBar")
-                NotificationCenter.default.post(name: Notification.Name("landscapeTabBarChanged"), object: nil)
+                NotificationCenter.default.post(name: .landscapeTabBarDidChange, object: nil)
             }
         }
     }

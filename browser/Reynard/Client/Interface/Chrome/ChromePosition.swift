@@ -1,11 +1,11 @@
 //
-//  ChromePosition.swift
+//  browserChromePosition.swift
 //  Reynard
 //
 //  Created by Minh Ton on 10/6/26.
 //
 
-enum ChromePosition: String {
+enum browserChromePosition: String {
     case top
     case bottom
 }

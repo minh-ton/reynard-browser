@@ -31,6 +31,7 @@ final class TabOverview: UIView {
         static let tabCollectionItemSpacing: CGFloat = 16
         static let bottomToolbarContainerHeight: CGFloat = 144
         static let topToolbarContainerHeight: CGFloat = 76
+        static let layoutAnimationDuration: TimeInterval = 0.22
     }
 
     enum Mode: Int {
@@ -129,7 +130,16 @@ final class TabOverview: UIView {
             self.layoutIfNeeded()
             self.collection.applyPresentationTransforms()
         }
-        animated ? UIView.animate(withDuration: 0.22, animations: changes) : changes()
+        animated ? UIView.animate(withDuration: UX.layoutAnimationDuration, animations: changes) : changes()
+    }
+
+    func setActiveToolbarAlpha(_ alpha: CGFloat) {
+        switch toolbarPosition {
+        case .top:
+            topToolbar.alpha = alpha
+        case .bottom:
+            bottomToolbar.alpha = alpha
+        }
     }
 
     func setPresented(_ presented: Bool, animated: Bool) {

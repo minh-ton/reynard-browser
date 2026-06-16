@@ -39,17 +39,15 @@ final class JITController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleChildProcessNotification(_:)),
-            name: NSNotification.Name("GeckoRuntimeChildProcessDidStart"),
+            name: .geckoRuntimeChildProcessDidStart,
             object: nil
         )
-        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleJITDisconnectNotification(_:)),
-            name: Notification.Name("me-minh-ton.jit.endpoint-monitor-failed"),
+            name: .jitEndpointMonitorDidFail,
             object: nil
         )
-        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleApplicationDidBecomeActive),
@@ -283,7 +281,7 @@ final class JITController {
         }
         
         DispatchQueue.main.async {
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "me.minh-ton.reynard.jitless-mode-activated"), object: nil)
+            NotificationCenter.default.post(name: .jitlessModeDidActivate, object: nil)
         }
     }
     

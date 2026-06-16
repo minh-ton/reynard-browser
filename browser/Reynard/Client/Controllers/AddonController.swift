@@ -332,7 +332,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
     
     @MainActor
     private func presentPopupAfterMenuDismissal(url: String, title: String) {
-        controller?.browserUI.browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
+        controller?.browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
             self?.presentModalPopup(url: url, title: title)
         }
     }
@@ -485,7 +485,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
                 return
             }
             
-            controller.browserUI.contentView.restoreInteraction(for: session)
+            controller.contentView.restoreInteraction(for: session)
         }
     }
     

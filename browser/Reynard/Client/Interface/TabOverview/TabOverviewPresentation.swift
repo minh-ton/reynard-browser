@@ -76,7 +76,9 @@ final class TabOverviewPresentation {
         let availableWidth = collectionView.bounds.width - horizontalInsets
         let tabViewAspectRatio = max(UX.cardMinimumPreviewAspectRatio, controller.tabPreviewAspectRatio())
         
-        let targetWidth = controller.usesPadChrome ? UX.padCardTargetWidth : UX.phoneCardTargetWidth
+        let targetWidth = controller.browserLayout.browserChromeMode == .phone
+            ? UX.phoneCardTargetWidth
+            : UX.padCardTargetWidth
         let computedColumns = Int((availableWidth + UX.cardCollectionItemSpacing) / (targetWidth + UX.cardCollectionItemSpacing))
         let columns = max(UX.minimumTabCardColumnCount, computedColumns)
         
@@ -122,7 +124,7 @@ final class TabOverviewPresentation {
         }
         
         if animated {
-            if controller.usesPadChrome {
+            if controller.browserLayout.browserChromeMode != .phone {
                 visible ? presentOnPad() : dismissOnPad()
             } else {
                 visible ? presentOnPhone() : dismissOnPhone()
@@ -142,7 +144,7 @@ final class TabOverviewPresentation {
             tabOverview.isHidden = false
             controller.view.bringSubviewToFront(tabOverview)
             controller.view.endEditing(true)
-            controller.browserUI.searchOverlayCoordinator.setFocused(false, animated: true)
+            controller.searchOverlayCoordinator.setFocused(false, animated: true)
         }
         
         let finalProgress: CGFloat = visible ? 1 : 0
@@ -154,8 +156,8 @@ final class TabOverviewPresentation {
             tabOverview.isHidden = true
             applyPresentationProgress(0)
         }
-        controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.updateLayout()
+        controller.updateBrowserLayout(animated: false)
+        controller.tabBar.updateLayout()
     }
 
     // MARK: - Presentation Progress
@@ -170,12 +172,12 @@ final class TabOverviewPresentation {
         tabOverview.collection.setPresentationVerticalOffset(collectionOffset)
         
         let pageScale = 1 - (UX.presentedPageScaleReduction * clamped)
-        controller.browserUI.contentView.setTransitionTransform(CGAffineTransform(scaleX: pageScale, y: pageScale))
+        controller.contentView.setTransitionTransform(CGAffineTransform(scaleX: pageScale, y: pageScale))
         
-        if controller.usesPadChrome {
-            controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1 - clamped, bottomAlpha: 1)
+        if controller.browserLayout.browserChromeMode != .phone {
+            controller.browserChrome.setChromeTransition(topAlpha: 1 - clamped, bottomAlpha: 1)
         } else {
-            controller.browserUI.browserChrome.setChromeTransition(
+            controller.browserChrome.setChromeTransition(
                 topAlpha: 1,
                 bottomAlpha: 1 - clamped,
                 bottomTranslationY: UX.hiddenPhoneToolbarTranslation * clamped
@@ -193,17 +195,17 @@ final class TabOverviewPresentation {
         tabOverview.setMode(overviewMode, animated: false)
         let selectedIndex = controller.tabManager.selectedTabIndex
         controller.view.layoutIfNeeded()
-        let bottomSnapshot = controller.browserUI.browserChrome.bottomToolbarSnapshot()
-        controller.applyChromeLayout(animated: false)
+        let bottomSnapshot = controller.browserChrome.bottomToolbarSnapshot()
+        controller.updateBrowserLayout(animated: false)
         controller.captureThumbnail(for: selectedIndex)
         tabOverview.invalidateCollectionLayouts()
         tabOverview.reloadTabs()
         tabOverview.isHidden = false
         tabOverview.alpha = 0
         tabOverview.bottomToolbar.alpha = 0
-        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.contentView)
+        controller.view.insertSubview(tabOverview, belowSubview: controller.contentView)
         controller.view.endEditing(true)
-        controller.browserUI.searchOverlayCoordinator.setFocused(false, animated: false)
+        controller.searchOverlayCoordinator.setFocused(false, animated: false)
         controller.view.layoutIfNeeded()
         
         dismissalTargetTabIndex = selectedIndex
@@ -219,26 +221,26 @@ final class TabOverviewPresentation {
               let bottomSnapshot else {
             state = .presented
             applyPresentationProgress(1)
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
         guard let transitionView = selectedCell.makeTransitionSnapshot() else {
             state = .presented
             applyPresentationProgress(1)
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
         let finalContentFrame = selectedCell.transitionSnapshotFrame(in: controller.view)
         let finalPreviewFrame = selectedCell.webpagePreviewImageFrame(in: controller.view)
-        let contentFrame = controller.browserUI.contentView.frame(in: controller.view)
+        let contentFrame = controller.contentView.frame(in: controller.view)
         
         selectedCell.setTransitionState(.hiddenForAnimation)
         tabOverview.alpha = 1
         selectedCollection.transform = standardCollectionTransform.scaledBy(x: UX.transitionCollectionInitialScale, y: UX.transitionCollectionInitialScale)
         
-        bottomSnapshot.frame = controller.browserUI.browserChrome.bottomToolbarFrame(in: controller.view)
+        bottomSnapshot.frame = controller.browserChrome.bottomToolbarFrame(in: controller.view)
         
         transitionView.frame = finalContentFrame
         transitionView.transform = webpagePreviewTransitionTransform(
@@ -246,11 +248,11 @@ final class TabOverviewPresentation {
             previewFrame: finalPreviewFrame,
             sourceFrame: contentFrame
         )
-        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.contentView)
+        controller.view.insertSubview(transitionView, belowSubview: controller.contentView)
         controller.view.addSubview(bottomSnapshot)
         
-        controller.browserUI.contentView.setTransitionHidden(true)
-        controller.browserUI.browserChrome.setBottomToolbarHidden(true)
+        controller.contentView.setTransitionHidden(true)
+        controller.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: UX.presentationAnimationDuration, delay: 0, usingSpringWithDamping: UX.presentationSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
             transitionView.transform = .identity
@@ -263,8 +265,8 @@ final class TabOverviewPresentation {
             selectedCell.setTransitionState(.visible)
             
             self.controller.view.bringSubviewToFront(self.tabOverview)
-            self.controller.browserUI.contentView.setTransitionHidden(false)
-            self.controller.applyChromeLayout(animated: false)
+            self.controller.contentView.setTransitionHidden(false)
+            self.controller.updateBrowserLayout(animated: false)
             self.state = .presented
         }
     }
@@ -291,7 +293,7 @@ final class TabOverviewPresentation {
             applyPresentationProgress(0)
             tabOverview.isHidden = true
             commitPendingTabSelection()
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
@@ -303,7 +305,7 @@ final class TabOverviewPresentation {
             applyPresentationProgress(0)
             tabOverview.isHidden = true
             commitPendingTabSelection()
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
@@ -320,16 +322,16 @@ final class TabOverviewPresentation {
         commitPendingTabSelection()
         state = .dismissing
         presentationProgress = 0
-        controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.updateLayout()
+        controller.updateBrowserLayout(animated: false)
+        controller.tabBar.updateLayout()
         
-        controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 0)
-        controller.browserUI.contentView.setTransitionHidden(true)
+        controller.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 0)
+        controller.contentView.setTransitionHidden(true)
         tabOverview.bottomToolbar.alpha = 0
         bringBrowserChromeToFrontForDismissal()
         
         UIView.animate(withDuration: UX.dismissalAnimationDuration, delay: 0, usingSpringWithDamping: UX.dismissalSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
-            pageSnapshot.frame = self.controller.dismissalContentFrame()
+            pageSnapshot.frame = self.controller.contentView.frame
             pageSnapshot.layer.cornerRadius = 0
             bottomSnapshot.alpha = 0
             self.tabOverview.alpha = 0
@@ -337,14 +339,14 @@ final class TabOverviewPresentation {
                 collectionView.alpha = 0
             }
             selectedCollection.transform = standardCollectionTransform.scaledBy(x: UX.transitionCollectionInitialScale, y: UX.transitionCollectionInitialScale)
-            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
+            self.controller.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             bottomSnapshot.removeFromSuperview()
             selectedCell.setTransitionState(.visible)
             selectedCollection.transform = standardCollectionTransform
             
-            self.controller.browserUI.contentView.setTransitionHidden(false)
+            self.controller.contentView.setTransitionHidden(false)
             for collectionView in self.tabOverview.collection.allCollectionViews {
                 collectionView.alpha = 1
             }
@@ -364,19 +366,14 @@ final class TabOverviewPresentation {
         let overviewMode: TabOverview.Mode = controller.tabManager.selectedTabMode == .private ? .privateTabs : .regularTabs
         tabOverview.setMode(overviewMode, animated: false)
         let selectedIndex = controller.tabManager.selectedTabIndex
-        controller.applyChromeLayout(animated: false)
+        controller.updateBrowserLayout(animated: false)
         controller.captureThumbnail(for: selectedIndex)
         tabOverview.invalidateCollectionLayouts()
         tabOverview.reloadTabs()
-        let isPhoneTopPresentation = controller.usesBottomPhoneOverview
         tabOverview.isHidden = false
         tabOverview.alpha = 0
-        if isPhoneTopPresentation {
-            tabOverview.bottomToolbar.alpha = 0
-        } else {
-            tabOverview.topToolbar.alpha = 0
-        }
-        controller.view.insertSubview(tabOverview, belowSubview: controller.browserUI.contentView)
+        tabOverview.setActiveToolbarAlpha(0)
+        controller.view.insertSubview(tabOverview, belowSubview: controller.contentView)
         controller.view.endEditing(true)
         controller.view.layoutIfNeeded()
         
@@ -392,20 +389,20 @@ final class TabOverviewPresentation {
         guard let selectedCell = selectedTabCard(at: selectedIndex) else {
             state = .presented
             applyPresentationProgress(1)
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
         guard let transitionView = selectedCell.makeTransitionSnapshot() else {
             state = .presented
             applyPresentationProgress(1)
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
         let finalContentFrame = selectedCell.transitionSnapshotFrame(in: controller.view)
         let finalPreviewFrame = selectedCell.webpagePreviewImageFrame(in: controller.view)
-        let contentFrame = controller.browserUI.contentView.frame(in: controller.view)
+        let contentFrame = controller.contentView.frame(in: controller.view)
         
         selectedCell.setTransitionState(.hiddenForAnimation)
         tabOverview.alpha = 1
@@ -417,26 +414,22 @@ final class TabOverviewPresentation {
             previewFrame: finalPreviewFrame,
             sourceFrame: contentFrame
         )
-        controller.view.insertSubview(transitionView, belowSubview: controller.browserUI.contentView)
-        controller.browserUI.contentView.setTransitionHidden(true)
-        controller.browserUI.browserChrome.setBottomToolbarHidden(true)
+        controller.view.insertSubview(transitionView, belowSubview: controller.contentView)
+        controller.contentView.setTransitionHidden(true)
+        controller.browserChrome.setBottomToolbarHidden(true)
         
         UIView.animate(withDuration: UX.presentationAnimationDuration, delay: 0, usingSpringWithDamping: UX.presentationSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
             transitionView.transform = .identity
-            if isPhoneTopPresentation {
-                self.tabOverview.bottomToolbar.alpha = 1
-            } else {
-                self.tabOverview.topToolbar.alpha = 1
-            }
+            self.tabOverview.setActiveToolbarAlpha(1)
             selectedCollection.transform = standardCollectionTransform
-            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 1)
+            self.controller.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 1)
         } completion: { _ in
             transitionView.removeFromSuperview()
             selectedCell.setTransitionState(.visible)
             
             self.controller.view.bringSubviewToFront(self.tabOverview)
-            self.controller.browserUI.contentView.setTransitionHidden(false)
-            self.controller.applyChromeLayout(animated: false)
+            self.controller.contentView.setTransitionHidden(false)
+            self.controller.updateBrowserLayout(animated: false)
             self.state = .presented
         }
     }
@@ -445,14 +438,9 @@ final class TabOverviewPresentation {
         state = .dismissing
         let overviewIndex = dismissalAnimationTabIndex()
         
-        let isPhoneTopDismissal = controller.usesBottomPhoneOverview
         tabOverview.isHidden = false
         tabOverview.alpha = 1
-        if isPhoneTopDismissal {
-            tabOverview.bottomToolbar.alpha = 1
-        } else {
-            tabOverview.topToolbar.alpha = 1
-        }
+        tabOverview.setActiveToolbarAlpha(1)
         controller.view.bringSubviewToFront(tabOverview)
         controller.view.layoutIfNeeded()
         
@@ -470,7 +458,7 @@ final class TabOverviewPresentation {
             applyPresentationProgress(0)
             tabOverview.isHidden = true
             commitPendingTabSelection()
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
@@ -482,7 +470,7 @@ final class TabOverviewPresentation {
             applyPresentationProgress(0)
             tabOverview.isHidden = true
             commitPendingTabSelection()
-            controller.applyChromeLayout(animated: false)
+            controller.updateBrowserLayout(animated: false)
             return
         }
         
@@ -496,45 +484,37 @@ final class TabOverviewPresentation {
         commitPendingTabSelection()
         state = .dismissing
         presentationProgress = 0
-        controller.applyChromeLayout(animated: false)
-        controller.browserUI.tabBar.updateLayout()
+        controller.updateBrowserLayout(animated: false)
+        controller.tabBar.updateLayout()
         
-        controller.browserUI.contentView.setTransitionHidden(true)
-        controller.browserUI.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 0)
-        controller.browserUI.tabBar.setPresentationAlpha(0)
+        controller.contentView.setTransitionHidden(true)
+        controller.browserChrome.setChromeTransition(topAlpha: 0, bottomAlpha: 0)
+        controller.tabBar.setPresentationAlpha(0)
         bringBrowserChromeToFrontForDismissal()
         
         UIView.animate(withDuration: UX.dismissalAnimationDuration, delay: 0, usingSpringWithDamping: UX.dismissalSpringDamping, initialSpringVelocity: 1, options: [.curveEaseInOut]) {
-            pageSnapshot.frame = self.controller.dismissalContentFrame()
+            pageSnapshot.frame = self.controller.contentView.frame
             pageSnapshot.layer.cornerRadius = 0
             self.tabOverview.alpha = 0
             for collectionView in self.tabOverview.collection.allCollectionViews {
                 collectionView.alpha = 0
             }
             selectedCollection.transform = standardCollectionTransform.scaledBy(x: UX.transitionCollectionInitialScale, y: UX.transitionCollectionInitialScale)
-            if isPhoneTopDismissal {
-                self.tabOverview.bottomToolbar.alpha = 0
-            } else {
-                self.tabOverview.topToolbar.alpha = 0
-            }
-            self.controller.browserUI.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
-            self.controller.browserUI.tabBar.setPresentationAlpha(1)
+            self.tabOverview.setActiveToolbarAlpha(0)
+            self.controller.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1)
+            self.controller.tabBar.setPresentationAlpha(1)
         } completion: { _ in
             pageSnapshot.removeFromSuperview()
             selectedCell.setTransitionState(.visible)
             selectedCollection.transform = standardCollectionTransform
             
-            self.controller.browserUI.contentView.setTransitionHidden(false)
+            self.controller.contentView.setTransitionHidden(false)
             for collectionView in self.tabOverview.collection.allCollectionViews {
                 collectionView.alpha = 1
             }
             self.tabOverview.collection.setPresentationVerticalOffset(0)
             self.tabOverview.isHidden = true
-            if isPhoneTopDismissal {
-                self.tabOverview.bottomToolbar.alpha = 1
-            } else {
-                self.tabOverview.topToolbar.alpha = 1
-            }
+            self.tabOverview.setActiveToolbarAlpha(1)
             self.state = .dismissed
         }
     }
@@ -558,7 +538,7 @@ final class TabOverviewPresentation {
     }
     
     private func bringBrowserChromeToFrontForDismissal() {
-        controller.view.bringSubviewToFront(controller.browserUI.browserChrome)
+        controller.view.bringSubviewToFront(controller.browserChrome)
     }
     
     private func webpagePreviewTransitionTransform(contentFrame: CGRect, previewFrame: CGRect, sourceFrame: CGRect) -> CGAffineTransform {

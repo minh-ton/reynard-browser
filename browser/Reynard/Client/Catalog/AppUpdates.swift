@@ -16,8 +16,6 @@ final class AppUpdates: NSObject {
     var cachedReleaseNotes: NSAttributedString?
     
     private static let sourceURL = "https://github.com/minh-ton/reynard-browser/releases/download/0.0.1-a1/source.json"
-    static let updateAvailableNotification = Notification.Name("me.minh-ton.reynard.update-available")
-    
     private override init() {
         super.init()
         
@@ -59,7 +57,7 @@ final class AppUpdates: NSObject {
                 self.sourceData = data
                 self.hasUpdate = true
                 self.latestVersion = latestVersionStr
-                NotificationCenter.default.post(name: Self.updateAvailableNotification, object: nil)
+                NotificationCenter.default.post(name: .appUpdateAvailable, object: nil)
             }
         }
     }

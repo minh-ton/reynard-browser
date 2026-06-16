@@ -52,7 +52,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
 
     private let viewModel: SearchViewModel
     private var results = SearchResults.empty
-    private var chromeMode: ChromeMode = .phone
+    private var browserChromeMode: browserChromeMode = .phone
     private var lastReportedOverlayContentHeight: CGFloat = -1
 
     // MARK: - Views
@@ -124,12 +124,12 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         viewModel.clear()
     }
 
-    func setChromeMode(_ chromeMode: ChromeMode) {
-        guard self.chromeMode != chromeMode else {
+    func setChromeMode(_ browserChromeMode: browserChromeMode) {
+        guard self.browserChromeMode != browserChromeMode else {
             return
         }
 
-        self.chromeMode = chromeMode
+        self.browserChromeMode = browserChromeMode
         tableView.reloadData()
         reportOverlayContentHeightIfNeeded()
     }
@@ -184,7 +184,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             ) as! SearchSuggestionCell
             cell.apply(text: completion, query: results.query)
             cell.setTrailingIconVisible(true)
-            cell.setTrailingIconDirection(upward: chromeMode != .phone)
+            cell.setTrailingIconDirection(upward: browserChromeMode != .phone)
             cell.setFilledBackgroundVisible(false)
             return cell
         case let .userDataResult(result):

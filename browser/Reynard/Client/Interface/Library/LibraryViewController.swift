@@ -123,7 +123,7 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(applySettingsTabBadge),
-            name: AppUpdates.updateAvailableNotification,
+            name: .appUpdateAvailable,
             object: nil
         )
         if AppUpdates.shared.hasUpdate {

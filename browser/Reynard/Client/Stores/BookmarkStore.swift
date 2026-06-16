@@ -8,10 +8,6 @@
 import Foundation
 import SQLite3
 
-extension Notification.Name {
-    static let bookmarkStoreDidChange = Notification.Name("me.minh-ton.reynard.bookmark-store-did-change")
-}
-
 enum BookmarkNodeType: Int64 {
     case bookmark = 1
     case folder = 2

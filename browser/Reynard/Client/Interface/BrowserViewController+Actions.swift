@@ -53,7 +53,7 @@ extension BrowserViewController {
         
         let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let popover = sheet.popoverPresentationController {
-            let sourceView = browserUI.browserChrome.sharePopoverSourceView()
+            let sourceView = browserChrome.sharePopoverSourceView()
             popover.sourceView = sourceView
             popover.sourceRect = sourceView.bounds
         }
@@ -69,13 +69,13 @@ extension BrowserViewController {
     }
     
     func createNewTab() {
-        browserUI.browserChrome.clearAddressBarAutocomplete()
-        browserUI.searchOverlayCoordinator.endSearchSession()
+        browserChrome.clearAddressBarAutocomplete()
+        searchOverlayCoordinator.endSearchSession()
         view.endEditing(true)
         
-        if browserUI.tabOverview.isPresented {
-            let overviewMode = browserUI.tabOverview.mode
-            browserUI.tabOverview.prepareNewTabInsertion { [weak self] in
+        if tabOverview.isPresented {
+            let overviewMode = tabOverview.mode
+            tabOverview.prepareNewTabInsertion { [weak self] in
                 guard let self else {
                     return
                 }
@@ -116,33 +116,13 @@ extension BrowserViewController {
         refreshAddressBar()
     }
     
-    func backButtonClicked() {
-        goBack()
-    }
-    
-    func forwardButtonClicked() {
-        goForward()
-    }
-    
-    func shareButtonClicked() {
-        presentShareSheet()
-    }
-    
-    func menuButtonClicked() {
-        presentMenuSheet()
-    }
-    
-    func tabsButtonClicked() {
-        showTabOverview()
-    }
-    
     @objc func tabsTapped() {
         showTabOverview()
     }
     
     @objc func doneTapped() {
-        if browserUI.tabOverview.isPresented {
-            let targetMode = browserUI.tabOverview.mode.tabMode
+        if tabOverview.isPresented {
+            let targetMode = tabOverview.mode.tabMode
             let targetTabs = targetMode == .private ? tabManager.privateTabs : tabManager.regularTabs
             guard !targetTabs.isEmpty else {
                 return
@@ -170,16 +150,16 @@ extension BrowserViewController {
     }
     
     @objc func clearAllTabsTapped() {
-        if browserUI.tabOverview.isPresented,
-           browserUI.tabOverview.mode == .privateTabs {
-            browserUI.tabBar.setPendingExpansion(at: nil)
+        if tabOverview.isPresented,
+           tabOverview.mode == .privateTabs {
+            tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .private)
             return
         }
         
-        if browserUI.tabOverview.isPresented,
-           browserUI.tabOverview.mode == .regularTabs {
-            browserUI.tabBar.setPendingExpansion(at: nil)
+        if tabOverview.isPresented,
+           tabOverview.mode == .regularTabs {
+            tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .regular)
             return
         }
@@ -260,7 +240,7 @@ extension BrowserViewController: TabOverviewDataSource, TabOverviewDelegate {
     }
 
     func tabOverview(_ tabOverview: TabOverview, didCloseTabAt index: Int, mode: TabMode) {
-        browserUI.tabBar.setPendingExpansion(at: nil)
+        tabBar.setPendingExpansion(at: nil)
         tabManager.removeTab(at: index, mode: mode)
     }
 

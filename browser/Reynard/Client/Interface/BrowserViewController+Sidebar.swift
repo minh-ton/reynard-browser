@@ -47,11 +47,11 @@ extension BrowserViewController {
     }
     
     var shouldEmbedSidebarContainer: Bool {
-        isSidebarContainerHost && traitCollection.userInterfaceIdiom == .pad
+        isSidebarContainerHost && browserLayout.interfaceIdiom == .pad
     }
     
     func syncSidebarButtonItem() {
-        browserUI.browserChrome.syncSidebarButton(splitViewController: splitViewController)
+        browserChrome.syncSidebarButton(splitViewController: splitViewController)
     }
     
     func setupEmbeddedSidebarContainer() {
@@ -74,12 +74,12 @@ extension BrowserViewController {
     }
     
     func setLibrarySidebarVisible(_ visible: Bool, animated: Bool) {
-        guard isPad else {
+        guard browserLayout.interfaceIdiom == .pad else {
             return
         }
         
         (splitViewController as? BrowserSplitViewController)?.setLibrarySidebarVisible(visible)
-        browserUI.applyChromeLayout(animated: animated)
+        updateBrowserLayout(animated: animated)
     }
     
     @objc func librarySidebarTapped() {
@@ -163,7 +163,7 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
             preferredDisplayMode = visible ? .allVisible : .primaryHidden
         }
         if browserViewController.isViewLoaded {
-            browserViewController.applyChromeLayout(animated: false)
+            browserViewController.updateBrowserLayout(animated: false)
         }
     }
     
@@ -185,15 +185,15 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
         containerView.layoutIfNeeded()
         browserViewController.view.layoutIfNeeded()
         
-        let destinationFrame = browserViewController.browserUI.browserChrome.sidebarButtonFrame(in: containerView)
-        browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
+        let destinationFrame = browserViewController.browserChrome.sidebarButtonFrame(in: containerView)
+        browserViewController.browserChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
         
         UIView.animate(withDuration: 0.14, delay: 0, options: [.curveEaseOut]) {
             snapshot.frame = destinationFrame
-            self.browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
+            self.browserViewController.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
         } completion: { _ in
             sourceView.isHidden = false
-            self.browserViewController.browserUI.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
+            self.browserViewController.browserChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
             snapshot.removeFromSuperview()
         }
     }
@@ -210,14 +210,14 @@ final class BrowserSplitViewController: UISplitViewController, UISplitViewContro
     func refreshSidebarVisibility() {
         sidebarVisible = displayMode != .secondaryOnly
         if browserViewController.isViewLoaded {
-            browserViewController.applyChromeLayout(animated: false)
+            browserViewController.updateBrowserLayout(animated: false)
         }
     }
     
     func splitViewController(_ svc: UISplitViewController, willChangeTo displayMode: UISplitViewController.DisplayMode) {
         sidebarVisible = displayMode != .secondaryOnly
         if browserViewController.isViewLoaded {
-            browserViewController.applyChromeLayout(animated: false)
+            browserViewController.updateBrowserLayout(animated: false)
         }
     }
     

@@ -7,15 +7,6 @@
 
 import UIKit
 
-protocol BottomToolbarDelegate: AnyObject {
-    func backButtonClicked()
-    func forwardButtonClicked()
-    func shareButtonClicked()
-    func menuButtonClicked()
-    func downloadsButtonClicked()
-    func tabsButtonClicked()
-}
-
 final class BottomToolbar: UIView {
     // MARK: - UX
 
@@ -47,12 +38,12 @@ final class BottomToolbar: UIView {
         return view
     }()
 
-    private lazy var backButton = ToolbarButton(buttonType: .back, target: self, action: #selector(backButtonClicked))
-    private lazy var forwardButton = ToolbarButton(buttonType: .forward, target: self, action: #selector(forwardButtonClicked))
-    private lazy var shareButton = ToolbarButton(buttonType: .share, target: self, action: #selector(shareButtonClicked))
-    private lazy var libraryButton = ToolbarButton(buttonType: .library, target: self, action: #selector(menuButtonClicked))
-    private lazy var downloadButton = ToolbarButton(buttonType: .download, target: self, action: #selector(downloadsButtonClicked))
-    private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: self, action: #selector(tabsButtonClicked))
+    private lazy var backButton = ToolbarButton(buttonType: .back, target: controller, action: #selector(BrowserViewController.padBackTapped))
+    private lazy var forwardButton = ToolbarButton(buttonType: .forward, target: controller, action: #selector(BrowserViewController.padForwardTapped))
+    private lazy var shareButton = ToolbarButton(buttonType: .share, target: controller, action: #selector(BrowserViewController.shareTapped))
+    private lazy var libraryButton = ToolbarButton(buttonType: .library, target: controller, action: #selector(BrowserViewController.topBarMenuTapped))
+    private lazy var downloadButton = ToolbarButton(buttonType: .download, target: controller, action: #selector(BrowserViewController.topBarDownloadsTapped))
+    private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: controller, action: #selector(BrowserViewController.tabsTapped))
 
     private lazy var buttons: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, libraryButton, downloadButton, tabOverviewButton])
@@ -75,13 +66,14 @@ final class BottomToolbar: UIView {
 
     // MARK: - State
 
-    weak var delegate: BottomToolbarDelegate?
+    private unowned let controller: BrowserViewController
     private var verticalOffset: CGFloat = 0
 
     // MARK: - Lifecycle
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(controller: BrowserViewController) {
+        self.controller = controller
+        super.init(frame: .zero)
         configureAppearance()
         configureHierarchy()
         configureConstraints()
@@ -182,15 +174,6 @@ final class BottomToolbar: UIView {
             for: .normal
         )
     }
-
-    // MARK: - Actions
-
-    @objc private func backButtonClicked() { delegate?.backButtonClicked() }
-    @objc private func forwardButtonClicked() { delegate?.forwardButtonClicked() }
-    @objc private func shareButtonClicked() { delegate?.shareButtonClicked() }
-    @objc private func menuButtonClicked() { delegate?.menuButtonClicked() }
-    @objc private func downloadsButtonClicked() { delegate?.downloadsButtonClicked() }
-    @objc private func tabsButtonClicked() { delegate?.tabsButtonClicked() }
 
     // MARK: - View Setup
 

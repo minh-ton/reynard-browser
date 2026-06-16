@@ -108,6 +108,23 @@ final class TabManagementStore {
             )
         }
     }
+
+    func restoredTabMode() -> TabMode {
+        let snapshot = loadSnapshot()
+        if snapshot.selectedTabMode == .private, !snapshot.privateTabs.isEmpty {
+            return .private
+        }
+        if snapshot.selectedTabMode == .regular, !snapshot.regularTabs.isEmpty {
+            return .regular
+        }
+        if !snapshot.regularTabs.isEmpty {
+            return .regular
+        }
+        if !snapshot.privateTabs.isEmpty {
+            return .private
+        }
+        return .regular
+    }
     
     func saveTabs(
         regularTabs: [Tab],

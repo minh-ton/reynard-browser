@@ -8,10 +8,6 @@
 import Foundation
 import SQLite3
 
-extension Notification.Name {
-    static let historyStoreDidChange = Notification.Name("me.minh-ton.reynard.history-store-did-change")
-}
-
 struct HistoryStoreSnapshot {
     let items: [HistorySiteSnapshot]
 }

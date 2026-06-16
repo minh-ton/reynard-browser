@@ -25,12 +25,12 @@ final class BrowserChrome: UIView {
 
     struct State {
         // Position controls AddressBar presentation; mode controls which toolbar physically hosts it.
-        let position: ChromePosition
-        let mode: ChromeMode
+        let position: browserChromePosition
+        let mode: browserChromeMode
         let presentation: PresentationState
         let search: SearchState
         let topInset: CGFloat
-        let isPadLayout: Bool
+        let interfaceIdiom: UIUserInterfaceIdiom
         let sidebarVisible: Bool
     }
 
@@ -43,7 +43,7 @@ final class BrowserChrome: UIView {
     }()
 
     private let topToolbar: TopToolbar
-    private let bottomToolbar = BottomToolbar()
+    private let bottomToolbar: BottomToolbar
     private let overlayContentView = ChromeOverlayContentView()
 
     // MARK: - Constraints
@@ -62,11 +62,12 @@ final class BrowserChrome: UIView {
 
     init(controller: BrowserViewController) {
         topToolbar = TopToolbar(controller: controller)
+        bottomToolbar = BottomToolbar(controller: controller)
         super.init(frame: .zero)
         configureAppearance()
         configureHierarchy()
         configureConstraints()
-        configureInteractions(controller: controller)
+        addressBar.configure(controller: controller)
     }
 
     required init?(coder: NSCoder) {
@@ -111,7 +112,7 @@ final class BrowserChrome: UIView {
 
     func apply(state: State) {
         self.state = state
-        addressBar.updateLayout(position: state.position, chromeMode: state.mode)
+        addressBar.updateLayout(position: state.position, browserChromeMode: state.mode)
         attachAddressBar(for: state.mode)
         configureOverlayPositioningIfNeeded()
 
@@ -129,7 +130,7 @@ final class BrowserChrome: UIView {
         topToolbar.apply(
             state: topState,
             topInset: state.topInset,
-            isPadLayout: state.isPadLayout,
+            interfaceIdiom: state.interfaceIdiom,
             sidebarVisible: state.sidebarVisible
         )
         bottomToolbar.apply(
@@ -142,7 +143,7 @@ final class BrowserChrome: UIView {
         )
     }
 
-    func setBottomOffset(_ offset: CGFloat) {
+    func dockAddressBar(offset: CGFloat) {
         bottomConstraint.constant = offset
         bottomToolbar.setVerticalOffset(offset)
     }
@@ -346,14 +347,9 @@ final class BrowserChrome: UIView {
         bottomToolbar.configureTopAnchor(to: safeAreaLayoutGuide.bottomAnchor)
     }
 
-    private func configureInteractions(controller: BrowserViewController) {
-        addressBar.configure(delegate: controller, dataSource: controller)
-        bottomToolbar.delegate = controller
-    }
-
     // MARK: - State Resolution
 
-    private func attachAddressBar(for mode: ChromeMode) {
+    private func attachAddressBar(for mode: browserChromeMode) {
         // Landscape phone uses pad-style top chrome even when the portrait preference is bottom.
         topToolbar.detachAddressBar()
         bottomToolbar.detachAddressBar()

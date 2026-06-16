@@ -82,7 +82,7 @@ final class SettingsRootViewController: SettingsTableViewController {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleJITLessModeActivated(_:)),
-            name: Notification.Name(rawValue: "me.minh-ton.reynard.jitless-mode-activated"),
+            name: .jitlessModeDidActivate,
             object: nil
         )
         refreshControls()

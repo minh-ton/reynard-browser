@@ -149,7 +149,7 @@ final class TopToolbar: UIView {
     func apply(
         state: LayoutState,
         topInset: CGFloat,
-        isPadLayout: Bool,
+        interfaceIdiom: UIUserInterfaceIdiom,
         sidebarVisible: Bool
     ) {
         UIView.performWithoutAnimation {
@@ -162,15 +162,15 @@ final class TopToolbar: UIView {
             let isCompact = state == .compact
             leadingButtons.isHidden = isCompact
             trailingButtons.isHidden = isCompact
-            leadingWidthConstraint.constant = isCompact ? 0 : resolvedLeadingWidth(
-                isPadLayout: isPadLayout,
+            leadingWidthConstraint.constant = isCompact ? 0 : leadingWidth(
+                interfaceIdiom: interfaceIdiom,
                 sidebarVisible: sidebarVisible,
                 showsDownloads: downloadButton.isShowingDownloads
             )
             trailingWidthConstraint.constant = isCompact ? 0 : UX.topToolbarStandardButtonStackWidth
 
-            sidebarButton.isHidden = !isPadLayout || sidebarVisible
-            libraryButton.isHidden = isPadLayout
+            sidebarButton.isHidden = interfaceIdiom != .pad || sidebarVisible
+            libraryButton.isHidden = interfaceIdiom == .pad
             downloadButton.isHidden = isCompact || !downloadButton.isShowingDownloads
 
             NSLayoutConstraint.deactivate(standardAddressBarConstraints + compactAddressBarConstraints)
@@ -250,8 +250,12 @@ final class TopToolbar: UIView {
         ])
     }
 
-    private func resolvedLeadingWidth(isPadLayout: Bool, sidebarVisible: Bool, showsDownloads: Bool) -> CGFloat {
-        guard isPadLayout else { return UX.topToolbarStandardButtonStackWidth }
+    private func leadingWidth(
+        interfaceIdiom: UIUserInterfaceIdiom,
+        sidebarVisible: Bool,
+        showsDownloads: Bool
+    ) -> CGFloat {
+        guard interfaceIdiom == .pad else { return UX.topToolbarStandardButtonStackWidth }
         let visibleButtonCount = (sidebarVisible ? 2 : 3) + (showsDownloads ? 1 : 0)
         return (CGFloat(visibleButtonCount) * UX.topToolbarButtonStackHeight)
             + (CGFloat(max(visibleButtonCount - 1, 0)) * UX.topToolbarButtonSpacing)

@@ -94,8 +94,8 @@ final class AddressBar: UIView {
     // These states are intentionally orthogonal: loading, editing, and placement can change independently.
     private var editingState: EditingState = .inactive
     private var loadingState: LoadingState = .idle
-    private var position: ChromePosition = .bottom
-    private var chromeMode: ChromeMode = .phone
+    private var position: browserChromePosition = .bottom
+    private var browserChromeMode: browserChromeMode = .phone
     private var autocompleteState: AutocompleteState = .none
     private var autocompleteDeletedText: String?
 
@@ -221,7 +221,7 @@ final class AddressBar: UIView {
     }()
 
     private let dismissButton = AddressBarDismissButton(type: .system)
-    private lazy var gestures = AddressBarGestures(addressBar: self)
+    private var gestures: AddressBarGestures?
 
     private var backgroundTrailingFullConstraint: NSLayoutConstraint!
     private var backgroundTrailingFocusedConstraint: NSLayoutConstraint!
@@ -258,7 +258,7 @@ final class AddressBar: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let showsShadow = chromeMode != .pad
+        let showsShadow = browserChromeMode != .pad
         addressBarBackground.layer.shadowPath = showsShadow
             ? UIBezierPath(roundedRect: addressBarBackground.bounds, cornerRadius: UX.addressBarBackgroundCornerRadius).cgPath
             : nil
@@ -266,11 +266,13 @@ final class AddressBar: UIView {
 
     // MARK: - Configuration
 
-    func configure(delegate: AddressBarDelegate, dataSource: AddressBarDataSource) {
-        self.delegate = delegate
-        self.dataSource = dataSource
+    func configure(controller: BrowserViewController) {
+        delegate = controller
+        dataSource = controller
         textField.delegate = self
-        gestures.delegate = delegate as? AddressBarGesturesDelegate
+        let gestures = AddressBarGestures(addressBar: self, controller: controller)
+        self.gestures = gestures
+        gestures.configure()
     }
 
     func configureSearchDelegate(_ searchDelegate: AddressBarSearchDelegate) {
@@ -336,14 +338,14 @@ final class AddressBar: UIView {
         }
     }
 
-    func updateLayout(position: ChromePosition, chromeMode: ChromeMode) {
+    func updateLayout(position: browserChromePosition, browserChromeMode: browserChromeMode) {
         // Hosting is owned by BrowserChrome; AddressBar only resolves its mode-dependent appearance and size.
         self.position = position
-        self.chromeMode = chromeMode
-        backgroundHeightConstraint.constant = height(for: chromeMode)
-        dismissWidthConstraint.constant = height(for: chromeMode)
-        dismissHeightConstraint.constant = height(for: chromeMode)
-        dismissButton.setShadowVisible(chromeMode == .phone)
+        self.browserChromeMode = browserChromeMode
+        backgroundHeightConstraint.constant = height(for: browserChromeMode)
+        dismissWidthConstraint.constant = height(for: browserChromeMode)
+        dismissHeightConstraint.constant = height(for: browserChromeMode)
+        dismissButton.setShadowVisible(browserChromeMode == .phone)
         applyState()
     }
 
@@ -447,11 +449,11 @@ final class AddressBar: UIView {
     // MARK: - Tab Transitions
 
     func resetHorizontalTransition() {
-        gestures.resetHorizontalTransition()
+        gestures?.resetHorizontalTransition()
     }
 
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
-        gestures.animateAutomaticNewTabTransition(to: tab, completion: completion)
+        gestures?.animateAutomaticNewTabTransition(to: tab, completion: completion)
     }
     
     var isEditingText: Bool {
@@ -564,7 +566,6 @@ final class AddressBar: UIView {
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
         dismissButton.addTarget(self, action: #selector(handleDismissButtonTap), for: .touchUpInside)
-        gestures.configure()
     }
 
     // MARK: - State Rendering
@@ -573,7 +574,7 @@ final class AddressBar: UIView {
         // Resolve all visual decisions first so view updates cannot observe a partial state.
         applyRenderModel(resolveRenderModel())
         applyLoadingState()
-        addressBarBackground.layer.shadowOpacity = chromeMode == .pad ? 0 : UX.addressBarBackgroundShadowOpacity
+        addressBarBackground.layer.shadowOpacity = browserChromeMode == .pad ? 0 : UX.addressBarBackgroundShadowOpacity
         setNeedsLayout()
     }
 
@@ -615,7 +616,7 @@ final class AddressBar: UIView {
         if case .loading = loadingState { return .loading }
         switch content {
         case .placeholder:
-            return chromeMode == .phone && position == .bottom ? .search : .hidden
+            return browserChromeMode == .phone && position == .bottom ? .search : .hidden
         case .page:
             return canShowBarMenu ? .menu : .hidden
         case .typedText:
@@ -714,8 +715,8 @@ final class AddressBar: UIView {
         trailingButton.setImage(UIImage(systemName: state == .stop ? "xmark" : "arrow.clockwise"), for: .normal)
     }
 
-    private func height(for chromeMode: ChromeMode) -> CGFloat {
-        switch chromeMode {
+    private func height(for browserChromeMode: browserChromeMode) -> CGFloat {
+        switch browserChromeMode {
         case .phone: return UX.phoneAddressBarHeight
         case .compact: return UX.compactAddressBarHeight
         case .pad: return UX.padAddressBarHeight

@@ -10,11 +10,6 @@ import GeckoView
 import UniformTypeIdentifiers
 import MobileCoreServices
 
-extension Notification.Name {
-    static let downloadStoreDidChange = Notification.Name("me.minh-ton.reynard.download-store-did-change")
-    static let downloadStoreDidStartDownload = Notification.Name("me.minh-ton.reynard.download-store-did-start-download")
-}
-
 struct DownloadStoreSummary {
     let totalCount: Int
     let activeCount: Int
