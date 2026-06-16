@@ -1628,8 +1628,8 @@ private extension UIViewController {
     }
     
     func resolvedBrowserViewController() -> BrowserViewController? {
-        if let splitViewController = splitViewController as? BrowserSplitViewController {
-            return splitViewController.contentBrowserViewController
+        if let sidebarViewController = splitViewController as? SidebarViewController {
+            return sidebarViewController.contentBrowser
         }
         
         if let browserViewController = navigationController?.presentingViewController as? BrowserViewController {
@@ -1653,8 +1653,8 @@ private extension UIViewController {
             return viewControllers.compactMap { resolvedBrowserViewController(from: $0) }.first
         }
         
-        if let splitViewController = controller as? BrowserSplitViewController {
-            return splitViewController.contentBrowserViewController
+        if let sidebarViewController = controller as? SidebarViewController {
+            return sidebarViewController.contentBrowser
         }
         
         if let presentedViewController = controller.presentedViewController,

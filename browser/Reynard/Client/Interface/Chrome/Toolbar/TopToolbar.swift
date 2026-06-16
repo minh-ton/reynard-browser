@@ -199,7 +199,8 @@ final class TopToolbar: UIView {
     }
 
     func syncSidebarButton(splitViewController: UISplitViewController?) {
-        SidebarToggleButtonConfiguration.configure(sidebarButton, in: splitViewController)
+        sidebarButton.setImage(splitViewController?.displayModeButtonItem.image ?? UIImage(systemName: "sidebar.left"), for: .normal)
+        sidebarButton.accessibilityLabel = splitViewController?.displayModeButtonItem.accessibilityLabel
     }
 
     func sidebarButtonFrame(in view: UIView) -> CGRect {

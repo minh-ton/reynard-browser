@@ -122,7 +122,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         return view
     }()
     
-    private let emptyStateView = LibraryEmptyBackgroundView(message: "Your browsing history appears here")
+    private let emptyStateView = SidebarEmptyBackgroundView(message: "Your browsing history appears here")
     private var sections: [Section] = []
     private var historyObserver: NSObjectProtocol?
     private var currentFetchOffset = 0
@@ -564,8 +564,8 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
     }
     
     private func resolvedBrowserViewController() -> BrowserViewController? {
-        if let splitViewController = splitViewController as? BrowserSplitViewController {
-            return splitViewController.contentBrowserViewController
+        if let sidebarViewController = splitViewController as? SidebarViewController {
+            return sidebarViewController.contentBrowser
         }
         
         if let browserViewController = navigationController?.presentingViewController as? BrowserViewController {
@@ -589,8 +589,8 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             return viewControllers.compactMap { resolvedBrowserViewController(from: $0) }.first
         }
         
-        if let splitViewController = controller as? BrowserSplitViewController {
-            return splitViewController.contentBrowserViewController
+        if let sidebarViewController = controller as? SidebarViewController {
+            return sidebarViewController.contentBrowser
         }
         
         if let presentedViewController = controller.presentedViewController,
@@ -740,4 +740,3 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         return true
     }
 }
-

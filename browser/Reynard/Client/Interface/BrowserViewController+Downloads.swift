@@ -71,7 +71,7 @@ extension BrowserViewController {
     func syncDownloadButtonState() {
         let summary = DownloadStore.shared.snapshot().summary
         browserChrome.updateDownload(summary)
-        if !shouldEmbedSidebarContainer,
+        if !sidebarCoordinator.hostsSidebar,
            browserLayout.interfaceIdiom == .pad,
            browserLayout.browserChromeMode == .pad {
             updateBrowserLayout(animated: false)
@@ -90,9 +90,8 @@ extension BrowserViewController {
     private func presentDownloadsFromToolbar() {
         DownloadStore.shared.markCompletedDownloadsViewed()
         if browserLayout.interfaceIdiom == .pad,
-           browserLayout.browserChromeMode == .pad,
-           let splitViewController = splitViewController as? BrowserSplitViewController {
-            splitViewController.showLibrarySection(.downloads)
+           browserLayout.browserChromeMode == .pad {
+            sidebarCoordinator.showSection(.downloads)
             return
         }
         

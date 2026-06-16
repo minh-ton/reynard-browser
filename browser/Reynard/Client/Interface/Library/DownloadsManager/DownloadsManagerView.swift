@@ -73,7 +73,7 @@ final class DownloadsManagerView: UIView, UITableViewDataSource, UITableViewDele
         return view
     }()
     
-    private let emptyStateView = LibraryEmptyBackgroundView(message: "Files you download appear here")
+    private let emptyStateView = SidebarEmptyBackgroundView(message: "Files you download appear here")
     private var sections: [Section] = []
     private var notificationToken: NSObjectProtocol?
     private var applicationActiveToken: NSObjectProtocol?
@@ -756,4 +756,3 @@ private let monthYearTitleFormatter: DateFormatter = {
     formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
     return formatter
 }()
-

@@ -52,6 +52,7 @@ final class BrowserViewController: UIViewController {
 
     lazy var tabManager: TabManager = TabManagerImplementation(delegate: self)
     private var orientationBeforeFullscreen: UIInterfaceOrientation?
+    private let canHostSidebar: Bool
     private(set) var browserLayout = BrowserLayout.initial(
         interfaceIdiom: UIDevice.current.userInterfaceIdiom
     )
@@ -67,6 +68,10 @@ final class BrowserViewController: UIViewController {
     )
     let tabBar = TabBar()
     let tabOverview = TabOverview()
+    lazy var sidebarCoordinator = SidebarCoordinator(
+        browserViewController: self,
+        canHostSidebar: canHostSidebar
+    )
     
     private(set) var isInFullscreenMedia = false {
         didSet {
@@ -79,7 +84,7 @@ final class BrowserViewController: UIViewController {
     }
     
     override var childForStatusBarHidden: UIViewController? {
-        shouldEmbedSidebarContainer ? embeddedSplitController : nil
+        sidebarCoordinator.statusBarController
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
@@ -98,9 +103,9 @@ final class BrowserViewController: UIViewController {
         return .portrait
     }
     
-    init(isSidebarContainerHost: Bool = true) {
+    init(canHostSidebar: Bool = true) {
+        self.canHostSidebar = canHostSidebar
         super.init(nibName: nil, bundle: nil)
-        self.isSidebarContainerHost = isSidebarContainerHost
     }
     
     required init?(coder: NSCoder) {
@@ -118,8 +123,7 @@ final class BrowserViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         
-        if shouldEmbedSidebarContainer {
-            setupEmbeddedSidebarContainer()
+        if sidebarCoordinator.installHostIfNeeded() {
             return
         }
         
@@ -130,7 +134,7 @@ final class BrowserViewController: UIViewController {
         configureBrowserInterface()
         tabOverview.restoreMode(TabOverview.Mode(tabMode: TabManagementStore.shared.restoredTabMode()))
         syncBrowserNavigationChrome(animated: false)
-        syncSidebarButtonItem()
+        browserChrome.syncSidebarButton(splitViewController: splitViewController)
         applyUpdateMenuButtonBadge()
         
         tabManager.createInitialTab()
@@ -152,39 +156,35 @@ final class BrowserViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        guard !shouldEmbedSidebarContainer else {
-            return
+        performContentLifecycle {
+            syncBrowserNavigationChrome(animated: animated)
         }
-        syncBrowserNavigationChrome(animated: animated)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        guard !shouldEmbedSidebarContainer else {
-            return
+        performContentLifecycle {
+            view.endEditing(true)
         }
-        view.endEditing(true)
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        guard !shouldEmbedSidebarContainer else {
-            return
+        performContentLifecycle {
+            syncBrowserNavigationChrome(animated: false)
+            browserChrome.syncSidebarButton(splitViewController: splitViewController)
+            syncDownloadButtonState()
+            updateBrowserLayout(animated: false)
         }
-        syncBrowserNavigationChrome(animated: false)
-        syncSidebarButtonItem()
-        syncDownloadButtonState()
-        updateBrowserLayout(animated: false)
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        guard !shouldEmbedSidebarContainer else {
-            embeddedSplitController?.refreshSidebarVisibility()
+        if sidebarCoordinator.refreshHostVisibility() {
             return
         }
         syncBrowserNavigationChrome(animated: false)
-        syncSidebarButtonItem()
+        browserChrome.syncSidebarButton(splitViewController: splitViewController)
         refreshAddressBar()
         updateBrowserLayout(animated: false)
         tabOverview.invalidateCollectionLayouts()
@@ -194,26 +194,24 @@ final class BrowserViewController: UIViewController {
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
-        guard !shouldEmbedSidebarContainer else {
-            return
-        }
-        
-        coordinator.animate { _ in
-            self.syncBrowserNavigationChrome(animated: false)
-            self.syncSidebarButtonItem()
-            self.tabOverview.invalidateCollectionLayouts()
-            self.tabBar.invalidateLayout()
-        } completion: { _ in
-            self.syncBrowserNavigationChrome(animated: false)
-            self.syncSidebarButtonItem()
-            self.contentView.setTransitionTransform(.identity)
-            self.browserChrome.resetHorizontalTransition()
-            self.tabOverview.refreshForCurrentOrientation()
-            DispatchQueue.main.async {
-                guard self.isViewLoaded, self.view.window != nil else {
-                    return
+        performContentLifecycle {
+            coordinator.animate { _ in
+                self.syncBrowserNavigationChrome(animated: false)
+                self.browserChrome.syncSidebarButton(splitViewController: self.splitViewController)
+                self.tabOverview.invalidateCollectionLayouts()
+                self.tabBar.invalidateLayout()
+            } completion: { _ in
+                self.syncBrowserNavigationChrome(animated: false)
+                self.browserChrome.syncSidebarButton(splitViewController: self.splitViewController)
+                self.contentView.setTransitionTransform(.identity)
+                self.browserChrome.resetHorizontalTransition()
+                self.tabOverview.refreshForCurrentOrientation()
+                DispatchQueue.main.async {
+                    guard self.isViewLoaded, self.view.window != nil else {
+                        return
+                    }
+                    self.updateBrowserLayout(animated: false)
                 }
-                self.updateBrowserLayout(animated: false)
             }
         }
     }
@@ -257,7 +255,7 @@ final class BrowserViewController: UIViewController {
     }
     
     private var activeContentController: BrowserViewController {
-        embeddedSplitController?.contentBrowserViewController ?? self
+        sidebarCoordinator.contentBrowser
     }
     
     private func prepareTabForExternalLoad() -> Tab {
@@ -331,8 +329,8 @@ final class BrowserViewController: UIViewController {
         animated: Bool,
         duration: TimeInterval = UX.layoutAnimationDuration
     ) {
-        if shouldEmbedSidebarContainer {
-            embeddedSplitController?.contentBrowserViewController.updateBrowserLayout(
+        if sidebarCoordinator.hostsSidebar {
+            sidebarCoordinator.contentBrowser.updateBrowserLayout(
                 animated: animated,
                 duration: duration
             )
@@ -447,7 +445,7 @@ final class BrowserViewController: UIViewController {
             search: isInFullscreenMedia ? .inactive : searchOverlayCoordinator.chromeState,
             topInset: browserTopInset(),
             interfaceIdiom: browserLayout.interfaceIdiom,
-            sidebarVisible: isLibrarySidebarVisible
+            sidebarVisible: sidebarCoordinator.isVisible
         ))
     }
 
@@ -519,17 +517,21 @@ final class BrowserViewController: UIViewController {
     }
 
     private func browserTopInset() -> CGFloat {
-        guard browserLayout.interfaceIdiom == .pad,
-              splitViewController is BrowserSplitViewController else {
-            return view.safeAreaInsets.top
+        sidebarCoordinator.topInset(fallback: UX.fallbackTopInset)
+    }
+
+    // MARK: - Sidebar
+
+    @objc func librarySidebarTapped() {
+        sidebarCoordinator.toggle(animated: true)
+    }
+
+    private func performContentLifecycle(_ action: () -> Void) {
+        guard !sidebarCoordinator.hostsSidebar else {
+            return
         }
 
-        if let statusBarHeight = view.window?.windowScene?.statusBarManager?.statusBarFrame.height,
-           statusBarHeight > 0 {
-            return statusBarHeight
-        }
-
-        return UX.fallbackTopInset
+        action()
     }
 
     // MARK: - Notifications
