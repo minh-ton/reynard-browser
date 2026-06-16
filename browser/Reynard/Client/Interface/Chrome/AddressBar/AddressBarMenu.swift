@@ -31,7 +31,6 @@ enum AddressBarMenu {
         onWebsiteSettings: @escaping () -> Void,
         onBookmark: @escaping (Bool) -> Void
     ) -> UIMenu {
-        // Menu actions stay view-owned and report intent through closures instead of global notifications.
         var tabActions: [UIMenuElement] = []
         
         let url = selectedURL.flatMap(URL.init(string:))
@@ -51,7 +50,6 @@ enum AddressBarMenu {
         
         let addonsChildren: [UIMenuElement]
         if addonItems.isEmpty {
-            // Keep Manage Add-ons visible even when the current page exposes no add-on actions.
             addonsChildren = [
                 UIAction(
                     title: "No Add-ons",

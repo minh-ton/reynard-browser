@@ -34,7 +34,6 @@ final class AddressBarDismissButton: UIButton {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        // Size is controlled by AddressBar, so derive the circle and shadow path from final bounds.
         layer.cornerRadius = bounds.height / UX.dismissButtonCornerRadiusDivisor
         layer.shadowPath = layer.shadowOpacity > 0
             ? UIBezierPath(roundedRect: bounds, cornerRadius: layer.cornerRadius).cgPath

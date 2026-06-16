@@ -94,13 +94,11 @@ final class BottomToolbar: UIView {
     // MARK: - Layout
 
     func configureTopAnchor(to safeAreaBottomAnchor: NSLayoutYAxisAnchor) {
-        // The top tracks content height while the view's bottom remains pinned to the physical screen edge.
         topConstraint = topAnchor.constraint(equalTo: safeAreaBottomAnchor, constant: -UX.bottomToolbarStandardContentHeight)
         topConstraint.isActive = true
     }
 
     func attachAddressBar(_ addressBar: AddressBar) {
-        // Standard phone layout places buttons below the AddressBar; compact layout bypasses this constraint.
         if addressBar.superview !== contentView {
             addressBar.removeFromSuperview()
             contentView.addSubview(addressBar)
@@ -139,7 +137,6 @@ final class BottomToolbar: UIView {
         }
 
         UIView.performWithoutAnimation {
-            // Resolve stack visibility immediately to prevent arranged subviews flying during outer transitions.
             topConstraint.constant = verticalOffset - contentHeight
             contentHeightConstraint.constant = contentHeight
             isHidden = state == .hidden
@@ -165,7 +162,6 @@ final class BottomToolbar: UIView {
     }
 
     func setVerticalOffset(_ offset: CGFloat) {
-        // Keyboard docking translates both toolbar edges equally, preserving its total safe-area-filling height.
         verticalOffset = offset
         topConstraint.constant = offset - contentHeightConstraint.constant
     }

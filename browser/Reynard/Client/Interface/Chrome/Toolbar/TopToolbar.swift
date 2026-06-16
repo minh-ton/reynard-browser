@@ -130,7 +130,6 @@ final class TopToolbar: UIView {
     // MARK: - Layout
 
     func attachAddressBar(_ addressBar: AddressBar) {
-        // Both constraint sets are created once; mode changes only switch the active set.
         if addressBar.superview !== contentView {
             addressBar.removeFromSuperview()
             contentView.addSubview(addressBar)
@@ -160,7 +159,6 @@ final class TopToolbar: UIView {
         sidebarVisible: Bool
     ) {
         UIView.performWithoutAnimation {
-            // Internal stack changes must be atomic so buttons do not interpolate outside the toolbar on rotation.
             contentTopConstraint.constant = topInset
             heightConstraint.constant = topInset + UX.topToolbarContentHeight
             isHidden = state == .hidden
@@ -244,7 +242,6 @@ final class TopToolbar: UIView {
     }
 
     private func configureConstraints() {
-        // The toolbar background begins at the screen edge while content starts below the resolved top inset.
         heightConstraint = heightAnchor.constraint(equalToConstant: UX.topToolbarContentHeight)
         contentTopConstraint = contentView.topAnchor.constraint(equalTo: topAnchor)
         leadingWidthConstraint = leadingButtons.widthAnchor.constraint(equalToConstant: UX.topToolbarStandardButtonStackWidth)

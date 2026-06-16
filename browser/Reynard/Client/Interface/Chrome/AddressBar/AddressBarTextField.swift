@@ -17,7 +17,6 @@ final class AddressBarTextField: UITextField {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if isAutocompleteActive {
-            // The overlay owns taps while a completion is visible; suppress the delayed edit menu too.
             suppressTextActions = true
             DispatchQueue.main.async { [weak self] in
                 self?.suppressTextActions = false

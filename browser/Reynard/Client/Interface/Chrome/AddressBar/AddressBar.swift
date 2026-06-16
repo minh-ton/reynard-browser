@@ -87,7 +87,6 @@ final class AddressBar: UIView {
     private weak var delegate: AddressBarDelegate?
     private weak var searchDelegate: AddressBarSearchDelegate?
 
-    // These states are intentionally orthogonal: loading, editing, and placement can change independently.
     private var editingState: EditingState = .inactive
     private var loadingState: LoadingState = .idle
     private var position: browserChromePosition = .bottom
@@ -95,13 +94,11 @@ final class AddressBar: UIView {
     private var autocompleteState: AutocompleteState = .none
     private var autocompleteDeletedText: String?
 
-    // Committed page content remains separate from textField.text, which may contain an in-progress query.
     private var currentText: String?
     private var currentLocationText: String?
     private var currentLocationTitle: String?
     private var canShowBarMenu = false
 
-    // Suggestion scrolling temporarily resigns the keyboard without ending the composing presentation.
     private var preserveAutocompleteAfterResign = false
     private var addonsMenu: UIMenu?
 
@@ -277,7 +274,6 @@ final class AddressBar: UIView {
         locationTitle: String? = nil,
         showsBarMenu: Bool = false
     ) {
-        // Never replace an active query with a navigation update while the user is typing.
         currentText = text?.trimmingCharacters(in: .whitespacesAndNewlines)
         currentLocationText = locationText?.trimmingCharacters(in: .whitespacesAndNewlines)
         currentLocationTitle = locationTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -323,7 +319,6 @@ final class AddressBar: UIView {
     }
 
     func setPreservesAutocompleteAfterResign(_ preserve: Bool) {
-        // Search suggestions use this during scroll-driven keyboard dismissal and restore.
         preserveAutocompleteAfterResign = preserve
         if !preserve && !textField.isFirstResponder {
             clearAutocomplete()
@@ -331,7 +326,6 @@ final class AddressBar: UIView {
     }
 
     func updateLayout(position: browserChromePosition, browserChromeMode: browserChromeMode) {
-        // Hosting is owned by BrowserChrome; AddressBar only resolves its mode-dependent appearance and size.
         self.position = position
         self.browserChromeMode = browserChromeMode
         backgroundHeightConstraint.constant = height(for: browserChromeMode)
@@ -342,7 +336,6 @@ final class AddressBar: UIView {
     }
 
     func setDismissButtonVisible(_ visible: Bool, animated: Bool) {
-        // The container keeps its external frame; only the internal pill contracts for the dismiss button.
         backgroundTrailingFullConstraint.isActive = !visible
         backgroundTrailingFocusedConstraint.isActive = visible
         if visible {
@@ -376,7 +369,6 @@ final class AddressBar: UIView {
             return
         }
         
-        // committedText becomes editable text; submissionText is the full value loaded on Return.
         autocompleteState = .suggestion(committedText: committedText, submissionText: submissionText)
         autocompleteLabel.attributedText = displayText
         autocompleteLabel.isHidden = false
@@ -563,7 +555,6 @@ final class AddressBar: UIView {
     // MARK: - State Rendering
 
     private func applyState() {
-        // Resolve all visual decisions first so view updates cannot observe a partial state.
         applyRenderModel(resolveRenderModel())
         applyLoadingState()
         addressBarBackground.layer.shadowOpacity = browserChromeMode == .pad ? 0 : UX.addressBarBackgroundShadowOpacity
@@ -590,7 +581,6 @@ final class AddressBar: UIView {
     }
 
     private func resolveContentState() -> ContentState {
-        // Editing always renders the text field. Inactive state renders the richer page label instead.
         if editingState != .inactive {
             let typedText = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return typedText.isEmpty ? .placeholder : .typedText
@@ -603,7 +593,6 @@ final class AddressBar: UIView {
     }
 
     private func resolveLeadingButtonState(for content: ContentState) -> LeadingButtonState {
-        // Loading keeps the page icon visible but disabled; otherwise empty top and pad bars omit an icon.
         guard editingState == .inactive else { return .hidden }
         if case .loading = loadingState { return .loading }
         switch content {
@@ -617,7 +606,6 @@ final class AddressBar: UIView {
     }
 
     private func resolveTrailingButtonState(for content: ContentState) -> TrailingButtonState {
-        // Loading takes precedence over page content so the same control becomes Stop instead of Reload.
         guard editingState == .inactive else { return .hidden }
         if case .loading = loadingState { return .stop }
         if case .page = content { return .reload }
@@ -632,7 +620,6 @@ final class AddressBar: UIView {
         let showsLeadingButton = model.leadingButton != .hidden
         let showsTrailingButton = model.trailingButton != .hidden
         
-        // Text and display label share the same horizontal rules and move together as buttons appear.
         NSLayoutConstraint.deactivate([
             textLeadingToButtonConstraint,
             textLeadingToBackgroundConstraint,
@@ -722,7 +709,6 @@ final class AddressBar: UIView {
             return nil
         }
         
-        // Only navigated pages use the compact "host / title" presentation.
         guard canShowBarMenu,
               let host = locationHost() else {
             return NSAttributedString(
@@ -811,7 +797,6 @@ final class AddressBar: UIView {
         }
         
         if isShowingAutocomplete {
-            // First tap accepts the completion for further editing; Return still submits the full URL.
             commitAutocompleteForEditing()
             return
         }
@@ -840,7 +825,6 @@ final class AddressBar: UIView {
             return
         }
         
-        // Mirror the selected-all appearance without invoking UITextField selection handles or edit menus.
         let attributedText = NSAttributedString(
             string: text,
             attributes: [
@@ -945,7 +929,6 @@ extension AddressBar: UITextFieldDelegate {
         replacementString string: String
     ) -> Bool {
         if case .focusPreview = autocompleteState {
-            // Replace the visual focus preview in one operation so the first keystroke never appends to it.
             clearFocusPreview()
             let previousText = lastEditingText
             if string.isEmpty {
@@ -972,7 +955,6 @@ extension AddressBar: UITextFieldDelegate {
             return true
         }
         
-        // Backspace rejects the completion before deleting additional user-entered text.
         clearAutocomplete()
         restoreCaretToEnd()
         lastEditWasDelete = true
@@ -1001,7 +983,6 @@ extension AddressBar: UITextFieldDelegate {
             textField.text = currentText
         }
         lastEditingText = textField.text ?? ""
-        // A scroll-dismissed suggestion should reappear unchanged when the keyboard returns.
         let preservesAutocomplete = preserveAutocompleteAfterResign && isShowingAutocomplete
         preserveAutocompleteAfterResign = false
         if !preservesAutocomplete {
@@ -1017,7 +998,6 @@ extension AddressBar: UITextFieldDelegate {
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        // .composing deliberately survives first-responder loss during suggestion scrolling.
         if editingState != .composing {
             editingState = .inactive
         }

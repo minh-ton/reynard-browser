@@ -17,7 +17,6 @@ final class AddressBarButton: UIButton {
 
     private var isMenuVisible = false
 
-    // UIKit cannot replace every visible submenu in place, so a full replacement may be deferred.
     private var pendingMenuAfterDismissal: UIMenu?
     private var pendingMenuDismissalHandlers: [() -> Void] = []
     private var legacyMenuDelegate: LegacyContextMenuDelegate?
@@ -57,7 +56,6 @@ final class AddressBarButton: UIButton {
         guard let interaction = interactions.compactMap({ $0 as? UIContextMenuInteraction }).first else {
             return
         }
-        // iOS 13 has no showsMenuAsPrimaryAction; invoke the interaction's private presenter directly.
         let selector = NSSelectorFromString("_presentMenuAtLocation:")
         guard interaction.responds(to: selector) else {
             return
@@ -74,7 +72,6 @@ final class AddressBarButton: UIButton {
             if isMenuVisible,
                let menu,
                let contextMenuInteraction = self.contextMenuInteraction {
-                // Keep the currently presented submenu stable, then install the full menu after dismissal.
                 pendingMenuAfterDismissal = menu
                 contextMenuInteraction.updateVisibleMenu { visibleMenu in
                     if let replacementMenu = self.replacementMenu(for: visibleMenu, in: menu) {
@@ -92,7 +89,6 @@ final class AddressBarButton: UIButton {
     }
     
     func performAfterMenuDismissal(_ action: @escaping () -> Void) {
-        // Actions that present another controller must wait until UIKit has finished dismissing the menu.
         guard isMenuVisible else {
             action()
             return
@@ -198,7 +194,6 @@ final class AddressBarButton: UIButton {
             return false
         }
         
-        // The visible icons are intentionally small, but retain a full-size practical touch target.
         let bounds = self.bounds
         let widthIncrease = bounds.width * (UX.addressBarButtonTouchTargetScale - 1) / 2
         let heightIncrease = bounds.height * (UX.addressBarButtonTouchTargetScale - 1) / 2

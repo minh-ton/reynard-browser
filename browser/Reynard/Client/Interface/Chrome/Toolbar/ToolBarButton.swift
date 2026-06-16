@@ -26,7 +26,6 @@ final class ToolbarButton: UIButton {
     }
 
     enum ButtonType {
-        // Button type is the single source of truth for symbol and specialized rendering behavior.
         case back
         case forward
         case share
@@ -101,7 +100,6 @@ final class ToolbarButton: UIButton {
     // MARK: - Updates
 
     func applyDownloadSummary(_ summary: DownloadStoreSummary) {
-        // Only the download variant owns progress views; standard buttons remain simple symbol buttons.
         guard toolbarButtonType == .download else {
             return
         }
@@ -153,7 +151,6 @@ final class ToolbarButton: UIButton {
     }
 
     private func configureDownloadViewsIfNeeded() {
-        // Download subviews are lazy so other toolbar buttons do not allocate unused progress UI.
         guard toolbarButtonType == .download else {
             return
         }

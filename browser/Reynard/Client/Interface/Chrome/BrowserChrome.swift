@@ -24,7 +24,6 @@ final class BrowserChrome: UIView {
     }
 
     struct State {
-        // Position controls AddressBar presentation; mode controls which toolbar physically hosts it.
         let position: browserChromePosition
         let mode: browserChromeMode
         let presentation: PresentationState
@@ -86,7 +85,6 @@ final class BrowserChrome: UIView {
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // BrowserChrome spans the screen for edge-to-edge backgrounds, but its empty center must not block Gecko.
         let hitView = super.hitTest(point, with: event)
         return hitView === self ? nil : hitView
     }
@@ -127,7 +125,6 @@ final class BrowserChrome: UIView {
         attachAddressBar(for: state.mode)
         configureOverlayPositioningIfNeeded()
 
-        // Presentation state has final authority over visibility; layout mode only selects visible geometry.
         let topState: TopToolbar.LayoutState
         let bottomState: BottomToolbar.LayoutState
         if state.presentation != .browsing {
@@ -367,7 +364,6 @@ final class BrowserChrome: UIView {
     }
 
     private func configureConstraints() {
-        // Each toolbar owns its safe-area extension. BrowserChrome only pins them to physical screen edges.
         bottomConstraint = bottomToolbar.bottomAnchor.constraint(equalTo: bottomAnchor)
         overlayWidthConstraint = overlayContentView.widthAnchor.constraint(equalToConstant: 0)
         overlayHeightConstraint = overlayContentView.heightAnchor.constraint(equalToConstant: 0)
@@ -389,7 +385,6 @@ final class BrowserChrome: UIView {
     // MARK: - State Resolution
 
     private func attachAddressBar(for mode: browserChromeMode) {
-        // Landscape phone uses pad-style top chrome even when the portrait preference is bottom.
         topToolbar.detachAddressBar()
         bottomToolbar.detachAddressBar()
         switch mode {

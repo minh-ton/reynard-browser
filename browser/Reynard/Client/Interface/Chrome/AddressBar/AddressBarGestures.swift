@@ -59,7 +59,6 @@ final class AddressBarGestures: NSObject {
     
     private var searchPanMode: SearchPanMode = .blocked
 
-    // Preview views are disposable snapshots; the actual tab selection changes only after completion.
     private var horizontalDirection = 0
     private var horizontalTargetIndex: Int?
     private var horizontalTargetContentView: UIView?
@@ -86,7 +85,6 @@ final class AddressBarGestures: NSObject {
         phoneSwipeUp.cancelsTouchesInView = false
         phoneSwipeUp.delegate = self
         
-        // Give the explicit overview swipe priority before interpreting movement as a tab switch.
         phonePan.require(toFail: phoneSwipeUp)
         
         addressBar.addGestureRecognizer(phoneSwipeUp)
@@ -96,7 +94,6 @@ final class AddressBarGestures: NSObject {
     // MARK: - Transition Lifecycle
     
     func resetHorizontalTransition() {
-        // Every exit path funnels through here to avoid leaving transformed chrome or orphan previews.
         delegate?.transitionContentView.setTransitionTransform(.identity)
         addressBar.transform = .identity
         
@@ -184,7 +181,6 @@ final class AddressBarGestures: NSObject {
     // MARK: - Previews
     
     private func createAddressBarPreview(for tab: Tab) -> UIView {
-        // A lightweight replica avoids reparenting or mutating the live AddressBar during the swipe.
         let container = UIView()
         container.backgroundColor = UIColor { traitCollection in
             traitCollection.userInterfaceStyle == .dark ? .tertiarySystemBackground : .systemBackground
@@ -289,7 +285,6 @@ final class AddressBarGestures: NSObject {
     }
     
     private func createContentPreview(for tab: Tab) -> UIView {
-        // Thumbnails are sufficient for the transition; Gecko remains attached only to the selected tab.
         let preview = UIView()
         preview.backgroundColor = .systemBackground
         
@@ -316,7 +311,6 @@ final class AddressBarGestures: NSObject {
         let direction = translationX < 0 ? 1 : -1
         
         if horizontalDirection != direction {
-            // Crossing the origin invalidates the preview created for the opposite neighbor.
             resetHorizontalTransition()
             horizontalDirection = direction
         }
@@ -344,7 +338,6 @@ final class AddressBarGestures: NSObject {
         }
         
         if horizontalTargetIndex == nil {
-            // No neighboring tab means an edge drag; damp it until new-tab threshold evaluation.
             let damped = translationX * UX.addressBarEdgeSwipeTranslationDamping
             delegate.transitionContentView.setTransitionTransform(CGAffineTransform(translationX: damped, y: 0))
             addressBar.transform = CGAffineTransform(translationX: damped, y: 0)
@@ -366,7 +359,6 @@ final class AddressBarGestures: NSObject {
 
         let width = delegate.transitionContentView.bounds.width
         let shouldSwitch = horizontalTargetIndex != nil && (abs(translationX) > width * UX.addressBarTabSwitchCompletionDistanceRatio || abs(velocityX) > UX.addressBarTabSwitchVelocityThreshold)
-        // A leftward edge swipe from the final phone tab is the only gesture that creates a tab.
         let shouldCreateNewTab = delegate.chromeMode == .phone
         && horizontalTargetIndex == nil
         && delegate.selectedTabIndex == delegate.activeTabs.count - 1
@@ -433,7 +425,6 @@ final class AddressBarGestures: NSObject {
             
         case .changed:
             if searchPanMode == .undecided {
-                // Wait for deliberate motion before locking the recognizer to horizontal or blocked.
                 if abs(translation.x) < UX.addressBarPanDirectionDetectionThreshold,
                    abs(translation.y) < UX.addressBarPanDirectionDetectionThreshold {
                     return
