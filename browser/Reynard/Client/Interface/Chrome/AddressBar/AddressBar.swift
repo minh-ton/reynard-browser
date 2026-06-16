@@ -7,18 +7,6 @@
 
 import UIKit
 
-protocol AddressBarDelegate: AnyObject {
-    func addressBarDidTapTrailingButton(_ addressBar: AddressBar)
-    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
-    func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
-    func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
-    func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
-}
-
-protocol AddressBarDataSource: AnyObject {
-    func addonItems(for addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
-}
-
 final class AddressBar: UIView {
     // MARK: - UX
 
@@ -87,9 +75,8 @@ final class AddressBar: UIView {
 
     // MARK: - State
 
-    private weak var delegate: AddressBarDelegate?
+    private weak var browserViewController: BrowserViewController?
     private weak var searchDelegate: AddressBarSearchDelegate?
-    private weak var dataSource: AddressBarDataSource?
 
     // These states are intentionally orthogonal: loading, editing, and placement can change independently.
     private var editingState: EditingState = .inactive
@@ -267,8 +254,7 @@ final class AddressBar: UIView {
     // MARK: - Configuration
 
     func configure(controller: BrowserViewController) {
-        delegate = controller
-        dataSource = controller
+        browserViewController = controller
         textField.delegate = self
         let gestures = AddressBarGestures(addressBar: self, controller: controller)
         self.gestures = gestures
@@ -304,25 +290,34 @@ final class AddressBar: UIView {
         addonsMenu = AddressBarMenu.makeMenu(
             selectedTab: selectedTab,
             selectedURL: url,
-            addonItems: dataSource?.addonItems(for: self) ?? [],
+            addonItems: addonItems(),
             onAddonSelected: { [weak self] item in
-                guard let self else { return }
-                self.delegate?.addressBar(self, didSelectAddon: item)
+                self?.browserViewController?.addonController.presentCurrentSiteSettings(for: item)
             },
             onChangeWebsiteMode: { [weak self] in
-                guard let self else { return }
-                self.delegate?.addressBarDidRequestWebsiteModeChange(self)
+                guard let browserViewController = self?.browserViewController,
+                      browserViewController.tabManager.changeWebsiteModeForSelectedTab() else {
+                    return
+                }
+                browserViewController.refreshAddressBar()
             },
             onWebsiteSettings: { [weak self] in
-                guard let self else { return }
-                self.delegate?.addressBarDidRequestWebsiteSettings(self)
+                self?.browserViewController?.presentWebsiteSettingsRequested()
             },
             onBookmark: { [weak self] favorites in
-                guard let self else { return }
-                self.delegate?.addressBar(self, didRequestBookmarkInFavorites: favorites)
+                self?.browserViewController?.presentBookmark(addToFavorites: favorites)
             }
         )
         applyState()
+    }
+
+    private func addonItems() -> [AddressBarMenu.AddonItem] {
+        browserViewController?.addonController.visibleMenuItemsForCurrentSite().map { item in
+            AddressBarMenu.AddonItem(
+                menuItem: item,
+                image: browserViewController?.addonController.iconImage(for: item.addon)
+            )
+        } ?? []
     }
     
     func setEditingState(_ state: EditingState) {
@@ -800,7 +795,7 @@ final class AddressBar: UIView {
     
     @objc
     private func handleTrailingButtonTap() {
-        delegate?.addressBarDidTapTrailingButton(self)
+        browserViewController?.tabManager.reloadOrStopSelectedTab()
     }
 
     @objc
