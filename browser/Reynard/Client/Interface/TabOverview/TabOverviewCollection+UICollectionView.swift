@@ -49,11 +49,8 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
                   let tabOverview = self.tabOverview else {
                 return
             }
-            tabOverview.delegate?.tabOverview(
-                tabOverview,
-                didCloseTabAt: currentIndexPath.item,
-                mode: currentTabMode.tabMode
-            )
+            tabOverview.browserViewController?.tabBar.setPendingExpansion(at: nil)
+            tabOverview.browserViewController?.tabManager.removeTab(at: currentIndexPath.item, mode: currentTabMode.tabMode)
         }
         return tabCard
     }
@@ -69,12 +66,9 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         let selectedTab = tabs(for: tabMode)[indexPath.item]
         let previewImage = (collectionView.cellForItem(at: indexPath) as? TabOverviewCard)?.previewImage
             ?? selectedTab.thumbnail
-        tabOverview.delegate?.tabOverview(
-            tabOverview,
-            didSelectTabAt: indexPath.item,
-            mode: tabMode.tabMode,
-            previewImage: previewImage
-        )
+        tabOverview.prepareDismissSelection(to: indexPath.item, mode: tabMode.tabMode, previewImage: previewImage)
+        tabOverview.reloadTabs()
+        tabOverview.browserViewController?.setTabOverviewVisible(false, animated: true)
     }
 
     func collectionView(
@@ -82,10 +76,9 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         moveItemAt sourceIndexPath: IndexPath,
         to destinationIndexPath: IndexPath
     ) {
-        guard let tabMode = tabMode(for: collectionView), let tabOverview else { return }
-        tabOverview.delegate?.tabOverview(
-            tabOverview,
-            didMoveTabFrom: sourceIndexPath.item,
+        guard let tabMode = tabMode(for: collectionView) else { return }
+        tabOverview?.browserViewController?.tabManager.moveTab(
+            from: sourceIndexPath.item,
             to: destinationIndexPath.item,
             mode: tabMode.tabMode
         )

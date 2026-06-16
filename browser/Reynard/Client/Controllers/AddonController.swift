@@ -66,12 +66,12 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
             return
         }
         
+        let activeTabs = controller.tabManager.activeTabs
         if let previousIndex,
-           (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).indices.contains(previousIndex) {
-            (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs)[previousIndex].session.setAddonTabActive(false)
+           activeTabs.indices.contains(previousIndex) {
+            activeTabs[previousIndex].session.setAddonTabActive(false)
         }
         
-        let activeTabs = controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs
         if activeTabs.indices.contains(selectedIndex) {
             activeTabs[selectedIndex].session.setAddonTabActive(true)
         }
@@ -224,9 +224,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
             self?.createAddonTab(
                 selecting: true,
                 url: value,
-                windowId: nil,
-                at: self?.controller?.tabManager.regularTabs.count,
-                loadURLInApp: true
+                loadImmediately: true
             )
         }
         
@@ -264,7 +262,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
         }
         
         if details.active == true {
-            self.controller?.selectTab(at: index, animated: false)
+            self.controller?.tabManager.selectTab(at: index, mode: self.controller?.tabManager.selectedTabMode)
         }
         
         return .allow
@@ -276,7 +274,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
             return .deny
         }
         
-        self.controller?.closeTab(at: index)
+        self.controller?.tabManager.removeTab(at: index, mode: self.controller?.tabManager.selectedTabMode)
         return .allow
     }
     
@@ -376,38 +374,26 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
         url: String?,
         windowId: String? = nil,
         at index: Int? = nil,
-        loadURLInApp: Bool = false
+        loadImmediately: Bool = false
     ) -> Tab? {
         guard let controller else {
             return nil
         }
         
-        let tabIndex = controller.createTab(selecting: selecting, windowId: windowId, at: index, isPrivate: false)
-        guard controller.tabManager.regularTabs.indices.contains(tabIndex) else {
-            return nil
-        }
-        
-        let tab = controller.tabManager.regularTabs[tabIndex]
-        if let url = url?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !url.isEmpty {
-            if loadURLInApp {
-                controller.tabManager.browse(to: url, in: tab)
-            } else {
-                tab.pendingDisplayText = url
-            }
-            
-            if tabIndex == controller.tabManager.selectedTabIndex,
-               controller.tabManager.selectedTabMode == .regular {
-                controller.refreshAddressBar()
-            }
-        }
-        
+        let tab = controller.tabManager.createRegularTab(
+            selecting: selecting,
+            windowId: windowId,
+            target: index.map(TabInsertionTarget.index) ?? .end,
+            url: url,
+            loadImmediately: loadImmediately
+        )
+        controller.refreshAddressBar()
         return tab
     }
     
     private func openPopupURLInNewTab(_ url: String) {
         let createTab: () -> Void = { [weak self] in
-            self?.createAddonTab(selecting: true, url: url, loadURLInApp: true)
+            self?.createAddonTab(selecting: true, url: url, loadImmediately: true)
         }
         
         if let presentedViewController = presentedViewControllerForDismissal() {

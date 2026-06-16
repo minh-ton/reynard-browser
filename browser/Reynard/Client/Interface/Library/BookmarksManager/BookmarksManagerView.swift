@@ -827,7 +827,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         }
         
         browserViewController.loadViewIfNeeded()
-        browserViewController.browse(to: bookmark.url.absoluteString)
+        browserViewController.tabManager.browse(to: bookmark.url.absoluteString)
         
         if navigationController?.presentingViewController is BrowserViewController {
             navigationController?.dismiss(animated: true)

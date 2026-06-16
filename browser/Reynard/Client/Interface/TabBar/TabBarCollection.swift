@@ -89,12 +89,12 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     }
 
     func updateLayout() {
-        let tabCount = tabBar?.dataSource?.tabsForTabBar.count ?? 0
+        let tabCount = tabBar?.tabManager?.activeTabs.count ?? 0
         let horizontalInsets = adjustedContentInset.left + adjustedContentInset.right
         let baseWidth = bounds.width > 1 ? bounds.width : tabBar?.bounds.width ?? 0
         let availableWidth = max(0, baseWidth - horizontalInsets)
-        let selectedIndex = tabBar?.dataSource?.selectedTabForTabBar.flatMap { selectedTab in
-            tabBar?.dataSource?.tabsForTabBar.firstIndex { $0.id == selectedTab.id }
+        let selectedIndex = tabBar?.tabManager?.selectedTab.flatMap { selectedTab in
+            tabBar?.tabManager?.activeTabs.firstIndex { $0.id == selectedTab.id }
         }
         let pendingIndex = tabBar?.pendingExpandedTabIndex
 
@@ -246,7 +246,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     private func updateDragDestination(at location: CGPoint, previousX: CGFloat?) {
         guard let previousX,
               let currentDestinationIndex = dragDestinationIndex,
-              let tabCount = tabBar?.dataSource?.tabsForTabBar.count else {
+              let tabCount = tabBar?.tabManager?.activeTabs.count else {
             return
         }
 
@@ -348,7 +348,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
 
 extension TabBarCollection: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        tabBar?.dataSource?.tabsForTabBar.count ?? 0
+        tabBar?.tabManager?.activeTabs.count ?? 0
     }
 
     func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
@@ -357,7 +357,7 @@ extension TabBarCollection: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let tabBar,
-              let tabs = tabBar.dataSource?.tabsForTabBar,
+              let tabs = tabBar.tabManager?.activeTabs,
               tabs.indices.contains(indexPath.item),
               let tabBarCell = dequeueReusableCell(
                 withReuseIdentifier: TabBarCell.reuseIdentifier,
@@ -370,7 +370,7 @@ extension TabBarCollection: UICollectionViewDataSource {
         let cellLayout = tabBar.cellLayout(at: indexPath.item)
         tabBarCell.configure(
             tab: tab,
-            isSelected: tab.id == tabBar.dataSource?.selectedTabForTabBar?.id,
+            isSelected: tab.id == tabBar.tabManager?.selectedTab?.id,
             layoutMode: cellLayout.mode,
             cellWidth: cellLayout.width
         )

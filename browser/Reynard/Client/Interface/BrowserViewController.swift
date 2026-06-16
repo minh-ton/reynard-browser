@@ -52,6 +52,7 @@ final class BrowserViewController: UIViewController {
 
     lazy var tabManager: TabManager = TabManagerImplementation(delegate: self)
     private var orientationBeforeFullscreen: UIInterfaceOrientation?
+    weak var activeFullscreenSession: GeckoSession?
     private let canHostSidebar: Bool
     private(set) var browserLayout = BrowserLayout.initial(
         interfaceIdiom: UIDevice.current.userInterfaceIdiom
@@ -217,87 +218,12 @@ final class BrowserViewController: UIViewController {
         }
     }
     
-    @discardableResult
-    func createTab(selecting: Bool, windowId: String? = nil, at index: Int? = nil, isPrivate: Bool? = nil) -> Int {
-        let shouldCreatePrivate = isPrivate ?? (tabManager.selectedTabMode == .private)
-        let createdIndex = tabManager.addTab(selecting: selecting, windowId: windowId, at: index, isPrivate: shouldCreatePrivate)
-        tabBar.setPendingExpansion(at: selecting ? createdIndex : nil)
-        return createdIndex
-    }
-    
-    func selectTab(at index: Int, animated: Bool) {
-        pendingSelectionAnimation = animated
-        tabManager.selectTab(at: index, mode: nil)
-    }
-    
-    func moveTab(from sourceIndex: Int, to destinationIndex: Int) {
-        tabManager.moveTab(from: sourceIndex, to: destinationIndex, mode: nil)
-    }
-    
-    func closeTab(at index: Int) {
-        tabBar.setPendingExpansion(at: nil)
-        tabManager.removeTab(at: index, mode: nil)
-    }
-    
-    func clearAllTabs() {
-        tabBar.setPendingExpansion(at: nil)
-        tabManager.removeAllTabs(mode: nil)
-    }
-    
-    func browse(to term: String) {
-        tabManager.browse(to: term)
-    }
-    
-    func openExternalURL(_ url: URL) {
-        let targetController = activeContentController
-        targetController.loadViewIfNeeded()
-        let targetTab = targetController.prepareTabForExternalLoad()
-        targetController.tabManager.browse(to: url.absoluteString, in: targetTab)
-    }
-    
-    private var activeContentController: BrowserViewController {
-        sidebarCoordinator.contentBrowser
-    }
-    
-    private func prepareTabForExternalLoad() -> Tab {
-        let targetMode = tabManager.selectedTabMode
-        let targetIsPrivate = targetMode == .private
-        let activeTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
-        
-        guard !activeTabs.isEmpty else {
-            let createdIndex = createTab(selecting: true, at: 0, isPrivate: targetIsPrivate)
-            let updatedTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
-            return updatedTabs[createdIndex]
-        }
-        
-        if let selectedTab = tabManager.selectedTab,
-           selectedTab.isPrivate == targetIsPrivate,
-           isBlankTab(selectedTab) {
-            return selectedTab
-        }
-        
-        let createdIndex = createTab(selecting: true, at: activeTabs.count, isPrivate: targetIsPrivate)
-        let updatedTabs = targetIsPrivate ? tabManager.privateTabs : tabManager.regularTabs
-        return updatedTabs[createdIndex]
-    }
-    
-    private func isBlankTab(_ tab: Tab) -> Bool {
-        guard let url = tab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !url.isEmpty else {
-            return true
-        }
-        
-        return url.lowercased().hasPrefix("about:blank")
-    }
-
     // MARK: - Browser Layout
 
     private func configureBrowserInterface() {
         browserChrome.configureAddressBarSearchDelegate(searchOverlayCoordinator)
-        tabBar.dataSource = self
-        tabBar.delegate = self
-        tabOverview.dataSource = self
-        tabOverview.delegate = self
+        tabBar.tabManager = tabManager
+        tabOverview.configure(browserViewController: self)
 
         view.addSubview(contentView)
         view.addSubview(tabBar)
@@ -659,26 +585,30 @@ final class BrowserViewController: UIViewController {
         }
 
         browserChrome.updateNavigation(
-            canGoBack: tab.canNavigateBack,
-            canGoForward: tab.canNavigateForward,
+            canGoBack: tab.state.navigationState.canGoBack,
+            canGoForward: tab.state.navigationState.canGoForward,
             canShare: tabManager.shareableURL(for: tab) != nil
         )
     }
 
     func refreshAddressBar() {
         let selectedTab = tabManager.selectedTab
-        let pendingDisplayText = selectedTab?.pendingDisplayText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasPendingDisplayText = !(pendingDisplayText?.isEmpty ?? true)
+        let displayText: String?
+        if case let .pending(text) = selectedTab?.state.displayState {
+            displayText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            displayText = nil
+        }
         let selectedURL = selectedTab?.url
         browserChrome.setAddressBarText(
-            hasPendingDisplayText ? pendingDisplayText : selectedURL,
+            displayText?.isEmpty == false ? displayText : selectedURL,
             locationText: selectedURL,
             locationTitle: selectedTab?.title,
-            showsBarMenu: !hasPendingDisplayText && selectedURL?.isEmpty == false
+            showsBarMenu: displayText?.isEmpty != false && selectedURL?.isEmpty == false
         )
         browserChrome.setAddressBarLoadingProgress(
-            selectedTab?.progress ?? 0,
-            isLoading: selectedTab?.isLoading ?? false
+            selectedTab?.state.loadingState.progress ?? 0,
+            isLoading: selectedTab?.state.loadingState.isLoading ?? false
         )
         addonController.prepareVisibleAddonIcons()
         browserChrome.updateAddressBarMenu(selectedTab: selectedTab, url: selectedURL)
@@ -690,11 +620,8 @@ final class BrowserViewController: UIViewController {
     }
 
     func captureThumbnail(for index: Int) {
-        let activeTabs = tabManager.selectedTabMode == .private
-            ? tabManager.privateTabs
-            : tabManager.regularTabs
         guard !contentView.isHidden,
-              let tab = activeTabs[safe: index],
+              let tab = tabManager.activeTabs[safe: index],
               contentView.isDisplaying(session: tab.session),
               let image = contentView.makeThumbnail() else {
             return

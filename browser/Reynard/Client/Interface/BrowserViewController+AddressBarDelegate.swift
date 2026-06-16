@@ -5,7 +5,6 @@
 //  Created by Minh Ton on 11/6/26.
 //
 
-import GeckoView
 import UIKit
 
 extension BrowserViewController: AddressBarDelegate, AddressBarDataSource {
@@ -16,15 +15,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource {
     }
 
     func addressBarDidTapTrailingButton(_ addressBar: AddressBar) {
-        guard let selectedTab = tabManager.selectedTab else {
-            return
-        }
-
-        if selectedTab.isLoading {
-            selectedTab.session.stop()
-        } else {
-            selectedTab.session.reload()
-        }
+        tabManager.reloadOrStopSelectedTab()
     }
 
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
@@ -32,7 +23,9 @@ extension BrowserViewController: AddressBarDelegate, AddressBarDataSource {
     }
 
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
-        changeWebsiteMode()
+        if tabManager.changeWebsiteModeForSelectedTab() {
+            refreshAddressBar()
+        }
     }
 
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {

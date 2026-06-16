@@ -1609,14 +1609,14 @@ private extension UIViewController {
         
         let openTab: () -> Void = {
             browserViewController.loadViewIfNeeded()
-            let insertIndex = browserViewController.tabManager.regularTabs.count
-            let tabIndex = browserViewController.createTab(selecting: true, at: insertIndex, isPrivate: false)
-            guard browserViewController.tabManager.regularTabs.indices.contains(tabIndex) else {
+            guard browserViewController.tabManager.createRegularTab(
+                selecting: true,
+                target: .end,
+                url: trimmedURLString,
+                loadImmediately: true
+            ) != nil else {
                 return
             }
-            
-            let tab = browserViewController.tabManager.regularTabs[tabIndex]
-            browserViewController.tabManager.browse(to: trimmedURLString, in: tab)
             browserViewController.refreshAddressBar()
         }
         

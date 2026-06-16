@@ -25,7 +25,7 @@ protocol TabManager: AnyObject {
     @discardableResult
     func addTab(selecting: Bool, windowId: String?, at index: Int?, isPrivate: Bool) -> Int
     @discardableResult
-    func addTab(using session: GeckoSession, url: String, title: String?, selecting: Bool, at index: Int?, isPrivate: Bool) -> Int
+    func addTransferredSession(_ session: GeckoSession, url: String, title: String?, selecting: Bool, at index: Int?, isPrivate: Bool) -> Int
     func selectTab(at index: Int, mode: TabMode?)
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode?)
     func removeTab(at index: Int, mode: TabMode?)
@@ -34,7 +34,7 @@ protocol TabManager: AnyObject {
     func browse(to term: String, in tab: Tab)
     func goBack()
     func goForward()
-    func replaceSession(with session: GeckoSession, url: String, title: String?)
+    func replaceSelectedSession(with session: GeckoSession, url: String, title: String?)
     func tabIndex(for session: GeckoSession) -> Int?
     func shareableURL(for tab: Tab) -> URL?
     func updateThumbnail(_ image: UIImage?, forTabAt index: Int)

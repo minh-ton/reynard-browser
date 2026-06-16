@@ -73,18 +73,11 @@ final class ContextMenuCoordinator: NSObject {
         }
 
         isCommitting = true
-        let selectedIndex = browserViewController.tabManager.selectedTabIndex
-        let activeTabs = browserViewController.tabManager.selectedTabMode == .private
-            ? browserViewController.tabManager.privateTabs
-            : browserViewController.tabManager.regularTabs
-        let insertionIndex = selectedIndex >= 0 ? selectedIndex + 1 : activeTabs.count
-        browserViewController.tabManager.addTab(
-            using: session,
+        ContextMenuTabActions(tabManager: browserViewController.tabManager).openPreviewSession(
+            session,
             url: preview.pageURL,
             title: preview.pageTitle,
-            selecting: true,
-            at: insertionIndex,
-            isPrivate: browserViewController.tabManager.selectedTab?.isPrivate ?? false
+            disposition: .newTab
         )
         linkPreview = nil
     }
@@ -95,20 +88,10 @@ final class ContextMenuCoordinator: NSObject {
             return
         }
 
-        let previewURL = preview.pageURL
         isCommitting = true
+        let previewURL = preview.pageURL
         closePreview()
-
-        let insertionIndex = browserViewController.tabManager.selectedTabMode == .private
-            ? browserViewController.tabManager.selectedTabIndex + 1
-            : browserViewController.tabManager.privateTabs.count
-        let tabIndex = browserViewController.createTab(selecting: true, at: insertionIndex, isPrivate: true)
-        guard browserViewController.tabManager.privateTabs.indices.contains(tabIndex) else {
-            return
-        }
-
-        browserViewController.tabManager.browse(to: previewURL, in: browserViewController.tabManager.privateTabs[tabIndex])
-        browserViewController.refreshAddressBar()
+        ContextMenuTabActions(tabManager: browserViewController.tabManager).openURL(previewURL, disposition: .newPrivateTab)
     }
 
     // MARK: - Preview
@@ -216,7 +199,12 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         }
 
         isCommitting = true
-        browserViewController.tabManager.replaceSession(with: session, url: preview.pageURL, title: preview.pageTitle)
+        ContextMenuTabActions(tabManager: browserViewController.tabManager).openPreviewSession(
+            session,
+            url: preview.pageURL,
+            title: preview.pageTitle,
+            disposition: .currentTab
+        )
         linkPreview = nil
 
         animator.addCompletion { [weak self] in

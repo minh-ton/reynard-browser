@@ -79,10 +79,16 @@ extension BrowserViewController {
                 guard let self else {
                     return
                 }
-                _ = self.createTab(selecting: true, isPrivate: overviewMode == .privateTabs)
+                let createdIndex = self.tabManager.createTab(
+                    selecting: true,
+                    target: .end,
+                    mode: overviewMode.tabMode
+                )
+                self.tabBar.setPendingExpansion(at: createdIndex)
             }
         } else {
-            _ = createTab(selecting: true)
+            let createdIndex = tabManager.createTab(selecting: true)
+            tabBar.setPendingExpansion(at: createdIndex)
             setTabOverviewVisible(false, animated: true)
         }
     }
@@ -93,27 +99,6 @@ extension BrowserViewController {
     
     func goForward() {
         tabManager.goForward()
-    }
-    
-    func changeWebsiteMode() {
-        guard let tab = tabManager.selectedTab,
-              let url = tab.url,
-              let navigationAction = GeckoSessionController.shared.changeWebsiteMode(for: url, tabID: tab.id) else {
-            return
-        }
-        
-        switch navigationAction {
-        case .reload:
-            tab.session.updateSettings(GeckoSessionController.shared.sessionSettings(for: url, tabID: tab.id))
-            tab.session.reload()
-        case let .load(overrideURL):
-            tab.pendingDisplayText = overrideURL
-            tab.suppressInitialNavigation = false
-            tab.session.updateSettings(GeckoSessionController.shared.sessionSettings(for: overrideURL, tabID: tab.id))
-            tab.session.load(overrideURL, flags: GeckoSessionLoadFlags.replaceHistory)
-        }
-        
-        refreshAddressBar()
     }
     
     @objc func tabsTapped() {
@@ -129,15 +114,9 @@ extension BrowserViewController {
             }
             
             if tabManager.selectedTabMode != targetMode {
-                var tabIndex: Int?
-                for index in targetTabs.indices {
-                    if tabIndex == nil || targetTabs[index].selectionOrder >= targetTabs[tabIndex!].selectionOrder {
-                        tabIndex = index
-                    }
-                }
-                
-                if let tabIndex {
-                    pendingSelectionAnimation = false
+                if let tabIndex = targetTabs.indices.max(by: {
+                    targetTabs[$0].state.selectionOrder < targetTabs[$1].state.selectionOrder
+                }) {
                     tabManager.selectTab(at: tabIndex, mode: targetMode)
                 }
             }
@@ -150,21 +129,21 @@ extension BrowserViewController {
     }
     
     @objc func clearAllTabsTapped() {
+        tabBar.setPendingExpansion(at: nil)
+        
         if tabOverview.isPresented,
            tabOverview.mode == .privateTabs {
-            tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .private)
             return
         }
         
         if tabOverview.isPresented,
            tabOverview.mode == .regularTabs {
-            tabBar.setPendingExpansion(at: nil)
             tabManager.removeAllTabs(mode: .regular)
             return
         }
         
-        clearAllTabs()
+        tabManager.removeAllTabs(mode: nil)
     }
     
     @objc func shareTapped() {
@@ -225,42 +204,5 @@ extension BrowserViewController {
         let navigationController = UINavigationController(rootViewController: viewController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
-    }
-}
-
-extension BrowserViewController: TabOverviewDataSource, TabOverviewDelegate {
-    var tabOverviewSelectedMode: TabMode { tabManager.selectedTabMode }
-    var tabOverviewRegularTabs: [Tab] { tabManager.regularTabs }
-    var tabOverviewPrivateTabs: [Tab] { tabManager.privateTabs }
-
-    func tabOverview(_ tabOverview: TabOverview, didSelectTabAt index: Int, mode: TabMode, previewImage: UIImage?) {
-        tabOverview.prepareDismissSelection(to: index, mode: mode, previewImage: previewImage)
-        tabOverview.reloadTabs()
-        setTabOverviewVisible(false, animated: true)
-    }
-
-    func tabOverview(_ tabOverview: TabOverview, didCloseTabAt index: Int, mode: TabMode) {
-        tabBar.setPendingExpansion(at: nil)
-        tabManager.removeTab(at: index, mode: mode)
-    }
-
-    func tabOverview(_ tabOverview: TabOverview, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int, mode: TabMode) {
-        tabManager.moveTab(from: sourceIndex, to: destinationIndex, mode: mode)
-    }
-
-    func tabOverviewDidRequestNewTab(_ tabOverview: TabOverview) {
-        createNewTab()
-    }
-
-    func tabOverviewDidRequestDone(_ tabOverview: TabOverview) {
-        doneTapped()
-    }
-
-    func tabOverviewDidRequestClear(_ tabOverview: TabOverview) {
-        clearAllTabsTapped()
-    }
-
-    func tabOverview(_ tabOverview: TabOverview, didChangeMode mode: TabMode) {
-        TabManagementStore.shared.saveLastTabOverview(mode == .private ? .private : .regular)
     }
 }

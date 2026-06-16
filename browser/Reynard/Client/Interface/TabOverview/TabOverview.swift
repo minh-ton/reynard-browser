@@ -7,22 +7,6 @@
 
 import UIKit
 
-protocol TabOverviewDataSource: AnyObject {
-    var tabOverviewSelectedMode: TabMode { get }
-    var tabOverviewRegularTabs: [Tab] { get }
-    var tabOverviewPrivateTabs: [Tab] { get }
-}
-
-protocol TabOverviewDelegate: AnyObject {
-    func tabOverview(_ tabOverview: TabOverview, didSelectTabAt index: Int, mode: TabMode, previewImage: UIImage?)
-    func tabOverview(_ tabOverview: TabOverview, didCloseTabAt index: Int, mode: TabMode)
-    func tabOverview(_ tabOverview: TabOverview, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
-    func tabOverviewDidRequestNewTab(_ tabOverview: TabOverview)
-    func tabOverviewDidRequestDone(_ tabOverview: TabOverview)
-    func tabOverviewDidRequestClear(_ tabOverview: TabOverview)
-    func tabOverview(_ tabOverview: TabOverview, didChangeMode mode: TabMode)
-}
-
 final class TabOverview: UIView {
     // MARK: - UX
 
@@ -54,8 +38,7 @@ final class TabOverview: UIView {
 
     // MARK: - State
 
-    weak var dataSource: TabOverviewDataSource?
-    weak var delegate: TabOverviewDelegate?
+    weak var browserViewController: BrowserViewController?
 
     private(set) var toolbarPosition: ToolbarPosition = .bottom
 
@@ -107,6 +90,12 @@ final class TabOverview: UIView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Configuration
+
+    func configure(browserViewController: BrowserViewController) {
+        self.browserViewController = browserViewController
     }
 
     // MARK: - Updates
@@ -257,26 +246,26 @@ final class TabOverview: UIView {
     // MARK: - Actions
 
     private func requestClearTabs() {
-        delegate?.tabOverviewDidRequestClear(self)
+        browserViewController?.clearAllTabsTapped()
     }
 
     private func handleTabModeChange(_ mode: Mode) {
         setMode(mode, animated: true)
-        delegate?.tabOverview(self, didChangeMode: mode.tabMode)
+        TabManagementStore.shared.saveLastTabOverview(mode == .privateTabs ? .private : .regular)
     }
 
     private func requestNewTab() {
-        delegate?.tabOverviewDidRequestNewTab(self)
+        browserViewController?.createNewTab()
     }
 
     private func requestDone() {
-        delegate?.tabOverviewDidRequestDone(self)
+        browserViewController?.doneTapped()
     }
 
     private func updateToolbarState() {
-        let regularCount = dataSource?.tabOverviewRegularTabs.count ?? 0
+        let regularCount = browserViewController?.tabManager.regularTabs.count ?? 0
         let visibleCount = mode == .privateTabs
-            ? dataSource?.tabOverviewPrivateTabs.count ?? 0
+            ? browserViewController?.tabManager.privateTabs.count ?? 0
             : regularCount
         topToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)
         bottomToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)

@@ -191,8 +191,8 @@ final class AddressBarGestures: NSObject {
         trailingButton.translatesAutoresizingMaskIntoConstraints = false
         trailingButton.tintColor = .label
         trailingButton.isUserInteractionEnabled = false
-        trailingButton.setImage(UIImage(systemName: tab.isLoading ? "xmark" : "arrow.clockwise"), for: .normal)
-        trailingButton.isHidden = !tab.isLoading && tab.url == nil
+        trailingButton.setImage(UIImage(systemName: tab.state.loadingState.isLoading ? "xmark" : "arrow.clockwise"), for: .normal)
+        trailingButton.isHidden = !tab.state.loadingState.isLoading && tab.url == nil
         
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -298,12 +298,11 @@ final class AddressBarGestures: NSObject {
         }
         
         if horizontalTargetIndex == nil {
-            let activeTabs = controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs
             let candidate = controller.tabManager.selectedTabIndex + direction
-            if activeTabs.indices.contains(candidate) {
+            if controller.tabManager.activeTabs.indices.contains(candidate) {
                 horizontalTargetIndex = candidate
                 
-                let targetTab = activeTabs[candidate]
+                let targetTab = controller.tabManager.activeTabs[candidate]
                 
                 let targetContent = createContentPreview(for: targetTab)
                 targetContent.frame = controller.contentView.frame.offsetBy(dx: CGFloat(direction) * controller.contentView.bounds.width, dy: 0)
@@ -341,7 +340,7 @@ final class AddressBarGestures: NSObject {
         // A leftward edge swipe from the final phone tab is the only gesture that creates a tab.
         let shouldCreateNewTab = controller.browserLayout.browserChromeMode == .phone
         && horizontalTargetIndex == nil
-        && controller.tabManager.selectedTabIndex == (controller.tabManager.selectedTabMode == .private ? controller.tabManager.privateTabs : controller.tabManager.regularTabs).count - 1
+        && controller.tabManager.selectedTabIndex == controller.tabManager.activeTabs.count - 1
         && horizontalDirection == 1
         && (abs(translationX) > width * UX.addressBarTabSwitchCompletionDistanceRatio || velocityX < -UX.addressBarTabSwitchVelocityThreshold)
         
@@ -355,12 +354,13 @@ final class AddressBarGestures: NSObject {
                 self.horizontalTargetBarView?.transform = transform
             } completion: { _ in
                 self.resetHorizontalTransition()
-                self.controller.selectTab(at: targetIndex, animated: true)
+                self.controller.tabManager.selectTab(at: targetIndex, mode: self.controller.tabManager.selectedTabMode)
             }
         } else if shouldCreateNewTab {
             swipeHaptic.impactOccurred()
             animateAutomaticNewTabTransition {
-                _ = self.controller.createTab(selecting: true)
+                let createdIndex = self.controller.tabManager.createTab(selecting: true)
+                self.controller.tabBar.setPendingExpansion(at: createdIndex)
             }
         } else {
             UIView.animate(withDuration: UX.addressBarTabSwitchCancellationDuration, delay: 0, options: [.curveEaseOut]) {

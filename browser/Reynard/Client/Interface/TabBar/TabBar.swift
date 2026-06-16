@@ -7,17 +7,6 @@
 
 import UIKit
 
-protocol TabBarDataSource: AnyObject {
-    var tabsForTabBar: [Tab] { get }
-    var selectedTabForTabBar: Tab? { get }
-}
-
-protocol TabBarDelegate: AnyObject {
-    func tabBar(_ tabBar: TabBar, didSelectTabAt index: Int)
-    func tabBar(_ tabBar: TabBar, didCloseTabAt index: Int)
-    func tabBar(_ tabBar: TabBar, didMoveTabFrom sourceIndex: Int, to destinationIndex: Int)
-}
-
 final class TabBar: UIView {
     // MARK: - UX
 
@@ -45,8 +34,7 @@ final class TabBar: UIView {
 
     // MARK: - State
 
-    weak var dataSource: TabBarDataSource?
-    weak var delegate: TabBarDelegate?
+    weak var tabManager: TabManager?
 
     private(set) var visibility: Visibility = .hidden
     private(set) var reorderState: ReorderState = .idle
@@ -95,7 +83,7 @@ final class TabBar: UIView {
     }
 
     func cellLayout(at index: Int) -> CellLayout {
-        let tabs = dataSource?.tabsForTabBar ?? []
+        let tabs = tabManager?.activeTabs ?? []
         let horizontalInset = tabCollection.adjustedContentInset.left + tabCollection.adjustedContentInset.right
         let containerWidth = tabCollection.bounds.width > 1 ? tabCollection.bounds.width : bounds.width
         let availableWidth = max(0, containerWidth - horizontalInset)
@@ -160,16 +148,25 @@ final class TabBar: UIView {
     }
 
     func requestSelectTab(at index: Int) {
-        delegate?.tabBar(self, didSelectTabAt: index)
+        guard let tabManager else {
+            return
+        }
+        tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
     }
 
     func requestCloseTab(at index: Int) {
         pendingExpandedTabIndex = nil
-        delegate?.tabBar(self, didCloseTabAt: index)
+        guard let tabManager else {
+            return
+        }
+        tabManager.removeTab(at: index, mode: tabManager.selectedTabMode)
     }
 
     func requestMoveTab(from sourceIndex: Int, to destinationIndex: Int) {
-        delegate?.tabBar(self, didMoveTabFrom: sourceIndex, to: destinationIndex)
+        guard let tabManager else {
+            return
+        }
+        tabManager.moveTab(from: sourceIndex, to: destinationIndex, mode: tabManager.selectedTabMode)
     }
 
     // MARK: - View Setup
@@ -206,7 +203,7 @@ final class TabBar: UIView {
             return
         }
 
-        if dataSource?.tabsForTabBar.indices.contains(pendingExpandedTabIndex) != true {
+        if tabManager?.activeTabs.indices.contains(pendingExpandedTabIndex) != true {
             self.pendingExpandedTabIndex = nil
         }
     }
@@ -216,7 +213,7 @@ final class TabBar: UIView {
             return false
         }
 
-        let selectedTabID = dataSource?.selectedTabForTabBar?.id
+        let selectedTabID = tabManager?.selectedTab?.id
         let pendingTabID = pendingExpandedTabIndex.flatMap { tabs[safe: $0]?.id }
         return tab.id == selectedTabID || tab.id == pendingTabID
     }

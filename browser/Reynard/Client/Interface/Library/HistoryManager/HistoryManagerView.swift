@@ -269,8 +269,8 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             HistoryStore.shared.clearHistory(since: startDate)
             
             if shouldCloseTabs {
-                browserViewController?.clearAllTabs()
-                browserViewController?.createTab(selecting: true, isPrivate: false)
+                browserViewController?.tabManager.removeAllTabs(mode: .regular)
+                browserViewController?.tabManager.createTab(selecting: true, mode: .regular)
             }
         }
         let navigationController = UINavigationController(rootViewController: viewController)
@@ -556,7 +556,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         }
         
         browserViewController.loadViewIfNeeded()
-        browserViewController.browse(to: item.url.absoluteString)
+        browserViewController.tabManager.browse(to: item.url.absoluteString)
         
         if navigationController?.presentingViewController is BrowserViewController {
             navigationController?.dismiss(animated: true)

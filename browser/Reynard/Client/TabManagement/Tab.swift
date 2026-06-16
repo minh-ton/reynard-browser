@@ -15,18 +15,8 @@ final class Tab {
     var url: String?
     var isPrivate: Bool
     var favicon: UIImage?
-    var pendingRestoreURL: String?
-    var pendingDisplayText: String?
-    var selectionOrder = 0
-    var suppressInitialNavigation = true
-    var sessionCanGoBack = false
-    var sessionCanGoForward = false
-    var canNavigateBack = false
-    var canNavigateForward = false
-    var isLoading = false
-    var progress: Float = 0
     var thumbnail: UIImage?
-    var nowPlayingController: NowPlayingController?
+    let state = TabSessionState()
     
     init(
         id: UUID = UUID(),

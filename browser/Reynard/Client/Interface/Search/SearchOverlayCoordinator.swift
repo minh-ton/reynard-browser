@@ -225,20 +225,17 @@ final class SearchOverlayCoordinator {
     }
 
     private func switchToTab(id: UUID) {
-        let activeTabs = controller.tabManager.selectedTabMode == .private
-            ? controller.tabManager.privateTabs
-            : controller.tabManager.regularTabs
-        guard let index = activeTabs.firstIndex(where: { $0.id == id }) else {
+        guard let index = controller.tabManager.activeTabs.firstIndex(where: { $0.id == id }) else {
             return
         }
 
-        controller.selectTab(at: index, animated: true)
+        controller.tabManager.selectTab(at: index, mode: controller.tabManager.selectedTabMode)
     }
 }
 
 extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControllerDelegate {
     func addressBarDidSubmit(_ searchTerm: String) {
-        controller.browse(to: searchTerm)
+        controller.tabManager.browse(to: searchTerm)
         controller.view.endEditing(true)
     }
 
@@ -277,7 +274,7 @@ extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControll
             return
         }
 
-        self.controller.browse(to: suggestion)
+        self.controller.tabManager.browse(to: suggestion)
     }
 
     func searchViewController(_ controller: SearchViewController, didUpdateAutocompleteFor query: String, result: UserDataSearchResult?) {
