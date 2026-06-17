@@ -131,7 +131,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         self.parentFolderGUID = parentFolderGUID
         self.store = store
         if #available(iOS 26.0, *) {
-            usesNavigationActionsButton = parentFolderGUID == nil && MakeButtons.hasLiquidGlass
+            usesNavigationActionsButton = parentFolderGUID == nil
         } else {
             usesNavigationActionsButton = false
         }

@@ -10,7 +10,6 @@ import Darwin
 import Symbols
 
 enum MakeButtons {
-    static let hasLiquidGlass = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "_UISolariumEnabled") != nil && _UISolariumEnabled()
     static let bookmarksLibraryActionBarButtonTag = 8701
     static let historyLibraryActionBarButtonTag = 8702
     static let downloadsLibraryActionBarButtonTag = 8703
@@ -44,7 +43,7 @@ enum MakeButtons {
     }
     
     static func updateLibraryActionsButton(_ button: UIButton, imageName: String) {
-        if hasLiquidGlass, #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *) {
             var configuration = UIButton.Configuration.glass()
             configuration.image = toolbarImage(for: imageName)
             configuration.baseForegroundColor = .label
@@ -77,7 +76,7 @@ private final class LibraryActionsButton: UIButton {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        guard !MakeButtons.hasLiquidGlass else {
+        guard #available(iOS 26.0, *) else {
             return
         }
         

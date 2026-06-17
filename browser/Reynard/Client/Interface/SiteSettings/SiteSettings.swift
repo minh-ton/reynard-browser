@@ -612,7 +612,7 @@ private final class SitePermissionOptionsViewController: UITableViewController {
 
 private func siteSettingsDismissButton(target: Any?, action: Selector) -> UIBarButtonItem {
     let button: UIBarButtonItem
-    if #available(iOS 26.0, *), MakeButtons.hasLiquidGlass {
+    if #available(iOS 26.0, *) {
         button = UIBarButtonItem(barButtonSystemItem: .cancel, target: target, action: action)
         button.tintColor = .label
     } else {

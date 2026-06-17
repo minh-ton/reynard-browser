@@ -144,11 +144,10 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
         let selectedTag = viewControllers?[safe: selectedIndex]?.tabBarItem.tag
         let keepsLibraryActionsButton: Bool
         if #available(iOS 26.0, *) {
-            keepsLibraryActionsButton = MakeButtons.hasLiquidGlass && (
+            keepsLibraryActionsButton =
                 selectedTag == LibrarySection.bookmarks.rawValue ||
                 selectedTag == LibrarySection.history.rawValue ||
                 selectedTag == LibrarySection.downloads.rawValue
-            )
         } else {
             keepsLibraryActionsButton = false
         }
@@ -189,7 +188,6 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
         
         let selectedTag = viewController.tabBarItem.tag
         if #available(iOS 26.0, *),
-           MakeButtons.hasLiquidGlass,
            (selectedTag == LibrarySection.bookmarks.rawValue ||
             selectedTag == LibrarySection.history.rawValue ||
             selectedTag == LibrarySection.downloads.rawValue) {

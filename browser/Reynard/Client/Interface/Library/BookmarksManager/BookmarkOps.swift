@@ -145,7 +145,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         
-        if #available(iOS 26.0, *), MakeButtons.hasLiquidGlass {
+        if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(saveBookmark))
             navigationItem.rightBarButtonItem?.tintColor = .label
             if bookmark != nil {
@@ -404,7 +404,7 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         
-        if #available(iOS 26.0, *), MakeButtons.hasLiquidGlass {
+        if #available(iOS 26.0, *) {
             navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancel))
             navigationItem.leftBarButtonItem?.tintColor = .label
             navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(createFolder))

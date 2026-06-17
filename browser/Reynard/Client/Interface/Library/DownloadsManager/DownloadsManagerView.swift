@@ -52,7 +52,7 @@ final class DownloadsManagerView: UIView, UITableViewDataSource, UITableViewDele
     }()
     private var usesNavigationActionsButton: Bool {
         if #available(iOS 26.0, *) {
-            return MakeButtons.hasLiquidGlass
+            return true
         }
         
         return false

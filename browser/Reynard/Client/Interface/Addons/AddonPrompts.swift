@@ -77,7 +77,7 @@ final class AddonPromptViewController: UITableViewController {
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         
-        if #available(iOS 26.0, *), MakeButtons.hasLiquidGlass {
+        if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItems = [
                 UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(dismissModal))
             ]
