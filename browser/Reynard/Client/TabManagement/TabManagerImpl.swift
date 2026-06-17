@@ -26,6 +26,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     
     private let enginePromptCoordinator = EnginePromptCoordinator()
     private let engineSelectionActionCoordinator = EngineSelectionActionCoordinator()
+    private let engineMediaSessionCoordinator = EngineMediaSessionCoordinator()
 
     private weak var delegate: TabManagerDelegate?
     private let store: TabManagementStore
@@ -173,23 +174,16 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func makeTab(windowId: String?, isPrivate: Bool) -> Tab {
-        let tab = Tab(session: createSession(windowId: windowId, isPrivate: isPrivate), isPrivate: isPrivate)
-        let npController = NowPlayingController(session: tab.session)
-        tab.session.mediaSessionDelegate = npController
-        tab.state.nowPlayingController = npController
-        return tab
+        Tab(session: createSession(windowId: windowId, isPrivate: isPrivate), isPrivate: isPrivate)
     }
     
-    private func bindDelegates(to session: GeckoSession, for tab: Tab) {
+    private func bindDelegates(to session: GeckoSession) {
         session.contentDelegate = self
         session.progressDelegate = self
         session.navigationDelegate = self
         session.promptDelegate = enginePromptCoordinator
         session.selectionActionDelegate = engineSelectionActionCoordinator
-
-        let npController = NowPlayingController(session: session)
-        session.mediaSessionDelegate = npController
-        tab.state.nowPlayingController = npController
+        session.mediaSessionDelegate = engineMediaSessionCoordinator
     }
     
     private func applyTransferredState(to tab: Tab, url: String, title: String?) {
@@ -325,9 +319,6 @@ final class TabManagerImplementation: NSObject, TabManager {
                 _ = sessionStore.setOwnsNav(true, for: tab.id)
             }
             applyNavigationState(to: tab)
-            let npController = NowPlayingController(session: tab.session)
-            tab.session.mediaSessionDelegate = npController
-            tab.state.nowPlayingController = npController
             return tab
         }
         
@@ -347,9 +338,6 @@ final class TabManagerImplementation: NSObject, TabManager {
                 _ = sessionStore.setOwnsNav(true, for: tab.id)
             }
             applyNavigationState(to: tab)
-            let npController = NowPlayingController(session: tab.session)
-            tab.session.mediaSessionDelegate = npController
-            tab.state.nowPlayingController = npController
             return tab
         }
         
@@ -438,7 +426,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     func addTransferredSession(_ session: GeckoSession, url: String, title: String?, selecting: Bool, at insertionIndex: Int?, isPrivate: Bool = false) -> Int {
         let tab = Tab(session: session, isPrivate: isPrivate)
         let mode: TabMode = isPrivate ? .private : .regular
-        bindDelegates(to: session, for: tab)
+        bindDelegates(to: session)
         applyTransferredState(to: tab, url: url, title: title)
         recordNavigation(url, for: tab)
         
@@ -693,7 +681,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         let oldSession = tab.session
         closeSession(oldSession)
         
-        bindDelegates(to: session, for: tab)
+        bindDelegates(to: session)
         tab.session = session
         applyTransferredState(to: tab, url: url, title: title)
         tab.state.sessionNavigationState = .unavailable
@@ -745,6 +733,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         session.navigationDelegate = self
         session.promptDelegate = enginePromptCoordinator
         session.selectionActionDelegate = engineSelectionActionCoordinator
+        session.mediaSessionDelegate = engineMediaSessionCoordinator
         session.open(windowId: windowId)
         return session
     }
@@ -952,12 +941,10 @@ extension TabManagerImplementation: NavigationDelegate {
         newSession.navigationDelegate = self
         newSession.promptDelegate = enginePromptCoordinator
         newSession.selectionActionDelegate = engineSelectionActionCoordinator
+        newSession.mediaSessionDelegate = engineMediaSessionCoordinator
         let newTab = Tab(session: newSession, isPrivate: sourceIsPrivate)
         newSession.updateSettings(GeckoSessionController.shared.sessionSettings(for: uri, tabID: newTab.id))
-        let npController = NowPlayingController(session: newSession)
-        newSession.mediaSessionDelegate = npController
         SitePermissionController.shared.applyPermissions(to: newSession, urlString: uri)
-        newTab.state.nowPlayingController = npController
         newTab.url = uri
         newTab.favicon = cachedFavicon(for: uri)
         recordNavigation(uri, for: newTab)

@@ -1,5 +1,5 @@
 //
-//  NowPlayingController.swift
+//  EngineMediaSessionCoordinator.swift
 //  Reynard
 //
 //  Created by Minh Ton on 9/4/26.
@@ -9,18 +9,15 @@ import Foundation
 import GeckoView
 import MediaPlayer
 
-// Bridges Gecko media session events to the system Now Playing center and
-// handles remote control commands from the Lock Screen and Control Center.
-final class NowPlayingController: MediaSessionDelegate {
-    private weak var session: GeckoSession?
+final class EngineMediaSessionCoordinator: MediaSessionDelegate {
+    private weak var activeSession: GeckoSession?
     private let nowPlaying = MPNowPlayingInfoCenter.default()
     private let commandCenter = MPRemoteCommandCenter.shared()
     private var artworkTask: URLSessionDataTask?
     private var isActive = false
     private var commandTokens: [Any] = []
     
-    init(session: GeckoSession) {
-        self.session = session
+    init() {
         registerCommands()
     }
     
@@ -29,12 +26,14 @@ final class NowPlayingController: MediaSessionDelegate {
     }
     
     func onActivated(session: GeckoSession) {
+        activeSession = session
         isActive = true
     }
     
     func onDeactivated(session: GeckoSession) {
-        guard isActive else { return }
+        guard isActive, activeSession === session else { return }
         isActive = false
+        activeSession = nil
         nowPlaying.nowPlayingInfo = nil
         artworkTask?.cancel()
         artworkTask = nil
@@ -55,6 +54,7 @@ final class NowPlayingController: MediaSessionDelegate {
                 guard let self, let data, let image = UIImage(data: data) else { return }
                 let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
                 DispatchQueue.main.async {
+                    guard self.activeSession === session else { return }
                     var updated = self.nowPlaying.nowPlayingInfo ?? [:]
                     updated[MPMediaItemPropertyArtwork] = artwork
                     self.nowPlaying.nowPlayingInfo = updated
@@ -78,6 +78,7 @@ final class NowPlayingController: MediaSessionDelegate {
     }
     
     func onPlaybackNone(session: GeckoSession) {
+        guard activeSession === session else { return }
         nowPlaying.nowPlayingInfo = nil
     }
     
@@ -100,38 +101,38 @@ final class NowPlayingController: MediaSessionDelegate {
     private func registerCommands() {
         var tokens: [Any] = []
         tokens.append(commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.play()
+            self?.activeSession?.mediaSession.play()
             return .success
         })
         tokens.append(commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.pause()
+            self?.activeSession?.mediaSession.pause()
             return .success
         })
         tokens.append(commandCenter.stopCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.stop()
+            self?.activeSession?.mediaSession.stop()
             return .success
         })
         tokens.append(commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.nextTrack()
+            self?.activeSession?.mediaSession.nextTrack()
             return .success
         })
         tokens.append(commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.previousTrack()
+            self?.activeSession?.mediaSession.previousTrack()
             return .success
         })
         tokens.append(commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.seekForward()
+            self?.activeSession?.mediaSession.seekForward()
             return .success
         })
         tokens.append(commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.session?.mediaSession.seekBackward()
+            self?.activeSession?.mediaSession.seekBackward()
             return .success
         })
         tokens.append(commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let posEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            self?.session?.mediaSession.seekTo(time: posEvent.positionTime)
+            self?.activeSession?.mediaSession.seekTo(time: posEvent.positionTime)
             return .success
         })
         commandTokens = tokens

@@ -90,5 +90,4 @@ final class TabSessionState {
     var sessionNavigationState = TabSessionNavigationState.unavailable
     var navigationState = TabNavigationState.session(back: false, forward: false)
     var loadingState = TabLoadingState.idle
-    var nowPlayingController: NowPlayingController?
 }
