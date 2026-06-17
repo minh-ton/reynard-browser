@@ -272,10 +272,10 @@ final class BrowserViewController: UIViewController {
             self?.presentShareSheet()
         }
         browserChrome.onLibrary = { [weak self] in
-            self?.presentMenuSheet()
+            self?.presentLibrary()
         }
         browserChrome.onDownloads = { [weak self] in
-            self?.presentMenuSheet(initialSection: .downloads)
+            self?.presentLibrary(initialSection: .downloads)
         }
         browserChrome.onNewTab = { [weak self] in
             self?.createNewTab()

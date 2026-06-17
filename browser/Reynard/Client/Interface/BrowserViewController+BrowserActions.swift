@@ -10,7 +10,7 @@ import UIKit
 extension BrowserViewController {
     // MARK: - Library
 
-    func presentMenuSheet(initialSection: LibrarySection = .bookmarks) {
+    func presentLibrary(initialSection: LibrarySection = .bookmarks) {
         if initialSection == .downloads {
             DownloadStore.shared.markCompletedDownloadsViewed()
             if browserLayout.interfaceIdiom == .pad,
