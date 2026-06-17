@@ -74,11 +74,11 @@ public class GeckoSession {
         set { navigationHandler.setDelegate(newValue) }
     }
     
-    lazy var permissionHandler: GeckoSessionHandler = {
-        let handler = newPermissionHandler(self)
-        handler.setDelegate(true as AnyObject)
-        return handler
-    }()
+    lazy var permissionHandler = newPermissionHandler(self)
+    public var permissionDelegate: PermissionEmbedderDelegate? {
+        get { permissionHandler.delegate(as: PermissionEmbedderDelegate.self) }
+        set { permissionHandler.setDelegate(newValue) }
+    }
     
     lazy var progressHandler = newProgressHandler(self)
     public var progressDelegate: ProgressDelegate? {

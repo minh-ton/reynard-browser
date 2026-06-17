@@ -16,19 +16,19 @@ public struct MediaPermissionRequest {
 
 public protocol PermissionEmbedderDelegate: AnyObject {
     @MainActor
-    func permissionDelegate(_ delegate: PermissionDelegate, decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value
+    func permissionDelegate(decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value
     @MainActor
-    func permissionDelegate(_ delegate: PermissionDelegate, decideMediaPermission request: MediaPermissionRequest, session: GeckoSession) async -> Bool
+    func permissionDelegate(decideMediaPermission request: MediaPermissionRequest, session: GeckoSession) async -> Bool
 }
 
 public extension PermissionEmbedderDelegate {
     @MainActor
-    func permissionDelegate(_ delegate: PermissionDelegate, decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value {
+    func permissionDelegate(decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value {
         .prompt
     }
     
     @MainActor
-    func permissionDelegate(_ delegate: PermissionDelegate, decideMediaPermission request: MediaPermissionRequest, session: GeckoSession) async -> Bool {
+    func permissionDelegate(decideMediaPermission request: MediaPermissionRequest, session: GeckoSession) async -> Bool {
         false
     }
 }
@@ -38,14 +38,8 @@ private enum PermissionEvents: String, CaseIterable {
     case mediaPermission = "GeckoView:MediaPermission"
 }
 
-public final class PermissionDelegate {
-    public static let shared = PermissionDelegate()
-    
-    public weak var delegate: PermissionEmbedderDelegate?
-    
-    private init() {}
-    
-    public func permissions(for uri: String, privateMode: Bool = false, contextId: String? = nil) async throws -> [ContentPermission] {
+public enum PermissionDelegate {
+    public static func permissions(for uri: String, privateMode: Bool = false, contextId: String? = nil) async throws -> [ContentPermission] {
         let response = try await GeckoEventDispatcherWrapper.runtimeInstance.query(
             type: "GeckoView:GetPermissionsByURI",
             message: [
@@ -65,14 +59,14 @@ public final class PermissionDelegate {
         }
     }
     
-    public func setPermission(_ permission: ContentPermission, value: ContentPermission.Value, allowPermanentPrivateBrowsing: Bool = false) {
+    public static func setPermission(_ permission: ContentPermission, value: ContentPermission.Value, allowPermanentPrivateBrowsing: Bool = false) {
         var message = permission.geckoDictionary
         message["newValue"] = value.rawValue
         message["allowPermanentPrivateBrowsing"] = allowPermanentPrivateBrowsing
         GeckoEventDispatcherWrapper.runtimeInstance.dispatch(type: "GeckoView:SetPermission", message: message)
     }
     
-    public func setPermission(uri: String, permissionKey: String, rawValue: Int32, privateMode: Bool = false, contextId: String? = nil) {
+    public static func setPermission(uri: String, permissionKey: String, rawValue: Int32, privateMode: Bool = false, contextId: String? = nil) {
         GeckoEventDispatcherWrapper.runtimeInstance.dispatch(
             type: "GeckoView:SetPermissionByURI",
             message: [
@@ -85,7 +79,7 @@ public final class PermissionDelegate {
         )
     }
     
-    public func removePermission(uri: String, permissionKey: String, privateMode: Bool = false, contextId: String? = nil) {
+    public static func removePermission(uri: String, permissionKey: String, privateMode: Bool = false, contextId: String? = nil) {
         GeckoEventDispatcherWrapper.runtimeInstance.dispatch(
             type: "GeckoView:RemovePermissionByURI",
             message: [
@@ -97,7 +91,7 @@ public final class PermissionDelegate {
         )
     }
     
-    public func removePermission(_ permission: ContentPermission) {
+    public static func removePermission(_ permission: ContentPermission) {
         GeckoEventDispatcherWrapper.runtimeInstance.dispatch(
             type: "GeckoView:RemovePermission",
             message: permission.geckoDictionary
@@ -105,7 +99,7 @@ public final class PermissionDelegate {
     }
     
     @MainActor
-    func handleMediaPermission(message: [String: Any?]?, session: GeckoSession) async -> Any {
+    static func handleMediaPermission(message: [String: Any?]?, session: GeckoSession, delegate: PermissionEmbedderDelegate?) async -> Any {
         let videoSources = message?["video"] as? [[String: Any?]]
         let audioSources = message?["audio"] as? [[String: Any?]]
         let videoRequested = videoSources != nil
@@ -125,7 +119,7 @@ public final class PermissionDelegate {
             audioRequested: audioRequested
         )
         
-        guard await delegate?.permissionDelegate(self, decideMediaPermission: request, session: session) == true else {
+        guard await delegate?.permissionDelegate(decideMediaPermission: request, session: session) == true else {
             return false
         }
         
@@ -143,7 +137,7 @@ func newPermissionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         moduleName: "GeckoViewPermission",
         events: PermissionEvents.allCases.map(\.rawValue),
         session: session
-    ) { @MainActor session, _, type, message in
+    ) { @MainActor session, delegate, type, message in
         guard let event = PermissionEvents(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
@@ -151,10 +145,15 @@ func newPermissionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         switch event {
         case .contentPermission:
             let permission = ContentPermission.fromDictionary(message ?? [:])
-            return await PermissionDelegate.shared.delegate?.permissionDelegate(PermissionDelegate.shared, decideContentPermission: permission, session: session).rawValue ?? ContentPermission.Value.prompt.rawValue
+            let delegate = delegate as? PermissionEmbedderDelegate
+            return await delegate?.permissionDelegate(decideContentPermission: permission, session: session).rawValue ?? ContentPermission.Value.prompt.rawValue
             
         case .mediaPermission:
-            return await PermissionDelegate.shared.handleMediaPermission(message: message, session: session)
+            return await PermissionDelegate.handleMediaPermission(
+                message: message,
+                session: session,
+                delegate: delegate as? PermissionEmbedderDelegate
+            )
         }
     }
 }

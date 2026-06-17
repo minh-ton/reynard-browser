@@ -27,6 +27,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     private let enginePromptCoordinator = EnginePromptCoordinator()
     private let engineSelectionActionCoordinator = EngineSelectionActionCoordinator()
     private let engineMediaSessionCoordinator = EngineMediaSessionCoordinator()
+    private let enginePermissionCoordinator = EnginePermissionCoordinator()
 
     private weak var delegate: TabManagerDelegate?
     private let store: TabManagementStore
@@ -181,6 +182,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         session.contentDelegate = self
         session.progressDelegate = self
         session.navigationDelegate = self
+        session.permissionDelegate = enginePermissionCoordinator
         session.promptDelegate = enginePromptCoordinator
         session.selectionActionDelegate = engineSelectionActionCoordinator
         session.mediaSessionDelegate = engineMediaSessionCoordinator
@@ -731,6 +733,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         session.contentDelegate = self
         session.progressDelegate = self
         session.navigationDelegate = self
+        session.permissionDelegate = enginePermissionCoordinator
         session.promptDelegate = enginePromptCoordinator
         session.selectionActionDelegate = engineSelectionActionCoordinator
         session.mediaSessionDelegate = engineMediaSessionCoordinator
@@ -872,7 +875,7 @@ extension TabManagerImplementation: NavigationDelegate {
         
         if let url {
             session.updateSettings(GeckoSessionController.shared.sessionSettings(for: url, tabID: tab.id))
-            SitePermissionController.shared.applyPermissions(to: session, urlString: url)
+            enginePermissionCoordinator.applyStoredPermissions(to: session, urlString: url)
         }
         
         tab.url = url
@@ -939,12 +942,13 @@ extension TabManagerImplementation: NavigationDelegate {
         newSession.contentDelegate = self
         newSession.progressDelegate = self
         newSession.navigationDelegate = self
+        newSession.permissionDelegate = enginePermissionCoordinator
         newSession.promptDelegate = enginePromptCoordinator
         newSession.selectionActionDelegate = engineSelectionActionCoordinator
         newSession.mediaSessionDelegate = engineMediaSessionCoordinator
         let newTab = Tab(session: newSession, isPrivate: sourceIsPrivate)
         newSession.updateSettings(GeckoSessionController.shared.sessionSettings(for: uri, tabID: newTab.id))
-        SitePermissionController.shared.applyPermissions(to: newSession, urlString: uri)
+        enginePermissionCoordinator.applyStoredPermissions(to: newSession, urlString: uri)
         newTab.url = uri
         newTab.favicon = cachedFavicon(for: uri)
         recordNavigation(uri, for: newTab)

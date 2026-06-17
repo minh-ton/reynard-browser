@@ -42,17 +42,17 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
     }
     
     func presentAddonViewController(_ coordinator: AddonCoordinator, _ viewController: UIViewController) {
-        topPresentedViewController().present(viewController, animated: true)
+        topPresentedController().present(viewController, animated: true)
     }
     
     func presentAddonAlert(_ coordinator: AddonCoordinator, title: String?, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
-        topPresentedViewController().present(alert, animated: true)
+        topPresentedController().present(alert, animated: true)
     }
     
     func dismissAddonModal(_ coordinator: AddonCoordinator, completion: (() -> Void)?) -> Bool {
-        let presenter = topPresentedViewController()
+        let presenter = topPresentedController()
         guard presenter !== self else {
             return false
         }
@@ -95,16 +95,5 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
             
             contentView.restoreInteraction(for: session)
         }
-    }
-    
-    // MARK: - Presentation
-    
-    private func topPresentedViewController() -> UIViewController {
-        var current: UIViewController = self
-        
-        while let presented = current.presentedViewController {
-            current = presented
-        }
-        return current
     }
 }

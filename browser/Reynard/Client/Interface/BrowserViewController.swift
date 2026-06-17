@@ -150,8 +150,6 @@ final class BrowserViewController: UIViewController {
                 return
             }
             
-            SitePermissionController.shared.attach(controller: self)
-            SitePermissionController.shared.start()
             await self.addonCoordinator.start()
             self.tabManager.selectedTab?.session.setAddonTabActive(true)
         }

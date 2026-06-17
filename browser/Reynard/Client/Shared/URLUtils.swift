@@ -8,6 +8,48 @@
 import Foundation
 
 enum URLUtils {
+    static func httpOriginString(for url: URL) -> String? {
+        guard let scheme = url.scheme?.lowercased(),
+              let host = normalizedHost(url.host),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+
+        if let port = url.port {
+            return "\(scheme)://\(host):\(port)"
+        }
+        return "\(scheme)://\(host)"
+    }
+
+    static func normalizedHost(fromRawURI rawURI: String?) -> String? {
+        guard let rawURI,
+              let url = URL(string: rawURI) else {
+            return nil
+        }
+
+        return normalizedHost(url.host)
+    }
+
+    static func normalizedHost(_ host: String?) -> String? {
+        guard let host = host?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !host.isEmpty else {
+            return nil
+        }
+
+        return host
+    }
+
+    static func permissionOriginCandidates(forHost host: String) -> [String] {
+        guard let host = normalizedHost(host) else {
+            return []
+        }
+
+        return [
+            "http://\(host)",
+            "https://\(host)",
+        ]
+    }
+
     static func displayString(for url: URL) -> String {
         strippedURLString(url.absoluteString, trimsTrailingSlash: true)
     }

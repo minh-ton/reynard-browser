@@ -6,8 +6,6 @@
 //
 
 import GeckoView
-import AVFoundation
-import CoreLocation
 import UIKit
 
 final class SitePermissionsViewController: SettingsTableViewController {
@@ -23,7 +21,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         case microphone
         case location
         case persistentStorage
-        case crossSiteCookies
+        case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
         
@@ -39,7 +37,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return "Location"
             case .persistentStorage:
                 return "Persistent Storage"
-            case .crossSiteCookies:
+            case .crossOriginStorageAccess:
                 return "Cross-site Cookies"
             case .localDeviceAccess:
                 return "Device Apps and Services"
@@ -60,7 +58,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return .location
             case .persistentStorage:
                 return .persistentStorage
-            case .crossSiteCookies:
+            case .crossOriginStorageAccess:
                 return .crossOriginStorageAccess
             case .localDeviceAccess:
                 return .localDeviceAccess
@@ -76,32 +74,16 @@ final class SitePermissionsViewController: SettingsTableViewController {
         .microphone,
         .location,
         .persistentStorage,
-        .crossSiteCookies,
+        .crossOriginStorageAccess,
         .localDeviceAccess,
         .localNetworkAccess,
     ]
-    private var didResetPermissionsForAllSites = false
-    
-    private var disabledPermissions: [String] {
-        var permissions: [String] = []
-        
-        if isCameraPermissionDisabled() {
-            permissions.append("Camera")
-        }
-        if isMicrophonePermissionDisabled() {
-            permissions.append("Microphone")
-        }
-        if isLocationPermissionDisabled() {
-            permissions.append("Location")
-        }
-        
-        return permissions
-    }
+    private var didResetAllSitePermissions = false
     
     private var visibleSections: [Section] {
         var sections: [Section] = []
         
-        if !disabledPermissions.isEmpty {
+        if !SiteSettingsUtils.disabledPermissionNames().isEmpty {
             sections.append(.availability)
         }
         
@@ -153,7 +135,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         case .availability:
             if indexPath.row == 0 {
                 let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-                cell.textLabel?.text = disabledPermissionsDescription()
+                cell.textLabel?.text = SiteSettingsUtils.disabledPermissionMessage()
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.textLabel?.numberOfLines = 0
                 cell.selectionStyle = .none
@@ -172,11 +154,11 @@ final class SitePermissionsViewController: SettingsTableViewController {
             
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             cell.textLabel?.text = row.title
-            cell.detailTextLabel?.text = permissionActionTitle(
-                for: defaultPermissionAction(for: row.permission),
+            cell.detailTextLabel?.text = SiteSettingsUtils.actionTitle(
+                for: SiteSettingsUtils.defaultAction(for: row.permission),
                 permission: row.permission
             )
-            if isPermissionDisabled(row.permission) {
+            if SiteSettingsUtils.isSystemDisabled(row.permission) {
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.detailTextLabel?.textColor = .tertiaryLabel
                 cell.accessoryType = .none
@@ -194,7 +176,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             cell.textLabel?.text = "Reset Permissions for all Sites"
             cell.textLabel?.textColor = .systemRed
-            if didResetPermissionsForAllSites {
+            if didResetAllSitePermissions {
                 cell.detailTextLabel?.text = "Successfully reset permissions for all sites."
             } else {
                 cell.detailTextLabel?.text = nil
@@ -216,13 +198,13 @@ final class SitePermissionsViewController: SettingsTableViewController {
         switch section {
         case .availability:
             if indexPath.row == 1 {
-                openAppSettings()
+                SiteSettingsUtils.openAppSettings()
             }
         case .permissions:
             guard let row = row(at: indexPath) else {
                 return
             }
-            guard !isPermissionDisabled(row.permission) else {
+            guard !SiteSettingsUtils.isSystemDisabled(row.permission) else {
                 return
             }
             
@@ -231,7 +213,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 animated: true
             )
         case .websiteActions:
-            resetPermissionsForAllSites()
+            resetAllSitePermissions()
         }
     }
     
@@ -249,95 +231,35 @@ final class SitePermissionsViewController: SettingsTableViewController {
         return permissionRows[safe: indexPath.row]
     }
     
-    private func resetPermissionsForAllSites() {
-        let permissions: [SitePermission] = [
-            .autoplay,
-            .camera,
-            .microphone,
-            .location,
-            .persistentStorage,
-            .crossOriginStorageAccess,
-            .localDeviceAccess,
-            .localNetworkAccess,
-        ]
+    private func resetAllSitePermissions() {
         let actions: [SitePermissionAction] = [
             .allowed,
             .askToAllow,
             .blocked,
         ]
         
-        for permission in permissions {
+        for row in permissionRows {
             for action in actions {
-                let entries = SitePermissionStore.shared.hosts(for: permission, action: action)
+                let entries = SitePermissionStore.shared.hosts(for: row.permission, action: action)
                 for entry in entries {
-                    SitePermissionStore.shared.removePersistedActionAndWait(for: permission, host: entry.host)
-                    clearGeckoPermission(for: permission, host: entry.host)
+                    SitePermissionStore.shared.removePersistedActionAndWait(for: row.permission, host: entry.host)
+                    SiteSettingsUtils.clearGeckoPermission(for: row.permission, host: entry.host)
                 }
             }
         }
         
-        didResetPermissionsForAllSites = true
+        didResetAllSitePermissions = true
         tableView.reloadData()
-    }
-    
-    private func isPermissionDisabled(_ permission: SitePermission) -> Bool {
-        switch permission {
-        case .camera:
-            return isCameraPermissionDisabled()
-        case .microphone:
-            return isMicrophonePermissionDisabled()
-        case .location:
-            return isLocationPermissionDisabled()
-        default:
-            return false
-        }
-    }
-    
-    private func disabledPermissionsDescription() -> String {
-        let names = disabledPermissions
-        let permissionList = formattedPermissionList(names)
-        
-        if names.count == 1 {
-            return "\(permissionList) is currently disabled for Reynard. Open the Settings app to enable this permission."
-        }
-        
-        return "\(permissionList) are currently disabled for Reynard. Open the Settings app to enable these permissions."
-    }
-    
-    private func formattedPermissionList(_ names: [String]) -> String {
-        if names.isEmpty {
-            return ""
-        }
-        
-        if names.count == 1 {
-            return names[0]
-        }
-        
-        if names.count == 2 {
-            return "\(names[0]) and \(names[1])"
-        }
-        
-        let head = names.dropLast().joined(separator: ", ")
-        let tail = names[names.count - 1]
-        return "\(head), and \(tail)"
-    }
-    
-    private func openAppSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-        
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
 }
 
 private final class SitePermissionDetailsViewController: SettingsTableViewController {
-    private struct PermissionOption {
+    private struct ActionOption {
         let title: String
         let action: SitePermissionAction
     }
     
-    private struct SiteRecord {
+    private struct SiteEntry {
         let host: String
         let updatedAt: Date
     }
@@ -346,14 +268,13 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         case defaultBehavior
         case allowedSites
         case deniedSites
-        case changedSites
+        case customActionSites
     }
     
     private let permission: SitePermission
-    private let store: SitePermissionStore
-    private var allowedSites: [SiteRecord] = []
-    private var deniedSites: [SiteRecord] = []
-    private var changedSites: [(host: String, action: SitePermissionAction)] = []
+    private var allowedSites: [SiteEntry] = []
+    private var deniedSites: [SiteEntry] = []
+    private var customActionSites: [(host: String, action: SitePermissionAction)] = []
     private let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -361,9 +282,8 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         return formatter
     }()
     
-    init(permission: SitePermission, title: String, store: SitePermissionStore = .shared) {
+    init(permission: SitePermission, title: String) {
         self.permission = permission
-        self.store = store
         super.init(style: .insetGrouped)
         self.title = title
     }
@@ -374,7 +294,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        reloadSites()
+        reloadSiteLists()
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -388,7 +308,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         
         switch visibleSections[section] {
         case .defaultBehavior:
-            return options.count
+            return actionOptions.count
         case .allowedSites:
             if allowedSites.isEmpty {
                 return 1
@@ -399,11 +319,11 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
                 return 1
             }
             return deniedSites.count
-        case .changedSites:
-            if changedSites.isEmpty {
+        case .customActionSites:
+            if customActionSites.isEmpty {
                 return 1
             }
-            return changedSites.count
+            return customActionSites.count
         }
     }
     
@@ -419,7 +339,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             return "Allowed Sites"
         case .deniedSites:
             return "Denied Sites"
-        case .changedSites:
+        case .customActionSites:
             return "Changed Sites"
         }
     }
@@ -432,12 +352,12 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         switch visibleSections[indexPath.section] {
         case .defaultBehavior:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            guard options.indices.contains(indexPath.row) else {
+            guard actionOptions.indices.contains(indexPath.row) else {
                 return cell
             }
-            let option = options[indexPath.row]
+            let option = actionOptions[indexPath.row]
             cell.textLabel?.text = option.title
-            cell.accessoryType = option.action == selectedDefaultAction ? .checkmark : .none
+            cell.accessoryType = option.action == SiteSettingsUtils.defaultAction(for: permission) ? .checkmark : .none
             return cell
         case .allowedSites:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
@@ -453,7 +373,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             }
             let site = allowedSites[indexPath.row]
             cell.textLabel?.text = site.host
-            cell.detailTextLabel?.text = subtitle(for: .allowed, at: site.updatedAt)
+            cell.detailTextLabel?.text = siteSubtitle(for: .allowed, at: site.updatedAt)
             cell.textLabel?.textColor = .label
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.selectionStyle = .default
@@ -472,27 +392,27 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             }
             let site = deniedSites[indexPath.row]
             cell.textLabel?.text = site.host
-            cell.detailTextLabel?.text = subtitle(for: .blocked, at: site.updatedAt)
+            cell.detailTextLabel?.text = siteSubtitle(for: .blocked, at: site.updatedAt)
             cell.textLabel?.textColor = .label
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.selectionStyle = .default
             return cell
-        case .changedSites:
+        case .customActionSites:
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            if changedSites.isEmpty {
+            if customActionSites.isEmpty {
                 cell.textLabel?.text = "No Sites Added"
                 cell.textLabel?.textColor = .secondaryLabel
                 cell.detailTextLabel?.text = nil
                 cell.selectionStyle = .none
                 return cell
             }
-            guard changedSites.indices.contains(indexPath.row) else {
+            guard customActionSites.indices.contains(indexPath.row) else {
                 return cell
             }
-            let changedSite = changedSites[indexPath.row]
-            cell.textLabel?.text = changedSite.host
-            cell.detailTextLabel?.text = permissionActionTitle(
-                for: changedSite.action,
+            let site = customActionSites[indexPath.row]
+            cell.textLabel?.text = site.host
+            cell.detailTextLabel?.text = SiteSettingsUtils.actionTitle(
+                for: site.action,
                 permission: permission
             )
             cell.textLabel?.textColor = .label
@@ -506,18 +426,18 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         defer { tableView.deselectRow(at: indexPath, animated: true) }
         guard visibleSections.indices.contains(indexPath.section),
               visibleSections[indexPath.section] == .defaultBehavior,
-              options.indices.contains(indexPath.row) else {
+              actionOptions.indices.contains(indexPath.row) else {
             return
         }
         
-        setDefaultAction(options[indexPath.row].action)
-        reloadSites()
+        SiteSettingsUtils.setDefaultAction(actionOptions[indexPath.row].action, for: permission)
+        reloadSiteLists()
         tableView.reloadData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        reloadSites()
+        reloadSiteLists()
         tableView.reloadData()
     }
     
@@ -534,7 +454,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             guard allowedSites.indices.contains(indexPath.row) else {
                 return nil
             }
-            return makeClearConfiguration(
+            return clearSiteActionConfiguration(
                 for: allowedSites[indexPath.row].host
             )
         case .deniedSites:
@@ -544,20 +464,20 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             guard deniedSites.indices.contains(indexPath.row) else {
                 return nil
             }
-            return makeClearConfiguration(
+            return clearSiteActionConfiguration(
                 for: deniedSites[indexPath.row].host
             )
         case .defaultBehavior:
             return nil
-        case .changedSites:
-            guard !changedSites.isEmpty else {
+        case .customActionSites:
+            guard !customActionSites.isEmpty else {
                 return nil
             }
-            guard changedSites.indices.contains(indexPath.row) else {
+            guard customActionSites.indices.contains(indexPath.row) else {
                 return nil
             }
-            return makeClearConfiguration(
-                for: changedSites[indexPath.row].host
+            return clearSiteActionConfiguration(
+                for: customActionSites[indexPath.row].host
             )
         }
     }
@@ -566,7 +486,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         if permission == .autoplay {
             return [
                 .defaultBehavior,
-                .changedSites,
+                .customActionSites,
             ]
         }
         
@@ -577,44 +497,40 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         ]
     }
     
-    private var selectedDefaultAction: SitePermissionAction {
-        return defaultPermissionAction(for: permission)
-    }
-    
-    private var options: [PermissionOption] {
+    private var actionOptions: [ActionOption] {
         switch permission {
         case .autoplay:
-            return [
-                PermissionOption(title: "Allow Audio and Video", action: .allowed),
-                PermissionOption(title: "Block Audio only", action: .askToAllow),
-                PermissionOption(title: "Block Audio and Video", action: .blocked),
-            ]
+            return actionOptions(for: [.allowed, .askToAllow, .blocked])
         default:
-            return [
-                PermissionOption(title: "Ask", action: .askToAllow),
-                PermissionOption(title: "Allow", action: .allowed),
-                PermissionOption(title: "Deny", action: .blocked),
-            ]
+            return actionOptions(for: [.askToAllow, .allowed, .blocked])
+        }
+    }
+
+    private func actionOptions(for actions: [SitePermissionAction]) -> [ActionOption] {
+        actions.map {
+            ActionOption(
+                title: SiteSettingsUtils.actionTitle(for: $0, permission: permission),
+                action: $0
+            )
         }
     }
     
-    private func reloadSites() {
+    private func reloadSiteLists() {
         if permission == .autoplay {
-            let defaultAction = selectedDefaultAction
+            let defaultAction = SiteSettingsUtils.defaultAction(for: permission)
             var items: [(host: String, action: SitePermissionAction)] = []
-            let possibleActions: [SitePermissionAction] = [.allowed, .askToAllow, .blocked]
-            for action in possibleActions {
+            for action in [SitePermissionAction.allowed, .askToAllow, .blocked] {
                 if action == defaultAction {
                     continue
                 }
                 
-                let entries = store.hosts(for: permission, action: action)
+                let entries = SitePermissionStore.shared.hosts(for: permission, action: action)
                 for entry in entries {
                     items.append((host: entry.host, action: action))
                 }
             }
             
-            changedSites = items.sorted { lhs, rhs in
+            customActionSites = items.sorted { lhs, rhs in
                 lhs.host.localizedCaseInsensitiveCompare(rhs.host) == .orderedAscending
             }
             allowedSites = []
@@ -622,48 +538,23 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
             return
         }
         
-        let allowedEntries = store.hosts(for: permission, action: .allowed)
-        let deniedEntries = store.hosts(for: permission, action: .blocked)
-        allowedSites = allowedEntries.map { SiteRecord(host: $0.host, updatedAt: $0.updatedAt) }
-        deniedSites = deniedEntries.map { SiteRecord(host: $0.host, updatedAt: $0.updatedAt) }
-        changedSites = []
+        let allowedEntries = SitePermissionStore.shared.hosts(for: permission, action: .allowed)
+        let deniedEntries = SitePermissionStore.shared.hosts(for: permission, action: .blocked)
+        allowedSites = allowedEntries.map { SiteEntry(host: $0.host, updatedAt: $0.updatedAt) }
+        deniedSites = deniedEntries.map { SiteEntry(host: $0.host, updatedAt: $0.updatedAt) }
+        customActionSites = []
     }
     
-    private func setDefaultAction(_ action: SitePermissionAction) {
-        switch permission {
-        case .autoplay:
-            Prefs.SitePermissionSettings.defaultAutoplayPermission = action
-        case .camera:
-            Prefs.SitePermissionSettings.defaultCameraPermission = action
-        case .microphone:
-            Prefs.SitePermissionSettings.defaultMicrophonePermission = action
-        case .location:
-            Prefs.SitePermissionSettings.defaultLocationPermission = action
-        case .persistentStorage:
-            Prefs.SitePermissionSettings.defaultPersistentStoragePermission = action
-        case .crossOriginStorageAccess:
-            Prefs.SitePermissionSettings.defaultCrossOriginStorageAccessPermission = action
-        case .localDeviceAccess:
-            Prefs.SitePermissionSettings.defaultLocalDeviceAccessPermission = action
-        case .localNetworkAccess:
-            Prefs.SitePermissionSettings.defaultLocalNetworkAccessPermission = action
-        case .notification:
-            return
-        case .mediaKeySystemAccess:
-            return
-        }
-    }
-    
-    private func makeClearConfiguration(for host: String) -> UISwipeActionsConfiguration {
+    private func clearSiteActionConfiguration(for host: String) -> UISwipeActionsConfiguration {
         let clearAction = UIContextualAction(style: .destructive, title: "Clear") { [weak self] _, _, completion in
             guard let self else {
                 completion(false)
                 return
             }
             
-            self.store.removePersistedActionAndWait(for: self.permission, host: host)
-            clearGeckoPermission(for: self.permission, host: host)
-            self.reloadSites()
+            SitePermissionStore.shared.removePersistedActionAndWait(for: self.permission, host: host)
+            SiteSettingsUtils.clearGeckoPermission(for: self.permission, host: host)
+            self.reloadSiteLists()
             self.tableView.reloadData()
             completion(true)
         }
@@ -673,7 +564,7 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         return configuration
     }
     
-    private func subtitle(for action: SitePermissionAction, at date: Date) -> String {
+    private func siteSubtitle(for action: SitePermissionAction, at date: Date) -> String {
         let timestamp = timestampFormatter.string(from: date)
         switch action {
         case .allowed:
@@ -685,119 +576,4 @@ private final class SitePermissionDetailsViewController: SettingsTableViewContro
         }
     }
     
-}
-
-private func permissionActionTitle(for action: SitePermissionAction, permission: SitePermission) -> String {
-    switch permission {
-    case .autoplay:
-        switch action {
-        case .allowed:
-            return "Allow Audio and Video"
-        case .askToAllow:
-            return "Block Audio only"
-        case .blocked:
-            return "Block Audio and Video"
-        }
-    default:
-        switch action {
-        case .allowed:
-            return "Allow"
-        case .askToAllow:
-            return "Ask"
-        case .blocked:
-            return "Deny"
-        }
-    }
-}
-
-private func defaultPermissionAction(for permission: SitePermission) -> SitePermissionAction {
-    switch permission {
-    case .autoplay:
-        return Prefs.SitePermissionSettings.defaultAutoplayPermission
-    case .camera:
-        if isCameraPermissionDisabled() {
-            return .blocked
-        }
-        return Prefs.SitePermissionSettings.defaultCameraPermission
-    case .microphone:
-        if isMicrophonePermissionDisabled() {
-            return .blocked
-        }
-        return Prefs.SitePermissionSettings.defaultMicrophonePermission
-    case .location:
-        if isLocationPermissionDisabled() {
-            return .blocked
-        }
-        return Prefs.SitePermissionSettings.defaultLocationPermission
-    case .persistentStorage:
-        return Prefs.SitePermissionSettings.defaultPersistentStoragePermission
-    case .crossOriginStorageAccess:
-        return Prefs.SitePermissionSettings.defaultCrossOriginStorageAccessPermission
-    case .localDeviceAccess:
-        return Prefs.SitePermissionSettings.defaultLocalDeviceAccessPermission
-    case .localNetworkAccess:
-        return Prefs.SitePermissionSettings.defaultLocalNetworkAccessPermission
-    case .notification:
-        return .askToAllow
-    case .mediaKeySystemAccess:
-        return .askToAllow
-    }
-}
-
-private func isCameraPermissionDisabled() -> Bool {
-    let status = AVCaptureDevice.authorizationStatus(for: .video)
-    return status == .restricted || status == .denied
-}
-
-private func isMicrophonePermissionDisabled() -> Bool {
-    let status = AVCaptureDevice.authorizationStatus(for: .audio)
-    return status == .restricted || status == .denied
-}
-
-private func isLocationPermissionDisabled() -> Bool {
-    let status = CLLocationManager.authorizationStatus()
-    return status == .restricted || status == .denied
-}
-
-private func geckoPermissionKey(for permission: SitePermission) -> String {
-    switch permission {
-    case .location:
-        return "geo"
-    default:
-        return permission.rawValue
-    }
-}
-
-private func clearGeckoPermission(for permission: SitePermission, host: String) {
-    let key = geckoPermissionKey(for: permission)
-    let normalizedHost = host.lowercased()
-    let origins = [
-        "http://\(normalizedHost)",
-        "https://\(normalizedHost)",
-    ]
-    
-    for origin in origins {
-        PermissionDelegate.shared.removePermission(
-            uri: origin,
-            permissionKey: key,
-            privateMode: false
-        )
-    }
-    
-    Task {
-        for origin in origins {
-            let permissions = (try? await PermissionDelegate.shared.permissions(
-                for: origin,
-                privateMode: false
-            )) ?? []
-            
-            for resolvedPermission in permissions {
-                guard SitePermission(contentPermission: resolvedPermission) == permission else {
-                    continue
-                }
-                
-                PermissionDelegate.shared.removePermission(resolvedPermission)
-            }
-        }
-    }
 }
