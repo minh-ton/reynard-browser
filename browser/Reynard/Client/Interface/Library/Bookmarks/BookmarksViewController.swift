@@ -747,7 +747,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     // MARK: - Navigation
     
     private func openBookmarkURL(_ bookmark: BookmarkSnapshot) {
-        guard let browserViewController = resolvedBrowserViewController() else {
+        guard let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
             return
         }
         
@@ -757,18 +757,6 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         if navigationController?.presentingViewController is BrowserViewController {
             navigationController?.dismiss(animated: true)
         }
-    }
-    
-    private func resolvedBrowserViewController() -> BrowserViewController? {
-        if let sidebarViewController = splitViewController as? SidebarViewController {
-            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
-        }
-        
-        if let browserViewController = navigationController?.presentingViewController as? BrowserViewController {
-            return browserViewController
-        }
-        
-        return nil
     }
 
     // MARK: - UISearchBarDelegate

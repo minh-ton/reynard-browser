@@ -116,6 +116,73 @@ enum LibrarySharedUtils {
         let center = NSValue(cgPoint: CGPoint(x: button.bounds.midX, y: button.bounds.midY))
         _ = interaction.perform(selector, with: center)
     }
+
+    // MARK: - Browser Resolution
+
+    static func openLinkInBrowser(_ urlString: String, from viewController: UIViewController) {
+        let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedURLString.isEmpty,
+              let browserViewController = resolvedBrowserViewController(from: viewController) else {
+            return
+        }
+
+        let openTab = {
+            browserViewController.loadViewIfNeeded()
+            guard browserViewController.tabManager.createRegularTab(
+                selecting: true,
+                target: .end,
+                url: trimmedURLString,
+                loadImmediately: true
+            ) != nil else {
+                return
+            }
+            browserViewController.refreshAddressBar()
+        }
+
+        if viewController.navigationController?.presentingViewController is BrowserViewController {
+            viewController.navigationController?.dismiss(animated: true, completion: openTab)
+        } else {
+            openTab()
+        }
+    }
+
+    static func resolvedBrowserViewController(from viewController: UIViewController) -> BrowserViewController? {
+        if let sidebarViewController = viewController.splitViewController as? SidebarViewController {
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
+        }
+
+        if let browserViewController = viewController.navigationController?.presentingViewController as? BrowserViewController {
+            return browserViewController
+        }
+
+        return viewController.view.window?.rootViewController.flatMap { resolvedBrowserViewController(in: $0) }
+    }
+
+    static func resolvedBrowserViewController(in controller: UIViewController) -> BrowserViewController? {
+        if let browserViewController = controller as? BrowserViewController {
+            return browserViewController
+        }
+
+        if let navigationController = controller as? UINavigationController {
+            return navigationController.viewControllers.compactMap { resolvedBrowserViewController(in: $0) }.first
+        }
+
+        if let tabBarController = controller as? UITabBarController,
+           let viewControllers = tabBarController.viewControllers {
+            return viewControllers.compactMap { resolvedBrowserViewController(in: $0) }.first
+        }
+
+        if let sidebarViewController = controller as? SidebarViewController {
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
+        }
+
+        if let presentedViewController = controller.presentedViewController,
+           let browserViewController = resolvedBrowserViewController(in: presentedViewController) {
+            return browserViewController
+        }
+
+        return controller.children.compactMap { resolvedBrowserViewController(in: $0) }.first
+    }
 }
 
 @available(iOS 13.0, *)

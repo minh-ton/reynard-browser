@@ -130,7 +130,7 @@ final class SidebarMenuViewController: UIViewController, UICollectionViewDelegat
         case .downloads:
             contentViewController = DownloadsViewController()
         case .settings:
-            contentViewController = SettingsRootViewController()
+            contentViewController = SettingsViewController()
         }
 
         return SidebarDetailViewController(

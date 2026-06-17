@@ -108,7 +108,7 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
             case .downloads:
                 sectionController = DownloadsViewController()
             case .settings:
-                sectionController = LibraryHostedSectionViewController(buildContentView: { SettingsView() })
+                sectionController = SettingsViewController()
             }
             sectionController.tabBarItem = section.tabBarItem
             return sectionController
