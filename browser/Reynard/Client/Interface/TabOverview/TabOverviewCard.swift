@@ -34,7 +34,6 @@ final class TabOverviewCard: UICollectionViewCell {
         static let faviconSideLength: CGFloat = 16
         static let tabTitleMaximumWidthAdjustment: CGFloat = -24
         static let tabTitleFontSize: CGFloat = 14
-        static let tabTitleFontWeight: UIFont.Weight = .medium
         static let reorderLiftAnimationDuration: TimeInterval = 0.18
     }
 
@@ -117,7 +116,7 @@ final class TabOverviewCard: UICollectionViewCell {
     private let tabTitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = UIFont.systemFont(ofSize: UX.tabTitleFontSize, weight: UX.tabTitleFontWeight)
+        label.font = UIFont.systemFont(ofSize: UX.tabTitleFontSize, weight: .medium)
         label.textAlignment = .center
         label.textColor = .label
         label.numberOfLines = 1

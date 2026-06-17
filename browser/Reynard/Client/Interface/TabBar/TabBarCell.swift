@@ -14,7 +14,6 @@ final class TabBarCell: UICollectionViewCell {
         static let expandedTabMinimumWidth: CGFloat = 220
         static let collapsedTabMinimumWidth: CGFloat = 96
         static let tabTitleFontSize: CGFloat = 14
-        static let tabTitleFontWeight: UIFont.Weight = .semibold
         static let tabTitleSpacing: CGFloat = 6
         static let tabFaviconSideLength: CGFloat = 16
         static let tabCloseButtonSideLength: CGFloat = 22
@@ -59,7 +58,7 @@ final class TabBarCell: UICollectionViewCell {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = UIFont.systemFont(ofSize: UX.tabTitleFontSize, weight: UX.tabTitleFontWeight)
+        label.font = UIFont.systemFont(ofSize: UX.tabTitleFontSize, weight: .semibold)
         label.textColor = .secondaryLabel
         label.numberOfLines = 1
         label.textAlignment = .center
