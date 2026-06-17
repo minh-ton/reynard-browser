@@ -49,7 +49,7 @@ final class AddonController: NSObject, AddonEmbedderDelegate {
                 guard let self else {
                     return
                 }
-                let presentation = AddonErrors.installErrPresentation(
+                let presentation = AddonErrors.installErrorPresentation(
                     for: error,
                     addonName: nil
                 )

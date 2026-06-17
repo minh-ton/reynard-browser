@@ -60,23 +60,24 @@ final class BrowserViewController: UIViewController {
 
     // MARK: - Views And Coordinators
 
+    let tabBar = TabBar()
+    let tabOverview = TabOverview()
     let contentView = ContentView()
     lazy var browserChrome = BrowserChrome()
+
     lazy var overlayCoordinator = OverlayCoordinator(host: self)
     lazy var searchOverlayCoordinator = SearchOverlayCoordinator(
         delegate: self,
         overlayCoordinator: overlayCoordinator
     )
     lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self)
-    lazy var addonController = AddonController(controller: self)
     lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
-    let tabBar = TabBar()
-    let tabOverview = TabOverview()
     lazy var sidebarCoordinator = SidebarCoordinator(
         host: self,
         canHostSidebar: allowsSidebarHosting
     )
-    
+    lazy var addonController = AddonController(controller: self)
+
     private(set) var isShowingFullscreenMedia = false {
         didSet {
             setNeedsStatusBarAppearanceUpdate()
@@ -106,7 +107,7 @@ final class BrowserViewController: UIViewController {
 
         return .portrait
     }
-    
+
     init(canHostSidebar: Bool = true) {
         self.allowsSidebarHosting = canHostSidebar
         super.init(nibName: nil, bundle: nil)

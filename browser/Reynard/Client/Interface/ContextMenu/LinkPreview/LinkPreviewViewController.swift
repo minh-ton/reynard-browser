@@ -85,6 +85,8 @@ final class LinkPreviewViewController: UIViewController {
         hasClosedSession = true
         session?.contentDelegate = nil
         session?.navigationDelegate = nil
+        session?.promptDelegate = nil
+        session?.selectionActionDelegate = nil
         session?.setFocused(false)
         session?.setActive(false)
         geckoView.session = nil

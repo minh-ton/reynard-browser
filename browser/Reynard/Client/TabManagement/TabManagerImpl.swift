@@ -24,6 +24,9 @@ final class TabManagerImplementation: NSObject, TabManager {
         tabs(for: selectedTabMode)[safe: selectedTabIndex]
     }
     
+    private let enginePromptCoordinator = EnginePromptCoordinator()
+    private let engineSelectionActionCoordinator = EngineSelectionActionCoordinator()
+
     private weak var delegate: TabManagerDelegate?
     private let store: TabManagementStore
     private let faviconStore: FaviconStore
@@ -171,9 +174,9 @@ final class TabManagerImplementation: NSObject, TabManager {
     
     private func makeTab(windowId: String?, isPrivate: Bool) -> Tab {
         let tab = Tab(session: createSession(windowId: windowId, isPrivate: isPrivate), isPrivate: isPrivate)
-        let controller = NowPlayingController(session: tab.session)
-        tab.session.mediaSessionDelegate = controller
-        tab.state.nowPlayingController = controller
+        let npController = NowPlayingController(session: tab.session)
+        tab.session.mediaSessionDelegate = npController
+        tab.state.nowPlayingController = npController
         return tab
     }
     
@@ -181,9 +184,12 @@ final class TabManagerImplementation: NSObject, TabManager {
         session.contentDelegate = self
         session.progressDelegate = self
         session.navigationDelegate = self
-        let controller = NowPlayingController(session: session)
-        session.mediaSessionDelegate = controller
-        tab.state.nowPlayingController = controller
+        session.promptDelegate = enginePromptCoordinator
+        session.selectionActionDelegate = engineSelectionActionCoordinator
+
+        let npController = NowPlayingController(session: session)
+        session.mediaSessionDelegate = npController
+        tab.state.nowPlayingController = npController
     }
     
     private func applyTransferredState(to tab: Tab, url: String, title: String?) {
@@ -319,9 +325,9 @@ final class TabManagerImplementation: NSObject, TabManager {
                 _ = sessionStore.setOwnsNav(true, for: tab.id)
             }
             applyNavigationState(to: tab)
-            let controller = NowPlayingController(session: tab.session)
-            tab.session.mediaSessionDelegate = controller
-            tab.state.nowPlayingController = controller
+            let npController = NowPlayingController(session: tab.session)
+            tab.session.mediaSessionDelegate = npController
+            tab.state.nowPlayingController = npController
             return tab
         }
         
@@ -341,9 +347,9 @@ final class TabManagerImplementation: NSObject, TabManager {
                 _ = sessionStore.setOwnsNav(true, for: tab.id)
             }
             applyNavigationState(to: tab)
-            let controller = NowPlayingController(session: tab.session)
-            tab.session.mediaSessionDelegate = controller
-            tab.state.nowPlayingController = controller
+            let npController = NowPlayingController(session: tab.session)
+            tab.session.mediaSessionDelegate = npController
+            tab.state.nowPlayingController = npController
             return tab
         }
         
@@ -737,6 +743,8 @@ final class TabManagerImplementation: NSObject, TabManager {
         session.contentDelegate = self
         session.progressDelegate = self
         session.navigationDelegate = self
+        session.promptDelegate = enginePromptCoordinator
+        session.selectionActionDelegate = engineSelectionActionCoordinator
         session.open(windowId: windowId)
         return session
     }
@@ -942,12 +950,14 @@ extension TabManagerImplementation: NavigationDelegate {
         newSession.contentDelegate = self
         newSession.progressDelegate = self
         newSession.navigationDelegate = self
+        newSession.promptDelegate = enginePromptCoordinator
+        newSession.selectionActionDelegate = engineSelectionActionCoordinator
         let newTab = Tab(session: newSession, isPrivate: sourceIsPrivate)
         newSession.updateSettings(GeckoSessionController.shared.sessionSettings(for: uri, tabID: newTab.id))
-        let controller = NowPlayingController(session: newSession)
-        newSession.mediaSessionDelegate = controller
+        let npController = NowPlayingController(session: newSession)
+        newSession.mediaSessionDelegate = npController
         SitePermissionController.shared.applyPermissions(to: newSession, urlString: uri)
-        newTab.state.nowPlayingController = controller
+        newTab.state.nowPlayingController = npController
         newTab.url = uri
         newTab.favicon = cachedFavicon(for: uri)
         recordNavigation(uri, for: newTab)

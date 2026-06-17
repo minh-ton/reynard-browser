@@ -173,7 +173,7 @@ final class AddonUpdateController {
                 }
                 
                 failedCount += 1
-                let presentation = AddonErrors.updateErrPresentation(
+                let presentation = AddonErrors.updateErrorPresentation(
                     for: error,
                     addonName: addon.metaData.name ?? addon.id
                 )

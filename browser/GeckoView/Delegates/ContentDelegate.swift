@@ -132,19 +132,6 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             }
         }
         
-        func parseInt64(_ value: Any?) -> Int64? {
-            if let intValue = value as? Int64 {
-                return intValue
-            }
-            if let intValue = value as? Int {
-                return Int64(intValue)
-            }
-            if let number = value as? NSNumber {
-                return number.int64Value
-            }
-            return nil
-        }
-        
         guard let event = ContentEvents(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
@@ -214,7 +201,7 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                     localFilePath: message?["localFilePath"] as? String,
                     filename: message?["filename"] as? String,
                     mimeType: message?["mimeType"] as? String,
-                    contentLength: parseInt64(message?["contentLength"]),
+                    contentLength: PayloadValue.int64(message?["contentLength"]),
                     requestMethod: message?["requestMethod"] as? String,
                     requestHeaders: parseStringDictionary(message?["requestHeaders"])
                 )
@@ -297,14 +284,7 @@ func newProcessHangHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         let delegate = delegate as? ContentDelegate
         switch event {
         case .hangReport:
-            let reportId: Int
-            if let intValue = message?["hangId"] as? Int {
-                reportId = intValue
-            } else if let number = message?["hangId"] as? NSNumber {
-                reportId = number.intValue
-            } else {
-                reportId = 0
-            }
+            let reportId = PayloadValue.int(message?["hangId"]) ?? 0
             
             let response = await delegate?.onSlowScript(
                 session: session,

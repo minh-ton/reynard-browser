@@ -359,7 +359,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isInstallingAddonFromFile = false
                     self.reloadMoreSection()
-                    let presentation = AddonErrors.installErrPresentation(
+                    let presentation = AddonErrors.installErrorPresentation(
                         for: error,
                         addonName: sourceURL.deletingPathExtension().lastPathComponent
                     )

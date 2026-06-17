@@ -125,7 +125,11 @@ final class SitePermissionController: NSObject, PermissionEmbedderDelegate {
         }
         
         let allowed = await presentPermissionAlert(
-            title: request.title,
+            title: ContentPermission.mediaAlertTitle(
+                uri: request.uri,
+                videoRequested: request.videoRequested,
+                audioRequested: request.audioRequested
+            ),
             message: nil,
             isMedia: true
         )
