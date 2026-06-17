@@ -58,7 +58,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return "Updating Add-ons..."
         }
         if let browserViewController = resolvedBrowserViewController(),
-           browserViewController.addonController.updateController.hasPendingApprovals {
+           browserViewController.addonCoordinator.updateCoordinator.hasPendingApprovals {
             return "Complete Add-on Updates"
         }
         return "Update All Add-ons"
@@ -81,14 +81,14 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        resolvedBrowserViewController()?.addonController.updateController.setSettingsVisible(true)
+        resolvedBrowserViewController()?.addonCoordinator.updateCoordinator.setSettingsVisible(true)
         resetDisplayedUpdateState()
         syncAddonsFromCache()
     }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        resolvedBrowserViewController()?.addonController.updateController.setSettingsVisible(false)
+        resolvedBrowserViewController()?.addonCoordinator.updateCoordinator.setSettingsVisible(false)
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -359,7 +359,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isInstallingAddonFromFile = false
                     self.reloadMoreSection()
-                    let presentation = AddonErrors.installErrorPresentation(
+                    let presentation = AddonErrorPresenter.installErrorPresentation(
                         for: error,
                         addonName: sourceURL.deletingPathExtension().lastPathComponent
                     )
@@ -483,8 +483,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             
             let result: AddonUpdateBatchResult
-            if browserViewController.addonController.updateController.hasPendingApprovals {
-                result = await browserViewController.addonController.updateController.completePendingUpdates { [weak self] addonID, statusText in
+            if browserViewController.addonCoordinator.updateCoordinator.hasPendingApprovals {
+                result = await browserViewController.addonCoordinator.updateCoordinator.completePendingUpdates { [weak self] addonID, statusText in
                     guard let self else {
                         return
                     }
@@ -500,7 +500,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                     }
                 }
             } else {
-                result = await browserViewController.addonController.updateController.updateAllAddons { [weak self] addonID, statusText in
+                result = await browserViewController.addonCoordinator.updateCoordinator.updateAllAddons { [weak self] addonID, statusText in
                     guard let self else {
                         return
                     }

@@ -1,5 +1,5 @@
 //
-//  AddonUpdateController.swift
+//  AddonUpdateCoordinator.swift
 //  Reynard
 //
 //  Created by Minh Ton on 24/5/26.
@@ -15,11 +15,15 @@ struct AddonUpdateBatchResult {
     let failedCount: Int
 }
 
-final class AddonUpdateController {
+final class AddonUpdateCoordinator {
+    // MARK: - State
+    
     private var shouldRunAutomaticCheck: Bool
     private var isRunningBatch = false
     private var shouldPresentUpdatePrompts = false
     private var isSettingsVisible = false
+    
+    // MARK: - Initialization
     
     init() {
         if let lastGlobalCheckAt = Prefs.AddonSettings.lastGlobalCheckAt {
@@ -29,16 +33,16 @@ final class AddonUpdateController {
         }
     }
     
+    // MARK: - State
+    
     var hasPendingApprovals: Bool {
         !Prefs.AddonSettings.pendingApprovalAddonIDs.isEmpty
     }
     
-    var isUpdating: Bool {
-        isRunningBatch
-    }
+    // MARK: - Lifecycle
     
     func start() {
-        prunePendingApprovalAddonIDs()
+        prunePendingApprovals()
         guard shouldRunAutomaticCheck else {
             return
         }
@@ -48,12 +52,16 @@ final class AddonUpdateController {
         }
     }
     
+    // MARK: - Settings Visibility
+    
     func setSettingsVisible(_ visible: Bool) {
         isSettingsVisible = visible
         if visible {
-            prunePendingApprovalAddonIDs()
+            prunePendingApprovals()
         }
     }
+    
+    // MARK: - Permission Prompts
     
     @MainActor
     func responseForUpdatePrompt(
@@ -61,24 +69,26 @@ final class AddonUpdateController {
         presentPrompt: @escaping (AddonPermissionPrompt) async -> AddonPermissionPromptResponse
     ) async -> AddonPermissionPromptResponse {
         guard shouldPresentUpdatePrompts && isSettingsVisible else {
-            addPendingApprovalAddonID(prompt.addon.id)
+            markNeedsApproval(prompt.addon.id)
             return .deny
         }
         
         let response = await presentPrompt(prompt)
         if response.allow {
-            removePendingApprovalAddonID(prompt.addon.id)
+            clearPendingApproval(prompt.addon.id)
         } else {
-            addPendingApprovalAddonID(prompt.addon.id)
+            markNeedsApproval(prompt.addon.id)
         }
         return response
     }
     
+    // MARK: - Updates
+    
     func updateAllAddons(
         status: @escaping @MainActor (String, String?) -> Void
     ) async -> AddonUpdateBatchResult {
-        await runBatch(
-            addons: updatableAddons(),
+        await runUpdateBatch(
+            addons: updateCandidates(),
             status: status
         )
     }
@@ -87,8 +97,8 @@ final class AddonUpdateController {
         status: @escaping @MainActor (String, String?) -> Void
     ) async -> AddonUpdateBatchResult {
         let pendingIDs = Set(Prefs.AddonSettings.pendingApprovalAddonIDs)
-        let addons = updatableAddons().filter { pendingIDs.contains($0.id) }
-        return await runBatch(addons: addons, status: status)
+        let addons = updateCandidates().filter { pendingIDs.contains($0.id) }
+        return await runUpdateBatch(addons: addons, status: status)
     }
     
     private func runAutomaticCheck() async {
@@ -101,15 +111,15 @@ final class AddonUpdateController {
             isRunningBatch = false
         }
         
-        for addon in updatableAddons() {
+        for addon in updateCandidates() {
             do {
                 let updatedAddon = try await AddonRuntime.shared.update(addon)
                 if updatedAddon == nil {
-                    removePendingApprovalAddonID(addon.id)
+                    clearPendingApproval(addon.id)
                 }
             } catch {
-                if AddonErrors.updateRequiresPermissions(error) {
-                    addPendingApprovalAddonID(addon.id)
+                if AddonErrorPresenter.updateRequiresPermissions(error) {
+                    markNeedsApproval(addon.id)
                 }
             }
         }
@@ -117,7 +127,7 @@ final class AddonUpdateController {
         Prefs.AddonSettings.lastGlobalCheckAt = Date()
     }
     
-    private func runBatch(
+    private func runUpdateBatch(
         addons: [Addon],
         status: @escaping @MainActor (String, String?) -> Void
     ) async -> AddonUpdateBatchResult {
@@ -152,20 +162,20 @@ final class AddonUpdateController {
                 let updatedAddon = try await AddonRuntime.shared.update(addon)
                 if updatedAddon == nil {
                     noUpdateCount += 1
-                    removePendingApprovalAddonID(addon.id)
+                    clearPendingApproval(addon.id)
                     await MainActor.run {
                         status(addon.id, "No update available")
                     }
                 } else {
                     updatedCount += 1
-                    removePendingApprovalAddonID(addon.id)
+                    clearPendingApproval(addon.id)
                     await MainActor.run {
                         status(addon.id, "Successfully updated")
                     }
                 }
             } catch {
-                if AddonErrors.updateRequiresPermissions(error) {
-                    addPendingApprovalAddonID(addon.id)
+                if AddonErrorPresenter.updateRequiresPermissions(error) {
+                    markNeedsApproval(addon.id)
                     await MainActor.run {
                         status(addon.id, "Needs permission to update")
                     }
@@ -173,7 +183,7 @@ final class AddonUpdateController {
                 }
                 
                 failedCount += 1
-                let presentation = AddonErrors.updateErrorPresentation(
+                let presentation = AddonErrorPresenter.updateErrorPresentation(
                     for: error,
                     addonName: addon.metaData.name ?? addon.id
                 )
@@ -191,14 +201,18 @@ final class AddonUpdateController {
         )
     }
     
-    private func updatableAddons() -> [Addon] {
-        prunePendingApprovalAddonIDs()
+    // MARK: - Addon Selection
+    
+    private func updateCandidates() -> [Addon] {
+        prunePendingApprovals()
         return AddonRuntime.shared.installedAddons.filter {
             !$0.isBuiltIn && !$0.metaData.isUnsupported
         }
     }
     
-    private func prunePendingApprovalAddonIDs() {
+    // MARK: - Pending Approval State
+    
+    private func prunePendingApprovals() {
         let validAddonIDs = Set(AddonRuntime.shared.installedAddons.filter {
             !$0.isBuiltIn && !$0.metaData.isUnsupported
         }.map(\ .id))
@@ -208,7 +222,7 @@ final class AddonUpdateController {
         }
     }
     
-    private func addPendingApprovalAddonID(_ addonID: String) {
+    private func markNeedsApproval(_ addonID: String) {
         var pendingApprovalAddonIDs = Prefs.AddonSettings.pendingApprovalAddonIDs
         if !pendingApprovalAddonIDs.contains(addonID) {
             pendingApprovalAddonIDs.append(addonID)
@@ -216,7 +230,7 @@ final class AddonUpdateController {
         }
     }
     
-    private func removePendingApprovalAddonID(_ addonID: String) {
+    private func clearPendingApproval(_ addonID: String) {
         let filteredIDs = Prefs.AddonSettings.pendingApprovalAddonIDs.filter { $0 != addonID }
         if filteredIDs != Prefs.AddonSettings.pendingApprovalAddonIDs {
             Prefs.AddonSettings.pendingApprovalAddonIDs = filteredIDs

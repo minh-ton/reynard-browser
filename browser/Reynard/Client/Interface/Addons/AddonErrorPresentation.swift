@@ -1,12 +1,11 @@
 //
-//  AddonErrors.swift
+//  AddonErrorPresentation.swift
 //  Reynard
 //
 //  Created by Minh Ton on 24/5/26.
 //
 
 import Foundation
-import GeckoView
 
 public struct AddonErrorPresentation {
     public let statusText: String?
@@ -14,7 +13,9 @@ public struct AddonErrorPresentation {
     public let isUserCancelled: Bool
 }
 
-public struct AddonErrors {
+public struct AddonErrorPresenter {
+    // MARK: - Public API
+    
     public static func updateRequiresPermissions(_ error: Error) -> Bool {
         normalizeCode(installErrorDetails(from: error).code) == "ERROR_POSTPONED"
     }
@@ -45,6 +46,8 @@ public struct AddonErrors {
         )
     }
     
+    // MARK: - Error Extraction
+    
     private static func installErrorDetails(from error: Error) -> (code: String?, cancelledByUser: Bool) {
         guard let value = Mirror(reflecting: error).descendant("value") as? [String: Any?] else {
             return (nil, false)
@@ -74,6 +77,8 @@ public struct AddonErrors {
         
         return (installError, cancelledByUser)
     }
+    
+    // MARK: - Presentation
     
     private static func presentation(
         code: String?,
@@ -151,6 +156,8 @@ public struct AddonErrors {
         }
         return "Failed to install this extension."
     }
+    
+    // MARK: - Codes
     
     private static func normalizeCode(_ code: String?) -> String? {
         guard let code = code?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty else {

@@ -39,7 +39,7 @@ extension BrowserViewController: TabManagerDelegate {
         }
         
         contentView.setSession(selectedTab.session)
-        addonController.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
+        addonCoordinator.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
         
         browserChrome.setAddressBarLoadingProgress(
             selectedTab.state.loadingState.progress,
@@ -154,7 +154,7 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, shouldHandleExternalResponse response: ExternalResponseInfo, for session: GeckoSession) -> Bool {
-        addonController.handleExternalResponse(response)
+        addonCoordinator.handleExternalResponse(response)
     }
 }
 

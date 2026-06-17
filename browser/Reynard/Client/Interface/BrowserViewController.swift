@@ -76,7 +76,7 @@ final class BrowserViewController: UIViewController {
         host: self,
         canHostSidebar: allowsSidebarHosting
     )
-    lazy var addonController = AddonController(controller: self)
+    lazy var addonCoordinator = AddonCoordinator(dataSource: self, delegate: self)
 
     private(set) var isShowingFullscreenMedia = false {
         didSet {
@@ -152,7 +152,7 @@ final class BrowserViewController: UIViewController {
             
             SitePermissionController.shared.attach(controller: self)
             SitePermissionController.shared.start()
-            await self.addonController.start()
+            await self.addonCoordinator.start()
             self.tabManager.selectedTab?.session.setAddonTabActive(true)
         }
         

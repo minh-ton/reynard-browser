@@ -1,5 +1,5 @@
 //
-//  AddonPrompts.swift
+//  AddonPermissionPromptViewController.swift
 //  Reynard
 //
 //  Created by Minh Ton on 23/5/26.
@@ -8,7 +8,19 @@
 import GeckoView
 import UIKit
 
-final class AddonPromptViewController: UITableViewController {
+final class AddonPermissionPromptViewController: UITableViewController {
+    // MARK: - UX
+    
+    private enum UX {
+        static let cellReuseIdentifier = "Cell"
+        static let footerHeight: CGFloat = 88
+        static let actionButtonTopInset: CGFloat = 24
+        static let actionButtonHeight: CGFloat = 50
+        static let actionButtonCornerRadius: CGFloat = 25
+    }
+    
+    // MARK: - Types
+    
     private enum Section {
         case message
         case permissions
@@ -16,16 +28,18 @@ final class AddonPromptViewController: UITableViewController {
         case options
     }
     
-    private enum DisplayItem {
+    private enum PermissionRow {
         case domainHeader(String)
         case showAllSites
         case permission(String)
     }
     
+    // MARK: - State
+    
     private let prompt: AddonPermissionPrompt
     private let onDecision: (AddonPermissionPromptResponse) -> Void
-    private let permissionRows: [String]
-    private let domainRows: [String]
+    private let siteDomains: [String]
+    private let permissionRows: [PermissionRow]
     private let dataCollectionDescription: String?
     private var buttonLeadingConstraint: NSLayoutConstraint?
     private var buttonTrailingConstraint: NSLayoutConstraint?
@@ -33,7 +47,7 @@ final class AddonPromptViewController: UITableViewController {
     private let privateBrowsingSwitch = UISwitch()
     private var visibleSections: [Section] {
         var sections: [Section] = [.message]
-        if !displayItems.isEmpty {
+        if !permissionRows.isEmpty {
             sections.append(.permissions)
         }
         if dataCollectionDescription != nil {
@@ -48,7 +62,7 @@ final class AddonPromptViewController: UITableViewController {
         let button = UIButton(type: .system)
         button.backgroundColor = view.tintColor
         button.tintColor = .white
-        button.layer.cornerRadius = 25
+        button.layer.cornerRadius = UX.actionButtonCornerRadius
         button.layer.cornerCurve = .continuous
         button.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         button.setTitle(prompt.kind == .install ? "Add" : "Allow", for: .normal)
@@ -56,15 +70,20 @@ final class AddonPromptViewController: UITableViewController {
         return button
     }()
     
+    // MARK: - Lifecycle
+    
     init(prompt: AddonPermissionPrompt, onDecision: @escaping (AddonPermissionPromptResponse) -> Void) {
         self.prompt = prompt
         self.onDecision = onDecision
         let content = Self.promptContent(for: prompt)
-        permissionRows = content.permissionRows
-        domainRows = content.domainRows
+        siteDomains = content.siteDomains
+        permissionRows = Self.makePermissionRows(
+            localizedPermissions: content.permissionRows,
+            domains: content.siteDomains
+        )
         dataCollectionDescription = content.dataCollectionDescription
         super.init(style: .insetGrouped)
-        title = Self.promptTitle(for: prompt)
+        configureTitle()
     }
     
     required init?(coder: NSCoder) {
@@ -73,34 +92,9 @@ final class AddonPromptViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        view.backgroundColor = .systemGroupedBackground
-        navigationItem.largeTitleDisplayMode = .never
-        
-        if #available(iOS 26.0, *) {
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(dismissModal))
-            ]
-            navigationItem.rightBarButtonItems?.first?.tintColor = .label
-        } else {
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissModal))
-            ]
-        }
-        
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: 88))
-        container.addSubview(actionButton)
-        actionButton.translatesAutoresizingMaskIntoConstraints = false
-        buttonLeadingConstraint = actionButton.leadingAnchor.constraint(equalTo: container.leadingAnchor)
-        buttonTrailingConstraint = actionButton.trailingAnchor.constraint(equalTo: container.trailingAnchor)
-        NSLayoutConstraint.activate([
-            actionButton.topAnchor.constraint(equalTo: container.topAnchor, constant: 24),
-            buttonLeadingConstraint!,
-            buttonTrailingConstraint!,
-            actionButton.heightAnchor.constraint(equalToConstant: 50),
-        ])
-        
-        tableView.tableFooterView = container
+        configureView()
+        configureNavigationItem()
+        configureFooter()
     }
     
     override func viewDidLayoutSubviews() {
@@ -138,9 +132,9 @@ final class AddonPromptViewController: UITableViewController {
         case .message:
             return 1
         case .permissions:
-            return displayItems.count
+            return permissionRows.count
         case .dataCollection:
-            return dataCollectionDescription == nil ? 0 : 1
+            return 1
         case .options:
             return 1
         }
@@ -153,12 +147,12 @@ final class AddonPromptViewController: UITableViewController {
         
         switch visibleSections[section] {
         case .permissions:
-            guard !displayItems.isEmpty else {
+            guard !permissionRows.isEmpty else {
                 return nil
             }
             return "Required Permissions"
         case .dataCollection:
-            return dataCollectionDescription == nil ? nil : "Required Data Collection"
+            return "Required Data Collection"
         case .options:
             return "Additional Options"
         case .message:
@@ -170,11 +164,13 @@ final class AddonPromptViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell")
-        ?? UITableViewCell(style: .default, reuseIdentifier: "Cell")
+        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellReuseIdentifier)
+        ?? UITableViewCell(style: .default, reuseIdentifier: UX.cellReuseIdentifier)
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.textColor = .label
         cell.selectionStyle = .none
+        cell.accessoryType = .none
+        cell.accessoryView = nil
         
         guard visibleSections.indices.contains(indexPath.section) else {
             cell.textLabel?.text = nil
@@ -186,7 +182,7 @@ final class AddonPromptViewController: UITableViewController {
             cell.textLabel?.font = .preferredFont(forTextStyle: .headline)
             cell.textLabel?.text = promptMessage()
         case .permissions:
-            switch displayItems[indexPath.row] {
+            switch permissionRows[indexPath.row] {
             case .domainHeader(let value):
                 cell.textLabel?.font = .preferredFont(forTextStyle: .body)
                 cell.textLabel?.text = value
@@ -201,10 +197,8 @@ final class AddonPromptViewController: UITableViewController {
                 cell.textLabel?.text = value
             }
         case .dataCollection:
-            if let dataCollectionDescription {
-                cell.textLabel?.font = .preferredFont(forTextStyle: .body)
-                cell.textLabel?.text = dataCollectionDescription
-            }
+            cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+            cell.textLabel?.text = dataCollectionDescription
         case .options:
             cell.textLabel?.font = .preferredFont(forTextStyle: .body)
             cell.textLabel?.text = "Allow in Private Browsing"
@@ -221,15 +215,59 @@ final class AddonPromptViewController: UITableViewController {
             return
         }
         
-        if case .showAllSites = displayItems[indexPath.row] {
+        if case .showAllSites = permissionRows[indexPath.row] {
             navigationController?.pushViewController(
-                AddonPromptSitesViewController(sites: domainRows),
+                AddonPromptSiteListViewController(sites: siteDomains),
                 animated: true
             )
         }
         
         tableView.deselectRow(at: indexPath, animated: true)
     }
+    
+    // MARK: - Setup
+    
+    private func configureTitle() {
+        title = Self.promptTitle(for: prompt)
+    }
+    
+    private func configureView() {
+        view.backgroundColor = .systemGroupedBackground
+    }
+    
+    private func configureNavigationItem() {
+        navigationItem.largeTitleDisplayMode = .never
+        
+        if #available(iOS 26.0, *) {
+            navigationItem.rightBarButtonItems = [
+                UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(dismissModal))
+            ]
+            navigationItem.rightBarButtonItems?.first?.tintColor = .label
+        } else {
+            navigationItem.rightBarButtonItems = [
+                UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissModal))
+            ]
+        }
+    }
+    
+    private func configureFooter() {
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: UX.footerHeight))
+        container.addSubview(actionButton)
+        actionButton.translatesAutoresizingMaskIntoConstraints = false
+        buttonLeadingConstraint = actionButton.leadingAnchor.constraint(equalTo: container.leadingAnchor)
+        buttonTrailingConstraint = actionButton.trailingAnchor.constraint(equalTo: container.trailingAnchor)
+        
+        NSLayoutConstraint.activate([
+            actionButton.topAnchor.constraint(equalTo: container.topAnchor, constant: UX.actionButtonTopInset),
+            buttonLeadingConstraint!,
+            buttonTrailingConstraint!,
+            actionButton.heightAnchor.constraint(equalToConstant: UX.actionButtonHeight),
+        ])
+        
+        tableView.tableFooterView = container
+    }
+    
+    // MARK: - Actions
     
     @objc private func dismissModal() {
         dismiss(animated: true)
@@ -250,6 +288,8 @@ final class AddonPromptViewController: UITableViewController {
         dismiss(animated: true)
     }
     
+    // MARK: - Content
+    
     private func promptMessage() -> String {
         let addonName = prompt.addon.metaData.name ?? prompt.addon.id
         
@@ -266,22 +306,24 @@ final class AddonPromptViewController: UITableViewController {
         }
     }
     
-    private var displayItems: [DisplayItem] {
-        var items: [DisplayItem] = []
+    private static func makePermissionRows(localizedPermissions: [String], domains: [String]) -> [PermissionRow] {
+        var rows: [PermissionRow] = []
         
-        if !domainRows.isEmpty {
-            items.append(.domainHeader("Access your data for sites in \(domainRows.count) domains"))
-            items.append(.showAllSites)
+        if !domains.isEmpty {
+            rows.append(.domainHeader("Access your data for sites in \(domains.count) domains"))
+            rows.append(.showAllSites)
         }
         
-        permissionRows.forEach { items.append(.permission($0)) }
+        localizedPermissions.forEach { rows.append(.permission($0)) }
         
-        return items
+        return rows
     }
+    
+    // MARK: - Formatting
     
     private static func promptContent(
         for prompt: AddonPermissionPrompt
-    ) -> (permissionRows: [String], domainRows: [String], dataCollectionDescription: String?) {
+    ) -> (permissionRows: [String], siteDomains: [String], dataCollectionDescription: String?) {
         switch prompt.kind {
         case .install, .optional:
             let hostPermissions = AddonPermissionSupport.classifyOriginPermissions(prompt.origins)
@@ -297,7 +339,7 @@ final class AddonPromptViewController: UITableViewController {
             
             return (
                 permissionRows: AddonPermissionSupport.localizePermissions(displayPermissions, forUpdate: false),
-                domainRows: allUrlsPermissionFound ? [] : (hostPermissions.wildcards + hostPermissions.sites),
+                siteDomains: allUrlsPermissionFound ? [] : (hostPermissions.wildcards + hostPermissions.sites),
                 dataCollectionDescription: prompt.kind == .optional
                 ? AddonPermissionSupport.optionalDataCollectionDescription(for: filteredDataCollectionPermissions)
                 : AddonPermissionSupport.requiredDataCollectionDescription(for: filteredDataCollectionPermissions)
@@ -305,7 +347,7 @@ final class AddonPromptViewController: UITableViewController {
         case .update:
             return (
                 permissionRows: AddonPermissionSupport.updatePermissionDescription(for: prompt.permissions + prompt.origins).map { [$0] } ?? [],
-                domainRows: [],
+                siteDomains: [],
                 dataCollectionDescription: AddonPermissionSupport.updateDataCollectionDescription(for: prompt.dataCollectionPermissions)
             )
         }
@@ -322,8 +364,18 @@ final class AddonPromptViewController: UITableViewController {
     
 }
 
-private final class AddonPromptSitesViewController: UITableViewController {
+private final class AddonPromptSiteListViewController: UITableViewController {
+    // MARK: - UX
+    
+    private enum UX {
+        static let cellReuseIdentifier = "SiteCell"
+    }
+    
+    // MARK: - State
+    
     private let sites: [String]
+    
+    // MARK: - Lifecycle
     
     init(sites: [String]) {
         self.sites = sites
@@ -349,8 +401,8 @@ private final class AddonPromptSitesViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SiteCell")
-        ?? UITableViewCell(style: .default, reuseIdentifier: "SiteCell")
+        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellReuseIdentifier)
+        ?? UITableViewCell(style: .default, reuseIdentifier: UX.cellReuseIdentifier)
         cell.selectionStyle = .none
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.text = sites[indexPath.row]

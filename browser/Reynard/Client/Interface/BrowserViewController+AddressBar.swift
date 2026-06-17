@@ -30,7 +30,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             selectedTab?.state.loadingState.progress ?? 0,
             isLoading: selectedTab?.state.loadingState.isLoading ?? false
         )
-        addonController.prepareVisibleAddonIcons()
+        addonCoordinator.prepareMenuIcons()
         browserChrome.updateAddressBarMenu(selectedTab: selectedTab, url: selectedURL)
     }
 
@@ -41,16 +41,16 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
 
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem] {
-        addonController.visibleMenuItemsForCurrentSite().map { item in
+        addonCoordinator.currentSiteMenuItems().map { item in
             AddressBarMenu.AddonItem(
                 menuItem: item,
-                image: addonController.iconImage(for: item.addon)
+                image: addonCoordinator.menuIcon(for: item.addon)
             )
         }
     }
 
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
-        addonController.presentCurrentSiteSettings(for: item)
+        addonCoordinator.activateMenuItem(item)
     }
 
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
