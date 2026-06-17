@@ -14,4 +14,4 @@ AGENTS.md
 
 # Build artifacts
 dist/
-browser/Reynard/JIT/libidevice_ffi.a
+browser/Reynard/JIT/RPPairing/libidevice_ffi.a
