@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 SUBMODULE_PATH="$REPO_ROOT/support/idevice"
 FFI_DIR="$SUBMODULE_PATH/ffi"
-OUTPUT_LIB="$REPO_ROOT/browser/Reynard/JIT/libidevice_ffi.a"
+OUTPUT_LIB="$REPO_ROOT/browser/Reynard/JIT/RPPairing/libidevice_ffi.a"
 
 TARGET_DIR="$SUBMODULE_PATH/target"
 DEPLOYMENT_TARGET="13.0"

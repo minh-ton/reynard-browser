@@ -8,8 +8,7 @@
 #import "JITEnabler.h"
 #import "JITSupport.h"
 #import "JITUtils.h"
-#import "TSRoot.h"
-#import "TSUtils.h"
+#import "Utils.h"
 #include <sys/stat.h>
 #include <errno.h>
 

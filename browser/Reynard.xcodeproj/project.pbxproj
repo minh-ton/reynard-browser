@@ -80,13 +80,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		010FB2CB2F909FE300271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				TrollStore/Utils/TSUtils.m,
-			);
-			target = 01GECKO0012F2F289C001F0002 /* GeckoView */;
-		};
 		0111ED022F4A19FD00490C82 /* Exceptions for "Helper" folder in "GeckoView" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -107,10 +100,17 @@
 		018C67B02F2F289E001F0BBB /* Exceptions for "Reynard" folder in "Reynard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				JIT/Unsandboxed/ptrace_jit.c,
 				Resources/Info.plist,
-				TrollStore/JIT/ptrace_jit.c,
 			);
 			target = 018C679D2F2F289C001F0BBB /* Reynard */;
+		};
+		01D723872FE2DDA300E9D86C /* Exceptions for "Reynard" folder in "GeckoView" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/Utils.m,
+			);
+			target = 01GECKO0012F2F289C001F0002 /* GeckoView */;
 		};
 		01GECKO0072F2F289C001F0001 /* Exceptions for "GeckoView" folder in "GeckoView" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -142,7 +142,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				018C67B02F2F289E001F0BBB /* Exceptions for "Reynard" folder in "Reynard" target */,
-				010FB2CB2F909FE300271A50 /* Exceptions for "Reynard" folder in "GeckoView" target */,
+				01D723872FE2DDA300E9D86C /* Exceptions for "Reynard" folder in "GeckoView" target */,
 			);
 			path = Reynard;
 			sourceTree = "<group>";
@@ -519,6 +519,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/Reynard/JIT",
 					"$(PROJECT_DIR)/Reynard/JIT",
+					"$(PROJECT_DIR)/Reynard/JIT/RPPairing",
 				);
 				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (
@@ -586,6 +587,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/Reynard/JIT",
 					"$(PROJECT_DIR)/Reynard/JIT",
+					"$(PROJECT_DIR)/Reynard/JIT/RPPairing",
 				);
 				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = (

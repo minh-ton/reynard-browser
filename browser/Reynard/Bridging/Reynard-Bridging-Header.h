@@ -11,8 +11,8 @@
 #import "ExtensionBridge.h"
 #import "GeckoRuntimeBridge.h"
 #import "JITEnabler.h"
-#import "TSUtils.h"
 #import "UIKit+Private.h"
+#import "Utils.h"
 #import <GeckoView/GeckoViewSwiftSupport.h>
 #import <GeckoView/IOSBootstrap.h>
 
