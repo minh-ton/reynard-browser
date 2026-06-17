@@ -13,7 +13,8 @@ final class TabBarCell: UICollectionViewCell {
     private enum UX {
         static let expandedTabMinimumWidth: CGFloat = 220
         static let collapsedTabMinimumWidth: CGFloat = 96
-        static let tabTitleFont = UIFont.systemFont(ofSize: 14, weight: .semibold)
+        static let tabTitleFontSize: CGFloat = 14
+        static let tabTitleFontWeight: UIFont.Weight = .semibold
         static let tabTitleSpacing: CGFloat = 6
         static let tabFaviconSideLength: CGFloat = 16
         static let tabCloseButtonSideLength: CGFloat = 22
@@ -24,7 +25,6 @@ final class TabBarCell: UICollectionViewCell {
         static let collapsedTabContentHorizontalInset: CGFloat = 8
         static let expandedTabTitleWidthInset: CGFloat = 58
         static let tabSeparatorWidth: CGFloat = 2 / UIScreen.main.scale
-        static let minimumVisibleTabTitle = "WWWWW"
     }
 
     enum LayoutMode {
@@ -33,6 +33,7 @@ final class TabBarCell: UICollectionViewCell {
     }
     
     static let reuseIdentifier = "TabBarCell"
+    private static let minimumVisibleTabTitle = "WWWWW"
 
     static var expandedMinimumWidth: CGFloat {
         UX.expandedTabMinimumWidth
@@ -58,7 +59,7 @@ final class TabBarCell: UICollectionViewCell {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = UX.tabTitleFont
+        label.font = UIFont.systemFont(ofSize: UX.tabTitleFontSize, weight: UX.tabTitleFontWeight)
         label.textColor = .secondaryLabel
         label.numberOfLines = 1
         label.textAlignment = .center
@@ -136,7 +137,7 @@ final class TabBarCell: UICollectionViewCell {
         contentView.backgroundColor = isSelected ? .systemGray6 : .systemGray5
         titleLabel.textColor = isSelected ? .label : .secondaryLabel
         faviconView.tintColor = isSelected ? .label : .secondaryLabel
-        let minimumVisibleTitle = UX.minimumVisibleTabTitle as NSString
+        let minimumVisibleTitle = Self.minimumVisibleTabTitle as NSString
         let minimumTitleWidth = minimumVisibleTitle.size(withAttributes: [.font: titleLabel.font as Any]).width
         let availableTitleWidth = cellWidth - UX.expandedTabTitleWidthInset
         let isTooNarrowForTitle = availableTitleWidth < minimumTitleWidth

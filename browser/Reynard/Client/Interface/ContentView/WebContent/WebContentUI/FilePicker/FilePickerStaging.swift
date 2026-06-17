@@ -20,7 +20,7 @@ extension FilePicker {
 
     nonisolated static func stageImageData(_ imageData: Data, in directory: URL) throws -> SelectionResult {
         try prepareDirectory(directory)
-        let destinationURL = uniqueDestinationURL(in: directory, preferredName: UX.defaultPhotoName)
+        let destinationURL = uniqueDestinationURL(in: directory, preferredName: "photo.jpg")
         try imageData.write(to: destinationURL, options: .atomic)
         return SelectionResult(files: [destinationURL.path], filesInWebKitDirectory: [])
     }
@@ -28,7 +28,7 @@ extension FilePicker {
     nonisolated static func stageFolder(from url: URL, in directory: URL) throws -> SelectionResult {
         try prepareDirectory(directory)
 
-        let rootName = sanitizeFileName(url.lastPathComponent.isEmpty ? UX.defaultFolderName : url.lastPathComponent)
+        let rootName = sanitizeFileName(url.lastPathComponent.isEmpty ? "Folder" : url.lastPathComponent)
         let destinationURL = directory.appendingPathComponent(rootName, isDirectory: true)
 
         try withSecurityScopedAccess(to: url) {
@@ -97,7 +97,7 @@ extension FilePicker {
 
     nonisolated static func uniqueDestinationURL(in directory: URL, preferredName: String) -> URL {
         let fileManager = FileManager.default
-        let sanitizedName = sanitizeFileName(preferredName.isEmpty ? UX.defaultFileName : preferredName)
+        let sanitizedName = sanitizeFileName(preferredName.isEmpty ? "File" : preferredName)
         let extensionPart = URL(fileURLWithPath: sanitizedName).pathExtension
         let baseName = extensionPart.isEmpty
         ? sanitizedName
@@ -118,7 +118,7 @@ extension FilePicker {
         let invalidCharacters = CharacterSet(charactersIn: "/:\n")
         let pieces = name.components(separatedBy: invalidCharacters)
         let sanitized = pieces.joined(separator: "-").trimmingCharacters(in: .whitespacesAndNewlines)
-        return sanitized.isEmpty ? UX.defaultFileName : sanitized
+        return sanitized.isEmpty ? "File" : sanitized
     }
 
     private nonisolated static func mimeType(for url: URL) -> String {
@@ -259,11 +259,11 @@ extension FilePicker {
 
         let baseName: String
         if typeConforms(typeIdentifier, to: kUTTypeMovie as String) {
-            baseName = UX.videoBaseName
+            baseName = "Video"
         } else if typeConforms(typeIdentifier, to: kUTTypeImage as String) {
-            baseName = UX.photoBaseName
+            baseName = "Photo"
         } else {
-            baseName = UX.defaultFileName
+            baseName = "File"
         }
 
         if let type = UTType(typeIdentifier),

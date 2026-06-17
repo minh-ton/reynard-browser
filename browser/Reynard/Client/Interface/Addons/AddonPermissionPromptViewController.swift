@@ -12,7 +12,6 @@ final class AddonPermissionPromptViewController: UITableViewController {
     // MARK: - UX
     
     private enum UX {
-        static let cellReuseIdentifier = "Cell"
         static let footerHeight: CGFloat = 88
         static let actionButtonTopInset: CGFloat = 24
         static let actionButtonHeight: CGFloat = 50
@@ -36,6 +35,7 @@ final class AddonPermissionPromptViewController: UITableViewController {
     
     // MARK: - State
     
+    private let cellReuseIdentifier = "Cell"
     private let prompt: AddonPermissionPrompt
     private let onDecision: (AddonPermissionPromptResponse) -> Void
     private let siteDomains: [String]
@@ -164,8 +164,8 @@ final class AddonPermissionPromptViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellReuseIdentifier)
-        ?? UITableViewCell(style: .default, reuseIdentifier: UX.cellReuseIdentifier)
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier)
+        ?? UITableViewCell(style: .default, reuseIdentifier: cellReuseIdentifier)
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.textColor = .label
         cell.selectionStyle = .none
@@ -365,14 +365,9 @@ final class AddonPermissionPromptViewController: UITableViewController {
 }
 
 private final class AddonPromptSiteListViewController: UITableViewController {
-    // MARK: - UX
-    
-    private enum UX {
-        static let cellReuseIdentifier = "SiteCell"
-    }
-    
     // MARK: - State
     
+    private let cellReuseIdentifier = "SiteCell"
     private let sites: [String]
     
     // MARK: - Lifecycle
@@ -401,8 +396,8 @@ private final class AddonPromptSiteListViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellReuseIdentifier)
-        ?? UITableViewCell(style: .default, reuseIdentifier: UX.cellReuseIdentifier)
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier)
+        ?? UITableViewCell(style: .default, reuseIdentifier: cellReuseIdentifier)
         cell.selectionStyle = .none
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.text = sites[indexPath.row]

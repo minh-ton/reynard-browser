@@ -10,14 +10,6 @@ import UIKit
 
 @MainActor
 final class SelectPicker {
-    // MARK: - UX
-
-    private enum UX {
-        static let fallbackTitle = "Select Option"
-        static let fallbackOptionTitle = "Option"
-        static let cancelTitle = "Cancel"
-    }
-
     // MARK: - State
 
     private var mode: String
@@ -126,14 +118,14 @@ final class SelectPicker {
             return
         }
 
-        let alert = UIAlertController(title: UX.fallbackTitle, message: nil, preferredStyle: .actionSheet)
+        let alert = UIAlertController(title: "Select Option", message: nil, preferredStyle: .actionSheet)
         for item in selectableChoices(from: choices) {
-            let title = item.label.isEmpty ? UX.fallbackOptionTitle : item.label
+            let title = item.label.isEmpty ? "Option" : item.label
             alert.addAction(UIAlertAction(title: title, style: .default) { [weak self] _ in
                 self?.finish([item.id])
             })
         }
-        alert.addAction(UIAlertAction(title: UX.cancelTitle, style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
             self?.finish(nil)
         })
 

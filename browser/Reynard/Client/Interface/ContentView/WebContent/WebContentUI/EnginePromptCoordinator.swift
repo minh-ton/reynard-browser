@@ -10,21 +10,6 @@ import UIKit
 
 @MainActor
 final class EnginePromptCoordinator: PromptDelegate {
-    // MARK: - UX
-
-    private enum UX {
-        static let okTitle = "OK"
-        static let cancelTitle = "Cancel"
-        static let yesTitle = "Yes"
-        static let noTitle = "No"
-        static let confirmUploadTitle = "Confirm Upload"
-        static let uploadTitle = "Upload"
-        static let uploadAllFilesMessage = "Are you sure you want to upload all files? Only do this if you trust the site."
-        static func uploadDirectoryMessage(_ directoryName: String) -> String {
-            "Are you sure you want to upload all files from \"\(directoryName)\"? Only do this if you trust the site."
-        }
-    }
-
     // MARK: - State
 
     private var activeSelectPickers: [String: SelectPicker] = [:]
@@ -100,7 +85,7 @@ final class EnginePromptCoordinator: PromptDelegate {
                 message: request.message.isEmpty ? nil : request.message,
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: UX.okTitle, style: .default) { _ in
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
                 continuation.resume()
             })
             presenter.present(alert, animated: true)
@@ -138,7 +123,7 @@ final class EnginePromptCoordinator: PromptDelegate {
             }
 
             if alert.actions.isEmpty {
-                alert.addAction(UIAlertAction(title: UX.okTitle, style: .default) { _ in
+                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
                     continuation.resume(returning: .button(0))
                 })
             }
@@ -164,10 +149,10 @@ final class EnginePromptCoordinator: PromptDelegate {
             alert.addTextField { textField in
                 textField.text = request.value
             }
-            alert.addAction(UIAlertAction(title: UX.cancelTitle, style: .cancel) { _ in
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
                 continuation.resume(returning: nil)
             })
-            alert.addAction(UIAlertAction(title: UX.okTitle, style: .default) { _ in
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
                 continuation.resume(returning: .text(alert.textFields?.first?.text ?? ""))
             })
             presenter.present(alert, animated: true)
@@ -183,19 +168,19 @@ final class EnginePromptCoordinator: PromptDelegate {
         }
 
         let message = request.directoryName.isEmpty
-            ? UX.uploadAllFilesMessage
-            : UX.uploadDirectoryMessage(request.directoryName)
+            ? "Are you sure you want to upload all files? Only do this if you trust the site."
+            : "Are you sure you want to upload all files from \"\(request.directoryName)\"? Only do this if you trust the site."
 
         return await withCheckedContinuation { continuation in
             let alert = UIAlertController(
-                title: UX.confirmUploadTitle,
+                title: "Confirm Upload",
                 message: message,
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: UX.cancelTitle, style: .cancel) { _ in
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
                 continuation.resume(returning: .folderUpload(allowed: false))
             })
-            alert.addAction(UIAlertAction(title: UX.uploadTitle, style: .default) { _ in
+            alert.addAction(UIAlertAction(title: "Upload", style: .default) { _ in
                 continuation.resume(returning: .folderUpload(allowed: true))
             })
             presenter.present(alert, animated: true)
@@ -326,15 +311,15 @@ final class EnginePromptCoordinator: PromptDelegate {
 
         switch label {
         case "ok":
-            return UX.okTitle
+            return "OK"
         case "cancel":
-            return UX.cancelTitle
+            return "Cancel"
         case "yes":
-            return UX.yesTitle
+            return "Yes"
         case "no":
-            return UX.noTitle
+            return "No"
         case "custom":
-            return customLabel.isEmpty ? UX.okTitle : customLabel
+            return customLabel.isEmpty ? "OK" : customLabel
         default:
             return ""
         }

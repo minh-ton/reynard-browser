@@ -22,7 +22,6 @@ final class TabBar: UIView {
 
     private enum UX {
         static let tabBarHeight: CGFloat = 36
-        static let tabBarBackgroundColor = UIColor.systemGray6
     }
 
     enum Visibility: Equatable {
@@ -183,7 +182,7 @@ final class TabBar: UIView {
 
     private func configureAppearance() {
         translatesAutoresizingMaskIntoConstraints = false
-        backgroundColor = UX.tabBarBackgroundColor
+        backgroundColor = .systemGray6
         isHidden = true
     }
 

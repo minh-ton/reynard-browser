@@ -11,7 +11,8 @@ final class SidebarEmptyBackgroundView: UIView {
     // MARK: - UX
 
     private enum UX {
-        static let messageFont = UIFont.systemFont(ofSize: 16, weight: .medium)
+        static let messageFontSize: CGFloat = 16
+        static let messageFontWeight: UIFont.Weight = .medium
     }
 
     // MARK: - State
@@ -40,7 +41,7 @@ final class SidebarEmptyBackgroundView: UIView {
 
     private let messageLabel: UILabel = {
         let label = UILabel()
-        label.font = UX.messageFont
+        label.font = UIFont.systemFont(ofSize: UX.messageFontSize, weight: UX.messageFontWeight)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
         label.numberOfLines = 0

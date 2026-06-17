@@ -30,7 +30,7 @@ final class AddressBar: UIView {
         static let padAddressBarHeight: CGFloat = 38
         static let addressBarLoadingProgressHeight: CGFloat = 2
         static let addressBarAutocompleteTrailingInset: CGFloat = 30
-        static let addressBarTextFont = UIFont.systemFont(ofSize: 17)
+        static let addressBarTextFontSize: CGFloat = 17
         static let addressBarDismissButtonAnimationDuration: TimeInterval = 0.2
         static let addressBarBackgroundDarkModeShadowAlpha: CGFloat = 0.3
         static let addressBarBackgroundShadowOpacity: Float = 0.12
@@ -177,7 +177,7 @@ final class AddressBar: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textAlignment = .left
         label.textColor = .label
-        label.font = UX.addressBarTextFont
+        label.font = UIFont.systemFont(ofSize: UX.addressBarTextFontSize)
         label.lineBreakMode = .byTruncatingTail
         label.numberOfLines = 1
         label.isUserInteractionEnabled = false
@@ -189,7 +189,7 @@ final class AddressBar: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textAlignment = .left
         label.textColor = .label
-        label.font = UX.addressBarTextFont
+        label.font = UIFont.systemFont(ofSize: UX.addressBarTextFontSize)
         label.lineBreakMode = .byTruncatingTail
         label.numberOfLines = 1
         label.isHidden = true

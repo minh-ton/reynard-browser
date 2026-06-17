@@ -38,9 +38,9 @@ extension FilePicker {
     @available(iOS 14.0, *)
     private func buildMenu() -> UIMenu {
         UIMenu(children: [
-            menuAction(.photoLibrary, systemImage: UX.photoLibraryIconName),
-            menuAction(.camera, systemImage: UX.cameraIconName),
-            menuAction(.chooseFile, systemImage: UX.documentIconName),
+            menuAction(.photoLibrary, systemImage: "photo.on.rectangle"),
+            menuAction(.camera, systemImage: "camera"),
+            menuAction(.chooseFile, systemImage: "doc"),
         ])
     }
 
@@ -80,7 +80,7 @@ extension FilePicker {
                 }
             })
         }
-        alert.addAction(UIAlertAction(title: UX.cancelTitle, style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
             self?.finish(with: nil)
         })
 
@@ -131,11 +131,11 @@ extension FilePicker {
     private func title(for action: PickerAction) -> String {
         switch action {
         case .photoLibrary:
-            return UX.photoLibraryTitle
+            return "Photo Library"
         case .camera:
             return cameraActionTitle
         case .chooseFile:
-            return mode == .folder ? UX.chooseFolderTitle : UX.chooseFileTitle
+            return mode == .folder ? "Choose Folder" : "Choose File"
         }
     }
 
@@ -157,13 +157,13 @@ extension FilePicker {
 
         switch (supportsImages, supportsVideos) {
         case (true, true):
-            return UX.takePhotoOrVideoTitle
+            return "Take Photo or Video"
         case (true, false):
-            return UX.takePhotoTitle
+            return "Take Photo"
         case (false, true):
-            return UX.takeVideoTitle
+            return "Take Video"
         case (false, false):
-            return UX.takePhotoTitle
+            return "Take Photo"
         }
     }
 

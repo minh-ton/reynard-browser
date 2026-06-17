@@ -12,22 +12,6 @@ final class FilePicker: NSObject {
     // MARK: - UX
 
     enum UX {
-        static let stagingDirectoryName = "GeckoFilePicker"
-        static let photoLibraryTitle = "Photo Library"
-        static let chooseFileTitle = "Choose File"
-        static let chooseFolderTitle = "Choose Folder"
-        static let cancelTitle = "Cancel"
-        static let takePhotoTitle = "Take Photo"
-        static let takeVideoTitle = "Take Video"
-        static let takePhotoOrVideoTitle = "Take Photo or Video"
-        static let photoLibraryIconName = "photo.on.rectangle"
-        static let cameraIconName = "camera"
-        static let documentIconName = "doc"
-        static let defaultFileName = "File"
-        static let defaultFolderName = "Folder"
-        static let defaultPhotoName = "photo.jpg"
-        static let photoBaseName = "Photo"
-        static let videoBaseName = "Video"
         static let imageCompressionQuality: CGFloat = 0.92
     }
 
@@ -185,7 +169,7 @@ final class FilePicker: NSObject {
 
     static func stagingDirectoryURL(promptId: String) -> URL {
         FileManager.default.temporaryDirectory
-            .appendingPathComponent(UX.stagingDirectoryName, isDirectory: true)
+            .appendingPathComponent("GeckoFilePicker", isDirectory: true)
             .appendingPathComponent(promptId, isDirectory: true)
     }
 }

@@ -8,14 +8,9 @@
 import UIKit
 
 final class SitePermissionOptionsViewController: UITableViewController {
-    // MARK: - UX
-
-    private enum UX {
-        static let cellIdentifier = "Cell"
-    }
-
     // MARK: - State
 
+    private let cellReuseIdentifier = "Cell"
     private let optionTitles: [String]
     private var selectedIndex: Int
     private let onSelect: (Int) -> Void
@@ -53,8 +48,8 @@ final class SitePermissionOptionsViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellIdentifier)
-        ?? UITableViewCell(style: .default, reuseIdentifier: UX.cellIdentifier)
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier)
+        ?? UITableViewCell(style: .default, reuseIdentifier: cellReuseIdentifier)
         guard optionTitles.indices.contains(indexPath.row) else {
             return cell
         }

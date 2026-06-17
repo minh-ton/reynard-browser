@@ -9,18 +9,7 @@ import GeckoView
 import UIKit
 
 final class SiteSettingsViewController: UITableViewController {
-    // MARK: - UX
-
-    private enum UX {
-        static let cellIdentifier = "Cell"
-        static let titlePrefix = "Settings for"
-        static let permissionsHeaderTitle = "Permissions"
-        static let actionsHeaderTitle = "Actions"
-        static let openSettingsTitle = "Open Settings"
-        static let resetPermissionsTitle = "Reset Permissions for this Site"
-        static let resetPermissionsSuccessTitle = "Successfully reset permissions for this site."
-        static let popupImageName = "chevron.up.chevron.down"
-    }
+    private let permissionCellReuseIdentifier = "Cell"
 
     private enum Section {
         case availability
@@ -129,7 +118,7 @@ final class SiteSettingsViewController: UITableViewController {
         self.origin = origin
         self.session = session
         super.init(style: .insetGrouped)
-        title = "\(UX.titlePrefix) \(host)"
+        title = "Settings for \(host)"
     }
 
     required init?(coder: NSCoder) {
@@ -174,9 +163,9 @@ final class SiteSettingsViewController: UITableViewController {
         case .availability:
             return nil
         case .permissions:
-            return UX.permissionsHeaderTitle
+            return "Permissions"
         case .siteActions:
-            return UX.actionsHeaderTitle
+            return "Actions"
         }
     }
 
@@ -228,15 +217,15 @@ final class SiteSettingsViewController: UITableViewController {
         }
 
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = UX.openSettingsTitle
+        cell.textLabel?.text = "Open Settings"
         cell.textLabel?.textColor = view.tintColor
         cell.accessoryType = .none
         return cell
     }
 
     private func permissionCell(at indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellIdentifier)
-        ?? UITableViewCell(style: .value1, reuseIdentifier: UX.cellIdentifier)
+        let cell = tableView.dequeueReusableCell(withIdentifier: permissionCellReuseIdentifier)
+        ?? UITableViewCell(style: .value1, reuseIdentifier: permissionCellReuseIdentifier)
 
         guard let row = row(at: indexPath) else {
             return cell
@@ -274,9 +263,9 @@ final class SiteSettingsViewController: UITableViewController {
 
     private func resetSitePermissionsCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        cell.textLabel?.text = UX.resetPermissionsTitle
+        cell.textLabel?.text = "Reset Permissions for this Site"
         cell.textLabel?.textColor = .systemRed
-        cell.detailTextLabel?.text = didResetSitePermissions ? UX.resetPermissionsSuccessTitle : nil
+        cell.detailTextLabel?.text = didResetSitePermissions ? "Successfully reset permissions for this site." : nil
         cell.detailTextLabel?.textColor = .secondaryLabel
         cell.accessoryView = nil
         cell.accessoryType = .none
@@ -449,7 +438,7 @@ final class SiteSettingsViewController: UITableViewController {
     private func permissionMenuButton(for row: Row) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(SiteSettingsUtils.actionTitles(for: row.permission)[selectedOptionIndex(for: row)], for: .normal)
-        button.setImage(UIImage(systemName: UX.popupImageName), for: .normal)
+        button.setImage(UIImage(systemName: "chevron.up.chevron.down"), for: .normal)
         button.semanticContentAttribute = .forceRightToLeft
         button.contentHorizontalAlignment = .trailing
         button.showsMenuAsPrimaryAction = true

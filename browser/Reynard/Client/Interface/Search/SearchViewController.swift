@@ -17,7 +17,6 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
     // MARK: - UX
 
     private enum UX {
-        static let userDataSectionTitle = "Bookmarks, History, and Tabs"
         static let limitedCompletionCountWithUserData = 4
         static let tableInset: CGFloat = 8
         static let estimatedRowHeight: CGFloat = 60
@@ -79,7 +78,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
     }()
 
     private lazy var completionsHeaderView = makeSectionHeaderView(title: "\(viewModel.completionProvider.name) Suggestions")
-    private lazy var userDataHeaderView = makeSectionHeaderView(title: UX.userDataSectionTitle)
+    private lazy var userDataHeaderView = makeSectionHeaderView(title: "Bookmarks, History, and Tabs")
 
     // MARK: - Lifecycle
 

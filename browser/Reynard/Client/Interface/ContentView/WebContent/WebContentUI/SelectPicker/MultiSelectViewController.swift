@@ -9,15 +9,9 @@ import GeckoView
 import UIKit
 
 final class MultiSelectViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    // MARK: - UX
-
-    private enum UX {
-        static let title = "Select Options"
-        static let cellReuseIdentifier = "cell"
-    }
-
     // MARK: - State
 
+    private let cellReuseIdentifier = "cell"
     private var choices: [PromptChoice]
     private var selectedIds: Set<String>
     private var sections: [(title: String?, items: [PromptChoice])] = []
@@ -56,7 +50,7 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
     // MARK: - Setup
 
     private func configureNavigation() {
-        title = UX.title
+        title = "Select Options"
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .done,
             target: self,
@@ -74,7 +68,7 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: UX.cellReuseIdentifier)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellReuseIdentifier)
         view.addSubview(tableView)
     }
 
@@ -154,7 +148,7 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: UX.cellReuseIdentifier, for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier, for: indexPath)
         let item = sections[indexPath.section].items[indexPath.row]
         cell.textLabel?.text = item.label
         cell.accessoryType = selectedIds.contains(item.id) ? .checkmark : .none

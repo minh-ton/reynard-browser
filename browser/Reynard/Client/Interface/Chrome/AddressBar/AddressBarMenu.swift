@@ -8,11 +8,9 @@
 import UIKit
 
 enum AddressBarMenu {
-    // MARK: - UX
-
-    private enum UX {
-        static let addressBarMenuIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu")
-        static let manageAddonsMenuIdentifier = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu.manage-addons")
+    private struct Identifier {
+        static let addressBarMenu = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu")
+        static let manageAddonsMenu = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu.manage-addons")
     }
 
     struct AddonItem {
@@ -69,7 +67,7 @@ enum AddressBarMenu {
             UIMenu(
                 title: "Manage Add-ons",
                 image: UIImage(systemName: "puzzlepiece.extension"),
-                identifier: UX.manageAddonsMenuIdentifier,
+                identifier: Identifier.manageAddonsMenu,
                 children: addonsChildren
             )
         ]
@@ -93,6 +91,6 @@ enum AddressBarMenu {
         
         let children = tabActions + [UIMenu(options: .displayInline, children: pageActions)] + [UIMenu(options: .displayInline, children: settingsActions)]
         
-        return UIMenu(title: "", image: nil, identifier: UX.addressBarMenuIdentifier, options: [], children: children)
+        return UIMenu(title: "", image: nil, identifier: Identifier.addressBarMenu, options: [], children: children)
     }
 }
