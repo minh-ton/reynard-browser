@@ -124,11 +124,11 @@ final class SidebarMenuViewController: UIViewController, UICollectionViewDelegat
 
         switch section {
         case .bookmarks:
-            contentViewController = SidebarHostedSectionViewController(hostedView: BookmarksManagerView())
+            contentViewController = BookmarksViewController()
         case .history:
-            contentViewController = SidebarHostedSectionViewController(hostedView: HistoryManagerView())
+            contentViewController = HistoryViewController()
         case .downloads:
-            contentViewController = SidebarHostedSectionViewController(hostedView: DownloadsManagerView())
+            contentViewController = DownloadsViewController()
         case .settings:
             contentViewController = SettingsRootViewController()
         }

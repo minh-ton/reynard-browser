@@ -8,10 +8,27 @@
 import UIKit
 
 final class HistoryItemCell: UITableViewCell {
+    // MARK: - UX
+
+    private enum UX {
+        static let labelsStackSpacing: CGFloat = 4
+        static let faviconSize: CGFloat = 26
+        static let faviconVerticalInset: CGFloat = 13
+        static let labelsLeadingSpacing: CGFloat = 13
+        static let labelsVerticalInset: CGFloat = 13
+        static let separatorLeftInset: CGFloat = 56
+    }
+
+    // MARK: - Reuse
+
     static let reuseIdentifier = "HistoryItemCell"
-    
+
+    // MARK: - Dependencies
+
     private static let faviconStore = FaviconStore.shared
-    
+
+    // MARK: - Views
+
     private let faviconView: UIImageView = {
         let view = UIImageView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -19,7 +36,7 @@ final class HistoryItemCell: UITableViewCell {
         return view
     }()
     
-    private let titleLabel: UILabel = {
+    private let pageTitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = .preferredFont(forTextStyle: .body)
@@ -29,7 +46,7 @@ final class HistoryItemCell: UITableViewCell {
         return label
     }()
     
-    private let urlLabel: UILabel = {
+    private let pageURLLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = .preferredFont(forTextStyle: .subheadline)
@@ -38,21 +55,25 @@ final class HistoryItemCell: UITableViewCell {
         label.numberOfLines = 1
         return label
     }()
-    
+
+    // MARK: - State
+
     private var representedURL: URL?
     private var faviconTask: Task<Void, Never>?
-    
+
+    // MARK: - Lifecycle
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
         clipsToBounds = true
         contentView.clipsToBounds = true
         
-        let labelsStack = UIStackView(arrangedSubviews: [titleLabel, urlLabel])
+        let labelsStack = UIStackView(arrangedSubviews: [pageTitleLabel, pageURLLabel])
         labelsStack.translatesAutoresizingMaskIntoConstraints = false
         labelsStack.axis = .vertical
         labelsStack.alignment = .fill
-        labelsStack.spacing = 4
+        labelsStack.spacing = UX.labelsStackSpacing
         
         contentView.addSubview(faviconView)
         contentView.addSubview(labelsStack)
@@ -60,39 +81,32 @@ final class HistoryItemCell: UITableViewCell {
         NSLayoutConstraint.activate([
             faviconView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
             faviconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            faviconView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 13),
-            faviconView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -13),
-            faviconView.widthAnchor.constraint(equalToConstant: 26),
-            faviconView.heightAnchor.constraint(equalToConstant: 26),
+            faviconView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: UX.faviconVerticalInset),
+            faviconView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -UX.faviconVerticalInset),
+            faviconView.widthAnchor.constraint(equalToConstant: UX.faviconSize),
+            faviconView.heightAnchor.constraint(equalToConstant: UX.faviconSize),
             
-            labelsStack.leadingAnchor.constraint(equalTo: faviconView.trailingAnchor, constant: 13),
+            labelsStack.leadingAnchor.constraint(equalTo: faviconView.trailingAnchor, constant: UX.labelsLeadingSpacing),
             labelsStack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             labelsStack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            labelsStack.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 13),
-            labelsStack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -13),
+            labelsStack.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: UX.labelsVerticalInset),
+            labelsStack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -UX.labelsVerticalInset),
         ])
         
-        separatorInset.left = 56
+        separatorInset.left = UX.separatorLeftInset
         
-        applyFavicon(nil)
+        setFavicon(nil)
     }
-    
+
+    // MARK: - Updates
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        contentView.layoutIfNeeded()
-        let guideFrameInContent = contentView.layoutMarginsGuide.layoutFrame
-        let guideFrameInCell = convert(guideFrameInContent, from: contentView)
-        let rightInset = bounds.width - guideFrameInCell.maxX
-        separatorInset = UIEdgeInsets(
-            top: separatorInset.top,
-            left: separatorInset.left,
-            bottom: separatorInset.bottom,
-            right: rightInset
-        )
+        LibrarySharedUtils.alignSeparatorWithReadableContent(in: self)
     }
     
     override func prepareForReuse() {
@@ -100,25 +114,25 @@ final class HistoryItemCell: UITableViewCell {
         representedURL = nil
         faviconTask?.cancel()
         faviconTask = nil
-        titleLabel.text = nil
-        urlLabel.text = nil
-        applyFavicon(nil)
+        pageTitleLabel.text = nil
+        pageURLLabel.text = nil
+        setFavicon(nil)
     }
     
-    func apply(item: HistorySiteSnapshot) {
+    func configure(with item: HistorySiteSnapshot) {
         representedURL = item.url
         faviconTask?.cancel()
         faviconTask = nil
         
-        titleLabel.text = item.title
-        urlLabel.text = item.url.absoluteString
+        pageTitleLabel.text = item.title
+        pageURLLabel.text = item.url.absoluteString
         
         if let cachedImage = Self.faviconStore.cachedImage(for: item.url) {
-            applyFavicon(cachedImage)
+            setFavicon(cachedImage)
             return
         }
         
-        applyFavicon(nil)
+        setFavicon(nil)
         let expectedURL = item.url
         faviconTask = Task { [weak self] in
             guard let self else {
@@ -135,12 +149,12 @@ final class HistoryItemCell: UITableViewCell {
                     return
                 }
                 
-                self.applyFavicon(image)
+                self.setFavicon(image)
             }
         }
     }
     
-    private func applyFavicon(_ image: UIImage?) {
+    private func setFavicon(_ image: UIImage?) {
         if let image {
             faviconView.image = image
             faviconView.tintColor = nil

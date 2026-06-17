@@ -5,19 +5,36 @@
 //  Created by Minh Ton on 23/5/26.
 //
 
+import UIKit
+
 final class BookmarkItemCell: UITableViewCell {
+    // MARK: - UX
+
+    private enum UX {
+        static let iconSize: CGFloat = 26
+        static let titleLeadingSpacing: CGFloat = 13
+        static let titleToCountSpacing: CGFloat = 8
+        static let separatorLeftInset: CGFloat = 56
+    }
+
+    // MARK: - Reuse
+
     static let reuseIdentifier = "BookmarkItemCell"
-    
+
+    // MARK: - Dependencies
+
     private static let faviconStore = FaviconStore.shared
-    
-    private let iconView: UIImageView = {
+
+    // MARK: - Views
+
+    private let itemIconView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
     
-    private let titleLabel: UILabel = {
+    private let itemTitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = .preferredFont(forTextStyle: .body)
@@ -37,54 +54,51 @@ final class BookmarkItemCell: UITableViewCell {
         label.setContentHuggingPriority(.required, for: .horizontal)
         return label
     }()
-    
+
+    // MARK: - State
+
     private var representedURL: URL?
     private var faviconTask: Task<Void, Never>?
-    
+
+    // MARK: - Lifecycle
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
         clipsToBounds = true
         contentView.clipsToBounds = true
         
-        contentView.addSubview(iconView)
-        contentView.addSubview(titleLabel)
+        contentView.addSubview(itemIconView)
+        contentView.addSubview(itemTitleLabel)
         contentView.addSubview(countLabel)
         
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
-            iconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 26),
-            iconView.heightAnchor.constraint(equalToConstant: 26),
+            itemIconView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            itemIconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            itemIconView.widthAnchor.constraint(equalToConstant: UX.iconSize),
+            itemIconView.heightAnchor.constraint(equalToConstant: UX.iconSize),
             
-            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 13),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: countLabel.leadingAnchor, constant: -8),
-            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            itemTitleLabel.leadingAnchor.constraint(equalTo: itemIconView.trailingAnchor, constant: UX.titleLeadingSpacing),
+            itemTitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: countLabel.leadingAnchor, constant: -UX.titleToCountSpacing),
+            itemTitleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             
             countLabel.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             countLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
         ])
         
-        separatorInset.left = 56
+        separatorInset.left = UX.separatorLeftInset
         applyIcon(UIImage(systemName: "globe"), tintColor: .secondaryLabel)
     }
-    
+
+    // MARK: - Updates
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        contentView.layoutIfNeeded()
-        let guideFrameInContent = contentView.layoutMarginsGuide.layoutFrame
-        let guideFrameInCell = convert(guideFrameInContent, from: contentView)
-        let rightInset = bounds.width - guideFrameInCell.maxX
-        separatorInset = UIEdgeInsets(
-            top: separatorInset.top,
-            left: separatorInset.left,
-            bottom: separatorInset.bottom,
-            right: rightInset
-        )
+        LibrarySharedUtils.alignSeparatorWithReadableContent(in: self)
     }
     
     override func prepareForReuse() {
@@ -92,17 +106,17 @@ final class BookmarkItemCell: UITableViewCell {
         representedURL = nil
         faviconTask?.cancel()
         faviconTask = nil
-        titleLabel.text = nil
+        itemTitleLabel.text = nil
         countLabel.text = nil
         countLabel.isHidden = true
         applyIcon(UIImage(systemName: "globe"), tintColor: .secondaryLabel)
     }
     
-    func apply(folder: BookmarkFolderSnapshot) {
+    func configure(folder: BookmarkFolderSnapshot) {
         representedURL = nil
         faviconTask?.cancel()
         faviconTask = nil
-        titleLabel.text = folder.title
+        itemTitleLabel.text = folder.title
         countLabel.text = "\(folder.childCount)"
         countLabel.isHidden = false
         
@@ -113,11 +127,11 @@ final class BookmarkItemCell: UITableViewCell {
         }
     }
     
-    func apply(bookmark: BookmarkSnapshot) {
+    func configure(bookmark: BookmarkSnapshot) {
         representedURL = bookmark.url
         faviconTask?.cancel()
         faviconTask = nil
-        titleLabel.text = bookmark.title
+        itemTitleLabel.text = bookmark.title
         countLabel.text = nil
         countLabel.isHidden = true
         
@@ -149,7 +163,7 @@ final class BookmarkItemCell: UITableViewCell {
     }
     
     private func applyIcon(_ image: UIImage?, tintColor: UIColor?) {
-        iconView.image = image
-        iconView.tintColor = tintColor
+        itemIconView.image = image
+        itemIconView.tintColor = tintColor
     }
 }

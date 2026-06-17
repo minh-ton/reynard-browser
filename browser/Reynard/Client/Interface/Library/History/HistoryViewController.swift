@@ -1,4 +1,4 @@
-//  HistoryManagerView.swift
+//  HistoryViewController.swift
 //  Reynard
 //
 //  Created by Minh Ton on 9/3/26.
@@ -6,66 +6,29 @@
 
 import UIKit
 
-final class HistoryManagerView: UIView {
-    private weak var hostedViewController: HistoryManagerViewController?
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        translatesAutoresizingMaskIntoConstraints = false
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        embedViewControllerIfNeeded()
-    }
-    
-    private func embedViewControllerIfNeeded() {
-        guard hostedViewController == nil,
-              let parentViewController = containingViewController else {
-            return
-        }
-        
-        let historyViewController = HistoryManagerViewController()
-        historyViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        historyViewController.view.backgroundColor = .clear
-        
-        parentViewController.addChild(historyViewController)
-        addSubview(historyViewController.view)
-        
-        NSLayoutConstraint.activate([
-            historyViewController.view.topAnchor.constraint(equalTo: topAnchor),
-            historyViewController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
-            historyViewController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
-            historyViewController.view.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        
-        historyViewController.didMove(toParent: parentViewController)
-        hostedViewController = historyViewController
-    }
-}
+final class HistoryViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
+    // MARK: - UX
 
-private extension UIView {
-    var containingViewController: UIViewController? {
-        sequence(first: next, next: { $0?.next }).first(where: { $0 is UIViewController }) as? UIViewController
+    private enum UX {
+        static let estimatedRowHeight: CGFloat = 72
+        static let sectionHeaderTopPadding: CGFloat = 0
+        static let headerClearButtonTrailingInset: CGFloat = 20
     }
-}
 
-private final class HistoryManagerViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
-    private struct Section {
-        let day: Date
-        let title: String
-        var items: [HistorySiteSnapshot]
+    // MARK: - Fetch
+
+    private enum Fetch {
+        static let pageSize = 100
+        static let prefetchThreshold = 8
+        static let searchLimit = 50
     }
-    
-    private enum Constants {
-        static let queryFetchLimit = 100
-        static let historyPanelPrefetchOffset = 8
-        static let searchQueryFetchLimit = 50
+
+    private enum FetchState {
+        case idle
+        case loading
     }
+
+    // MARK: - Views
     
     private lazy var searchBar: UISearchBar = {
         let searchBar = UISearchBar(frame: .zero)
@@ -77,22 +40,22 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         return searchBar
     }()
     
-    private lazy var clearHistoryButton = MakeButtons.makeLibraryActionsButton(
+    private lazy var clearHistoryButton = LibraryActionButton(
         target: self,
-        imageName: "clock.badge.xmark",
-        action: #selector(clearHistoryButtonTapped)
+        iconName: "clock.badge.xmark",
+        action: #selector(showClearHistory)
     )
-    private lazy var clearHistoryBarButtonItem: UIBarButtonItem = {
+    private lazy var clearHistoryActionItem: UIBarButtonItem = {
         let item = UIBarButtonItem(
             image: UIImage(named: "clock.badge.xmark"),
             style: .plain,
             target: self,
-            action: #selector(clearHistoryButtonTapped)
+            action: #selector(showClearHistory)
         )
-        item.tag = MakeButtons.historyLibraryActionBarButtonTag
+        item.tag = LibraryActionButton.historyNavigationActionTag
         return item
     }()
-    private var usesNavigationActionsButton: Bool {
+    private var showsNavigationClearAction: Bool {
         if #available(iOS 26.0, *) {
             return true
         }
@@ -100,7 +63,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         return false
     }
     
-    private let headerContainerView: UIView = {
+    private let headerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         return view
@@ -113,25 +76,28 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         view.dataSource = self
         view.delegate = self
         view.rowHeight = UITableView.automaticDimension
-        view.estimatedRowHeight = 72
+        view.estimatedRowHeight = UX.estimatedRowHeight
         view.separatorStyle = .singleLine
         if #available(iOS 15.0, *) {
-            view.sectionHeaderTopPadding = 0
+            view.sectionHeaderTopPadding = UX.sectionHeaderTopPadding
         }
         view.register(HistoryItemCell.self, forCellReuseIdentifier: HistoryItemCell.reuseIdentifier)
         return view
     }()
+
+    // MARK: - State
     
     private let emptyStateView = SidebarEmptyBackgroundView(message: "Your browsing history appears here")
-    private var sections: [Section] = []
-    private var historyObserver: NSObjectProtocol?
-    private var currentFetchOffset = 0
-    private var hasMoreHistory = true
-    private var isFetchInProgress = false
-    private var currentSearchTerm = ""
-    private var requestGeneration = 0
-    private var suppressNextReload = false
-    private var hasStoredHistory = false
+    private var sections: [HistorySection] = []
+    private var storeObserver: NSObjectProtocol?
+    private var nextOffset = 0
+    private var hasMoreItems = true
+    private var fetchState: FetchState = .idle
+    private var query = ""
+    private var loadVersion = 0
+    private var skipsNextStoreReload = false
+
+    // MARK: - Lifecycle
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -150,27 +116,27 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         
-        setupHeaderView()
+        installHeader()
         
-        historyObserver = NotificationCenter.default.addObserver(
+        storeObserver = NotificationCenter.default.addObserver(
             forName: .historyStoreDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
-            if self.suppressNextReload {
-                self.suppressNextReload = false
+            if self.skipsNextStoreReload {
+                self.skipsNextStoreReload = false
                 return
             }
             self.reloadHistory()
         }
         
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleBackgroundTap))
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissSearch))
         tapGesture.cancelsTouchesInView = false
         tapGesture.delegate = self
         tableView.addGestureRecognizer(tapGesture)
         
-        refreshSearchBarVisibility()
+        refreshHistoryPresence()
         reloadHistory()
     }
     
@@ -179,42 +145,44 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
     }
     
     deinit {
-        if let historyObserver {
-            NotificationCenter.default.removeObserver(historyObserver)
+        if let storeObserver {
+            NotificationCenter.default.removeObserver(storeObserver)
         }
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateHeaderSizeIfNeeded()
+        LibrarySharedUtils.syncTableHeaderWidth(headerView, in: tableView)
         tableView.backgroundView?.frame = tableView.bounds
         emptyStateView.updateContentInsets(from: tableView)
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        installNavigationActionsButtonIfNeeded()
+        installClearHistoryNavigationActionIfNeeded()
     }
+
+    // MARK: - View Setup
     
-    private func setupHeaderView() {
-        headerContainerView.layoutMargins = tableView.layoutMargins
-        headerContainerView.addSubview(searchBar)
+    private func installHeader() {
+        headerView.layoutMargins = tableView.layoutMargins
+        headerView.addSubview(searchBar)
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         
         var constraints = [
-            searchBar.topAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.topAnchor),
-            searchBar.leadingAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.leadingAnchor),
-            searchBar.bottomAnchor.constraint(equalTo: headerContainerView.bottomAnchor)
+            searchBar.topAnchor.constraint(equalTo: headerView.layoutMarginsGuide.topAnchor),
+            searchBar.leadingAnchor.constraint(equalTo: headerView.layoutMarginsGuide.leadingAnchor),
+            searchBar.bottomAnchor.constraint(equalTo: headerView.bottomAnchor)
         ]
         
-        if usesNavigationActionsButton {
-            constraints.append(searchBar.trailingAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.trailingAnchor))
+        if showsNavigationClearAction {
+            constraints.append(searchBar.trailingAnchor.constraint(equalTo: headerView.layoutMarginsGuide.trailingAnchor))
         } else {
-            headerContainerView.addSubview(clearHistoryButton)
+            headerView.addSubview(clearHistoryButton)
             clearHistoryButton.translatesAutoresizingMaskIntoConstraints = false
             constraints.append(contentsOf: [
                 searchBar.trailingAnchor.constraint(equalTo: clearHistoryButton.leadingAnchor),
-                clearHistoryButton.trailingAnchor.constraint(equalTo: headerContainerView.trailingAnchor, constant: -20),
+                clearHistoryButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -UX.headerClearButtonTrailingInset),
                 clearHistoryButton.centerYAnchor.constraint(equalTo: searchBar.searchTextField.centerYAnchor),
                 clearHistoryButton.widthAnchor.constraint(equalTo: clearHistoryButton.heightAnchor),
                 clearHistoryButton.heightAnchor.constraint(equalTo: searchBar.searchTextField.heightAnchor),
@@ -224,30 +192,29 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         NSLayoutConstraint.activate(constraints)
         
         let targetWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
-        headerContainerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
-        updateHeaderFittingHeight()
+        headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
+        LibrarySharedUtils.updateTableHeaderHeight(headerView, in: tableView)
         
     }
     
-    private func refreshSearchBarVisibility() {
+    private func refreshHistoryPresence() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let hasStoredHistory = !HistoryStore.shared.snapshot(limit: 1, offset: 0).items.isEmpty
+            let hasHistory = !HistoryStore.shared.snapshot(limit: 1, offset: 0).items.isEmpty
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
                 }
                 
-                self.hasStoredHistory = hasStoredHistory
-                self.updateSearchBarVisibility()
+                self.updateSearchHeaderVisibility(containsHistory: hasHistory)
             }
         }
     }
     
-    private func updateSearchBarVisibility() {
-        if hasStoredHistory {
-            if tableView.tableHeaderView !== headerContainerView {
-                tableView.tableHeaderView = headerContainerView
-                updateHeaderSizeIfNeeded()
+    private func updateSearchHeaderVisibility(containsHistory: Bool) {
+        if containsHistory {
+            if tableView.tableHeaderView !== headerView {
+                tableView.tableHeaderView = headerView
+                LibrarySharedUtils.syncTableHeaderWidth(headerView, in: tableView)
             }
             return
         }
@@ -257,14 +224,16 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         }
     }
     
-    @objc private func handleBackgroundTap() {
+    @objc private func dismissSearch() {
         searchBar.resignFirstResponder()
     }
+
+    // MARK: - Clear History
     
-    @objc private func clearHistoryButtonTapped() {
+    @objc private func showClearHistory() {
         searchBar.resignFirstResponder()
         
-        let browserViewController = resolvedBrowserViewController()
+        let browserViewController = findBrowser()
         let viewController = ClearHistoryViewController(tabCount: browserViewController?.tabManager.regularTabs.count ?? 0) { [weak browserViewController] startDate, shouldCloseTabs in
             HistoryStore.shared.clearHistory(since: startDate)
             
@@ -278,118 +247,91 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         present(navigationController, animated: true)
     }
     
-    private func installNavigationActionsButtonIfNeeded() {
-        guard usesNavigationActionsButton,
+    private func installClearHistoryNavigationActionIfNeeded() {
+        guard showsNavigationClearAction,
               let navigationItem = navigationController?.topViewController?.navigationItem else {
             return
         }
         
-        clearHistoryBarButtonItem.tintColor = .label
-        MakeButtons.installLibraryActionBarButton(clearHistoryBarButtonItem, in: navigationItem)
+        clearHistoryActionItem.tintColor = .label
+        LibraryActionButton.installNavigationAction(clearHistoryActionItem, in: navigationItem)
     }
-    
-    private func updateHeaderFittingHeight() {
-        headerContainerView.setNeedsLayout()
-        headerContainerView.layoutIfNeeded()
-        
-        let targetSize = CGSize(width: headerContainerView.bounds.width, height: UIView.layoutFittingCompressedSize.height)
-        let height = headerContainerView.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        ).height
-        
-        var frame = headerContainerView.frame
-        if frame.height != height {
-            frame.size.height = height
-            headerContainerView.frame = frame
-            tableView.tableHeaderView = headerContainerView
-        }
-    }
-    
-    private func updateHeaderSizeIfNeeded() {
-        let targetWidth = tableView.bounds.width
-        guard targetWidth > 0 else { return }
-        
-        var frame = headerContainerView.frame
-        guard frame.width != targetWidth else { return }
-        
-        frame.size.width = targetWidth
-        headerContainerView.frame = frame
-        updateHeaderFittingHeight()
-    }
+
+    // MARK: - Loading
     
     private func reloadHistory() {
-        refreshSearchBarVisibility()
-        if !currentSearchTerm.isEmpty {
-            performSearch(term: currentSearchTerm)
+        refreshHistoryPresence()
+        if !query.isEmpty {
+            searchHistory(term: query)
             return
         }
         
-        resetPagedHistoryAndLoad()
+        reloadFirstHistoryPage()
     }
     
-    private func resetPagedHistoryAndLoad() {
-        requestGeneration += 1
-        currentFetchOffset = 0
-        hasMoreHistory = true
-        isFetchInProgress = false
+    private func reloadFirstHistoryPage() {
+        loadVersion += 1
+        nextOffset = 0
+        hasMoreItems = true
+        fetchState = .idle
         sections = []
         tableView.reloadData()
-        updateBackgroundView()
-        loadNextPage()
+        updateEmptyState()
+        loadNextHistoryPage()
     }
     
-    private func loadNextPage() {
-        guard currentSearchTerm.isEmpty, hasMoreHistory, !isFetchInProgress else {
+    private func loadNextHistoryPage() {
+        guard query.isEmpty, hasMoreItems, fetchState == .idle else {
             return
         }
         
-        isFetchInProgress = true
-        let offset = currentFetchOffset
-        let generation = requestGeneration
+        fetchState = .loading
+        let offset = nextOffset
+        let generation = loadVersion
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else {
                 return
             }
             
-            let items = HistoryStore.shared.snapshot(limit: Constants.queryFetchLimit, offset: offset).items
+            let items = HistoryStore.shared.snapshot(limit: Fetch.pageSize, offset: offset).items
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
                 }
                 
-                guard self.requestGeneration == generation, self.currentSearchTerm.isEmpty else {
+                guard self.loadVersion == generation, self.query.isEmpty else {
                     return
                 }
                 
-                self.applyPage(items, reset: offset == 0)
-                self.currentFetchOffset += items.count
-                self.hasMoreHistory = items.count == Constants.queryFetchLimit
+                self.appendHistoryPage(items, reset: offset == 0)
+                self.nextOffset += items.count
+                self.hasMoreItems = items.count == Fetch.pageSize
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.isFetchInProgress = false
+                    self?.fetchState = .idle
                 }
             }
         }
     }
+
+    // MARK: - Paging
     
-    private func applyPage(_ items: [HistorySiteSnapshot], reset: Bool) {
-        let fetchedSections = makeSections(from: items)
+    private func appendHistoryPage(_ items: [HistorySiteSnapshot], reset: Bool) {
+        let fetchedSections = HistorySection.make(from: items)
         
         if reset {
             sections = fetchedSections
-            updateBackgroundView()
+            updateEmptyState()
             tableView.reloadData()
             return
         }
         
         guard !fetchedSections.isEmpty else {
-            updateBackgroundView()
+            updateEmptyState()
             return
         }
         
-        updateBackgroundView()
+        updateEmptyState()
         
         if sections.isEmpty {
             sections = fetchedSections
@@ -427,14 +369,16 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             }
         }
     }
+
+    // MARK: - Search
     
-    private func performSearch(term: String, preserveFocusOnClear: Bool = false) {
+    private func searchHistory(term: String, preserveFocusOnClear: Bool = false) {
         let normalizedTerm = term.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if normalizedTerm.isEmpty {
-            currentSearchTerm = ""
+            query = ""
             HistoryStore.shared.interruptReader()
-            resetPagedHistoryAndLoad()
+            reloadFirstHistoryPage()
             if preserveFocusOnClear {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.searchBar.window != nil else {
@@ -447,80 +391,46 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             return
         }
         
-        currentSearchTerm = normalizedTerm
+        query = normalizedTerm
         
         HistoryStore.shared.interruptReader()
-        requestGeneration += 1
-        let generation = requestGeneration
-        isFetchInProgress = true
+        loadVersion += 1
+        let generation = loadVersion
+        fetchState = .loading
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else {
                 return
             }
             
-            let items = HistoryStore.shared.search(matching: normalizedTerm, limit: Constants.searchQueryFetchLimit).items
+            let items = HistoryStore.shared.search(matching: normalizedTerm, limit: Fetch.searchLimit).items
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
                 }
                 
-                guard self.requestGeneration == generation, self.currentSearchTerm == normalizedTerm else {
+                guard self.loadVersion == generation, self.query == normalizedTerm else {
                     return
                 }
                 
-                self.sections = self.makeSections(from: items)
-                self.hasMoreHistory = false
-                self.updateBackgroundView()
+                self.sections = HistorySection.make(from: items)
+                self.hasMoreItems = false
+                self.updateEmptyState()
                 self.tableView.reloadData()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.isFetchInProgress = false
+                    self?.fetchState = .idle
                 }
             }
         }
     }
+
+    // MARK: - Display State
     
-    private func updateBackgroundView() {
-        let hasHistory = !sections.isEmpty
-        emptyStateView.message = currentSearchTerm.isEmpty ? "Your browsing history appears here" : "No matching history"
-        tableView.backgroundView = hasHistory ? nil : emptyStateView
+    private func updateEmptyState() {
+        let hasRows = !sections.isEmpty
+        emptyStateView.message = query.isEmpty ? "Your browsing history appears here" : "No matching history"
+        tableView.backgroundView = hasRows ? nil : emptyStateView
         emptyStateView.updateContentInsets(from: tableView)
-    }
-    
-    private func makeSections(from items: [HistorySiteSnapshot]) -> [Section] {
-        guard !items.isEmpty else {
-            return []
-        }
-        
-        let calendar = Calendar.current
-        let groupedItems = Dictionary(grouping: items) { item in
-            calendar.startOfDay(for: item.lastVisitedAt)
-        }
-        
-        return groupedItems.keys.sorted(by: >).compactMap { day in
-            guard let items = groupedItems[day] else {
-                return nil
-            }
-            
-            let sortedItems = items.sorted { $0.lastVisitedAt > $1.lastVisitedAt }
-            return Section(day: day, title: sectionTitle(for: day), items: sortedItems)
-        }
-    }
-    
-    private func sectionTitle(for date: Date) -> String {
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) {
-            return "Today"
-        }
-        
-        if calendar.isDateInYesterday(date) {
-            return "Yesterday"
-        }
-        
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.setLocalizedDateFormatFromTemplate("EEEE, d MMMM")
-        return formatter.string(from: date)
     }
     
     private func item(at indexPath: IndexPath) -> HistorySiteSnapshot? {
@@ -536,22 +446,24 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         sections.reduce(0) { $0 + $1.items.count }
     }
     
-    private func flatIndex(for indexPath: IndexPath) -> Int {
+    private func flatRowIndex(for indexPath: IndexPath) -> Int {
         let priorCount = sections[..<indexPath.section].reduce(0) { $0 + $1.items.count }
         return priorCount + indexPath.row
     }
     
     private func loadNextPageIfNeeded(for indexPath: IndexPath) {
-        let remainingItems = loadedItemCount - flatIndex(for: indexPath) - 1
-        guard remainingItems <= Constants.historyPanelPrefetchOffset else {
+        let remainingItems = loadedItemCount - flatRowIndex(for: indexPath) - 1
+        guard remainingItems <= Fetch.prefetchThreshold else {
             return
         }
         
-        loadNextPage()
+        loadNextHistoryPage()
     }
+
+    // MARK: - Navigation
     
     private func openHistoryItem(_ item: HistorySiteSnapshot) {
-        guard let browserViewController = resolvedBrowserViewController() else {
+        guard let browserViewController = findBrowser() else {
             return
         }
         
@@ -563,7 +475,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         }
     }
     
-    private func resolvedBrowserViewController() -> BrowserViewController? {
+    private func findBrowser() -> BrowserViewController? {
         if let sidebarViewController = splitViewController as? SidebarViewController {
             return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
         }
@@ -572,21 +484,21 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             return browserViewController
         }
         
-        return view.window?.rootViewController.flatMap { resolvedBrowserViewController(from: $0) }
+        return view.window?.rootViewController.flatMap { findBrowser(from: $0) }
     }
     
-    private func resolvedBrowserViewController(from controller: UIViewController) -> BrowserViewController? {
+    private func findBrowser(from controller: UIViewController) -> BrowserViewController? {
         if let browserViewController = controller as? BrowserViewController {
             return browserViewController
         }
         
         if let navigationController = controller as? UINavigationController {
-            return navigationController.viewControllers.compactMap { resolvedBrowserViewController(from: $0) }.first
+            return navigationController.viewControllers.compactMap { findBrowser(from: $0) }.first
         }
         
         if let tabBarController = controller as? UITabBarController,
            let viewControllers = tabBarController.viewControllers {
-            return viewControllers.compactMap { resolvedBrowserViewController(from: $0) }.first
+            return viewControllers.compactMap { findBrowser(from: $0) }.first
         }
         
         if let sidebarViewController = controller as? SidebarViewController {
@@ -594,14 +506,16 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         }
         
         if let presentedViewController = controller.presentedViewController,
-           let browserViewController = resolvedBrowserViewController(from: presentedViewController) {
+           let browserViewController = findBrowser(from: presentedViewController) {
             return browserViewController
         }
         
-        return controller.children.compactMap { resolvedBrowserViewController(from: $0) }.first
+        return controller.children.compactMap { findBrowser(from: $0) }.first
     }
+
+    // MARK: - Deletion
     
-    private func removeItem(at indexPath: IndexPath) {
+    private func deleteVisibleRow(at indexPath: IndexPath) {
         guard sections.indices.contains(indexPath.section),
               sections[indexPath.section].items.indices.contains(indexPath.row) else {
             return
@@ -616,9 +530,11 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             tableView.deleteRows(at: [indexPath], with: .automatic)
         }
         
-        updateBackgroundView()
-        refreshSearchBarVisibility()
+        updateEmptyState()
+        refreshHistoryPresence()
     }
+
+    // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
         sections.count
@@ -644,7 +560,7 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             return UITableViewCell()
         }
         
-        cell.apply(item: item)
+        cell.configure(with: item)
         return cell
     }
     
@@ -653,29 +569,14 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
             return nil
         }
         
-        let container = UIView()
-        container.backgroundColor = .systemGroupedBackground
-        
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15, weight: .semibold)
-        label.textColor = .secondaryLabel
-        label.text = sections[section].title
-        
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
-            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
-        ])
-        
-        return container
+        return LibrarySharedUtils.makeGroupedSectionHeader(title: sections[section].title)
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        34
+        LibrarySharedUtils.UX.groupedSectionHeaderHeight
     }
+
+    // MARK: - UITableViewDelegate
     
     func tableView(
         _ tableView: UITableView,
@@ -695,9 +596,9 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
                 return
             }
             
-            self.suppressNextReload = true
+            self.skipsNextStoreReload = true
             HistoryStore.shared.deleteHistoryItem(id: item.id)
-            self.removeItem(at: indexPath)
+            self.deleteVisibleRow(at: indexPath)
             completion(true)
         }
         
@@ -714,29 +615,25 @@ private final class HistoryManagerViewController: UIViewController, UITableViewD
         tableView.deselectRow(at: indexPath, animated: true)
         openHistoryItem(item)
     }
+
+    // MARK: - UISearchBarDelegate
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         let preserveFocusOnClear = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && searchBar.isFirstResponder
-        performSearch(term: searchText, preserveFocusOnClear: preserveFocusOnClear)
+        searchHistory(term: searchText, preserveFocusOnClear: preserveFocusOnClear)
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
+
+    // MARK: - UIGestureRecognizerDelegate
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         guard gestureRecognizer.view === tableView else {
             return true
         }
         
-        var view = touch.view
-        while let currentView = view {
-            if currentView === searchBar {
-                return false
-            }
-            view = currentView.superview
-        }
-        
-        return true
+        return LibrarySharedUtils.isTapOutsideSearchBar(touch, in: tableView, ignoring: searchBar)
     }
 }

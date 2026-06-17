@@ -1,5 +1,5 @@
 //
-//  BookmarksManagerView.swift
+//  BookmarksViewController.swift
 //  Reynard
 //
 //  Created by Minh Ton on 9/3/26.
@@ -7,71 +7,30 @@
 
 import UIKit
 
-enum BookmarkSortOrder: String {
-    case none
-    case date_added
-    case name
-    case address
-}
+final class BookmarksViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
+    // MARK: - UX
 
-final class BookmarksManagerView: UIView {
-    private weak var hostedViewController: BookmarksFolderViewController?
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        translatesAutoresizingMaskIntoConstraints = false
+    private enum UX {
+        static let searchResultLimit = 50
+        static let sectionHeaderTopPadding: CGFloat = 0
+        static let headerMenuButtonTrailingInset: CGFloat = 20
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        embedViewControllerIfNeeded()
-    }
-    
-    private func embedViewControllerIfNeeded() {
-        guard hostedViewController == nil,
-              let parentViewController = containingViewController else {
-            return
-        }
-        
-        let bookmarksViewController = BookmarksFolderViewController(parentFolderGUID: nil)
-        bookmarksViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        bookmarksViewController.view.backgroundColor = .clear
-        
-        parentViewController.addChild(bookmarksViewController)
-        addSubview(bookmarksViewController.view)
-        
-        NSLayoutConstraint.activate([
-            bookmarksViewController.view.topAnchor.constraint(equalTo: topAnchor),
-            bookmarksViewController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
-            bookmarksViewController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
-            bookmarksViewController.view.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        
-        bookmarksViewController.didMove(toParent: parentViewController)
-        hostedViewController = bookmarksViewController
-    }
-}
 
-private final class BookmarksFolderViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
-    private static let searchResultLimit = 50
-    
-    private let parentFolderGUID: String?
+    // MARK: - State
+
+    private let folderID: String?
     private let store: BookmarkStore
     private var sections: [(title: String, items: [BookmarkContentSnapshot])] = []
-    private var currentSearchTerm = ""
-    private var requestGeneration = 0
-    private var isRootFolder: Bool {
-        parentFolderGUID == nil
+    private var query = ""
+    private var searchVersion = 0
+    private var isRoot: Bool {
+        folderID == nil
     }
-    private lazy var newFolderButtonItem = UIBarButtonItem(
+    private lazy var newFolderButton = UIBarButtonItem(
         title: "New Folder",
         style: .plain,
         target: self,
-        action: #selector(promptForNewFolder)
+        action: #selector(showNewFolderEditor)
     )
     private lazy var searchBar: UISearchBar = {
         let searchBar = UISearchBar(frame: .zero)
@@ -82,24 +41,27 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         searchBar.delegate = self
         return searchBar
     }()
-    private lazy var searchActionsButton = MakeButtons.makeLibraryActionsButton(
+    private lazy var bookmarkMenuButton = LibraryActionButton(
         target: self,
-        imageName: "ellipsis",
-        action: #selector(searchActionsButtonTapped)
+        iconName: "ellipsis",
+        action: #selector(didTapBookmarkMenu)
     )
-    private var legacySearchActionsMenuDelegate: LegacySearchActionsMenuDelegate?
-    private lazy var bookmarksActionsBarButtonItem: UIBarButtonItem = {
+    private var legacyBookmarkMenuDelegate: LibraryLegacyMenuDelegate?
+    private lazy var bookmarkMenuItem: UIBarButtonItem = {
         let item = UIBarButtonItem(
             image: UIImage(systemName: "ellipsis"),
             style: .plain,
             target: self,
-            action: #selector(searchActionsButtonTapped)
+            action: #selector(didTapBookmarkMenu)
         )
-        item.tag = MakeButtons.bookmarksLibraryActionBarButtonTag
+        item.tag = LibraryActionButton.bookmarksNavigationActionTag
         return item
     }()
-    private let usesNavigationActionsButton: Bool
-    private let headerContainerView: UIView = {
+    private let showsNavigationMenu: Bool
+
+    // MARK: - Views
+
+    private let headerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         return view
@@ -114,11 +76,11 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         tableView.keyboardDismissMode = .interactive
         tableView.separatorStyle = .singleLine
         if #available(iOS 15.0, *) {
-            tableView.sectionHeaderTopPadding = 0
+            tableView.sectionHeaderTopPadding = UX.sectionHeaderTopPadding
         }
         return tableView
     }()
-    private let emptyStateLabel: UILabel = {
+    private let emptyLabel: UILabel = {
         let label = UILabel()
         label.text = "No matching bookmarks"
         label.font = .systemFont(ofSize: 16, weight: .medium)
@@ -126,14 +88,15 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         label.textAlignment = .center
         return label
     }()
-    
-    init(parentFolderGUID: String?, store: BookmarkStore = .shared) {
-        self.parentFolderGUID = parentFolderGUID
+    // MARK: - Lifecycle
+
+    init(folderID: String? = nil, store: BookmarkStore = .shared) {
+        self.folderID = folderID
         self.store = store
         if #available(iOS 26.0, *) {
-            usesNavigationActionsButton = parentFolderGUID == nil
+            showsNavigationMenu = folderID == nil
         } else {
-            usesNavigationActionsButton = false
+            showsNavigationMenu = false
         }
         super.init(nibName: nil, bundle: nil)
         title = "Bookmarks"
@@ -142,17 +105,18 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
         view.backgroundColor = .systemGroupedBackground
-        configureLayout()
+        installLayout()
         
         tableView.register(BookmarkItemCell.self, forCellReuseIdentifier: BookmarkItemCell.reuseIdentifier)
         
-        if isRootFolder {
-            setupHeaderView()
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleBackgroundTap))
+        if isRoot {
+            installHeader()
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissSearch))
             tapGesture.cancelsTouchesInView = false
             tapGesture.delegate = self
             tableView.addGestureRecognizer(tapGesture)
@@ -160,25 +124,25 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleBookmarkStoreDidChange),
+            selector: #selector(reloadChangedBookmarks),
             name: .bookmarkStoreDidChange,
             object: nil
         )
         
-        reloadContents()
+        reloadBookmarkRows()
         updateToolbarItems(animated: false)
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateHeaderSizeIfNeeded()
+        resizeHeaderIfNeeded()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        navigationController?.setToolbarHidden(isRootFolder, animated: animated)
-        installNavigationActionsButtonIfNeeded()
-        reloadContents()
+        navigationController?.setToolbarHidden(isRoot, animated: animated)
+        installBookmarkNavigationMenuIfNeeded()
+        reloadBookmarkRows()
         updateToolbarItems(animated: animated)
     }
     
@@ -191,10 +155,10 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         super.setEditing(editing, animated: animated)
         tableView.setEditing(editing, animated: animated)
         updateToolbarItems(animated: animated)
-        updateSearchActionsButton()
+        updateBookmarkMenu()
     }
     
-    private func configureLayout() {
+    private func installLayout() {
         view.addSubview(tableView)
         
         NSLayoutConstraint.activate([
@@ -204,6 +168,8 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
+
+    // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
         sections.count
@@ -229,11 +195,11 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         switch item {
         case let .folder(folder):
-            cell.apply(folder: folder)
+            cell.configure(folder: folder)
             cell.accessoryType = .disclosureIndicator
             return cell
         case let .bookmark(bookmark):
-            cell.apply(bookmark: bookmark)
+            cell.configure(bookmark: bookmark)
             cell.accessoryType = .none
             return cell
         }
@@ -243,30 +209,15 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         guard sections.indices.contains(section) else {
             return nil
         }
-        
-        let container = UIView()
-        container.backgroundColor = .systemGroupedBackground
-        
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15, weight: .semibold)
-        label.textColor = .secondaryLabel
-        label.text = sections[section].title
-        
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
-            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
-        ])
-        
-        return container
+
+        return LibrarySharedUtils.makeGroupedSectionHeader(title: sections[section].title)
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        34
+        LibrarySharedUtils.UX.groupedSectionHeaderHeight
     }
+
+    // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         guard let item = item(at: indexPath) else {
@@ -282,7 +233,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
     }
     
     func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        guard currentSearchTerm.isEmpty,
+        guard query.isEmpty,
               Prefs.BookmarkSettings.sortOrders == .none,
               let item = item(at: indexPath) else {
             return false
@@ -333,7 +284,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
               sections.indices.contains(sourceIndexPath.section),
               sections[sourceIndexPath.section].items.indices.contains(sourceIndexPath.row),
               sections[destinationIndexPath.section].items.indices.contains(destinationIndexPath.row) else {
-            reloadContents()
+            reloadBookmarkRows()
             return
         }
         
@@ -351,11 +302,11 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         let didMove = store.moveItem(
             guid: movedGUID,
             toIndex: sections[..<destinationIndexPath.section].reduce(0) { $0 + $1.items.count } + destinationIndexPath.row,
-            inFolderWithGUID: parentFolderGUID
+            inFolderWithGUID: folderID
         )
         
         if !didMove {
-            reloadContents()
+            reloadBookmarkRows()
         }
     }
     
@@ -423,7 +374,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
             didDelete = store.deleteFolder(guid: folder.guid)
         }
         
-        reloadContents()
+        reloadBookmarkRows()
         return didDelete
     }
     
@@ -437,29 +388,31 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         switch item {
         case let .folder(folder):
-            let viewController = BookmarksFolderViewController(parentFolderGUID: folder.guid, store: store)
+            let viewController = BookmarksViewController(folderID: folder.guid, store: store)
             navigationController?.pushViewController(viewController, animated: true)
         case let .bookmark(bookmark):
-            openBookmark(bookmark)
+            openBookmarkURL(bookmark)
         }
     }
+
+    // MARK: - Actions
     
-    @objc private func handleBookmarkStoreDidChange() {
-        reloadContents()
+    @objc private func reloadChangedBookmarks() {
+        reloadBookmarkRows()
     }
     
-    @objc private func handleBackgroundTap() {
+    @objc private func dismissSearch() {
         searchBar.resignFirstResponder()
     }
     
-    @objc private func promptForNewFolder() {
-        let viewController = NewBookmarkFolderViewController(selectedParentFolderGUID: parentFolderGUID, store: store)
+    @objc private func showNewFolderEditor() {
+        let viewController = NewBookmarkFolderViewController(selectedFolderID: folderID, store: store)
         let navigationController = UINavigationController(rootViewController: viewController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
     }
     
-    @objc private func searchActionsButtonTapped() {
+    @objc private func didTapBookmarkMenu() {
         if isEditing {
             setEditing(false, animated: true)
             return
@@ -467,51 +420,38 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         if #available(iOS 13.0, *) {
             if #unavailable(iOS 14.0) {
-                presentLegacySearchActionsMenu()
+                LibrarySharedUtils.presentLegacyContextMenu(from: bookmarkMenuButton)
             }
         }
     }
+
+    // MARK: - Menu
     
-    @available(iOS 13.0, *)
-    private func presentLegacySearchActionsMenu() {
-        guard let interaction = searchActionsButton.interactions.compactMap({ $0 as? UIContextMenuInteraction }).first else {
-            return
-        }
-        
-        let selector = NSSelectorFromString("_presentMenuAtLocation:")
-        guard interaction.responds(to: selector) else {
-            return
-        }
-        
-        let center = NSValue(cgPoint: CGPoint(x: searchActionsButton.bounds.midX, y: searchActionsButton.bounds.midY))
-        _ = interaction.perform(selector, with: center)
-    }
-    
-    private func updateSearchActionsButton() {
+    private func updateBookmarkMenu() {
         let symbolName = isEditing ? "checkmark" : "ellipsis"
         
-        if usesNavigationActionsButton {
-            bookmarksActionsBarButtonItem.image = UIImage(systemName: symbolName)
-            bookmarksActionsBarButtonItem.tintColor = .label
+        if showsNavigationMenu {
+            bookmarkMenuItem.image = UIImage(systemName: symbolName)
+            bookmarkMenuItem.tintColor = .label
             
             if #available(iOS 14.0, *) {
-                bookmarksActionsBarButtonItem.menu = isEditing ? nil : makeSearchActionsMenu()
-                bookmarksActionsBarButtonItem.target = isEditing ? self : nil
-                bookmarksActionsBarButtonItem.action = isEditing ? #selector(searchActionsButtonTapped) : nil
+                bookmarkMenuItem.menu = isEditing ? nil : makeBookmarkMenu()
+                bookmarkMenuItem.target = isEditing ? self : nil
+                bookmarkMenuItem.action = isEditing ? #selector(didTapBookmarkMenu) : nil
             }
             
             return
         }
         
-        MakeButtons.updateLibraryActionsButton(searchActionsButton, imageName: symbolName)
+        bookmarkMenuButton.setIcon(named: symbolName)
         
         if #available(iOS 14.0, *) {
-            searchActionsButton.menu = isEditing ? nil : makeSearchActionsMenu()
-            searchActionsButton.showsMenuAsPrimaryAction = !isEditing
+            bookmarkMenuButton.menu = isEditing ? nil : makeBookmarkMenu()
+            bookmarkMenuButton.showsMenuAsPrimaryAction = !isEditing
         }
     }
     
-    fileprivate func makeSearchActionsMenu() -> UIMenu {
+    fileprivate func makeBookmarkMenu() -> UIMenu {
         UIMenu(title: "", children: [
             makeSortMenu(),
             UIAction(
@@ -520,15 +460,15 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
                 state: Prefs.BookmarkSettings.placeFoldersOnTop ? .on : .off
             ) { [weak self] _ in
                 Prefs.BookmarkSettings.placeFoldersOnTop.toggle()
-                self?.reloadContents()
-                self?.updateSearchActionsButton()
+                self?.reloadBookmarkRows()
+                self?.updateBookmarkMenu()
             },
             UIMenu(title: "", image: nil, identifier: nil, options: .displayInline, children: [
                 UIAction(title: "Edit Bookmarks", image: UIImage(systemName: "pencil")) { [weak self] _ in
                     self?.setEditing(true, animated: true)
                 },
                 UIAction(title: "New Folder", image: UIImage(systemName: "folder.badge.plus")) { [weak self] _ in
-                    self?.promptForNewFolder()
+                    self?.showNewFolderEditor()
                 },
             ]),
         ])
@@ -551,8 +491,8 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
                 let order = $0.order
                 return UIAction(title: $0.title, state: order == selectedOrder ? .on : .off) { [weak self] _ in
                     Prefs.BookmarkSettings.sortOrders = order
-                    self?.reloadContents()
-                    self?.updateSearchActionsButton()
+                    self?.reloadBookmarkRows()
+                    self?.updateBookmarkMenu()
                 }
             }
         )
@@ -564,51 +504,53 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         return menu
     }
     
-    private func installNavigationActionsButtonIfNeeded() {
-        guard usesNavigationActionsButton,
+    private func installBookmarkNavigationMenuIfNeeded() {
+        guard showsNavigationMenu,
               let navigationItem = navigationController?.topViewController?.navigationItem else {
             return
         }
         
-        updateSearchActionsButton()
-        MakeButtons.installLibraryActionBarButton(bookmarksActionsBarButtonItem, in: navigationItem)
+        updateBookmarkMenu()
+        LibraryActionButton.installNavigationAction(bookmarkMenuItem, in: navigationItem)
     }
+
+    // MARK: - Bookmark Loading
     
-    private func reloadContents() {
-        if !currentSearchTerm.isEmpty {
-            performSearch(term: currentSearchTerm)
+    private func reloadBookmarkRows() {
+        if !query.isEmpty {
+            searchBookmarks(term: query)
             return
         }
         
-        reloadFolderContents()
+        reloadFolder()
     }
     
-    private func reloadFolderContents() {
-        let snapshot = store.folderContents(parentGUID: parentFolderGUID)
-        sections = makeSections(from: snapshot.items)
+    private func reloadFolder() {
+        let snapshot = store.folderContents(parentGUID: folderID)
+        sections = makeBookmarkSections(from: snapshot.items)
         title = snapshot.parent.title
-        updateBackgroundView()
+        updateEmptyState()
         tableView.reloadData()
     }
     
-    private func updateBackgroundView() {
-        tableView.backgroundView = sections.isEmpty && !currentSearchTerm.isEmpty ? emptyStateLabel : nil
+    private func updateEmptyState() {
+        tableView.backgroundView = sections.isEmpty && !query.isEmpty ? emptyLabel : nil
     }
     
-    private func makeSections(from newItems: [BookmarkContentSnapshot]) -> [(title: String, items: [BookmarkContentSnapshot])] {
+    private func makeBookmarkSections(from newItems: [BookmarkContentSnapshot]) -> [(title: String, items: [BookmarkContentSnapshot])] {
         guard Prefs.BookmarkSettings.placeFoldersOnTop else {
-            let sortedItems = sorted(newItems)
+            let sortedItems = sortBookmarks(newItems)
             return sortedItems.isEmpty ? [] : [("Bookmarks", sortedItems)]
         }
         
-        let folders = sorted(newItems.filter {
+        let folders = sortBookmarks(newItems.filter {
             if case .folder = $0 {
                 return true
             }
             
             return false
         })
-        let bookmarks = sorted(newItems.filter {
+        let bookmarks = sortBookmarks(newItems.filter {
             if case .bookmark = $0 {
                 return true
             }
@@ -621,7 +563,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         ].filter { !$0.items.isEmpty }
     }
     
-    private func sorted(_ newItems: [BookmarkContentSnapshot]) -> [BookmarkContentSnapshot] {
+    private func sortBookmarks(_ newItems: [BookmarkContentSnapshot]) -> [BookmarkContentSnapshot] {
         let values = { (item: BookmarkContentSnapshot) -> (dateAdded: Date, title: String, address: String) in
             switch item {
             case let .folder(folder):
@@ -668,7 +610,7 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
             
             let sortedItem = sortedMovableItems[movableIndex]
             movableIndex += 1
-            return sortedItem
+        return sortedItem
         }
     }
     
@@ -680,94 +622,73 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         return sections[indexPath.section].items[indexPath.row]
     }
+
+    // MARK: - Header
     
-    private func setupHeaderView() {
-        headerContainerView.layoutMargins = tableView.layoutMargins
-        headerContainerView.addSubview(searchBar)
+    private func installHeader() {
+        headerView.layoutMargins = tableView.layoutMargins
+        headerView.addSubview(searchBar)
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         
         var constraints = [
-            searchBar.topAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.topAnchor),
-            searchBar.leadingAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.leadingAnchor),
-            searchBar.bottomAnchor.constraint(equalTo: headerContainerView.bottomAnchor),
+            searchBar.topAnchor.constraint(equalTo: headerView.layoutMarginsGuide.topAnchor),
+            searchBar.leadingAnchor.constraint(equalTo: headerView.layoutMarginsGuide.leadingAnchor),
+            searchBar.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
         ]
         
-        if usesNavigationActionsButton {
-            constraints.append(searchBar.trailingAnchor.constraint(equalTo: headerContainerView.layoutMarginsGuide.trailingAnchor))
+        if showsNavigationMenu {
+            constraints.append(searchBar.trailingAnchor.constraint(equalTo: headerView.layoutMarginsGuide.trailingAnchor))
         } else {
-            headerContainerView.addSubview(searchActionsButton)
-            searchActionsButton.translatesAutoresizingMaskIntoConstraints = false
+            headerView.addSubview(bookmarkMenuButton)
+            bookmarkMenuButton.translatesAutoresizingMaskIntoConstraints = false
             if #available(iOS 13.0, *) {
                 if #unavailable(iOS 14.0) {
-                    let delegate = LegacySearchActionsMenuDelegate(owner: self)
-                    searchActionsButton.addInteraction(UIContextMenuInteraction(delegate: delegate))
-                    legacySearchActionsMenuDelegate = delegate
+                    let delegate = LibraryLegacyMenuDelegate { [weak self] in
+                        guard let self, !self.isEditing else {
+                            return nil
+                        }
+
+                        return self.makeBookmarkMenu()
+                    }
+                    bookmarkMenuButton.addInteraction(UIContextMenuInteraction(delegate: delegate))
+                    legacyBookmarkMenuDelegate = delegate
                 }
             }
             constraints.append(contentsOf: [
-                searchBar.trailingAnchor.constraint(equalTo: searchActionsButton.leadingAnchor),
-                searchActionsButton.trailingAnchor.constraint(equalTo: headerContainerView.trailingAnchor, constant: -20),
-                searchActionsButton.centerYAnchor.constraint(equalTo: searchBar.searchTextField.centerYAnchor),
-                searchActionsButton.widthAnchor.constraint(equalTo: searchActionsButton.heightAnchor),
-                searchActionsButton.heightAnchor.constraint(equalTo: searchBar.searchTextField.heightAnchor),
+                searchBar.trailingAnchor.constraint(equalTo: bookmarkMenuButton.leadingAnchor),
+                bookmarkMenuButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -UX.headerMenuButtonTrailingInset),
+                bookmarkMenuButton.centerYAnchor.constraint(equalTo: searchBar.searchTextField.centerYAnchor),
+                bookmarkMenuButton.widthAnchor.constraint(equalTo: bookmarkMenuButton.heightAnchor),
+                bookmarkMenuButton.heightAnchor.constraint(equalTo: searchBar.searchTextField.heightAnchor),
             ])
         }
         
         NSLayoutConstraint.activate(constraints)
         
-        updateSearchActionsButton()
+        updateBookmarkMenu()
         
         let targetWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
-        headerContainerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
-        updateHeaderFittingHeight()
+        headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
+        LibrarySharedUtils.updateTableHeaderHeight(headerView, in: tableView)
     }
-    
-    private func updateHeaderFittingHeight() {
-        headerContainerView.setNeedsLayout()
-        headerContainerView.layoutIfNeeded()
-        
-        let targetSize = CGSize(width: headerContainerView.bounds.width, height: UIView.layoutFittingCompressedSize.height)
-        let height = headerContainerView.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        ).height
-        
-        var frame = headerContainerView.frame
-        if frame.height != height {
-            frame.size.height = height
-            headerContainerView.frame = frame
-            tableView.tableHeaderView = headerContainerView
-        }
-    }
-    
-    private func updateHeaderSizeIfNeeded() {
-        guard parentFolderGUID == nil else {
+
+    private func resizeHeaderIfNeeded() {
+        guard folderID == nil else {
             return
         }
         
-        let targetWidth = tableView.bounds.width
-        guard targetWidth > 0 else {
-            return
-        }
-        
-        var frame = headerContainerView.frame
-        guard frame.width != targetWidth else {
-            return
-        }
-        
-        frame.size.width = targetWidth
-        headerContainerView.frame = frame
-        updateHeaderFittingHeight()
+        LibrarySharedUtils.syncTableHeaderWidth(headerView, in: tableView)
     }
+
+    // MARK: - Search
     
-    private func performSearch(term: String, preserveFocusOnClear: Bool = false) {
+    private func searchBookmarks(term: String, preserveFocusOnClear: Bool = false) {
         let normalizedTerm = term.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if normalizedTerm.isEmpty {
-            currentSearchTerm = ""
-            requestGeneration += 1
-            reloadFolderContents()
+            query = ""
+            searchVersion += 1
+            reloadFolder()
             if preserveFocusOnClear {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.searchBar.window != nil else {
@@ -780,48 +701,52 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
             return
         }
         
-        currentSearchTerm = normalizedTerm
-        requestGeneration += 1
-        let generation = requestGeneration
+        query = normalizedTerm
+        searchVersion += 1
+        let generation = searchVersion
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else {
                 return
             }
             
-            let searchResults = self.store.searchBookmarks(matching: normalizedTerm, limit: Self.searchResultLimit)
+            let searchResults = self.store.searchBookmarks(matching: normalizedTerm, limit: UX.searchResultLimit)
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
                 }
                 
-                guard self.requestGeneration == generation, self.currentSearchTerm == normalizedTerm else {
+                guard self.searchVersion == generation, self.query == normalizedTerm else {
                     return
                 }
                 
-                self.sections = self.makeSections(from: searchResults.map { .bookmark($0) })
-                self.updateBackgroundView()
+                self.sections = self.makeBookmarkSections(from: searchResults.map { .bookmark($0) })
+                self.updateEmptyState()
                 self.tableView.reloadData()
             }
         }
     }
+
+    // MARK: - Toolbar
     
     private func updateToolbarItems(animated: Bool) {
-        guard !isRootFolder else {
+        guard !isRoot else {
             return
         }
         
         let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         let items: [UIBarButtonItem]
         if isEditing {
-            items = [newFolderButtonItem, flexibleSpace, editButtonItem]
+            items = [newFolderButton, flexibleSpace, editButtonItem]
         } else {
             items = [flexibleSpace, editButtonItem]
         }
         setToolbarItems(items, animated: animated)
     }
+
+    // MARK: - Navigation
     
-    private func openBookmark(_ bookmark: BookmarkSnapshot) {
+    private func openBookmarkURL(_ bookmark: BookmarkSnapshot) {
         guard let browserViewController = resolvedBrowserViewController() else {
             return
         }
@@ -845,57 +770,25 @@ private final class BookmarksFolderViewController: UIViewController, UITableView
         
         return nil
     }
+
+    // MARK: - UISearchBarDelegate
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         let preserveFocusOnClear = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && searchBar.isFirstResponder
-        performSearch(term: searchText, preserveFocusOnClear: preserveFocusOnClear)
+        searchBookmarks(term: searchText, preserveFocusOnClear: preserveFocusOnClear)
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
+
+    // MARK: - UIGestureRecognizerDelegate
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         guard gestureRecognizer.view === tableView else {
             return true
         }
         
-        var view = touch.view
-        while let currentView = view {
-            if currentView === searchBar {
-                return false
-            }
-            view = currentView.superview
-        }
-        
-        return true
-    }
-}
-
-private final class LegacySearchActionsMenuDelegate: NSObject, UIContextMenuInteractionDelegate {
-    weak var owner: BookmarksFolderViewController?
-    
-    init(owner: BookmarksFolderViewController) {
-        self.owner = owner
-    }
-    
-    func contextMenuInteraction(
-        _ interaction: UIContextMenuInteraction,
-        configurationForMenuAtLocation location: CGPoint
-    ) -> UIContextMenuConfiguration? {
-        guard let owner,
-              !owner.isEditing else {
-            return nil
-        }
-        
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-            owner.makeSearchActionsMenu()
-        }
-    }
-}
-
-private extension UIView {
-    var containingViewController: UIViewController? {
-        sequence(first: next, next: { $0?.next }).first(where: { $0 is UIViewController }) as? UIViewController
+        return LibrarySharedUtils.isTapOutsideSearchBar(touch, in: tableView, ignoring: searchBar)
     }
 }
