@@ -24,17 +24,17 @@ final class PromptPresenter: PromptPresenting {
     func present(_ request: PromptRequest, for session: GeckoSession) async -> PromptResponse? {
         switch request {
         case .alert(let request):
-            await presentAlert(session: session, request: request)
+            await presentAlert(request: request)
             return nil
 
         case .button(let request):
-            return await presentButton(session: session, request: request)
+            return await presentButton(request: request)
 
         case .text(let request):
-            return await presentText(session: session, request: request)
+            return await presentText(request: request)
 
         case .folderUpload(let request):
-            return await presentFolderUpload(session: session, request: request)
+            return await presentFolderUpload(request: request)
 
         case .color(let request):
             return await presentColorPicker(session: session, request: request)
@@ -72,8 +72,8 @@ final class PromptPresenter: PromptPresenting {
 
     // MARK: - Basic Prompts
 
-    private func presentAlert(session: GeckoSession, request: AlertPromptRequest) async {
-        guard let presenter = presenter(for: session) else {
+    private func presentAlert(request: AlertPromptRequest) async {
+        guard let presenter = UIApplication.shared.topViewController() else {
             return
         }
 
@@ -90,11 +90,8 @@ final class PromptPresenter: PromptPresenting {
         }
     }
 
-    private func presentButton(
-        session: GeckoSession,
-        request: ButtonPromptRequest
-    ) async -> PromptResponse? {
-        guard let presenter = presenter(for: session) else {
+    private func presentButton(request: ButtonPromptRequest) async -> PromptResponse? {
+        guard let presenter = UIApplication.shared.topViewController() else {
             return nil
         }
 
@@ -130,11 +127,8 @@ final class PromptPresenter: PromptPresenting {
         }
     }
 
-    private func presentText(
-        session: GeckoSession,
-        request: TextPromptRequest
-    ) async -> PromptResponse? {
-        guard let presenter = presenter(for: session) else {
+    private func presentText(request: TextPromptRequest) async -> PromptResponse? {
+        guard let presenter = UIApplication.shared.topViewController() else {
             return nil
         }
 
@@ -157,11 +151,8 @@ final class PromptPresenter: PromptPresenting {
         }
     }
 
-    private func presentFolderUpload(
-        session: GeckoSession,
-        request: FolderUploadPromptRequest
-    ) async -> PromptResponse? {
-        guard let presenter = presenter(for: session) else {
+    private func presentFolderUpload(request: FolderUploadPromptRequest) async -> PromptResponse? {
+        guard let presenter = UIApplication.shared.topViewController() else {
             return nil
         }
 
@@ -277,12 +268,6 @@ final class PromptPresenter: PromptPresenting {
         let result = await picker.present()
 
         return result.map(PromptResponse.choices)
-    }
-
-    // MARK: - Resolution
-
-    private func presenter(for session: GeckoSession) -> UIViewController? {
-        session.engineView?.nearestViewController()?.topPresentedController()
     }
 
     private func promptAnchor(

@@ -286,7 +286,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    self.presentAlert(title: "Failed to update private browsing access", message: "\(error)")
+                    AlertPresenter.show(title: "Failed to update private browsing access", message: "\(error)")
                 }
             }
         }
@@ -321,7 +321,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    self.presentAlert(title: "Failed to \(desiredState ? "enable" : "disable") add-on", message: "\(error)")
+                    AlertPresenter.show(title: "Failed to \(desiredState ? "enable" : "disable") add-on", message: "\(error)")
                 }
             }
         }
@@ -355,7 +355,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         } catch {
             await MainActor.run {
-                self.presentAlert(title: "Failed to reload add-on", message: "\(error)")
+                AlertPresenter.show(title: "Failed to reload add-on", message: "\(error)")
             }
         }
     }
@@ -455,16 +455,16 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     
     private func confirmRemoval() {
         let addonName = addon?.metaData.name ?? addonID
-        let alert = UIAlertController(
+        AlertPresenter.show(
             title: "Do you want to remove \(addonName)?",
             message: nil,
-            preferredStyle: .alert
+            buttons: [
+                AlertPresenter.Button(title: "Cancel", style: .cancel),
+                AlertPresenter.Button(title: "Remove", style: .destructive) { [weak self] in
+                    self?.uninstallAddon()
+                },
+            ]
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
-            self?.uninstallAddon()
-        })
-        present(alert, animated: true)
     }
     
     private func uninstallAddon() {
@@ -487,7 +487,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    self.presentAlert(title: "Failed to remove add-on", message: "\(error)")
+                    AlertPresenter.show(title: "Failed to remove add-on", message: "\(error)")
                 }
             }
         }

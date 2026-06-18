@@ -142,7 +142,7 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         }
         let baseText = "Enter URL with %s in place of query"
         guard !Prefs.SearchSettings.customSearchTemplate.isEmpty,
-              isValidCustomSearchTemplate(Prefs.SearchSettings.customSearchTemplate) else {
+              SearchEngine.canSearch(using: Prefs.SearchSettings.customSearchTemplate) else {
             return SettingsSectionText(footerTitle: baseText)
         }
         return SettingsSectionText(footerTitle: "\(baseText). The current value must be a valid http(s) URL.")
@@ -153,9 +153,9 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
     func textFieldDidEndEditing(_ textField: UITextField) {
         Prefs.SearchSettings.customSearchTemplate = textField.text ?? ""
         tableView.reloadData()
-        let value = Prefs.SearchSettings.customSearchTemplate
-        guard !value.isEmpty, !isValidCustomSearchTemplate(value) else { return }
-        presentAlert(
+        let customQueryTemplate = Prefs.SearchSettings.customSearchTemplate
+        guard !customQueryTemplate.isEmpty, !SearchEngine.canSearch(using: customQueryTemplate) else { return }
+        AlertPresenter.show(
             title: "Invalid Search URL",
             message: "Enter a valid http(s) URL containing %s where the search query should go."
         )

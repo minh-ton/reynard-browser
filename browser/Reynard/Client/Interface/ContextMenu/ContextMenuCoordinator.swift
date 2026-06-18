@@ -71,8 +71,7 @@ final class ContextMenuCoordinator: NSObject {
             return
         }
 
-        let presentHaptic = UIImpactFeedbackGenerator(style: .rigid)
-        presentHaptic.impactOccurred()
+        Haptics.rigid()
         _ = interaction.perform(selector, with: NSValue(cgPoint: context.point))
     }
 

@@ -9,17 +9,6 @@ import UIKit
 
 extension BrowserViewController: DownloadsCoordinatorDelegate {
     // MARK: - DownloadsCoordinatorDelegate
-
-    var downloadsAlertPresenter: UIViewController? {
-        var presenter: UIViewController? = self
-
-        while let presentedController = presenter?.presentedViewController {
-            presenter = presentedController
-        }
-
-        return presenter
-    }
-
     var downloadsShouldRefreshLayoutForStoreChange: Bool {
         !sidebarCoordinator.hostsSidebar
             && browserLayout.interfaceIdiom == .pad

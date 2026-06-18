@@ -8,7 +8,6 @@
 import UIKit
 
 protocol DownloadsCoordinatorDelegate: AnyObject {
-    var downloadsAlertPresenter: UIViewController? { get }
     var downloadsShouldRefreshLayoutForStoreChange: Bool { get }
 
     func downloadsCoordinator(_ coordinator: DownloadsCoordinator, didUpdate summary: DownloadStoreSummary)
@@ -64,27 +63,25 @@ final class DownloadsCoordinator {
 
     private func presentNextConfirmationAlertIfNeeded() {
         guard !isShowingConfirmationAlert,
-              let pendingDownload = confirmationQueue.first,
-              let presenter = delegate?.downloadsAlertPresenter else {
+              let pendingDownload = confirmationQueue.first else {
             return
         }
 
         isShowingConfirmationAlert = true
 
-        let alert = UIAlertController(
+        AlertPresenter.show(
             title: "Do you want to download \"\(pendingDownload.fileName)\"?",
             message: nil,
-            preferredStyle: .alert
+            buttons: [
+                AlertPresenter.Button(title: "Cancel", style: .cancel) { [weak self] in
+                    self?.resolveConfirmation(shouldStartDownload: false)
+                },
+                AlertPresenter.Button(title: "Download") { [weak self] in
+                    Haptics.success()
+                    self?.resolveConfirmation(shouldStartDownload: true)
+                },
+            ]
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-            self?.resolveConfirmation(shouldStartDownload: false)
-        })
-        alert.addAction(UIAlertAction(title: "Download", style: .default) { [weak self] _ in
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            self?.resolveConfirmation(shouldStartDownload: true)
-        })
-
-        presenter.present(alert, animated: true)
     }
 
     private func resolveConfirmation(shouldStartDownload: Bool) {

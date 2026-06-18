@@ -13,8 +13,7 @@ extension FilePicker {
     // MARK: - Document Picker
 
     func presentDocumentPicker() {
-        guard let geckoView,
-              let presenter = geckoView.nearestViewController() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             finish(with: nil)
             return
         }

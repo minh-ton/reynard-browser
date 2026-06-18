@@ -263,7 +263,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             }
         } catch {
             await MainActor.run {
-                self.presentAlert(title: "Failed to reload add-on", message: "\(error)")
+                AlertPresenter.show(title: "Failed to reload add-on", message: "\(error)")
             }
         }
     }

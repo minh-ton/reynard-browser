@@ -112,7 +112,7 @@ final class UpdatesSettingsSection {
               let latestEntry = versions.first,
               let packageURLString = latestEntry["downloadURL"] as? String,
               let packageURL = URL(string: packageURLString) else {
-            viewController.presentAlert(title: "Update Unavailable", message: "Could not retrieve the download URL.")
+            AlertPresenter.show(title: "Update Unavailable", message: "Could not retrieve the download URL.")
             return
         }
 
@@ -184,7 +184,7 @@ final class UpdatesSettingsSection {
                     }
 
                     SettingsViewUtils.dismissPresentedAlert(alert, from: viewController) {
-                        viewController.presentAlert(title: "Download Failed", message: error.localizedDescription)
+                        AlertPresenter.show(title: "Download Failed", message: error.localizedDescription)
                     }
                     return
                 }

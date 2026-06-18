@@ -414,7 +414,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                     guard !presentation.isUserCancelled else {
                         return
                     }
-                    self.presentAlert(title: nil, message: presentation.alertMessage)
+                    AlertPresenter.show(title: nil, message: presentation.alertMessage)
                 }
             }
         }

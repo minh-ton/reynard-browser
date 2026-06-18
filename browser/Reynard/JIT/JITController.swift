@@ -190,7 +190,7 @@ final class JITController {
             return
         }
         
-        guard let presenter = Self.topViewControllerForPresentation() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(150)) {
                 self.presentEnablementFailureScreen(error: error, showsErrorDetails: showsErrorDetails, retryCount: retryCount + 1)
             }
@@ -233,7 +233,7 @@ final class JITController {
             return
         }
         
-        guard let presenter = Self.topViewControllerForPresentation() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(150)) {
                 self.presentMissingDDIFailureScreen(retryCount: retryCount + 1)
             }
@@ -283,33 +283,6 @@ final class JITController {
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: .jitlessModeDidActivate, object: nil)
         }
-    }
-    
-    private static func topViewControllerForPresentation() -> UIViewController? {
-        let foregroundScenes = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .filter { $0.activationState == .foregroundActive }
-        
-        guard let scene = foregroundScenes.first else {
-            return nil
-        }
-        
-        let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController
-        ?? scene.windows.first(where: { !$0.isHidden })?.rootViewController
-        
-        guard let root else {
-            return nil
-        }
-        
-        return topPresentedViewController(from: root)
-    }
-    
-    private static func topPresentedViewController(from root: UIViewController) -> UIViewController {
-        var current = root
-        while let presented = current.presentedViewController {
-            current = presented
-        }
-        return current
     }
     
     private static func canPresentFailureUI() -> Bool {

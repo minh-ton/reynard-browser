@@ -37,7 +37,7 @@ final class ColorPicker: NSObject, UIPopoverPresentationControllerDelegate {
     
     private func showColorPicker(initialColor: UIColor) {
         guard let geckoView = geckoView,
-              let presenter = geckoView.nearestViewController() else {
+              let presenter = UIApplication.shared.topViewController() else {
             finish(nil)
             return
         }

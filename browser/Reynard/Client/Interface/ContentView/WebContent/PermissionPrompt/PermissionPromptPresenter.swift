@@ -16,7 +16,7 @@ struct PermissionPromptPresenter: PermissionPromptPresenting {
         cancelTitle: String,
         for session: GeckoSession
     ) async -> Bool {
-        guard let presenter = session.engineView?.nearestViewController()?.topPresentedController() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             return false
         }
 

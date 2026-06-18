@@ -607,24 +607,24 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func browse(to term: String, in tab: Tab) {
-        let trimmedValue = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedValue.isEmpty else {
+        let navigationInput = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !navigationInput.isEmpty else {
             return
         }
         
         tab.state.suppressInitialNavigation = false
-        tab.state.displayState = .pending(trimmedValue)
+        tab.state.displayState = .pending(navigationInput)
         
-        let fullRange = NSRange(location: 0, length: (trimmedValue as NSString).length)
-        let isURL = isURLLenient.firstMatch(in: trimmedValue, range: fullRange) != nil
+        let navigationInputRange = NSRange(location: 0, length: (navigationInput as NSString).length)
+        let shouldNavigateDirectly = isURLLenient.firstMatch(in: navigationInput, range: navigationInputRange) != nil
         
-        if isURL {
-            loadURL(trimmedValue, in: tab)
+        if shouldNavigateDirectly {
+            loadURL(navigationInput, in: tab)
             return
         }
         
-        let searchTarget = searchURL(for: trimmedValue)
-        loadURL(searchTarget, in: tab)
+        let searchDestination = SearchEngine.destination(for: navigationInput)
+        loadURL(searchDestination, in: tab)
     }
     
     func goBack() {

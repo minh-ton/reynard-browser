@@ -55,8 +55,6 @@ final class AddressBarGestures: NSObject {
     
     private unowned let addressBar: AddressBar
     private weak var delegate: AddressBarGestureDelegate?
-    private let swipeHaptic = UIImpactFeedbackGenerator(style: .rigid)
-    
     private var searchPanMode: SearchPanMode = .blocked
 
     private var horizontalDirection = 0
@@ -378,7 +376,7 @@ final class AddressBarGestures: NSObject {
                 delegate.selectTabFromGesture(at: targetIndex, mode: delegate.selectedTabMode)
             }
         } else if shouldCreateNewTab {
-            swipeHaptic.impactOccurred()
+            Haptics.rigid()
             animateAutomaticNewTabTransition {
                 let createdIndex = delegate.createTabForSwipe()
                 delegate.setPendingTabExpansion(at: createdIndex)
@@ -421,7 +419,7 @@ final class AddressBarGestures: NSObject {
         case .began:
             searchPanMode = .undecided
             resetHorizontalTransition()
-            swipeHaptic.prepare()
+            Haptics.prepareRigid()
             
         case .changed:
             if searchPanMode == .undecided {
@@ -434,7 +432,7 @@ final class AddressBarGestures: NSObject {
                     let newMode: SearchPanMode = (!delegate.isTabOverviewPresented && !delegate.isSearchFocused) ? .horizontalTabs : .blocked
                     searchPanMode = newMode
                     if newMode == .horizontalTabs {
-                        swipeHaptic.impactOccurred()
+                        Haptics.rigid()
                     }
                 } else {
                     searchPanMode = .blocked

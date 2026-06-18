@@ -166,7 +166,7 @@ final class JITSettingsSection: NSObject {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.settingsController?.presentAlert(title: "Import Failed", message: error.localizedDescription)
+                    AlertPresenter.show(title: "Import Failed", message: error.localizedDescription)
                 }
             }
         }
@@ -235,7 +235,7 @@ final class JITSettingsSection: NSObject {
                     Prefs.JITSettings.isJITEnabled = false
                     sender.setOn(false, animated: true)
                     SettingsViewUtils.dismissPresentedAlert(alert, from: settingsController) {
-                        settingsController.presentAlert(title: "Download Failed", message: error.localizedDescription)
+                        AlertPresenter.show(title: "Download Failed", message: error.localizedDescription)
                     }
                 }
             }

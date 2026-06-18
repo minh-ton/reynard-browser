@@ -547,19 +547,19 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         for item: DownloadItemSnapshot,
         completion: @escaping (Bool) -> Void
     ) {
-        let alert = UIAlertController(
+        AlertPresenter.show(
             title: "Cancel Download?",
             message: "Do you want to stop downloading \(item.fileName)?",
-            preferredStyle: .alert
+            buttons: [
+                AlertPresenter.Button(title: "Keep Downloading", style: .cancel) {
+                    completion(false)
+                },
+                AlertPresenter.Button(title: "Cancel Download", style: .destructive) {
+                    DownloadStore.shared.cancel(id: item.id)
+                    completion(true)
+                },
+            ]
         )
-        alert.addAction(UIAlertAction(title: "Keep Downloading", style: .cancel) { _ in
-            completion(false)
-        })
-        alert.addAction(UIAlertAction(title: "Cancel Download", style: .destructive) { _ in
-            DownloadStore.shared.cancel(id: item.id)
-            completion(true)
-        })
-        present(alert, animated: true)
     }
     
     private func shareDownload(_ item: DownloadItemSnapshot, from indexPath: IndexPath) {

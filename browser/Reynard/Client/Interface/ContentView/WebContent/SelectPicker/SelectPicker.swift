@@ -113,7 +113,7 @@ final class SelectPicker {
     }
 
     private func showSingleSelectFallback(in geckoView: UIView) {
-        guard let presenter = geckoView.nearestViewController() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             finish(nil)
             return
         }
@@ -214,7 +214,7 @@ final class SelectPicker {
 
     private func showMultiSelect() {
         guard let geckoView = geckoView,
-              let presenter = geckoView.nearestViewController() else {
+              let presenter = UIApplication.shared.topViewController() else {
             finish(nil)
             return
         }

@@ -67,7 +67,7 @@ extension FilePicker {
     }
 
     func showActionSheet(in geckoView: UIView) {
-        guard let presenter = geckoView.nearestViewController() else {
+        guard let presenter = UIApplication.shared.topViewController() else {
             finish(with: nil)
             return
         }
