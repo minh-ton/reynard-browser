@@ -42,12 +42,12 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     
     private lazy var clearHistoryButton = LibraryActionButton(
         target: self,
-        iconName: "clock.badge.xmark",
+        iconName: "reynard.clock.badge.xmark",
         action: #selector(showClearHistory)
     )
     private lazy var clearHistoryActionItem: UIBarButtonItem = {
         let item = UIBarButtonItem(
-            image: UIImage(named: "clock.badge.xmark"),
+            image: UIImage(named: "reynard.clock.badge.xmark"),
             style: .plain,
             target: self,
             action: #selector(showClearHistory)

@@ -62,7 +62,7 @@ final class AddressBarDismissButton: UIButton {
         layer.shadowRadius = UX.dismissButtonShadowRadius
         layer.shadowOffset = UX.dismissButtonShadowOffset
         layer.masksToBounds = false
-        setImage(UIImage(systemName: "xmark"), for: .normal)
+        setImage(UIImage(named: "reynard.xmark"), for: .normal)
         setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: UX.dismissButtonSymbolPointSize, weight: .regular),
             forImageIn: .normal

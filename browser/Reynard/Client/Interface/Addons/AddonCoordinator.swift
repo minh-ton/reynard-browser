@@ -441,7 +441,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         if let cached = iconCache.object(forKey: cacheKey) {
             return cached
         }
-        return UIImage(systemName: "puzzlepiece.extension")
+        return UIImage(named: "reynard.puzzlepiece.extension")
     }
     
     private func prefetchIconIfNeeded(for addon: Addon) {

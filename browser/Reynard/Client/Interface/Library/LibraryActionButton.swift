@@ -48,12 +48,12 @@ final class LibraryActionButton: UIButton {
     func setIcon(named iconName: String) {
         if #available(iOS 26.0, *) {
             var configuration = UIButton.Configuration.glass()
-            configuration.image = Self.actionIcon(for: iconName)
+            configuration.image = UIImage(named: iconName)
             configuration.baseForegroundColor = .label
             configuration.contentInsets = .zero
             self.configuration = configuration
         } else {
-            setImage(Self.actionIcon(for: iconName), for: .normal)
+            setImage(UIImage(named: iconName), for: .normal)
             backgroundColor = .quaternarySystemFill
         }
     }
@@ -92,17 +92,5 @@ final class LibraryActionButton: UIButton {
         tintColor = .label
         layer.cornerCurve = .continuous
         layer.masksToBounds = true
-    }
-
-    private static func actionIcon(for iconName: String) -> UIImage? {
-        if let image = UIImage(systemName: iconName) {
-            return image
-        }
-
-        if let image = UIImage(named: iconName) {
-            return image
-        }
-
-        return nil
     }
 }

@@ -149,7 +149,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     
     private func makeCloseButton() -> UIButton {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "xmark"), for: .normal)
+        button.setImage(UIImage(named: "reynard.xmark"), for: .normal)
         button.tintColor = .label
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)

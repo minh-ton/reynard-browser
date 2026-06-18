@@ -438,7 +438,7 @@ final class SiteSettingsViewController: UITableViewController {
     private func permissionMenuButton(for row: Row) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(SiteSettingsUtils.actionTitles(for: row.permission)[selectedOptionIndex(for: row)], for: .normal)
-        button.setImage(UIImage(systemName: "chevron.up.chevron.down"), for: .normal)
+        button.setImage(UIImage(named: "reynard.chevron.up.chevron.down"), for: .normal)
         button.semanticContentAttribute = .forceRightToLeft
         button.contentHorizontalAlignment = .trailing
         button.showsMenuAsPrimaryAction = true

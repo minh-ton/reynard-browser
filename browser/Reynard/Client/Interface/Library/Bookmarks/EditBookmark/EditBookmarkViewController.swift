@@ -46,7 +46,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
     }()
     
     private let titleFaviconView: UIImageView = {
-        let imageView = UIImageView(image: UIImage(systemName: "globe"))
+        let imageView = UIImageView(image: UIImage(named: "reynard.globe"))
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
         imageView.tintColor = .secondaryLabel
@@ -57,7 +57,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         return imageView
     }()
     private let urlFaviconView: UIImageView = {
-        let imageView = UIImageView(image: UIImage(systemName: "globe"))
+        let imageView = UIImageView(image: UIImage(named: "reynard.globe"))
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
         imageView.tintColor = .secondaryLabel
@@ -263,7 +263,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
             cell.tintColor = .systemBlue
             cell.textLabel?.text = "New Folder"
             cell.textLabel?.textColor = .systemBlue
-            cell.imageView?.image = UIImage(systemName: "folder.badge.plus")?.withRenderingMode(.alwaysTemplate)
+            cell.imageView?.image = UIImage(named: "reynard.folder.badge.plus")?.withRenderingMode(.alwaysTemplate)
             return cell
         }
         

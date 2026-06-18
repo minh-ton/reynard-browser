@@ -172,7 +172,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             cell.detailTextLabel?.text = statusText
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.accessoryType = .disclosureIndicator
-            cell.imageView?.image = Self.sharedIconCache.object(forKey: addon.id as NSString) ?? UIImage(systemName: "puzzlepiece.extension")
+            cell.imageView?.image = Self.sharedIconCache.object(forKey: addon.id as NSString) ?? UIImage(named: "reynard.puzzlepiece.extension")
             applyAvailabilityState(to: cell, for: addon)
             loadIcon(for: addon)
             return cell
@@ -188,7 +188,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             cell.detailTextLabel?.text = statusText
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.accessoryType = .disclosureIndicator
-            cell.imageView?.image = Self.sharedIconCache.object(forKey: addon.id as NSString) ?? UIImage(systemName: "puzzlepiece.extension")
+            cell.imageView?.image = Self.sharedIconCache.object(forKey: addon.id as NSString) ?? UIImage(named: "reynard.puzzlepiece.extension")
             applyAvailabilityState(to: cell, for: addon)
             loadIcon(for: addon)
             return cell
@@ -473,7 +473,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                     return
                 }
                 
-                cell.imageView?.image = iconImage ?? UIImage(systemName: "puzzlepiece.extension")
+                cell.imageView?.image = iconImage ?? UIImage(named: "reynard.puzzlepiece.extension")
                 cell.setNeedsLayout()
             }
         }

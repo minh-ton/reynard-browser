@@ -664,7 +664,7 @@ final class AddressBar: UIView {
         leadingButton.isHidden = false
         if state == .search {
             leadingButton.tintColor = .secondaryLabel
-            leadingButton.setImage(UIImage(systemName: "magnifyingglass"), for: .normal)
+            leadingButton.setImage(UIImage(named: "reynard.magnifyingglass"), for: .normal)
             leadingButton.setMenuPreservingPresentation(nil)
             leadingButton.isUserInteractionEnabled = false
             return
@@ -672,14 +672,14 @@ final class AddressBar: UIView {
 
         if state == .loading {
             leadingButton.tintColor = .secondaryLabel
-            leadingButton.setImage(UIImage(systemName: "list.bullet.below.rectangle"), for: .normal)
+            leadingButton.setImage(UIImage(named: "reynard.list.bullet.below.rectangle"), for: .normal)
             leadingButton.setMenuPreservingPresentation(nil)
             leadingButton.isUserInteractionEnabled = false
             return
         }
         
         leadingButton.tintColor = .label
-        leadingButton.setImage(UIImage(systemName: "list.bullet.below.rectangle"), for: .normal)
+        leadingButton.setImage(UIImage(named: "reynard.list.bullet.below.rectangle"), for: .normal)
         leadingButton.setMenuPreservingPresentation(addonsMenu)
         leadingButton.isUserInteractionEnabled = addonsMenu != nil
     }
@@ -691,7 +691,7 @@ final class AddressBar: UIView {
         guard visible else {
             return
         }
-        trailingButton.setImage(UIImage(systemName: state == .stop ? "xmark" : "arrow.clockwise"), for: .normal)
+        trailingButton.setImage(UIImage(named: state == .stop ? "reynard.xmark" : "reynard.arrow.clockwise"), for: .normal)
     }
 
     private func height(for browserChromeMode: browserChromeMode) -> CGFloat {

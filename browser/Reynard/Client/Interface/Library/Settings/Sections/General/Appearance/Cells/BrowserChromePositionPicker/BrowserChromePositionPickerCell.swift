@@ -17,12 +17,12 @@ final class BrowserChromePositionPickerCell: UITableViewCell {
     
     private let bottomPositionOption = BrowserChromePositionOptionControl(
         position: .bottom,
-        symbolName: "platter.filled.bottom.iphone",
+        symbolName: "reynard.platter.filled.bottom.iphone",
         title: "Bottom"
     )
     private let topPositionOption = BrowserChromePositionOptionControl(
         position: .top,
-        symbolName: "platter.filled.top.iphone",
+        symbolName: "reynard.platter.filled.top.iphone",
         title: "Top"
     )
 

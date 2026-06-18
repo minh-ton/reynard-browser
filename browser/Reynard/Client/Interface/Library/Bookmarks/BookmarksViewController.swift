@@ -43,13 +43,13 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     }()
     private lazy var bookmarkMenuButton = LibraryActionButton(
         target: self,
-        iconName: "ellipsis",
+        iconName: "reynard.ellipsis",
         action: #selector(didTapBookmarkMenu)
     )
     private var legacyBookmarkMenuDelegate: LibraryLegacyMenuDelegate?
     private lazy var bookmarkMenuItem: UIBarButtonItem = {
         let item = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
+            image: UIImage(named: "reynard.ellipsis"),
             style: .plain,
             target: self,
             action: #selector(didTapBookmarkMenu)
@@ -428,10 +428,10 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     // MARK: - Menu
     
     private func updateBookmarkMenu() {
-        let symbolName = isEditing ? "checkmark" : "ellipsis"
+        let symbolName = isEditing ? "reynard.checkmark" : "reynard.ellipsis"
         
         if showsNavigationMenu {
-            bookmarkMenuItem.image = UIImage(systemName: symbolName)
+            bookmarkMenuItem.image = UIImage(named: symbolName)
             bookmarkMenuItem.tintColor = .label
             
             if #available(iOS 14.0, *) {
@@ -456,7 +456,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             makeSortMenu(),
             UIAction(
                 title: "Show Folders on Top",
-                image: UIImage(named: "text.below.folder"),
+                image: UIImage(named: "reynard.text.below.folder"),
                 state: Prefs.BookmarkSettings.placeFoldersOnTop ? .on : .off
             ) { [weak self] _ in
                 Prefs.BookmarkSettings.placeFoldersOnTop.toggle()
@@ -464,10 +464,10 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
                 self?.updateBookmarkMenu()
             },
             UIMenu(title: "", image: nil, identifier: nil, options: .displayInline, children: [
-                UIAction(title: "Edit Bookmarks", image: UIImage(systemName: "pencil")) { [weak self] _ in
+                UIAction(title: "Edit Bookmarks", image: UIImage(named: "reynard.pencil")) { [weak self] _ in
                     self?.setEditing(true, animated: true)
                 },
-                UIAction(title: "New Folder", image: UIImage(systemName: "folder.badge.plus")) { [weak self] _ in
+                UIAction(title: "New Folder", image: UIImage(named: "reynard.folder.badge.plus")) { [weak self] _ in
                     self?.showNewFolderEditor()
                 },
             ]),
@@ -484,7 +484,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         ]
         let menu = UIMenu(
             title: "Sort By",
-            image: UIImage(systemName: "arrow.up.arrow.down"),
+            image: UIImage(named: "reynard.arrow.up.arrow.down"),
             identifier: nil,
             options: [],
             children: sortOptions.map {

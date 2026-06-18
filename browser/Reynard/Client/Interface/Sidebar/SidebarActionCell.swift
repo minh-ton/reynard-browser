@@ -54,7 +54,7 @@ final class SidebarActionCell: UICollectionViewCell {
 
     func configure(title: String, symbolName: String) {
         titleLabel.text = title
-        iconView.image = UIImage(systemName: symbolName)
+        iconView.image = UIImage(named: symbolName)
     }
 
     // MARK: - View Setup

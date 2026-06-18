@@ -59,8 +59,8 @@ final class BrowserChromePositionOptionControl: UIControl {
         nameLabel.textColor = .label
         let radioConfig = UIImage.SymbolConfiguration(pointSize: UX.indicatorSymbolSize, weight: .regular)
         selectionIndicatorView.image = UIImage(
-            systemName: selected ? "checkmark.circle.fill" : "circle",
-            withConfiguration: radioConfig
+            named: selected ? "reynard.checkmark.circle.fill" : "reynard.circle", in: .main,
+            with: radioConfig
         )
         selectionIndicatorView.tintColor = selected ? accent : secondary
     }

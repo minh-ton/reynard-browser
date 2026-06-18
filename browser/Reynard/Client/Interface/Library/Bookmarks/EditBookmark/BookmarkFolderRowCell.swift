@@ -96,11 +96,11 @@ final class BookmarkFolderRowCell: UITableViewCell {
         folderIconView.tintColor = isSelected ? .systemBlue : .secondaryLabel
         
         if folder.parentGUID == nil {
-            folderIconView.image = UIImage(systemName: "book")?.withRenderingMode(.alwaysTemplate)
+            folderIconView.image = UIImage(named: "reynard.book")?.withRenderingMode(.alwaysTemplate)
         } else if folder.isProtected && folder.title == "Favorites" {
-            folderIconView.image = UIImage(systemName: "star")?.withRenderingMode(.alwaysTemplate)
+            folderIconView.image = UIImage(named: "reynard.star")?.withRenderingMode(.alwaysTemplate)
         } else {
-            folderIconView.image = UIImage(systemName: "folder")?.withRenderingMode(.alwaysTemplate)
+            folderIconView.image = UIImage(named: "reynard.folder")?.withRenderingMode(.alwaysTemplate)
         }
     }
 }

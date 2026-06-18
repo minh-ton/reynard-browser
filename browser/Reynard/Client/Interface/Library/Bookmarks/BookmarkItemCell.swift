@@ -87,7 +87,7 @@ final class BookmarkItemCell: UITableViewCell {
         ])
         
         separatorInset.left = UX.separatorLeftInset
-        applyIcon(UIImage(systemName: "globe"), tintColor: .secondaryLabel)
+        applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
     }
 
     // MARK: - Updates
@@ -109,7 +109,7 @@ final class BookmarkItemCell: UITableViewCell {
         itemTitleLabel.text = nil
         countLabel.text = nil
         countLabel.isHidden = true
-        applyIcon(UIImage(systemName: "globe"), tintColor: .secondaryLabel)
+        applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
     }
     
     func configure(folder: BookmarkFolderSnapshot) {
@@ -121,9 +121,9 @@ final class BookmarkItemCell: UITableViewCell {
         countLabel.isHidden = false
         
         if folder.isProtected && folder.title == "Favorites" {
-            applyIcon(UIImage(systemName: "star"), tintColor: .secondaryLabel)
+            applyIcon(UIImage(named: "reynard.star"), tintColor: .secondaryLabel)
         } else {
-            applyIcon(UIImage(systemName: "folder"), tintColor: .secondaryLabel)
+            applyIcon(UIImage(named: "reynard.folder"), tintColor: .secondaryLabel)
         }
     }
     
@@ -140,7 +140,7 @@ final class BookmarkItemCell: UITableViewCell {
             return
         }
         
-        applyIcon(UIImage(systemName: "globe"), tintColor: .secondaryLabel)
+        applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
         let expectedURL = bookmark.url
         faviconTask = Task { [weak self] in
             guard let self else {
@@ -157,7 +157,7 @@ final class BookmarkItemCell: UITableViewCell {
                     return
                 }
                 
-                self.applyIcon(image ?? UIImage(systemName: "globe"), tintColor: image == nil ? .secondaryLabel : nil)
+                self.applyIcon(image ?? UIImage(named: "reynard.globe"), tintColor: image == nil ? .secondaryLabel : nil)
             }
         }
     }

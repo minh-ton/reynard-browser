@@ -42,7 +42,7 @@ final class TabBarCell: UICollectionViewCell {
         UX.collapsedTabMinimumWidth
     }
     
-    private static let fallbackFavicon = UIImage(systemName: "globe")
+    private static let fallbackFavicon = UIImage(named: "reynard.globe")
     
     var closeHandler: (() -> Void)?
     
@@ -68,7 +68,7 @@ final class TabBarCell: UICollectionViewCell {
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: "x.square.fill"), for: .normal)
+        button.setImage(UIImage(named: "reynard.x.square.fill"), for: .normal)
         button.setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: UX.tabCloseButtonSymbolPointSize, weight: .regular),
             forImageIn: .normal

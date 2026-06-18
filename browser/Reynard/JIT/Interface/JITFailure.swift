@@ -69,7 +69,7 @@ final class JITFailureView: UIView {
         let horizontalInset: CGFloat = 24
         
         let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 96, weight: .regular)
-        symbolImageView.image = UIImage(systemName: "bolt.slash", withConfiguration: symbolConfiguration)
+        symbolImageView.image = UIImage(named: "reynard.bolt.slash", in: .main, with: symbolConfiguration)
         symbolImageView.tintColor = .label
         symbolImageView.contentMode = .scaleAspectFit
         symbolImageView.setContentHuggingPriority(.required, for: .vertical)

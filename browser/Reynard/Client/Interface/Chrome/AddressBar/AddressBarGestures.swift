@@ -200,13 +200,13 @@ final class AddressBarGestures: NSObject {
             leadingButton.showsMenuAsPrimaryAction = true
         }
         leadingButton.isUserInteractionEnabled = false
-        leadingButton.setImage(UIImage(systemName: tab.url != nil ? "list.bullet.below.rectangle" : "magnifyingglass"), for: .normal)
+        leadingButton.setImage(UIImage(named: tab.url != nil ? "reynard.list.bullet.below.rectangle" : "reynard.magnifyingglass"), for: .normal)
         
         let trailingButton = AddressBarButton(type: .system)
         trailingButton.translatesAutoresizingMaskIntoConstraints = false
         trailingButton.tintColor = .label
         trailingButton.isUserInteractionEnabled = false
-        trailingButton.setImage(UIImage(systemName: tab.state.loadingState.isLoading ? "xmark" : "arrow.clockwise"), for: .normal)
+        trailingButton.setImage(UIImage(named: tab.state.loadingState.isLoading ? "reynard.xmark" : "reynard.arrow.clockwise"), for: .normal)
         trailingButton.isHidden = !tab.state.loadingState.isLoading && tab.url == nil
         
         let label = UILabel()

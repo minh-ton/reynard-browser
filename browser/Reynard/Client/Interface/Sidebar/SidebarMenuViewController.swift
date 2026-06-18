@@ -173,7 +173,7 @@ final class SidebarMenuViewController: UIViewController, UICollectionViewDelegat
             let cellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, LibrarySection> { cell, _, section in
                 var content = cell.defaultContentConfiguration()
                 content.text = section.title
-                content.image = UIImage(systemName: section.symbolName)
+                content.image = UIImage(named: section.symbolName)
                 content.imageProperties.tintColor = .label
                 cell.contentConfiguration = content
                 cell.accessories = []
@@ -209,7 +209,7 @@ final class SidebarMenuViewController: UIViewController, UICollectionViewDelegat
     }
 
     private func configureCollapseButton(_ button: UIButton) {
-        button.setImage(splitViewController?.displayModeButtonItem.image ?? UIImage(systemName: "sidebar.left"), for: .normal)
+        button.setImage(splitViewController?.displayModeButtonItem.image ?? UIImage(named: "reynard.sidebar.left"), for: .normal)
         button.accessibilityLabel = splitViewController?.displayModeButtonItem.accessibilityLabel
     }
 }

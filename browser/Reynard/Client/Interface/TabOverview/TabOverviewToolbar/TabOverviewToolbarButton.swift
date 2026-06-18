@@ -62,7 +62,7 @@ final class TabOverviewToolbarButton: UIButton {
     }
 
     private func configureImage() {
-        setImage(UIImage(systemName: symbolName), for: .normal)
+        setImage(UIImage(named: symbolName), for: .normal)
         setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: UX.toolbarButtonSymbolPointSize, weight: .regular),
             forImageIn: .normal
@@ -78,9 +78,9 @@ final class TabOverviewToolbarButton: UIButton {
 
     private var symbolName: String {
         switch action {
-        case .clear: return "trash"
-        case .add: return "plus"
-        case .done: return "checkmark"
+        case .clear: return "reynard.trash"
+        case .add: return "reynard.plus"
+        case .done: return "reynard.checkmark"
         }
     }
 }

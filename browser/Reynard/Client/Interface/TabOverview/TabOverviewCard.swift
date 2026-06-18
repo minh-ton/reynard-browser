@@ -53,7 +53,7 @@ final class TabOverviewCard: UICollectionViewCell {
 
     var onClose: (() -> Void)?
 
-    private static let fallbackFaviconImage = UIImage(systemName: "globe")
+    private static let fallbackFaviconImage = UIImage(named: "reynard.globe")
     private(set) var transitionState: TransitionState = .visible
     private(set) var reorderState: ReorderState = .resting
 
@@ -101,7 +101,7 @@ final class TabOverviewCard: UICollectionViewCell {
     private let closeTabButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: "xmark"), for: .normal)
+        button.setImage(UIImage(named: "reynard.xmark"), for: .normal)
         button.setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: UX.closeButtonSymbolPointSize, weight: .medium),
             forImageIn: .normal

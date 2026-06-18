@@ -38,9 +38,9 @@ extension FilePicker {
     @available(iOS 14.0, *)
     private func buildMenu() -> UIMenu {
         UIMenu(children: [
-            menuAction(.photoLibrary, systemImage: "photo.on.rectangle"),
-            menuAction(.camera, systemImage: "camera"),
-            menuAction(.chooseFile, systemImage: "doc"),
+            menuAction(.photoLibrary, symbol: "reynard.photo.on.rectangle"),
+            menuAction(.camera, symbol: "reynard.camera"),
+            menuAction(.chooseFile, symbol: "reynard.document"),
         ])
     }
 
@@ -95,10 +95,10 @@ extension FilePicker {
     }
 
     @available(iOS 14.0, *)
-    private func menuAction(_ action: PickerAction, systemImage: String) -> UIAction {
+    private func menuAction(_ action: PickerAction, symbol: String) -> UIAction {
         UIAction(
             title: title(for: action),
-            image: UIImage(systemName: systemImage),
+            image: UIImage(named: symbol),
             attributes: canPerform(action) ? [] : .disabled
         ) { [weak self] _ in
             self?.launchFollowupPicker {

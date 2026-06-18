@@ -173,7 +173,7 @@ final class BottomToolbar: UIView {
 
     func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
         libraryButton.setImage(
-            hasUpdate ? UIImage(named: "ellipsis.circle.badge") : UIImage(systemName: "ellipsis.circle"),
+            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
             for: .normal
         )
     }

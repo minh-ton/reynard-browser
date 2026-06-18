@@ -113,7 +113,7 @@ final class ToolbarButton: UIButton {
         }
 
         let configuration = UIImage.SymbolConfiguration(pointSize: UX.downloadSymbolPointSize, weight: .regular)
-        downloadIconView.image = UIImage(systemName: "arrow.down.circle", withConfiguration: configuration)
+        downloadIconView.image = UIImage(named: "reynard.arrow.down.circle", in: .main, with: configuration)
 
         let progress = min(max(CGFloat(summary.aggregateProgress), 0), 1)
         let showsProgress = summary.activeCount > 0
@@ -136,7 +136,7 @@ final class ToolbarButton: UIButton {
         guard toolbarButtonType != .download else {
             return
         }
-        setImage(UIImage(systemName: symbolName), for: .normal)
+        setImage(UIImage(named: symbolName), for: .normal)
         let pointSize = toolbarButtonType == .newTab
             ? UX.newTabSymbolPointSize
             : UX.standardSymbolPointSize
@@ -188,14 +188,14 @@ final class ToolbarButton: UIButton {
 
     private var symbolName: String {
         switch toolbarButtonType {
-        case .back: return "chevron.backward"
-        case .forward: return "chevron.forward"
-        case .share: return "square.and.arrow.up"
-        case .library: return "ellipsis.circle"
-        case .tabOverview: return "square.on.square"
-        case .download: return "arrow.down.circle"
-        case .newTab: return "plus"
-        case .sidebar: return "sidebar.left"
+        case .back: return "reynard.chevron.backward"
+        case .forward: return "reynard.chevron.forward"
+        case .share: return "reynard.square.and.arrow.up"
+        case .library: return "reynard.ellipsis.circle"
+        case .tabOverview: return "reynard.square.on.square"
+        case .download: return "reynard.arrow.down.circle"
+        case .newTab: return "reynard.plus"
+        case .sidebar: return "reynard.sidebar.left"
         }
     }
 

@@ -35,12 +35,12 @@ enum AddressBarMenu {
         if let url,
            url.host != nil {
             let title = BookmarkStore.shared.bookmark(for: url) == nil ? "Add Bookmark" : "Edit Bookmark"
-            tabActions.append(UIAction(title: title, image: UIImage(systemName: "book")) { _ in
+            tabActions.append(UIAction(title: title, image: UIImage(named: "reynard.book")) { _ in
                 onBookmark(false)
             })
             
             if !BookmarkStore.shared.containsBookmarkInFavoritesHierarchy(for: url) {
-                tabActions.append(UIAction(title: "Add to Favorites", image: UIImage(systemName: "star")) { _ in
+                tabActions.append(UIAction(title: "Add to Favorites", image: UIImage(named: "reynard.star")) { _ in
                     onBookmark(true)
                 })
             }
@@ -51,7 +51,7 @@ enum AddressBarMenu {
             addonsChildren = [
                 UIAction(
                     title: "No Add-ons",
-                    image: UIImage(systemName: "puzzlepiece.extension"),
+                    image: UIImage(named: "reynard.puzzlepiece.extension"),
                     attributes: .disabled
                 ) { _ in }
             ]
@@ -66,7 +66,7 @@ enum AddressBarMenu {
         var pageActions: [UIMenuElement] = [
             UIMenu(
                 title: "Manage Add-ons",
-                image: UIImage(systemName: "puzzlepiece.extension"),
+                image: UIImage(named: "reynard.puzzlepiece.extension"),
                 identifier: Identifier.manageAddonsMenu,
                 children: addonsChildren
             )
@@ -74,15 +74,15 @@ enum AddressBarMenu {
         
         if let isDesktop = usesDesktopWebsite {
             let title = isDesktop ? "Request Mobile Website" : "Request Desktop Website"
-            let imageName = isDesktop ? "iphone" : "desktopcomputer"
-            pageActions.append(UIAction(title: title, image: UIImage(systemName: imageName)) { _ in
+            let imageName = isDesktop ? "reynard.smartphone" : "reynard.desktopcomputer"
+            pageActions.append(UIAction(title: title, image: UIImage(named: imageName)) { _ in
                 onChangeWebsiteMode()
             })
         }
         
         var settingsActions: [UIMenuElement] = []
         if url?.host != nil {
-            settingsActions.append(UIAction(title: "Website Settings", image: UIImage(systemName: "gear")) { _ in
+            settingsActions.append(UIAction(title: "Website Settings", image: UIImage(named: "reynard.gear")) { _ in
                 onWebsiteSettings()
             })
         }

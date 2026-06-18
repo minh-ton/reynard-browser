@@ -33,26 +33,26 @@ enum LibrarySection: Int, CaseIterable {
     var symbolName: String {
         switch self {
         case .bookmarks:
-            return "book"
+            return "reynard.book"
         case .history:
-            return "clock"
+            return "reynard.clock"
         case .downloads:
-            return "arrow.down.circle"
+            return "reynard.arrow.down.circle"
         case .settings:
-            return "gearshape"
+            return "reynard.gearshape"
         }
     }
 
     private var selectedSymbolName: String {
         switch self {
         case .bookmarks:
-            return "book.fill"
+            return "reynard.book.fill"
         case .history:
-            return "clock.fill"
+            return "reynard.clock.fill"
         case .downloads:
-            return "arrow.down.circle.fill"
+            return "reynard.arrow.down.circle.fill"
         case .settings:
-            return "gearshape.fill"
+            return "reynard.gearshape.fill"
         }
     }
 
@@ -62,8 +62,8 @@ enum LibrarySection: Int, CaseIterable {
         let configuration = UIImage.SymbolConfiguration(pointSize: LibraryTabBarStyle.UX.itemSymbolPointSize, weight: .regular)
         let item = UITabBarItem(
             title: title,
-            image: UIImage(systemName: symbolName, withConfiguration: configuration),
-            selectedImage: UIImage(systemName: selectedSymbolName, withConfiguration: configuration)
+            image: UIImage(named: symbolName, in: .main, with: configuration),
+            selectedImage: UIImage(named: selectedSymbolName, in: .main, with: configuration)
         )
         item.tag = rawValue
         return item

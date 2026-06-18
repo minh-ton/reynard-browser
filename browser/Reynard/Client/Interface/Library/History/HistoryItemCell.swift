@@ -161,7 +161,7 @@ final class HistoryItemCell: UITableViewCell {
             return
         }
         
-        faviconView.image = UIImage(systemName: "globe")
+        faviconView.image = UIImage(named: "reynard.globe")
         faviconView.tintColor = .secondaryLabel
     }
 }

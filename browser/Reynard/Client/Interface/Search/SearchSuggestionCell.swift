@@ -25,7 +25,7 @@ final class SearchSuggestionCell: UITableViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
-        imageView.image = UIImage(systemName: "magnifyingglass")
+        imageView.image = UIImage(named: "reynard.magnifyingglass")
         imageView.tintColor = .label
         return imageView
     }()
@@ -45,7 +45,7 @@ final class SearchSuggestionCell: UITableViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
-        imageView.image = UIImage(systemName: "arrow.down.left.circle")
+        imageView.image = UIImage(named: "reynard.arrow.down.left.circle")
         imageView.tintColor = .tertiaryLabel
         return imageView
     }()
@@ -87,7 +87,7 @@ final class SearchSuggestionCell: UITableViewCell {
     }
 
     func setTrailingIconDirection(upward: Bool) {
-        trailingIconView.image = UIImage(systemName: upward ? "arrow.up.left.circle" : "arrow.down.left.circle")
+        trailingIconView.image = UIImage(named: upward ? "reynard.arrow.up.left.circle" : "reynard.arrow.down.left.circle")
     }
 
     private func configureAppearance() {

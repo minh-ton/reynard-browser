@@ -32,7 +32,7 @@ final class UserDataSuggestionCell: UITableViewCell {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
         imageView.tintColor = .label
-        imageView.image = UIImage(systemName: "globe")
+        imageView.image = UIImage(named: "reynard.globe")
         return imageView
     }()
 
@@ -93,7 +93,7 @@ final class UserDataSuggestionCell: UITableViewCell {
         faviconTask = nil
         titleLabel.text = nil
         subtitleLabel.text = nil
-        sourceIconView.image = UIImage(systemName: "globe")
+        sourceIconView.image = UIImage(named: "reynard.globe")
         sourceIconView.tintColor = .label
         setFilledBackgroundVisible(false)
     }
@@ -109,14 +109,14 @@ final class UserDataSuggestionCell: UITableViewCell {
         switch result.source {
         case .bookmark:
             subtitleLabel.text = URLUtils.displayString(for: result.url)
-            sourceIconView.image = UIImage(systemName: "book")
+            sourceIconView.image = UIImage(named: "reynard.book")
         case .history:
             let relativeDate = Self.relativeDateFormatter.localizedString(for: result.lastVisitedAt ?? Date(), relativeTo: Date())
             subtitleLabel.text = "\(URLUtils.hostDisplayString(for: result.url)) · Visited \(relativeDate)"
-            sourceIconView.image = UIImage(systemName: "clock")
+            sourceIconView.image = UIImage(named: "reynard.clock")
         case .tab:
             subtitleLabel.text = "\(URLUtils.hostDisplayString(for: result.url)) · Opened Tab"
-            sourceIconView.image = UIImage(systemName: "square.on.square")
+            sourceIconView.image = UIImage(named: "reynard.square.on.square")
         }
 
         sourceIconView.tintColor = .label
@@ -179,7 +179,7 @@ final class UserDataSuggestionCell: UITableViewCell {
             return
         }
 
-        sourceIconView.image = UIImage(systemName: "globe")
+        sourceIconView.image = UIImage(named: "reynard.globe")
         sourceIconView.tintColor = .label
 
         faviconTask = Task { [weak self] in
@@ -190,7 +190,7 @@ final class UserDataSuggestionCell: UITableViewCell {
 
             await MainActor.run {
                 guard self.representedURL == url else { return }
-                self.sourceIconView.image = image ?? UIImage(systemName: "globe")
+                self.sourceIconView.image = image ?? UIImage(named: "reynard.globe")
                 self.sourceIconView.tintColor = image == nil ? .label : nil
             }
         }

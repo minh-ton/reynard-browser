@@ -36,13 +36,13 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     
     private lazy var downloadsMenuButton = LibraryActionButton(
         target: self,
-        iconName: "ellipsis",
+        iconName: "reynard.ellipsis",
         action: #selector(didTapDownloadsMenu)
     )
     private var legacyDownloadsMenuDelegate: LibraryLegacyMenuDelegate?
     private lazy var downloadsMenuItem: UIBarButtonItem = {
         let item = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
+            image: UIImage(named: "reynard.ellipsis"),
             style: .plain,
             target: self,
             action: #selector(didTapDownloadsMenu)
@@ -266,10 +266,10 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     
     fileprivate func makeDownloadsMenu() -> UIMenu {
         UIMenu(title: "", children: [
-            UIAction(title: "Open Downloads Folder", image: UIImage(systemName: "folder")) { [weak self] _ in
+            UIAction(title: "Open Downloads Folder", image: UIImage(named: "reynard.folder")) { [weak self] _ in
                 self?.openDownloadsFolder()
             },
-            UIAction(title: "Clear Downloads History", image: UIImage(named: "arrow.down.circle.badge.xmark")) { [weak self] _ in
+            UIAction(title: "Clear Downloads History", image: UIImage(named: "reynard.arrow.down.circle.badge.xmark")) { [weak self] _ in
                 self?.showClearDownloads()
             },
         ])
