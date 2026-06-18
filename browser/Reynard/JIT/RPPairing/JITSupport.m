@@ -6,28 +6,21 @@
 //
 
 #import "JITSupport.h"
+#import "JITErrors.h"
 #import "JITUtils.h"
 #import "IdeviceFFI.h"
-#import <Security/Security.h>
 
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-static const char *providerLabel = "Reynard";
-static const uint16_t lockdownPort = 62078;
 static const uint16_t rppairingPort = 49152;
-static const NSTimeInterval debugPacketTimeoutSeconds = 2.0;
-
-static const char *const legacyDebugServiceIdentifier = "com.apple.debugserver.DVTSecureSocketProxy";
 
 struct DeviceProvider {
-    IdeviceProviderHandle *handle;
     AdapterHandle *adapter;
     RsdHandshakeHandle *handshake;
     HeartbeatClientHandle *heartbeatClient;
@@ -139,7 +132,7 @@ static void startHeartbeat(DeviceProvider *provider) {
     });
 }
 
-// MARK: JIT on iOS 17+
+// MARK: RPPairing JIT enablement on 17.4+
 
 BOOL sendDebugCommand(DebugProxyHandle *debugProxy, NSString *commandString, NSString **responseOut, NSError **error) {
     DebugserverCommandHandle *command = debugserver_command_new(commandString.UTF8String, NULL, 0);
@@ -236,7 +229,7 @@ BOOL connectDebugSession(DeviceProvider *provider, DebugSession *session, NSStri
                                        &session->adapter, &session->handshake
                                        );
     rp_pairing_file_free(rpPairingFile);
-    
+
     if (ffiError) {
         if (error) *error = MakeError(TunnelCreateFailed);
         idevice_error_free(ffiError);
@@ -395,81 +388,8 @@ DeviceProvider *createDeviceProvider(NSString *pairingFilePath, NSString *target
         return NULL;
     }
     
-    if (__builtin_available(iOS 17.4, *)) {
-        RpPairingFileHandle *rpPairingFile = NULL;
-        IdeviceFfiError *ffiError = rp_pairing_file_read(pairingFilePath.fileSystemRepresentation, &rpPairingFile);
-        if (ffiError) {
-            if (error) *error = MakeError(PairingFileReadFailed);
-            idevice_error_free(ffiError);
-            return NULL;
-        }
-        
-        struct sockaddr_in address;
-        memset(&address, 0, sizeof(address));
-        address.sin_family = AF_INET;
-        address.sin_port = htons(rppairingPort);
-        
-        if (inet_pton(AF_INET, targetAddress.UTF8String, &address.sin_addr) != 1) {
-            rp_pairing_file_free(rpPairingFile);
-            if (error) *error = MakeError(InvalidTargetAddress);
-            return NULL;
-        }
-        
-        AdapterHandle *adapter = NULL;
-        RsdHandshakeHandle *handshake = NULL;
-        ffiError = tunnel_create_rppairing(
-                                           (const struct sockaddr *)&address,
-                                           (socklen_t)sizeof(address),
-                                           "Reynard",
-                                           rpPairingFile,
-                                           NULL, NULL,
-                                           &adapter, &handshake
-                                           );
-        rp_pairing_file_free(rpPairingFile);
-        
-        if (ffiError) {
-            if (error) *error = MakeError(TunnelCreateFailed);
-            idevice_error_free(ffiError);
-            return NULL;
-        }
-        
-        HeartbeatClientHandle *heartbeatClient = NULL;
-        ffiError = heartbeat_connect_rsd(adapter, handshake, &heartbeatClient);
-        if (ffiError) {
-            if (error) *error = MakeError(HeartbeatConnectFailed);
-            idevice_error_free(ffiError);
-            rsd_handshake_free(handshake);
-            adapter_free(adapter);
-            return NULL;
-        }
-        
-        uint64_t nextInterval = 0;
-        ffiError = heartbeat_get_marco(heartbeatClient, 2, &nextInterval);
-        if (!ffiError) ffiError = heartbeat_send_polo(heartbeatClient);
-        
-        DeviceProvider *provider = calloc(1, sizeof(*provider));
-        if (!provider) {
-            if (heartbeatClient) heartbeat_client_free(heartbeatClient);
-            rsd_handshake_free(handshake);
-            adapter_free(adapter);
-            if (error) *error = MakeError(DeviceProviderAllocationFailed);
-            return NULL;
-        }
-        
-        provider->handle = NULL;
-        provider->adapter = adapter;
-        provider->handshake = handshake;
-        provider->heartbeatClient = heartbeatClient;
-        provider->heartbeatRunning = NO;
-        
-        if (heartbeatClient) startHeartbeat(provider);
-        
-        return provider;
-    }
-    
-    IdevicePairingFile *pairingFile = NULL;
-    IdeviceFfiError *ffiError = idevice_pairing_file_read(pairingFilePath.fileSystemRepresentation, &pairingFile);
-    
+    RpPairingFileHandle *rpPairingFile = NULL;
+    IdeviceFfiError *ffiError = rp_pairing_file_read(pairingFilePath.fileSystemRepresentation, &rpPairingFile);
     if (ffiError) {
         if (error) *error = MakeError(PairingFileReadFailed);
         idevice_error_free(ffiError);
@@ -479,45 +399,57 @@ DeviceProvider *createDeviceProvider(NSString *pairingFilePath, NSString *target
     struct sockaddr_in address;
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
-    address.sin_port = htons(lockdownPort);
+    address.sin_port = htons(rppairingPort);
     
     if (inet_pton(AF_INET, targetAddress.UTF8String, &address.sin_addr) != 1) {
-        idevice_pairing_file_free(pairingFile);
+        rp_pairing_file_free(rpPairingFile);
         if (error) *error = MakeError(InvalidTargetAddress);
         return NULL;
     }
     
-    IdeviceProviderHandle *providerHandle = NULL;
-    ffiError = idevice_tcp_provider_new((const struct sockaddr *)&address, pairingFile, providerLabel, &providerHandle);
+    AdapterHandle *adapter = NULL;
+    RsdHandshakeHandle *handshake = NULL;
+    ffiError = tunnel_create_rppairing(
+                                       (const struct sockaddr *)&address,
+                                       (socklen_t)sizeof(address),
+                                       "Reynard",
+                                       rpPairingFile,
+                                       NULL, NULL,
+                                       &adapter, &handshake
+                                       );
+    rp_pairing_file_free(rpPairingFile);
+
     if (ffiError) {
-        if (error) *error = MakeError(DeviceProviderCreateFailed);
+        if (error) *error = MakeError(TunnelCreateFailed);
         idevice_error_free(ffiError);
-        return NULL;
-    }
-    
-    DeviceProvider *provider = calloc(1, sizeof(*provider));
-    if (!provider) {
-        idevice_provider_free(providerHandle);
-        if (error) *error = MakeError(DeviceProviderAllocationFailed);
         return NULL;
     }
     
     HeartbeatClientHandle *heartbeatClient = NULL;
-    ffiError = heartbeat_connect(providerHandle, &heartbeatClient);
+    ffiError = heartbeat_connect_rsd(adapter, handshake, &heartbeatClient);
     if (ffiError) {
         if (error) *error = MakeError(HeartbeatConnectFailed);
         idevice_error_free(ffiError);
-        idevice_provider_free(providerHandle);
+        rsd_handshake_free(handshake);
+        adapter_free(adapter);
         return NULL;
     }
     
     uint64_t nextInterval = 0;
-    ffiError = heartbeat_get_marco(heartbeatClient, 15, &nextInterval);
+    ffiError = heartbeat_get_marco(heartbeatClient, 2, &nextInterval);
     if (!ffiError) ffiError = heartbeat_send_polo(heartbeatClient);
+
+    DeviceProvider *provider = calloc(1, sizeof(*provider));
+    if (!provider) {
+        heartbeat_client_free(heartbeatClient);
+        rsd_handshake_free(handshake);
+        adapter_free(adapter);
+        if (error) *error = MakeError(DeviceProviderAllocationFailed);
+        return NULL;
+    }
     
-    provider->handle = providerHandle;
-    provider->adapter = NULL;
-    provider->handshake = NULL;
+    provider->adapter = adapter;
+    provider->handshake = handshake;
     provider->heartbeatClient = heartbeatClient;
     provider->heartbeatRunning = NO;
     
@@ -539,352 +471,7 @@ void freeDeviceProvider(DeviceProvider *provider) {
     if (provider->heartbeatClient) { heartbeat_client_free(provider->heartbeatClient); provider->heartbeatClient = NULL; }
     if (provider->handshake) { rsd_handshake_free(provider->handshake); provider->handshake = NULL; }
     if (provider->adapter) { adapter_free(provider->adapter); provider->adapter = NULL; }
-    if (provider->handle) { idevice_provider_free(provider->handle); provider->handle = NULL; }
     free(provider);
-}
-
-// MARK: JIT on pre-iOS 17
-
-// This JIT enablement method requires a lot of the TLS things to be
-// re-implemented. So thanks LLM for helping me with this I guess?
-// And I'm also going to add a TODO: Find a better way (or a library) for these TLS mess.
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
-static BOOL configureLegacyDebugTLS(LegacyDebugConnection *connection, NSError **error) {
-    if (!connection || connection->socketFD < 0) {
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        return NO;
-    }
-    
-    SSLContextRef sslContext = SSLCreateContext(kCFAllocatorDefault, kSSLClientSide, kSSLStreamType);
-    if (!sslContext) {
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        return NO;
-    }
-    
-    OSStatus status = SSLSetIOFuncs(sslContext, legacySSLRead, legacySSLWrite);
-    if (status != noErr) {
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        CFRelease(sslContext);
-        return NO;
-    }
-    
-    int *connectionSocket = &connection->socketFD;
-    status = SSLSetConnection(sslContext, connectionSocket);
-    if (status != noErr) {
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        CFRelease(sslContext);
-        return NO;
-    }
-    
-    SSLSetProtocolVersionMin(sslContext, kTLSProtocol1);
-    SSLSetProtocolVersionMax(sslContext, kTLSProtocol12);
-    SSLSetSessionOption(sslContext, kSSLSessionOptionBreakOnServerAuth, true);
-    
-    NSError *identityError = nil;
-    SecIdentityRef identity = copyLegacyPairingIdentity(&identityError);
-    if (!identity) {
-        if (error) *error = identityError ?: MakeError(TLSIdentityCreateFailed);
-        CFRelease(sslContext);
-        return NO;
-    }
-    
-    const void *identityValues[] = { identity };
-    CFArrayRef certificateChain = CFArrayCreate(NULL, identityValues, 1, &kCFTypeArrayCallBacks);
-    OSStatus statusSetCert = SSLSetCertificate(sslContext, certificateChain);
-    CFRelease(certificateChain);
-    CFRelease(identity);
-    if (statusSetCert != noErr) {
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        CFRelease(sslContext);
-        return NO;
-    }
-    
-    while (YES) {
-        status = SSLHandshake(sslContext);
-        if (status == noErr) break;
-        if (status == errSSLWouldBlock) continue;
-        if (status == errSSLServerAuthCompleted) continue;
-        
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        CFRelease(sslContext);
-        return NO;
-    }
-    
-    connection->sslContext = sslContext;
-    return YES;
-}
-
-void closeLegacyDebugConnection(LegacyDebugConnection *connection) {
-    if (!connection) return;
-    if (connection->sslContext) { SSLClose(connection->sslContext); CFRelease(connection->sslContext); connection->sslContext = NULL; }
-    if (connection->socketFD >= 0) { close(connection->socketFD); connection->socketFD = -1; }
-}
-
-static BOOL sendAllBytes(LegacyDebugConnection *connection, const uint8_t *bytes, size_t length, NSError **error) {
-    if (!connection || connection->socketFD < 0 || !connection->sslContext) {
-        if (error) *error = MakeError(LegacyTLSConnectionMissing);
-        return NO;
-    }
-    
-    size_t bytesWritten = 0;
-    while (bytesWritten < length) {
-        size_t processedLength = length - bytesWritten;
-        OSStatus status = SSLWrite(connection->sslContext, bytes + bytesWritten, processedLength, &processedLength);
-        
-        if (status == noErr) {
-            bytesWritten += processedLength;
-            continue;
-        }
-        
-        if (status == errSSLWouldBlock) continue;
-        
-        if (error) *error = MakeError(LegacyTLSConfigurationFailed);
-        
-        return NO;
-    }
-    
-    return YES;
-}
-
-static BOOL readByteWithTimeout(LegacyDebugConnection *connection, NSTimeInterval timeout, char *byteOut, BOOL *timedOut, NSError **error) {
-    if (timedOut) *timedOut = NO;
-    
-    if (!connection || connection->socketFD < 0 || !connection->sslContext) {
-        if (error) *error = MakeError(LegacyTLSConnectionMissing);
-        return NO;
-    }
-    
-    size_t processedLength = 1;
-    OSStatus status = SSLRead(connection->sslContext, byteOut, 1, &processedLength);
-    if (status == noErr && processedLength == 1) return YES;
-    
-    if (status == errSSLWouldBlock) {
-        if (timedOut) *timedOut = YES;
-        return YES;
-    }
-    
-    if (status == errSSLClosedGraceful || status == errSSLClosedAbort) {
-        if (error) *error = MakeError(LegacyTLSConnectionClosed);
-        return NO;
-    }
-    
-    if (error) *error = MakeError(LegacyTLSReadFailed);
-    return NO;
-}
-
-#pragma clang diagnostic pop
-
-static BOOL readLegacyDebugResponse(LegacyDebugConnection *connection, NSString **responseOut, NSError **error) {
-    while (YES) {
-        char marker = 0;
-        BOOL timedOut = NO;
-        if (!readByteWithTimeout(connection, debugPacketTimeoutSeconds, &marker, &timedOut, error)) return NO;
-        if (timedOut) {
-            if (responseOut) *responseOut = nil;
-            return YES;
-        }
-        
-        if (marker == '+') continue;
-        if (marker == '-') {
-            if (error) *error = MakeError(LegacyProtocolNackReceived);
-            return NO;
-        }
-        if (marker != '$') continue;
-        
-        NSMutableData *payloadData = [NSMutableData data];
-        while (YES) {
-            char payloadByte = 0;
-            timedOut = NO;
-            if (!readByteWithTimeout(connection, debugPacketTimeoutSeconds, &payloadByte, &timedOut, error)) return NO;
-            if (timedOut) {
-                if (error) *error = MakeError(LegacyProtocolPayloadTimeout);
-                return NO;
-            }
-            
-            if (payloadByte == '#') break;
-            [payloadData appendBytes:&payloadByte length:1];
-        }
-        
-        char checksumChars[3] = {0};
-        for (NSUInteger index = 0; index < 2; index++) {
-            BOOL checksumTimedOut = NO;
-            if (!readByteWithTimeout(connection, debugPacketTimeoutSeconds, &checksumChars[index], &checksumTimedOut, error)) return NO;
-            
-            if (checksumTimedOut) {
-                if (error) *error = MakeError(LegacyProtocolChecksumTimeout);
-                return NO;
-            }
-        }
-        
-        unsigned int providedChecksum = 0;
-        if (sscanf(checksumChars, "%2x", &providedChecksum) != 1 ||
-            (uint8_t)providedChecksum != packetChecksum(payloadData.bytes, payloadData.length)) {
-            if (error) *error = MakeError(LegacyProtocolChecksumMismatch);
-            return NO;
-        }
-        
-        const uint8_t ack = '+';
-        if (!sendAllBytes(connection, &ack, 1, error)) return NO;
-        
-        NSString *response = [[NSString alloc] initWithData:payloadData encoding:NSUTF8StringEncoding];
-        if (!response) response = [[NSString alloc] initWithData:payloadData encoding:NSISOLatin1StringEncoding];
-        if (!response) response = @"";
-        
-        if (responseOut) *responseOut = response;
-        return YES;
-    }
-}
-
-static BOOL sendLegacyDebugPacket(LegacyDebugConnection *connection, NSString *command, NSError **error) {
-    NSData *payloadData = [command dataUsingEncoding:NSUTF8StringEncoding];
-    if (!payloadData) {
-        if (error) *error = MakeError(LegacyCommandEncodingFailed);
-        return NO;
-    }
-    
-    uint8_t checksum = packetChecksum(payloadData.bytes, payloadData.length);
-    char checksumChars[3] = {0};
-    snprintf(checksumChars, sizeof(checksumChars), "%02x", checksum);
-    
-    NSMutableData *packetData = [NSMutableData dataWithCapacity:payloadData.length + 4];
-    const uint8_t packetStart = '$';
-    const uint8_t packetEnd = '#';
-    [packetData appendBytes:&packetStart length:1];
-    [packetData appendData:payloadData];
-    [packetData appendBytes:&packetEnd length:1];
-    [packetData appendBytes:checksumChars length:2];
-    
-    return sendAllBytes(connection, packetData.bytes, packetData.length, error);
-}
-
-BOOL sendLegacyDebugCommand(LegacyDebugConnection *connection, NSString *command, NSString **responseOut, NSError **error) {
-    if (!sendLegacyDebugPacket(connection, command, error)) {
-        if (error && !*error) *error = MakeError(LegacyDebugCommandPacketFailed);
-        return NO;
-    }
-    
-    if (!readLegacyDebugResponse(connection, responseOut, error)) {
-        if (error && !*error) *error = MakeError(LegacyDebugCommandResponseFailed);
-        return NO;
-    }
-    
-    return YES;
-}
-
-BOOL connectLegacyDebugSocket(NSString *targetAddress, uint16_t port, LegacyDebugConnection *connectionOut, NSError **error) {
-    if (!connectionOut) {
-        if (error) *error = MakeError(LegacyOutputConnectionMissing);
-        return NO;
-    }
-    
-    connectionOut->socketFD = -1;
-    connectionOut->sslContext = NULL;
-    
-    int socketFD = socket(AF_INET, SOCK_STREAM, 0);
-    if (socketFD < 0) {
-        if (error) *error = MakeError(LegacySocketCreateFailed);
-        return NO;
-    }
-    
-    int noSigPipe = 1;
-    setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
-    int noDelay = 1;
-    setsockopt(socketFD, IPPROTO_TCP, TCP_NODELAY, &noDelay, sizeof(noDelay));
-    applyLegacyDebugSocketTimeouts(socketFD);
-    
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    
-    if (inet_pton(AF_INET, targetAddress.UTF8String, &address.sin_addr) != 1) {
-        close(socketFD);
-        if (error) *error = MakeError(LegacySocketInvalidAddress);
-        return NO;
-    }
-    
-    if (connect(socketFD, (const struct sockaddr *)&address, sizeof(address)) != 0) {
-        close(socketFD);
-        if (error) *error = MakeError(LegacySocketConnectFailed);
-        return NO;
-    }
-    
-    connectionOut->socketFD = socketFD;
-    
-    if (!configureLegacyDebugTLS(connectionOut, error)) {
-        if (error && !*error) *error = MakeError(LegacySocketTLSSetupFailed);
-        closeLegacyDebugConnection(connectionOut);
-        return NO;
-    }
-    
-    return YES;
-}
-
-BOOL startLegacyDebugService(DeviceProvider *provider, uint16_t *portOut, NSError **error) {
-    LockdowndClientHandle *lockdownClient = NULL;
-    IdevicePairingFile *pairingFile = NULL;
-    IdeviceFfiError *ffiError = NULL;
-    BOOL success = NO;
-    
-    ffiError = lockdownd_connect(provider->handle, &lockdownClient);
-    if (ffiError) {
-        if (error) *error = MakeError(LockdowndConnectFailed);
-        idevice_error_free(ffiError);
-        return NO;
-    }
-    
-    ffiError = idevice_provider_get_pairing_file(provider->handle, &pairingFile);
-    if (ffiError) {
-        if (error) *error = MakeError(ProviderPairingFileFetchFailed);
-        idevice_error_free(ffiError);
-        goto cleanup;
-    }
-    
-    ffiError = lockdownd_start_session(lockdownClient, pairingFile);
-    if (ffiError) {
-        if (error) *error = MakeError(LockdowndSessionStartFailed);
-        idevice_error_free(ffiError);
-        goto cleanup;
-    }
-    
-    uint16_t debugPort = 0;
-    bool enableSSL = false;
-    ffiError = lockdownd_start_service(lockdownClient, legacyDebugServiceIdentifier, &debugPort, &enableSSL);
-    if (ffiError) {
-        if (error) *error = MakeError(LockdowndStartServiceFailed);
-        idevice_error_free(ffiError);
-        goto cleanup;
-    }
-    
-    if (!enableSSL) {
-        if (error) *error = MakeError(LegacyServiceTLSNotEnabled);
-        goto cleanup;
-    }
-    
-    if (portOut) *portOut = debugPort;
-    success = YES;
-    
-cleanup:
-    if (pairingFile) idevice_pairing_file_free(pairingFile);
-    if (lockdownClient) lockdownd_client_free(lockdownClient);
-    return success;
-}
-
-BOOL detachLegacyDebuggerSession(LegacyDebugConnection *connection, int32_t pid) {
-    NSString *detachResponse = nil;
-    NSError *detachError = nil;
-    if (sendLegacyDebugCommand(connection, @"D", &detachResponse, &detachError)) {
-        logger([NSString stringWithFormat:@"Legacy detach response for pid %d: %@", pid, detachResponse ?: @"<no response>"]);
-        return YES;
-    }
-    
-    if (!isNotConnectedError(detachError)) {
-        logger([NSString stringWithFormat:@"Legacy detach failed for pid %d: %@", pid, detachError.localizedDescription ?: @"detach failed"]);
-    }
-    return NO;
 }
 
 // MARK: Developer Disk Image Mounting
@@ -938,7 +525,7 @@ static BOOL isImageMounted(ImageMounterHandle *mounterClient, const char *imageT
 }
 
 BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
-    if (!provider) {
+    if (!provider || !provider->adapter || !provider->handshake) {
         if (error) *error = MakeError(DeviceProviderCreateFailed);
         return NO;
     }
@@ -947,97 +534,31 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     if (!ddiDirectory) return NO;
     
     LockdowndClientHandle *lockdownClient = NULL;
-    IdevicePairingFile *pairingFile = NULL;
     ImageMounterHandle *mounterClient = NULL;
     IdeviceFfiError *ffiError = NULL;
-    plist_t versionNode = NULL;
     plist_t chipIDNode = NULL;
-    char *versionCString = NULL;
-    NSString *versionString = nil;
-    NSInteger majorVersion = 0;
-    const char *imageType = NULL;
     BOOL mounted = NO;
-    NSData *legacyImageData = nil;
-    NSData *legacySignatureData = nil;
-    NSData *modernImageData = nil;
-    NSData *modernTrustCacheData = nil;
-    NSData *modernBuildManifestData = nil;
+    NSData *imageData = nil;
+    NSData *trustCacheData = nil;
+    NSData *buildManifestData = nil;
     uint64_t uniqueChipID = 0;
     BOOL success = NO;
     
-    if (__builtin_available(iOS 17.4, *)) {
-        if (!provider->adapter || !provider->handshake) {
-            if (error) *error = MakeError(DeviceProviderCreateFailed);
-            return NO;
-        }
-        
-        ffiError = lockdownd_connect_rsd(provider->adapter, provider->handshake, &lockdownClient);
-        if (ffiError) {
-            if (error) *error = MakeError(LockdowndConnectFailed);
-            idevice_error_free(ffiError);
-            goto cleanup;
-        }
-    } else {
-        if (!provider->handle) {
-            if (error) *error = MakeError(DeviceProviderCreateFailed);
-            return NO;
-        }
-        
-        ffiError = lockdownd_connect(provider->handle, &lockdownClient);
-        if (ffiError) {
-            if (error) *error = MakeError(LockdowndConnectFailed);
-            idevice_error_free(ffiError);
-            goto cleanup;
-        }
-        
-        ffiError = idevice_provider_get_pairing_file(provider->handle, &pairingFile);
-        if (ffiError) {
-            if (error) *error = MakeError(ProviderPairingFileFetchFailed);
-            idevice_error_free(ffiError);
-            goto cleanup;
-        }
-        
-        ffiError = lockdownd_start_session(lockdownClient, pairingFile);
-        if (ffiError) {
-            if (error) *error = MakeError(LockdowndSessionStartFailed);
-            idevice_error_free(ffiError);
-            goto cleanup;
-        }
-    }
-    
-    ffiError = lockdownd_get_value(lockdownClient, "ProductVersion", NULL, &versionNode);
+    ffiError = lockdownd_connect_rsd(provider->adapter, provider->handshake, &lockdownClient);
     if (ffiError) {
-        if (error) *error = MakeError(DDIDeviceVersionReadFailed);
+        if (error) *error = MakeError(LockdowndConnectFailed);
         idevice_error_free(ffiError);
         goto cleanup;
     }
     
-    plist_get_string_val(versionNode, &versionCString);
-    if (!versionCString) {
-        if (error) *error = MakeError(DDIDeviceVersionInvalid);
-        goto cleanup;
-    }
-    
-    versionString = [NSString stringWithUTF8String:versionCString] ?: @"";
-    majorVersion = versionString.integerValue;
-    if (majorVersion <= 0) {
-        if (error) *error = MakeError(DDIDeviceVersionInvalid);
-        goto cleanup;
-    }
-    
-    if (__builtin_available(iOS 17.4, *)) {
-        ffiError = image_mounter_connect_rsd(provider->adapter, provider->handshake, &mounterClient);
-    } else {
-        ffiError = image_mounter_connect(provider->handle, &mounterClient);
-    }
+    ffiError = image_mounter_connect_rsd(provider->adapter, provider->handshake, &mounterClient);
     if (ffiError) {
         if (error) *error = MakeError(ImageMounterConnectFailed);
         idevice_error_free(ffiError);
         goto cleanup;
     }
     
-    imageType = majorVersion < 17 ? "Developer" : "Personalized";
-    if (!isImageMounted(mounterClient, imageType, &mounted, error)) {
+    if (!isImageMounted(mounterClient, "Personalized", &mounted, error)) {
         goto cleanup;
     }
     
@@ -1046,32 +567,14 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         goto cleanup;
     }
     
-    if (majorVersion < 17) {
-        legacyImageData = ddiFileData(ddiDirectory, @"DeveloperDiskImage.dmg", error);
-        if (!legacyImageData) goto cleanup;
-        
-        legacySignatureData = ddiFileData(ddiDirectory, @"DeveloperDiskImage.dmg.signature", error);
-        if (!legacySignatureData) goto cleanup;
-        
-        ffiError = image_mounter_mount_developer(mounterClient, legacyImageData.bytes, legacyImageData.length, legacySignatureData.bytes, legacySignatureData.length);
-        if (ffiError) {
-            if (error) *error = MakeError(LegacyDDIMountFailed);
-            idevice_error_free(ffiError);
-            goto cleanup;
-        }
-        
-        success = YES;
-        goto cleanup;
-    }
+    imageData = ddiFileData(ddiDirectory, @"Image.dmg", error);
+    if (!imageData) goto cleanup;
     
-    modernImageData = ddiFileData(ddiDirectory, @"Image.dmg", error);
-    if (!modernImageData) goto cleanup;
+    trustCacheData = ddiFileData(ddiDirectory, @"Image.dmg.trustcache", error);
+    if (!trustCacheData) goto cleanup;
     
-    modernTrustCacheData = ddiFileData(ddiDirectory, @"Image.dmg.trustcache", error);
-    if (!modernTrustCacheData) goto cleanup;
-    
-    modernBuildManifestData = ddiFileData(ddiDirectory, @"BuildManifest.plist", error);
-    if (!modernBuildManifestData) goto cleanup;
+    buildManifestData = ddiFileData(ddiDirectory, @"BuildManifest.plist", error);
+    if (!buildManifestData) goto cleanup;
     
     ffiError = lockdownd_get_value(lockdownClient, "UniqueChipID", NULL, &chipIDNode);
     if (ffiError) {
@@ -1086,12 +589,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         goto cleanup;
     }
     
-    if (__builtin_available(iOS 17.4, *)) {
-        ffiError = image_mounter_mount_personalized_rsd(mounterClient, provider->adapter, provider->handshake, modernImageData.bytes, modernImageData.length, modernTrustCacheData.bytes, modernTrustCacheData.length, modernBuildManifestData.bytes, modernBuildManifestData.length, NULL, uniqueChipID);
-    } else {
-        ffiError = image_mounter_mount_personalized(mounterClient, provider->handle, modernImageData.bytes, modernImageData.length, modernTrustCacheData.bytes, modernTrustCacheData.length, modernBuildManifestData.bytes, modernBuildManifestData.length, NULL, uniqueChipID);
-    }
-    
+    ffiError = image_mounter_mount_personalized_rsd(mounterClient, provider->adapter, provider->handshake, imageData.bytes, imageData.length, trustCacheData.bytes, trustCacheData.length, buildManifestData.bytes, buildManifestData.length, NULL, uniqueChipID);
     if (ffiError) {
         if (error) *error = MakeError(ModernDDIMountFailed);
         idevice_error_free(ffiError);
@@ -1101,11 +599,8 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     success = YES;
     
 cleanup:
-    if (versionCString) free(versionCString);
     if (chipIDNode) plist_free(chipIDNode);
-    if (versionNode) plist_free(versionNode);
     if (mounterClient) image_mounter_free(mounterClient);
-    if (pairingFile) idevice_pairing_file_free(pairingFile);
     if (lockdownClient) lockdownd_client_free(lockdownClient);
     return success;
 }

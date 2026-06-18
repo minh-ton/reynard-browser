@@ -12,7 +12,6 @@ final class DDIManager: NSObject {
         case alreadyInProgress
         case cancelled
         case appSupportDirUnavail
-        case invalidRuntimeVersion
         case invalidRemoteURL
         
         var errorDescription: String? {
@@ -23,8 +22,6 @@ final class DDIManager: NSObject {
                 return "Developer Disk Image download was cancelled."
             case .appSupportDirUnavail:
                 return "Unable to access the app Application Support directory."
-            case .invalidRuntimeVersion:
-                return "Unable to determine the iOS version needed for Developer Disk Image download."
             case .invalidRemoteURL:
                 return "Developer Disk Image source URL is invalid."
             }
@@ -281,37 +278,12 @@ final class DDIManager: NSObject {
     
     private func makeDownloadPlan() throws -> DownloadPlan {
         let rootDirectoryURL = try ddiRootDirectoryURL()
-        let operatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
-        
-        if operatingSystemVersion.majorVersion >= 17 {
-            let baseURLString = "https://github.com/doronz88/DeveloperDiskImage/raw/refs/heads/main/PersonalizedImages/Xcode_iOS_DDI_Personalized"
-            guard let baseURL = URL(string: baseURLString) else {
-                throw DDIError.invalidRemoteURL
-            }
-            
-            let fileNames = ["BuildManifest.plist", "Image.dmg", "Image.dmg.trustcache"]
-            let items = fileNames.map { fileName in
-                DownloadItem(
-                    remoteURL: baseURL.appendingPathComponent(fileName),
-                    destinationURL: rootDirectoryURL.appendingPathComponent(fileName, isDirectory: false)
-                )
-            }
-            
-            return DownloadPlan(rootDirectoryURL: rootDirectoryURL, items: items)
-        }
-        
-        guard operatingSystemVersion.majorVersion > 0 else {
-            throw DDIError.invalidRuntimeVersion
-        }
-        
-        let versionString = "\(operatingSystemVersion.majorVersion).\(operatingSystemVersion.minorVersion)"
-        let baseURLString = "https://github.com/doronz88/DeveloperDiskImage/raw/refs/heads/main/DeveloperDiskImages/\(versionString)"
-        
+        let baseURLString = "https://github.com/doronz88/DeveloperDiskImage/raw/refs/heads/main/PersonalizedImages/Xcode_iOS_DDI_Personalized"
         guard let baseURL = URL(string: baseURLString) else {
             throw DDIError.invalidRemoteURL
         }
         
-        let fileNames = ["DeveloperDiskImage.dmg", "DeveloperDiskImage.dmg.signature"]
+        let fileNames = ["BuildManifest.plist", "Image.dmg", "Image.dmg.trustcache"]
         let items = fileNames.map { fileName in
             DownloadItem(
                 remoteURL: baseURL.appendingPathComponent(fileName),

@@ -14,18 +14,6 @@ NSString *ErrorDescription(ErrorCode code) {
     switch (code) {
         case PairingFileMissing:
             return @"Pairing file was not found.";
-        case PairingFilePathUnavailable:
-            return @"Unable to resolve pairing file path.";
-        case PairingFileLoadFailed:
-            return @"Failed to load pairing file.";
-        case PairingFileMissingCredentials:
-            return @"Pairing file is missing certificate or private key data.";
-        case HostCertificateParseFailed:
-            return @"Failed to parse host certificate from pairing file.";
-        case HostPrivateKeyParseFailed:
-            return @"Failed to parse host private key from pairing file.";
-        case TLSIdentityCreateFailed:
-            return @"Failed to create TLS identity from pairing data.";
         case InvalidTargetAddress:
             return @"Target address is invalid.";
         case DeviceProviderAllocationFailed:
@@ -37,15 +25,7 @@ NSString *ErrorDescription(ErrorCode code) {
         case HeartbeatConnectFailed:
             return @"Failed to connect heartbeat service.";
         case LockdowndConnectFailed:
-            return @"Failed to connect lockdownd service.";
-        case ProviderPairingFileFetchFailed:
-            return @"Failed to fetch pairing file from provider.";
-        case LockdowndSessionStartFailed:
-            return @"Failed to start lockdownd session.";
-        case LockdowndStartServiceFailed:
-            return @"Failed to start legacy debug service.";
-        case LegacyServiceTLSNotEnabled:
-            return @"Legacy debug service did not enable TLS.";
+            return @"Failed to connect lockdownd service over RSD.";
         case ProcessControlCreateFailed:
             return @"Failed to create process control client.";
         case RemoteServerConnectFailed:
@@ -70,54 +50,16 @@ NSString *ErrorDescription(ErrorCode code) {
             return @"Failed to read source memory for prepare-region.";
         case UnexpectedPrepareRegionResponse:
             return @"Unexpected prepare-region response.";
-        case LegacyTLSConfigurationFailed:
-            return @"Legacy TLS configuration failed.";
-        case LegacyTLSConnectionMissing:
-            return @"Legacy TLS connection is missing.";
-        case LegacyTLSConnectionClosed:
-            return @"Legacy TLS connection was closed by peer.";
-        case LegacyTLSReadFailed:
-            return @"Failed to read data from legacy TLS connection.";
-        case LegacyProtocolNackReceived:
-            return @"Legacy protocol NACK received.";
-        case LegacyProtocolPayloadTimeout:
-            return @"Timed out while reading legacy protocol payload.";
-        case LegacyProtocolChecksumTimeout:
-            return @"Timed out while reading legacy protocol checksum.";
-        case LegacyProtocolChecksumMismatch:
-            return @"Legacy protocol checksum mismatch.";
-        case LegacyCommandEncodingFailed:
-            return @"Failed to encode legacy debug command.";
-        case LegacyOutputConnectionMissing:
-            return @"Legacy output debug connection is missing.";
-        case LegacySocketCreateFailed:
-            return @"Failed to create legacy debug socket.";
-        case LegacySocketInvalidAddress:
-            return @"Invalid legacy debug socket address.";
-        case LegacySocketConnectFailed:
-            return @"Failed to connect legacy debug socket.";
-        case LegacySocketTLSSetupFailed:
-            return @"Failed to complete TLS setup for legacy debug socket.";
-        case LegacyDebugCommandPacketFailed:
-            return @"Failed sending legacy debug command packet.";
-        case LegacyDebugCommandResponseFailed:
-            return @"Failed reading legacy debug command response.";
         case DDIMountPathResolveFailed:
             return @"Unable to resolve the DDI directory path.";
         case DDIFileReadFailed:
             return @"Failed to read required DDI files from disk.";
         case ImageMounterConnectFailed:
             return @"Failed to connect MobileImageMounter service.";
-        case DDIDeviceVersionReadFailed:
-            return @"Failed to read ProductVersion from lockdownd.";
-        case DDIDeviceVersionInvalid:
-            return @"Device ProductVersion format is invalid.";
         case DDIMountStateQueryFailed:
             return @"Failed to query current DDI mount state.";
-        case LegacyDDIMountFailed:
-            return @"Failed to mount legacy DeveloperDiskImage.";
         case UniqueChipIDReadFailed:
-            return @"Failed to read UniqueChipID from lockdownd.";
+            return @"Failed to read UniqueChipID from lockdownd over RSD.";
         case UniqueChipIDInvalid:
             return @"UniqueChipID value is invalid.";
         case ModernDDIMountFailed:
@@ -140,12 +82,6 @@ NSString *ErrorDescription(ErrorCode code) {
 ErrorGroup ErrorGroupForCode(ErrorCode code) {
     switch (code) {
         case PairingFileMissing:
-        case PairingFilePathUnavailable:
-        case PairingFileLoadFailed:
-        case PairingFileMissingCredentials:
-        case HostCertificateParseFailed:
-        case HostPrivateKeyParseFailed:
-        case TLSIdentityCreateFailed:
         case PairingFileReadFailed:
             return ErrorGroupPairing;
         case InvalidTargetAddress:
@@ -155,10 +91,9 @@ ErrorGroup ErrorGroupForCode(ErrorCode code) {
         case DDIMountPathResolveFailed:
         case DDIFileReadFailed:
         case ImageMounterConnectFailed:
-        case DDIDeviceVersionReadFailed:
-        case DDIDeviceVersionInvalid:
         case EndpointConnectivityLost:
             return ErrorGroupSharedSetup;
+        case LockdowndConnectFailed:
         case ProcessControlCreateFailed:
         case RemoteServerConnectFailed:
         case DebugProxyConnectFailed:
@@ -170,40 +105,16 @@ ErrorGroup ErrorGroupForCode(ErrorCode code) {
         case ModernDDIMountFailed:
         case TunnelCreateFailed:
             return ErrorGroupModernPath;
-        case LockdowndConnectFailed:
-        case ProviderPairingFileFetchFailed:
-        case LockdowndSessionStartFailed:
-        case LockdowndStartServiceFailed:
-        case LegacyServiceTLSNotEnabled:
-        case LegacyOutputConnectionMissing:
-        case LegacySocketCreateFailed:
-        case LegacySocketInvalidAddress:
-        case LegacySocketConnectFailed:
-        case LegacySocketTLSSetupFailed:
-        case LegacyDDIMountFailed:
-            return ErrorGroupLegacyPath;
         case TSPtraceHelperMissing:
         case TSPtraceHelperAttachFailed:
         case TSPtraceHelperTerminated:
             return ErrorGroupTrollStore;
-        case LegacyTLSConfigurationFailed:
-        case LegacyTLSConnectionMissing:
-        case LegacyTLSConnectionClosed:
-        case LegacyTLSReadFailed:
-            return ErrorGroupTLS;
         case DebugCommandCreateFailed:
         case DebugCommandSendFailed:
         case UnexpectedRegisterWriteResponse:
         case UnexpectedNoAckResponse:
         case MemoryPrepareReadFailed:
         case UnexpectedPrepareRegionResponse:
-        case LegacyProtocolNackReceived:
-        case LegacyProtocolPayloadTimeout:
-        case LegacyProtocolChecksumTimeout:
-        case LegacyProtocolChecksumMismatch:
-        case LegacyCommandEncodingFailed:
-        case LegacyDebugCommandPacketFailed:
-        case LegacyDebugCommandResponseFailed:
         case DDIMountStateQueryFailed:
             return ErrorGroupProtocol;
     }

@@ -17,93 +17,58 @@ typedef NS_ENUM(NSInteger, ErrorGroup) {
   ErrorGroupUnknown = 0,
   ErrorGroupSharedSetup = 1,
   ErrorGroupModernPath = 2,
-  ErrorGroupLegacyPath = 3,
-  ErrorGroupPairing = 4,
-  ErrorGroupTLS = 5,
-  ErrorGroupProtocol = 6,
-  ErrorGroupTrollStore = 7,
+  ErrorGroupPairing = 3,
+  ErrorGroupProtocol = 4,
+  ErrorGroupTrollStore = 5,
 };
 
 typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
     // Pairing and bootstrap setup
     PairingFileMissing = -1,
-    PairingFilePathUnavailable = -2,
-    PairingFileLoadFailed = -3,
-    PairingFileMissingCredentials = -4,
-    HostCertificateParseFailed = -5,
-    HostPrivateKeyParseFailed = -6,
-    TLSIdentityCreateFailed = -7,
-    InvalidTargetAddress = -8,
-    DeviceProviderAllocationFailed = -9,
-    DeviceProviderCreateFailed = -10,
-    PairingFileReadFailed = -11,
-    HeartbeatConnectFailed = -12,
+    InvalidTargetAddress = -2,
+    DeviceProviderAllocationFailed = -3,
+    DeviceProviderCreateFailed = -4,
+    PairingFileReadFailed = -5,
+    HeartbeatConnectFailed = -6,
 
-    // Legacy service bootstrap
-    LockdowndConnectFailed = -13,
-    ProviderPairingFileFetchFailed = -14,
-    LockdowndSessionStartFailed = -15,
-    LockdowndStartServiceFailed = -16,
-    LegacyServiceTLSNotEnabled = -17,
+    // RSD service bootstrap
+    LockdowndConnectFailed = -7,
 
-    // Modern (iOS 17.4+) attach path
-    ProcessControlCreateFailed = -18,
-    RemoteServerConnectFailed = -19,
-    DebugProxyConnectFailed = -20,
-    NoAckConfigureFailed = -21,
-    AttachDebugProxyFailed = -22,
-    SessionAllocationFailed = -23,
+    // Attach
+    ProcessControlCreateFailed = -8,
+    RemoteServerConnectFailed = -9,
+    DebugProxyConnectFailed = -10,
+    NoAckConfigureFailed = -11,
+    AttachDebugProxyFailed = -12,
+    SessionAllocationFailed = -13,
 
     // Protocol handling and command execution
-    DebugCommandCreateFailed = -24,
-    DebugCommandSendFailed = -25,
-    UnexpectedRegisterWriteResponse = -26,
-    UnexpectedNoAckResponse = -27,
-    MemoryPrepareReadFailed = -28,
-    UnexpectedPrepareRegionResponse = -29,
-
-    // Legacy TLS and packet transport
-    LegacyTLSConfigurationFailed = -30,
-    LegacyTLSConnectionMissing = -31,
-    LegacyTLSConnectionClosed = -32,
-    LegacyTLSReadFailed = -33,
-    LegacyProtocolNackReceived = -34,
-    LegacyProtocolPayloadTimeout = -35,
-    LegacyProtocolChecksumTimeout = -36,
-    LegacyProtocolChecksumMismatch = -37,
-    LegacyCommandEncodingFailed = -38,
-    LegacyOutputConnectionMissing = -39,
-    LegacySocketCreateFailed = -40,
-    LegacySocketInvalidAddress = -41,
-    LegacySocketConnectFailed = -42,
-
-    // Wrapper-level legacy operation failures
-    LegacySocketTLSSetupFailed = -43,
-    LegacyDebugCommandPacketFailed = -44,
-    LegacyDebugCommandResponseFailed = -45,
+    DebugCommandCreateFailed = -14,
+    DebugCommandSendFailed = -15,
+    UnexpectedRegisterWriteResponse = -16,
+    UnexpectedNoAckResponse = -17,
+    MemoryPrepareReadFailed = -18,
+    UnexpectedPrepareRegionResponse = -19,
 
     // Developer Disk Image mounting
-    DDIMountPathResolveFailed = -46,
-    DDIFileReadFailed = -47,
-    ImageMounterConnectFailed = -48,
-    DDIDeviceVersionReadFailed = -49,
-    DDIDeviceVersionInvalid = -50,
-    DDIMountStateQueryFailed = -51,
-    LegacyDDIMountFailed = -52,
-    UniqueChipIDReadFailed = -53,
-    UniqueChipIDInvalid = -54,
-    ModernDDIMountFailed = -55,
+    DDIMountPathResolveFailed = -20,
+    DDIFileReadFailed = -21,
+    ImageMounterConnectFailed = -22,
+    DDIMountStateQueryFailed = -23,
+    UniqueChipIDReadFailed = -24,
+    UniqueChipIDInvalid = -25,
+    ModernDDIMountFailed = -26,
 
     // Runtime connectivity monitoring
-    EndpointConnectivityLost = -56,
+    EndpointConnectivityLost = -27,
 
     // RPPairing tunnel
-    TunnelCreateFailed = -57,
+    TunnelCreateFailed = -28,
 
     // TrollStore ptrace attach path
-    TSPtraceHelperMissing = -58,
-    TSPtraceHelperAttachFailed = -59,
-    TSPtraceHelperTerminated = -60,
+    TSPtraceHelperMissing = -29,
+    TSPtraceHelperAttachFailed = -30,
+    TSPtraceHelperTerminated = -31,
 };
 
 NSString *ErrorDescription(ErrorCode code);

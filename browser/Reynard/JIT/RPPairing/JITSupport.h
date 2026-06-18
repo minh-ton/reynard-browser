@@ -6,18 +6,12 @@
 //
 
 @import Foundation;
-#import <Security/Security.h>
 
 #import "IdeviceFFI.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 typedef struct DeviceProvider DeviceProvider;
-
-typedef struct {
-  int socketFD;
-  SSLContextRef sslContext;
-} LegacyDebugConnection;
 
 typedef struct {
   AdapterHandle *adapter;
@@ -46,20 +40,7 @@ BOOL configureNoAckMode(DebugProxyHandle *debugProxy,
 BOOL connectDebugSession(DeviceProvider *provider, DebugSession *session,
                          NSString *targetAddress,
                          NSError *_Nullable *_Nullable error);
-BOOL connectLegacyDebugSocket(NSString *targetAddress, uint16_t port,
-                              LegacyDebugConnection *connectionOut,
-                              NSError *_Nullable *_Nullable error);
-BOOL startLegacyDebugService(DeviceProvider *provider,
-                             uint16_t *_Nullable portOut,
-                             NSError *_Nullable *_Nullable error);
-BOOL sendLegacyDebugCommand(LegacyDebugConnection *connection,
-                            NSString *command,
-                            NSString *_Nullable *_Nullable responseOut,
-                            NSError *_Nullable *_Nullable error);
 BOOL detachDebuggerSession(DebugProxyHandle *debugProxy, int32_t pid);
-BOOL detachLegacyDebuggerSession(LegacyDebugConnection *connection,
-                                 int32_t pid);
-void closeLegacyDebugConnection(LegacyDebugConnection *connection);
 
 void runDebugService(int32_t pid, DebugSession *session);
 
