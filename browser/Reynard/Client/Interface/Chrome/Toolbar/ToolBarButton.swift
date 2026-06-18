@@ -12,7 +12,7 @@ final class ToolbarButton: UIButton {
 
     private enum UX {
         static let toolbarButtonCornerRadius: CGFloat = 10
-        static let downloadButtonSideLength: CGFloat = 40
+        static let downloadButtonSideLength: CGFloat = 44
         static let downloadIconSize: CGFloat = 24
         static let downloadIconVerticalOffset: CGFloat = -1
         static let downloadProgressTrackWidth: CGFloat = 18
