@@ -31,7 +31,15 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             isLoading: selectedTab?.state.loadingState.isLoading ?? false
         )
         addonCoordinator.prepareMenuIcons()
-        browserChrome.updateAddressBarMenu(selectedTab: selectedTab, url: selectedURL)
+        let usesDesktopWebsite = selectedTab.flatMap { tab in
+            tab.url.flatMap { url in
+                sessionManager.isDesktopMode(for: url, tabID: tab.id)
+            }
+        }
+        browserChrome.updateAddressBarMenu(
+            url: selectedURL,
+            usesDesktopWebsite: usesDesktopWebsite
+        )
     }
 
     // MARK: - AddressBarDelegate

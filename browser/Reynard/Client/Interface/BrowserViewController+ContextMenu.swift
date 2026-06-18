@@ -37,5 +37,6 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
 
     func contextMenuRestoreInteraction(for session: GeckoSession) {
         contentView.restoreInteraction(for: session)
+        sessionManager.activate(session)
     }
 }

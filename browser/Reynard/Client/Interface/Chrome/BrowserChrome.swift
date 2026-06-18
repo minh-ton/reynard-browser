@@ -239,8 +239,8 @@ final class BrowserChrome: UIView {
         )
     }
 
-    func updateAddressBarMenu(selectedTab: Tab?, url: String?) {
-        addressBar.updateMenu(selectedTab: selectedTab, url: url)
+    func updateAddressBarMenu(url: String?, usesDesktopWebsite: Bool?) {
+        addressBar.updateMenu(url: url, usesDesktopWebsite: usesDesktopWebsite)
     }
 
     func setAddressBarLoadingProgress(_ progress: Float, isLoading: Bool) {

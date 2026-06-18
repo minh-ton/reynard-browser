@@ -1,5 +1,5 @@
 //
-//  EnginePromptCoordinator.swift
+//  PromptPresenter.swift
 //  Reynard
 //
 //  Created by Minh Ton on 16/6/26.
@@ -9,73 +9,71 @@ import GeckoView
 import UIKit
 
 @MainActor
-final class EnginePromptCoordinator: PromptDelegate {
+final class PromptPresenter: PromptPresenting {
     // MARK: - State
 
-    private var activeSelectPickers: [String: SelectPicker] = [:]
-    private var activeColorPickers: [String: ColorPicker] = [:]
-    private var activeDateTimePickers: [String: DateTimePicker] = [:]
-    private var activeFilePickers: [String: FilePicker] = [:]
+    private var selectPickers: [String: SelectPicker] = [:]
+    private var colorPickers: [String: ColorPicker] = [:]
+    private var dateTimePickers: [String: DateTimePicker] = [:]
+    private var filePickers: [String: FilePicker] = [:]
 
     // MARK: - Lifecycle
 
     init() {}
 
-    // MARK: - PromptDelegate
-
-    func onPrompt(session: GeckoSession, request: PromptRequest) async -> PromptResponse? {
+    func present(_ request: PromptRequest, for session: GeckoSession) async -> PromptResponse? {
         switch request {
         case .alert(let request):
             await presentAlert(session: session, request: request)
             return nil
 
         case .button(let request):
-            return await presentButtonPrompt(session: session, request: request)
+            return await presentButton(session: session, request: request)
 
         case .text(let request):
-            return await presentTextPrompt(session: session, request: request)
+            return await presentText(session: session, request: request)
 
         case .folderUpload(let request):
-            return await presentFolderUploadPrompt(session: session, request: request)
+            return await presentFolderUpload(session: session, request: request)
 
         case .color(let request):
-            return await presentColorPrompt(session: session, request: request)
+            return await presentColorPicker(session: session, request: request)
 
         case .dateTime(let request):
-            return await presentDateTimePrompt(session: session, request: request)
+            return await presentDateTimePicker(session: session, request: request)
 
         case .file(let request):
-            return await presentFilePrompt(session: session, request: request)
+            return await presentFilePicker(session: session, request: request)
 
         case .choice(let request):
-            return await presentSelectPrompt(session: session, request: request)
+            return await presentSelectPicker(session: session, request: request)
         }
     }
 
-    func onPromptUpdate(session: GeckoSession, request: PromptRequest) {
+    func update(_ request: PromptRequest) {
         guard case .choice(let request) = request,
-              let picker = activeSelectPickers[request.id] else {
+              let picker = selectPickers[request.id] else {
             return
         }
 
         picker.updateChoices(request.choices, mode: request.mode)
     }
 
-    func onPromptDismiss(session: GeckoSession, promptId: String) {
-        if activeDateTimePickers[promptId] != nil {
+    func dismiss(promptID: String) {
+        if dateTimePickers[promptID] != nil {
             // Gecko fires dismiss when native date UI steals focus; the picker owns completion.
             return
         }
-        activeSelectPickers.removeValue(forKey: promptId)?.cancelAndDismiss()
-        activeColorPickers.removeValue(forKey: promptId)?.cancelAndDismiss()
-        activeDateTimePickers.removeValue(forKey: promptId)?.cancelAndDismiss()
-        activeFilePickers.removeValue(forKey: promptId)?.cancelAndDismiss()
+        selectPickers.removeValue(forKey: promptID)?.cancelAndDismiss()
+        colorPickers.removeValue(forKey: promptID)?.cancelAndDismiss()
+        dateTimePickers.removeValue(forKey: promptID)?.cancelAndDismiss()
+        filePickers.removeValue(forKey: promptID)?.cancelAndDismiss()
     }
 
     // MARK: - Basic Prompts
 
     private func presentAlert(session: GeckoSession, request: AlertPromptRequest) async {
-        guard let presenter = resolvePresenter(session: session) else {
+        guard let presenter = presenter(for: session) else {
             return
         }
 
@@ -92,11 +90,11 @@ final class EnginePromptCoordinator: PromptDelegate {
         }
     }
 
-    private func presentButtonPrompt(
+    private func presentButton(
         session: GeckoSession,
         request: ButtonPromptRequest
     ) async -> PromptResponse? {
-        guard let presenter = resolvePresenter(session: session) else {
+        guard let presenter = presenter(for: session) else {
             return nil
         }
 
@@ -108,7 +106,7 @@ final class EnginePromptCoordinator: PromptDelegate {
             )
 
             for index in 0..<3 {
-                let title = localizedButtonTitle(at: index, request: request)
+                let title = buttonTitle(at: index, request: request)
                 guard !title.isEmpty else { continue }
 
                 let isCancel = index == 2 &&
@@ -132,11 +130,11 @@ final class EnginePromptCoordinator: PromptDelegate {
         }
     }
 
-    private func presentTextPrompt(
+    private func presentText(
         session: GeckoSession,
         request: TextPromptRequest
     ) async -> PromptResponse? {
-        guard let presenter = resolvePresenter(session: session) else {
+        guard let presenter = presenter(for: session) else {
             return nil
         }
 
@@ -159,11 +157,11 @@ final class EnginePromptCoordinator: PromptDelegate {
         }
     }
 
-    private func presentFolderUploadPrompt(
+    private func presentFolderUpload(
         session: GeckoSession,
         request: FolderUploadPromptRequest
     ) async -> PromptResponse? {
-        guard let presenter = resolvePresenter(session: session) else {
+        guard let presenter = presenter(for: session) else {
             return nil
         }
 
@@ -189,11 +187,11 @@ final class EnginePromptCoordinator: PromptDelegate {
 
     // MARK: - Picker Prompts
 
-    private func presentColorPrompt(
+    private func presentColorPicker(
         session: GeckoSession,
         request: ColorPromptRequest
     ) async -> PromptResponse? {
-        guard let anchor = resolveAnchorFrame(request.anchor, session: session) else {
+        guard let anchor = promptAnchor(for: request.anchor, session: session) else {
             return nil
         }
 
@@ -201,19 +199,19 @@ final class EnginePromptCoordinator: PromptDelegate {
             anchorRect: anchor.rect,
             geckoView: anchor.view
         )
-        activeColorPickers[request.id] = picker
-        defer { activeColorPickers.removeValue(forKey: request.id) }
+        colorPickers[request.id] = picker
+        defer { colorPickers.removeValue(forKey: request.id) }
 
         let result = await picker.present(initialColor: UIColor(hexString: request.value) ?? .black)
 
         return result.map(PromptResponse.color)
     }
 
-    private func presentDateTimePrompt(
+    private func presentDateTimePicker(
         session: GeckoSession,
         request: DateTimePromptRequest
     ) async -> PromptResponse? {
-        guard let anchor = resolveAnchorFrame(request.anchor, session: session) else {
+        guard let anchor = promptAnchor(for: request.anchor, session: session) else {
             return nil
         }
 
@@ -222,8 +220,8 @@ final class EnginePromptCoordinator: PromptDelegate {
             anchorRect: anchor.rect,
             geckoView: anchor.view
         )
-        activeDateTimePickers[request.id] = picker
-        defer { activeDateTimePickers.removeValue(forKey: request.id) }
+        dateTimePickers[request.id] = picker
+        defer { dateTimePickers.removeValue(forKey: request.id) }
 
         let result = await picker.present(
             value: request.value,
@@ -235,11 +233,11 @@ final class EnginePromptCoordinator: PromptDelegate {
         return result.map(PromptResponse.dateTime)
     }
 
-    private func presentFilePrompt(
+    private func presentFilePicker(
         session: GeckoSession,
         request: FilePickerPromptRequest
     ) async -> PromptResponse? {
-        guard let anchor = resolveAnchorFrame(request.anchor, session: session) else {
+        guard let anchor = promptAnchor(for: request.anchor, session: session) else {
             return nil
         }
 
@@ -251,19 +249,19 @@ final class EnginePromptCoordinator: PromptDelegate {
             anchorRect: anchor.rect,
             geckoView: anchor.view
         )
-        activeFilePickers[request.id] = picker
-        defer { activeFilePickers.removeValue(forKey: request.id) }
+        filePickers[request.id] = picker
+        defer { filePickers.removeValue(forKey: request.id) }
 
         let result = await picker.present()
 
         return result.map(PromptResponse.files)
     }
 
-    private func presentSelectPrompt(
+    private func presentSelectPicker(
         session: GeckoSession,
         request: SelectPromptRequest
     ) async -> PromptResponse? {
-        guard let anchor = resolveAnchorFrame(request.anchor, session: session) else {
+        guard let anchor = promptAnchor(for: request.anchor, session: session) else {
             return nil
         }
 
@@ -273,8 +271,8 @@ final class EnginePromptCoordinator: PromptDelegate {
             sourceRect: anchor.rect,
             geckoView: anchor.view
         )
-        activeSelectPickers[request.id] = picker
-        defer { activeSelectPickers.removeValue(forKey: request.id) }
+        selectPickers[request.id] = picker
+        defer { selectPickers.removeValue(forKey: request.id) }
 
         let result = await picker.present()
 
@@ -283,12 +281,12 @@ final class EnginePromptCoordinator: PromptDelegate {
 
     // MARK: - Resolution
 
-    private func resolvePresenter(session: GeckoSession) -> UIViewController? {
+    private func presenter(for session: GeckoSession) -> UIViewController? {
         session.engineView?.nearestViewController()?.topPresentedController()
     }
 
-    private func resolveAnchorFrame(
-        _ anchor: PromptAnchor,
+    private func promptAnchor(
+        for anchor: PromptAnchor,
         session: GeckoSession
     ) -> (view: UIView, rect: CGRect)? {
         guard let rect = anchor.rect,
@@ -305,7 +303,7 @@ final class EnginePromptCoordinator: PromptDelegate {
 
     // MARK: - Helpers
 
-    private func localizedButtonTitle(at index: Int, request: ButtonPromptRequest) -> String {
+    private func buttonTitle(at index: Int, request: ButtonPromptRequest) -> String {
         let label = request.buttonTitles.indices.contains(index) ? request.buttonTitles[index] : ""
         let customLabel = request.customButtonTitles.indices.contains(index) ? request.customButtonTitles[index] : ""
 

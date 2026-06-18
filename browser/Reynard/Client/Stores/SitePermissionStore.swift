@@ -204,7 +204,7 @@ final class SitePermissionStore {
         }
     }
     
-    func removePrivateTabPerms(for session: GeckoSession) {
+    func removePrivatePermissions(for session: GeckoSession) {
         guard session.isPrivateMode else {
             return
         }

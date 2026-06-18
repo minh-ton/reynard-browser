@@ -288,10 +288,10 @@ final class AddressBar: UIView {
         applyState()
     }
 
-    func updateMenu(selectedTab: Tab?, url: String?) {
+    func updateMenu(url: String?, usesDesktopWebsite: Bool?) {
         addonsMenu = AddressBarMenu.makeMenu(
-            selectedTab: selectedTab,
             selectedURL: url,
+            usesDesktopWebsite: usesDesktopWebsite,
             addonItems: delegate?.addressBarAddonItems(self) ?? [],
             onAddonSelected: { [weak self] item in
                 guard let self else { return }

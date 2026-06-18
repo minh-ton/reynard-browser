@@ -19,6 +19,7 @@ final class LinkPreviewViewController: UIViewController {
 
     private(set) var pageURL: String
     private(set) var pageTitle: String?
+    private let sessionManager: SessionManager
     private var session: GeckoSession?
     private var hasClosedSession = false
 
@@ -28,8 +29,9 @@ final class LinkPreviewViewController: UIViewController {
 
     // MARK: - Lifecycle
 
-    init(url: URL, isPrivate: Bool) {
+    init(url: URL, isPrivate: Bool, sessionManager: SessionManager) {
         pageURL = url.absoluteString
+        self.sessionManager = sessionManager
         super.init(nibName: nil, bundle: nil)
         configurePreview(isPrivate: isPrivate)
     }
@@ -55,10 +57,17 @@ final class LinkPreviewViewController: UIViewController {
 
     private func configurePreview(isPrivate: Bool) {
         preferredContentSize = UX.preferredPreviewSize
-        let session = GeckoSession()
-        session.isPrivateMode = isPrivate
-        session.contentDelegate = self
-        session.navigationDelegate = self
+        let session = sessionManager.createSession(
+            url: pageURL,
+            tabID: nil,
+            isPrivate: isPrivate,
+            opening: .manual,
+            delegates: SessionDelegates()
+        )
+        sessionManager.bindDelegates(
+            to: session,
+            delegates: SessionDelegates(content: self, navigation: self)
+        )
         self.session = session
     }
 
@@ -72,6 +81,9 @@ final class LinkPreviewViewController: UIViewController {
 
     func releaseSession() -> GeckoSession? {
         hasClosedSession = true
+        if let session {
+            sessionManager.deactivate(session)
+        }
         let committedSession = session
         session = nil
         geckoView.session = nil
@@ -83,14 +95,10 @@ final class LinkPreviewViewController: UIViewController {
             return
         }
         hasClosedSession = true
-        session?.contentDelegate = nil
-        session?.navigationDelegate = nil
-        session?.promptDelegate = nil
-        session?.selectionActionDelegate = nil
-        session?.setFocused(false)
-        session?.setActive(false)
         geckoView.session = nil
-        session?.close()
+        if let session {
+            sessionManager.close(session)
+        }
         session = nil
     }
 
@@ -99,8 +107,9 @@ final class LinkPreviewViewController: UIViewController {
             return
         }
 
-        session.open()
+        sessionManager.open(session)
         geckoView.session = session
+        sessionManager.activate(session)
         session.load(pageURL)
     }
 }

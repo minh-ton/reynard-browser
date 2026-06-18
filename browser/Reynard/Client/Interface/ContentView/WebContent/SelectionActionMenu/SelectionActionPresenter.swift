@@ -1,5 +1,5 @@
 //
-//  EngineSelectionActionCoordinator.swift
+//  SelectionActionPresenter.swift
 //  Reynard
 //
 //  Created by Minh Ton on 16/6/26.
@@ -9,7 +9,7 @@ import GeckoView
 import UIKit
 
 @MainActor
-final class EngineSelectionActionCoordinator: SelectionActionDelegate {
+final class SelectionActionPresenter: SelectionActionPresenting {
     // MARK: - UX
 
     private enum UX {
@@ -18,27 +18,25 @@ final class EngineSelectionActionCoordinator: SelectionActionDelegate {
 
     // MARK: - State
 
-    private var activeHosts: [ObjectIdentifier: SelectionActionMenuHostView] = [:]
+    private var menuHosts: [ObjectIdentifier: SelectionActionMenuHostView] = [:]
 
     // MARK: - Lifecycle
 
     init() {}
 
-    // MARK: - SelectionActionDelegate
-
-    func onShowSelectionAction(session: GeckoSession, request: SelectionActionRequest) {
+    func show(_ request: SelectionActionRequest, for session: GeckoSession) {
         guard request.editable == false,
               request.actions.contains(SelectionActionCommand.copy) ||
                 request.actions.contains(SelectionActionCommand.selectAll),
               !request.selection.isEmpty,
               let targetView = session.engineView,
-              let selectionRect = convertScreenRect(request.screenRect, into: targetView) else {
-            activeHost(for: session)?.hideMenu()
+              let selectionRect = localRect(for: request.screenRect, in: targetView) else {
+            existingMenuHost(for: session)?.hideMenu()
             return
         }
 
-        let host = host(for: session)
-        let anchorRect = menuAnchorRect(from: selectionRect, in: targetView.bounds)
+        let host = menuHost(for: session)
+        let anchorRect = anchorRect(for: selectionRect, in: targetView.bounds)
         host.present(
             on: targetView,
             session: session,
@@ -48,30 +46,30 @@ final class EngineSelectionActionCoordinator: SelectionActionDelegate {
         )
     }
 
-    func onHideSelectionAction(session: GeckoSession) {
-        activeHost(for: session)?.hideMenu()
+    func hide(for session: GeckoSession) {
+        existingMenuHost(for: session)?.hideMenu()
     }
 
     // MARK: - Hosts
 
-    private func activeHost(for session: GeckoSession) -> SelectionActionMenuHostView? {
-        activeHosts[ObjectIdentifier(session)]
+    private func existingMenuHost(for session: GeckoSession) -> SelectionActionMenuHostView? {
+        menuHosts[ObjectIdentifier(session)]
     }
 
-    private func host(for session: GeckoSession) -> SelectionActionMenuHostView {
+    private func menuHost(for session: GeckoSession) -> SelectionActionMenuHostView {
         let key = ObjectIdentifier(session)
-        if let host = activeHosts[key] {
+        if let host = menuHosts[key] {
             return host
         }
 
         let host = SelectionActionMenuHostView()
-        activeHosts[key] = host
+        menuHosts[key] = host
         return host
     }
 
     // MARK: - Geometry
 
-    private func convertScreenRect(_ screenRect: CGRect, into view: UIView) -> CGRect? {
+    private func localRect(for screenRect: CGRect, in view: UIView) -> CGRect? {
         let window = (view as? UIWindow) ?? view.window
         guard let window else { return nil }
 
@@ -93,7 +91,7 @@ final class EngineSelectionActionCoordinator: SelectionActionDelegate {
         return clippedRect
     }
 
-    private func menuAnchorRect(from selectionRect: CGRect, in bounds: CGRect) -> CGRect {
+    private func anchorRect(for selectionRect: CGRect, in bounds: CGRect) -> CGRect {
         let verticalOffset: CGFloat
         if #available(iOS 26.0, *) {
             verticalOffset = UX.modernMenuVerticalOffset

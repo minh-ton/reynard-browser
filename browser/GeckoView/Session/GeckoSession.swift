@@ -13,7 +13,13 @@ protocol GeckoSessionHandlerCommon: GeckoEventListenerInternal {
     var enabled: Bool { get }
 }
 
-public struct GeckoSessionSettings {
+public struct GeckoSessionSettings: Equatable {
+    public static let `default` = GeckoSessionSettings(
+        userAgentOverride: nil,
+        userAgentMode: 0,
+        viewportMode: 0
+    )
+
     public let userAgentOverride: String?
     public let userAgentMode: Int
     public let viewportMode: Int
@@ -34,17 +40,13 @@ public class GeckoSession {
     let dispatcher: GeckoEventDispatcherWrapper = GeckoEventDispatcherWrapper()
     var window: GeckoViewWindow?
     var id: String?
-    public var isAddonPopup = false
-    public var isPrivateMode = false
+    public let isAddonPopup: Bool
+    public let isPrivateMode: Bool
     lazy var addonSessionListener = AddonSessionListener(session: self)
-    public var userAgentOverride: String?
-    public var userAgentMode = 0
-    public var viewportMode = 0
+    public private(set) var settings: GeckoSessionSettings
     
     public func updateSettings(_ settings: GeckoSessionSettings) {
-        userAgentOverride = settings.userAgentOverride
-        userAgentMode = settings.userAgentMode
-        viewportMode = settings.viewportMode
+        self.settings = settings
         
         guard isOpen() else { return }
         
@@ -119,7 +121,15 @@ public class GeckoSession {
         mediaSessionHandler,
     ]
     
-    public init() {
+    public init(
+        settings: GeckoSessionSettings = .default,
+        isPrivateMode: Bool = false,
+        isAddonPopup: Bool = false
+    ) {
+        self.settings = settings
+        self.isPrivateMode = isPrivateMode
+        self.isAddonPopup = isAddonPopup
+
         for sessionHandler in sessionHandlers {
             for type in sessionHandler.events {
                 dispatcher.addListener(type: type, listener: sessionHandler)
@@ -140,9 +150,9 @@ public class GeckoSession {
             "chromeUri": nil,
             "screenId": 0,
             "useTrackingProtection": false,
-            "userAgentMode": userAgentMode,
-            "userAgentOverride": userAgentOverride,
-            "viewportMode": viewportMode,
+            "userAgentMode": settings.userAgentMode,
+            "userAgentOverride": settings.userAgentOverride,
+            "viewportMode": settings.viewportMode,
             "displayMode": 0,
             "suspendMediaWhenInactive": false,
             "allowJavascript": true,
@@ -174,16 +184,17 @@ public class GeckoSession {
     }
     
     public func close() {
-        guard let window else {
-            return
-        }
-
         contentDelegate = nil
         navigationDelegate = nil
+        permissionDelegate = nil
         progressDelegate = nil
         promptDelegate = nil
         selectionActionDelegate = nil
         mediaSessionDelegate = nil
+
+        guard let window else {
+            return
+        }
         
         window.close()
         self.window = nil

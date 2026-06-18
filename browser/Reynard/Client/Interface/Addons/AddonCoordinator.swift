@@ -41,6 +41,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     private weak var dataSource: AddonCoordinatorDataSource?
     private weak var delegate: AddonCoordinatorDelegate?
+    private let sessionManager: SessionManager
     private var browserActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private var pageActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private let iconCache = NSCache<NSString, UIImage>()
@@ -50,9 +51,14 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     // MARK: - Initialization
     
-    init(dataSource: AddonCoordinatorDataSource, delegate: AddonCoordinatorDelegate) {
+    init(
+        dataSource: AddonCoordinatorDataSource,
+        delegate: AddonCoordinatorDelegate,
+        sessionManager: SessionManager
+    ) {
         self.dataSource = dataSource
         self.delegate = delegate
+        self.sessionManager = sessionManager
         updateCoordinator = AddonUpdateCoordinator()
         super.init()
         configureIconCache()
@@ -369,6 +375,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     private func presentPopup(url: String) {
         let popupViewController = AddonPopupViewController(
             url: url,
+            sessionManager: sessionManager,
             openInNewTab: { [weak self] url in
                 self?.openPopupURLInTab(url)
             },

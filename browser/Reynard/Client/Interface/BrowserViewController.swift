@@ -25,7 +25,11 @@ final class BrowserViewController: UIViewController {
 
     // MARK: - State
 
-    lazy var tabManager: TabManager = TabManagerImplementation(delegate: self)
+    let sessionManager = SessionManager()
+    lazy var tabManager: TabManager = TabManagerImplementation(
+        delegate: self,
+        sessionManager: sessionManager
+    )
     private var preFullscreenOrientation: UIInterfaceOrientation?
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
@@ -45,13 +49,17 @@ final class BrowserViewController: UIViewController {
         delegate: self,
         overlayCoordinator: overlayCoordinator
     )
-    lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self)
+    lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self, sessionManager: sessionManager)
     lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
     lazy var sidebarCoordinator = SidebarCoordinator(
         host: self,
         canHostSidebar: allowsSidebarHosting
     )
-    lazy var addonCoordinator = AddonCoordinator(dataSource: self, delegate: self)
+    lazy var addonCoordinator = AddonCoordinator(
+        dataSource: self,
+        delegate: self,
+        sessionManager: sessionManager
+    )
 
     private(set) var isShowingFullscreenMedia = false {
         didSet {

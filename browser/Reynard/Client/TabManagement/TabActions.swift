@@ -66,28 +66,6 @@ extension TabManager {
         selectedTab.state.loadingState.isLoading ? selectedTab.session.stop() : selectedTab.session.reload()
     }
     
-    @discardableResult
-    func changeWebsiteModeForSelectedTab() -> Bool {
-        guard let tab = selectedTab,
-              let url = tab.url,
-              let navigationAction = GeckoSessionController.shared.changeWebsiteMode(for: url, tabID: tab.id) else {
-            return false
-        }
-        
-        switch navigationAction {
-        case .reload:
-            tab.session.updateSettings(GeckoSessionController.shared.sessionSettings(for: url, tabID: tab.id))
-            tab.session.reload()
-        case let .load(overrideURL):
-            tab.state.displayState = .pending(overrideURL)
-            tab.state.suppressInitialNavigation = false
-            tab.session.updateSettings(GeckoSessionController.shared.sessionSettings(for: overrideURL, tabID: tab.id))
-            tab.session.load(overrideURL, flags: GeckoSessionLoadFlags.replaceHistory)
-        }
-        
-        return true
-    }
-    
     var activeTabs: [Tab] {
         selectedTabMode == .private ? privateTabs : regularTabs
     }
@@ -126,5 +104,31 @@ extension TabManager {
         }
         
         return url.lowercased().hasPrefix("about:blank")
+    }
+}
+
+extension TabManagerImplementation {
+    @discardableResult
+    func changeWebsiteModeForSelectedTab() -> Bool {
+        guard let tab = selectedTab,
+              let url = tab.url,
+              let navigationAction = sessionManager.toggleWebsiteMode(
+                for: url,
+                tabID: tab.id
+              ) else {
+            return false
+        }
+
+        switch navigationAction {
+        case .reload:
+            sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
+            tab.session.reload()
+        case let .load(overrideURL):
+            tab.state.displayState = .pending(overrideURL)
+            tab.state.suppressInitialNavigation = false
+            sessionManager.updateSettings(of: tab.session, for: overrideURL, tabID: tab.id)
+            tab.session.load(overrideURL, flags: GeckoSessionLoadFlags.replaceHistory)
+        }
+        return true
     }
 }

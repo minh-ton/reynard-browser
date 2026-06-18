@@ -38,6 +38,8 @@ protocol TabManager: AnyObject {
     func tabIndex(for session: GeckoSession) -> Int?
     func shareableURL(for tab: Tab) -> URL?
     func updateThumbnail(_ image: UIImage?, forTabAt index: Int)
+    @discardableResult
+    func changeWebsiteModeForSelectedTab() -> Bool
 }
 
 enum TabManagerUpdateReason {

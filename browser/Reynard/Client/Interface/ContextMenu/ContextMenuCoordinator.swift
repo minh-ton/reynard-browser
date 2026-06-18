@@ -23,6 +23,7 @@ final class ContextMenuCoordinator: NSObject {
     // MARK: - State
 
     private weak var host: ContextMenuCoordinatorHost?
+    private let sessionManager: SessionManager
     private var pendingContext: ContextMenuContext?
     private var interaction: UIContextMenuInteraction?
     private var linkPreview: LinkPreviewViewController?
@@ -31,8 +32,9 @@ final class ContextMenuCoordinator: NSObject {
 
     // MARK: - Lifecycle
 
-    init(host: ContextMenuCoordinatorHost) {
+    init(host: ContextMenuCoordinatorHost, sessionManager: SessionManager) {
         self.host = host
+        self.sessionManager = sessionManager
         super.init()
     }
 
@@ -181,6 +183,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         return LinkPreviewMenu.configuration(
             for: context,
             isPrivate: host.contextMenuSelectedTabIsPrivate,
+            sessionManager: sessionManager,
             onPreviewCreated: { [weak self] preview in
                 self?.linkPreview = preview
             },

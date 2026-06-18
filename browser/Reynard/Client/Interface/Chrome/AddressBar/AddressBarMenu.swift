@@ -21,8 +21,8 @@ enum AddressBarMenu {
     // MARK: - Menu Construction
     
     static func makeMenu(
-        selectedTab: Tab?,
         selectedURL: String?,
+        usesDesktopWebsite: Bool?,
         addonItems: [AddonItem],
         onAddonSelected: @escaping (AddonMenuItem) -> Void,
         onChangeWebsiteMode: @escaping () -> Void,
@@ -72,9 +72,7 @@ enum AddressBarMenu {
             )
         ]
         
-        if let selectedTab,
-           let selectedURL,
-           let isDesktop = GeckoSessionController.shared.isDesktopMode(for: selectedURL, tabID: selectedTab.id) {
+        if let isDesktop = usesDesktopWebsite {
             let title = isDesktop ? "Request Mobile Website" : "Request Desktop Website"
             let imageName = isDesktop ? "iphone" : "desktopcomputer"
             pageActions.append(UIAction(title: title, image: UIImage(systemName: imageName)) { _ in

@@ -94,6 +94,7 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
             }
             
             contentView.restoreInteraction(for: session)
+            sessionManager.activate(session)
         }
     }
 }

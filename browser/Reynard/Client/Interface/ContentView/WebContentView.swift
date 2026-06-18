@@ -78,8 +78,6 @@ final class WebContentView: UIView {
 
     func restoreInteraction(for session: GeckoSession) {
         webView.session = session
-        session.setActive(true)
-        session.setFocused(true)
     }
 
     // MARK: - Interaction

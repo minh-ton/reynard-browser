@@ -11,6 +11,7 @@ struct LinkPreviewMenu {
     static func configuration(
         for context: ContextMenuContext,
         isPrivate: Bool,
+        sessionManager: SessionManager,
         onPreviewCreated: @escaping (LinkPreviewViewController) -> Void,
         openInNewTab: @escaping () -> Void,
         openInNewPrivateTab: @escaping () -> Void,
@@ -21,7 +22,11 @@ struct LinkPreviewMenu {
         }
 
         return UIContextMenuConfiguration(identifier: url as NSURL) { [url] in
-            let viewController = LinkPreviewViewController(url: url, isPrivate: isPrivate)
+            let viewController = LinkPreviewViewController(
+                url: url,
+                isPrivate: isPrivate,
+                sessionManager: sessionManager
+            )
             onPreviewCreated(viewController)
             return viewController
         } actionProvider: { _ in

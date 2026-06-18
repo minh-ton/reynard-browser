@@ -28,25 +28,36 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     // MARK: - State
     
     private let url: String
+    private let sessionManager: SessionManager
     private let openInNewTab: (String) -> Void
     private let createSession: (String, String) -> GeckoSession?
     private let didDismiss: () -> Void
     private let geckoView = GeckoView()
-    private let session = GeckoSession()
+    private let session: GeckoSession
     private var hasClosedSession = false
     
     // MARK: - Lifecycle
     
     init(
         url: String,
+        sessionManager: SessionManager,
         openInNewTab: @escaping (String) -> Void,
         createSession: @escaping (String, String) -> GeckoSession?,
         didDismiss: @escaping () -> Void
     ) {
         self.url = url
+        self.sessionManager = sessionManager
         self.openInNewTab = openInNewTab
         self.createSession = createSession
         self.didDismiss = didDismiss
+        session = sessionManager.createSession(
+            url: url,
+            tabID: nil,
+            isPrivate: false,
+            isAddonPopup: true,
+            opening: .manual,
+            delegates: SessionDelegates()
+        )
         super.init(nibName: nil, bundle: nil)
         configureSession()
     }
@@ -78,11 +89,11 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     // MARK: - Setup
     
     private func configureSession() {
-        session.isAddonPopup = true
-        session.contentDelegate = self
-        session.navigationDelegate = self
-        session.updateSettings(GeckoSessionController.shared.sessionSettings(for: url, tabID: nil))
-        session.open()
+        sessionManager.bindDelegates(
+            to: session,
+            delegates: SessionDelegates(content: self, navigation: self)
+        )
+        sessionManager.open(session)
     }
     
     private func configureView() {
@@ -105,6 +116,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     
     private func loadPopup() {
         geckoView.session = session
+        sessionManager.activate(session)
         session.load(url)
     }
     
@@ -238,6 +250,6 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         
         hasClosedSession = true
         geckoView.session = nil
-        session.close()
+        sessionManager.close(session)
     }
 }
