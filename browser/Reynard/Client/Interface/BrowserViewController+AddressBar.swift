@@ -161,7 +161,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                 url: url,
                 limitsToFavorites: true
             )
-        } else if let bookmark = BookmarkStore.shared.bookmark(for: url) {
+        } else if let bookmark = BookmarkStore.shared.bookmark(savedFor: url) {
             bookmarkController = EditBookmarkViewController(bookmark: bookmark)
         } else {
             bookmarkController = EditBookmarkViewController(title: title, url: url)

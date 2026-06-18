@@ -66,7 +66,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func persistState() {
-        store.saveTabs(
+        store.persistTabs(
             regularTabs: regularTabs,
             privateTabs: privateTabs,
             selectedRegularTabID: regularTabs[safe: selectedRegularTabIndex]?.id,
@@ -195,7 +195,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         historyStore.recordVisit(url: url, title: tab.title)
         if let title,
            !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            historyStore.updateTitle(for: url, title: title)
+            historyStore.updatePageTitle(for: url, title: title)
         }
     }
     
@@ -227,7 +227,7 @@ final class TabManagerImplementation: NSObject, TabManager {
             return nil
         }
         
-        return faviconStore.cachedImage(for: url)
+        return faviconStore.cachedFavicon(for: url)
     }
     
     private func scheduleFaviconUpdate(forTabAt index: Int, mode: TabMode? = nil) {
@@ -255,7 +255,7 @@ final class TabManagerImplementation: NSObject, TabManager {
                 return
             }
             
-            let image = await self.faviconStore.resolveFavicon(for: url)
+            let image = await self.faviconStore.favicon(for: url)
             guard !Task.isCancelled else {
                 return
             }
@@ -286,7 +286,7 @@ final class TabManagerImplementation: NSObject, TabManager {
             return true
         }
         
-        let snapshot = store.loadSnapshot()
+        let snapshot = store.currentSnapshot()
         guard !snapshot.regularTabs.isEmpty || !snapshot.privateTabs.isEmpty else {
             return false
         }
@@ -712,7 +712,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         
         let tab = tabs(for: selectedTabMode)[index]
         tab.thumbnail = image
-        store.saveThumbnail(image, for: tab.id)
+        store.persistThumbnail(image, for: tab.id)
     }
     
     private func createSession(
@@ -741,7 +741,7 @@ extension TabManagerImplementation: ContentDelegate {
         tab.title = title
         if !tab.isPrivate,
            let url = remoteURL(from: tab.url) {
-            historyStore.updateTitle(for: url, title: title)
+            historyStore.updatePageTitle(for: url, title: title)
         }
         notifyUpdate(at: location.index, mode: location.mode, reason: .title)
         persistState()
@@ -826,7 +826,7 @@ extension TabManagerImplementation: ContentDelegate {
         if delegate?.tabManager(self, shouldHandleExternalResponse: response, for: session) == true {
             return
         }
-        guard let download = DownloadStore.shared.prepareDownload(from: response) else {
+        guard let download = DownloadStore.shared.pendingDownload(from: response) else {
             return
         }
         
@@ -834,7 +834,7 @@ extension TabManagerImplementation: ContentDelegate {
     }
     
     func onSavePdf(session: GeckoSession, request: SavePdfInfo) {
-        guard let download = DownloadStore.shared.prepareDownload(from: request) else {
+        guard let download = DownloadStore.shared.pendingDownload(from: request) else {
             return
         }
         

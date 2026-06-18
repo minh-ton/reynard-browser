@@ -12,7 +12,7 @@ extension BrowserViewController {
 
     func presentLibrary(initialSection: LibrarySection = .bookmarks) {
         if initialSection == .downloads {
-            DownloadStore.shared.markCompletedDownloadsViewed()
+            DownloadStore.shared.markCompletedAsViewed()
             if browserLayout.interfaceIdiom == .pad,
                browserLayout.chromeMode == .pad {
                 sidebarCoordinator.showSection(.downloads)

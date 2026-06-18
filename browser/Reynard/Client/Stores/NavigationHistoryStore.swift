@@ -8,6 +8,8 @@
 import Foundation
 
 final class NavigationHistoryStore {
+    // MARK: - Types
+
     static let shared = NavigationHistoryStore()
     
     struct Snapshot {
@@ -43,6 +45,8 @@ final class NavigationHistoryStore {
     private let storageURL: URL
     private let queue = DispatchQueue(label: "com.minh-ton.navigation-history-store", qos: .userInitiated)
     
+    // MARK: - Lifecycle
+
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -59,7 +63,9 @@ final class NavigationHistoryStore {
         }
     }
     
-    func loadSnapshot(for tabID: UUID) -> Snapshot {
+    // MARK: - Navigation
+
+    func currentSnapshot(for tabID: UUID) -> Snapshot {
         queue.sync {
             let history = loadHistory(for: tabID)
             return Snapshot(
@@ -71,7 +77,7 @@ final class NavigationHistoryStore {
         }
     }
     
-    func record(_ url: String, for tabID: UUID) -> Snapshot {
+    func recordNavigation(to url: String, for tabID: UUID) -> Snapshot {
         queue.sync {
             var history = loadHistory(for: tabID)
             guard history.currentURL != url else {
@@ -90,16 +96,16 @@ final class NavigationHistoryStore {
         }
     }
     
-    func setUsesStoredHistory(_ usesStoredHistory: Bool, for tabID: UUID) -> Snapshot {
+    func setUsesPersistedHistory(_ usesPersistedHistory: Bool, for tabID: UUID) -> Snapshot {
         queue.sync {
             var history = loadHistory(for: tabID)
-            history.usesStoredHistory = usesStoredHistory
+            history.usesStoredHistory = usesPersistedHistory
             saveHistory(history, for: tabID)
             return snapshot(from: history)
         }
     }
     
-    func moveBack(for tabID: UUID) -> String? {
+    func goBack(for tabID: UUID) -> String? {
         queue.sync {
             var history = loadHistory(for: tabID)
             guard let targetURL = history.backHistory.popLast() else {
@@ -117,7 +123,7 @@ final class NavigationHistoryStore {
         }
     }
     
-    func moveForward(for tabID: UUID) -> String? {
+    func goForward(for tabID: UUID) -> String? {
         queue.sync {
             var history = loadHistory(for: tabID)
             guard !history.forwardHistory.isEmpty else {
@@ -136,7 +142,7 @@ final class NavigationHistoryStore {
         }
     }
     
-    func removeHistory(for tabID: UUID) {
+    func removeNavigationHistory(for tabID: UUID) {
         queue.async {
             let fileURL = self.historyURL(for: tabID)
             guard self.fileManager.fileExists(atPath: fileURL.path) else {
@@ -147,6 +153,8 @@ final class NavigationHistoryStore {
         }
     }
     
+    // MARK: - Persistence
+
     private func createStorageDirectory() {
         try? fileManager.createDirectory(at: storageURL, withIntermediateDirectories: true)
     }

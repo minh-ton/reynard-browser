@@ -86,7 +86,7 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         
-        let root = limitsToFavorites ? store.favoritesFolderHierarchy() : store.folderHierarchy()
+        let root = limitsToFavorites ? store.favoritesFolderHierarchy() : store.childFolders()
         folderRows = makeBookmarkFolderRows(root: root, store: store)
         if selectedFolderID == nil {
             selectedFolderID = root.parent.guid
@@ -159,7 +159,7 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
             return
         }
         
-        _ = store.createFolder(title: title, inFolderWithGUID: selectedFolderID)
+        _ = store.addFolder(title: title, to: selectedFolderID)
         dismiss(animated: true)
     }
     

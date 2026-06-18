@@ -10,6 +10,8 @@ import SQLite3
 import UIKit
 
 final class TabManagementStore {
+    // MARK: - Types
+
     static let shared = TabManagementStore()
     
     enum LastTabOverview: String, Codable {
@@ -37,7 +39,7 @@ final class TabManagementStore {
     private struct StorageURLs {
         let directoryURL: URL
         let databaseURL: URL
-        let thumbCacheDirectoryURL: URL
+        let thumbnailCacheDirectoryURL: URL
     }
     
     private struct PersistedTab {
@@ -59,6 +61,8 @@ final class TabManagementStore {
     private var database: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
+    // MARK: - Lifecycle
+
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -72,7 +76,7 @@ final class TabManagementStore {
         self.storage = StorageURLs(
             directoryURL: directoryURL,
             databaseURL: directoryURL.appendingPathComponent("TabManagement", isDirectory: false),
-            thumbCacheDirectoryURL: directoryURL.appendingPathComponent("ThumbCache", isDirectory: true)
+            thumbnailCacheDirectoryURL: directoryURL.appendingPathComponent("ThumbCache", isDirectory: true)
         )
         
         stateQueue.sync {
@@ -95,7 +99,9 @@ final class TabManagementStore {
         }
     }
     
-    func loadSnapshot() -> Snapshot {
+    // MARK: - Tabs
+
+    func currentSnapshot() -> Snapshot {
         stateQueue.sync {
             let state = persistedStateLocked()
             return Snapshot(
@@ -109,8 +115,8 @@ final class TabManagementStore {
         }
     }
 
-    func restoredTabMode() -> TabMode {
-        let snapshot = loadSnapshot()
+    func preferredRestoredMode() -> TabMode {
+        let snapshot = currentSnapshot()
         if snapshot.selectedTabMode == .private, !snapshot.privateTabs.isEmpty {
             return .private
         }
@@ -126,7 +132,7 @@ final class TabManagementStore {
         return .regular
     }
     
-    func saveTabs(
+    func persistTabs(
         regularTabs: [Tab],
         privateTabs: [Tab],
         selectedRegularTabID: UUID?,
@@ -169,7 +175,7 @@ final class TabManagementStore {
         }
     }
     
-    func saveLastTabOverview(_ lastTabOverview: LastTabOverview) {
+    func persistLastOverview(_ lastTabOverview: LastTabOverview) {
         stateQueue.async {
             let state = self.persistedStateLocked()
             _ = self.saveStateLocked(
@@ -181,7 +187,7 @@ final class TabManagementStore {
         }
     }
     
-    func saveThumbnail(_ image: UIImage?, for tabID: UUID) {
+    func persistThumbnail(_ image: UIImage?, for tabID: UUID) {
         stateQueue.async {
             let fileURL = self.thumbnailFileURL(for: tabID)
             
@@ -200,15 +206,17 @@ final class TabManagementStore {
         }
     }
     
-    func searchTabs(matching query: String, limit: Int, isPrivate: Bool) -> [TabSnapshot] {
+    func tabs(matching query: String, limit: Int, isPrivate: Bool) -> [TabSnapshot] {
         stateQueue.sync {
             searchTabsLocked(matching: query, limit: limit, isPrivate: isPrivate)
         }
     }
     
+    // MARK: - Storage
+
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
-        try? fileManager.createDirectory(at: storage.thumbCacheDirectoryURL, withIntermediateDirectories: true)
+        try? fileManager.createDirectory(at: storage.thumbnailCacheDirectoryURL, withIntermediateDirectories: true)
     }
     
     private func openDatabaseLocked() {
@@ -385,7 +393,7 @@ final class TabManagementStore {
             return []
         }
         
-        let strippedQuery = strippedURLString(from: normalizedQuery)
+        let strippedQuery = URLUtils.normalizedURLMatchString(from: normalizedQuery)
         let tabs = fetchTabsLocked(isPrivate: isPrivate)
         var matches: [TabSnapshot] = []
         matches.reserveCapacity(min(limit, tabs.count))
@@ -393,7 +401,7 @@ final class TabManagementStore {
         for tab in tabs {
             let title = tab.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let urlValue = tab.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let strippedURL = strippedURLString(from: urlValue)
+            let strippedURL = URLUtils.normalizedURLMatchString(from: urlValue)
             let titleMatches = !title.isEmpty && title.contains(normalizedQuery)
             let urlMatches = !strippedURL.isEmpty && !strippedQuery.isEmpty && strippedURL.hasPrefix(strippedQuery)
             guard titleMatches || urlMatches else {
@@ -440,6 +448,8 @@ final class TabManagementStore {
         return true
     }
     
+    // MARK: - Thumbnails
+
     private func loadThumbnailLocked(for tabID: UUID) -> UIImage? {
         guard let data = try? Data(contentsOf: thumbnailFileURL(for: tabID)) else {
             return nil
@@ -450,7 +460,7 @@ final class TabManagementStore {
     
     private func pruneThumbCacheLocked(validTabIDs: Set<UUID>) {
         guard let fileURLs = try? fileManager.contentsOfDirectory(
-            at: storage.thumbCacheDirectoryURL,
+            at: storage.thumbnailCacheDirectoryURL,
             includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
         ) else {
@@ -466,11 +476,13 @@ final class TabManagementStore {
     }
     
     private func thumbnailFileURL(for tabID: UUID) -> URL {
-        storage.thumbCacheDirectoryURL
+        storage.thumbnailCacheDirectoryURL
             .appendingPathComponent(tabID.uuidString, isDirectory: false)
             .appendingPathExtension("png")
     }
     
+    // MARK: - SQLite
+
     private func executeLocked(_ sql: String) -> Bool {
         guard let database else {
             return false
@@ -529,18 +541,4 @@ final class TabManagementStore {
         return string(from: statement, at: index)
     }
     
-    private func strippedURLString(from value: String) -> String {
-        let lowercased = value.lowercased()
-        if lowercased.hasPrefix("https://") {
-            return String(lowercased.dropFirst("https://".count))
-        }
-        if lowercased.hasPrefix("http://") {
-            return String(lowercased.dropFirst("http://".count))
-        }
-        if lowercased.hasPrefix("ftp://") {
-            return String(lowercased.dropFirst("ftp://".count))
-        }
-        
-        return lowercased
-    }
 }

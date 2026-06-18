@@ -46,22 +46,22 @@ enum SearchRanking {
             return false
         }
 
-        let strippedQuery = URLUtils.strippedURLMatchString(from: query)
-        let strippedURL = URLUtils.strippedURLMatchString(from: result.url.absoluteString)
+        let strippedQuery = URLUtils.normalizedURLMatchString(from: query)
+        let strippedURL = URLUtils.normalizedURLMatchString(from: result.url.absoluteString)
         return result.title.hasPrefix(query)
             || (!strippedQuery.isEmpty && strippedURL.hasPrefix(strippedQuery))
     }
 
     private static func relevanceScore(for result: UserDataSearchResult, query: String) -> Int {
         let normalizedQuery = query.lowercased()
-        let strippedQuery = URLUtils.strippedURLMatchString(from: normalizedQuery)
+        let strippedQuery = URLUtils.normalizedURLMatchString(from: normalizedQuery)
         guard !normalizedQuery.isEmpty else {
             return Int.max
         }
 
         let title = result.title.lowercased()
         let host = URLUtils.strippedHostString(from: result.url.host ?? "")
-        let strippedURL = URLUtils.strippedURLMatchString(from: result.url.absoluteString)
+        let strippedURL = URLUtils.normalizedURLMatchString(from: result.url.absoluteString)
         let hasURLQuery = !strippedQuery.isEmpty
         let hasExactMatch =
             title == normalizedQuery ||

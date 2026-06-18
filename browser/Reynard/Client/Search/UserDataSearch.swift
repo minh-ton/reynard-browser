@@ -71,13 +71,13 @@ final class UserDataSearch {
         excludingTabID: UUID?
     ) -> UserDataSearchResult? {
         let limit = Limits.bestMatchCandidateCount
-        let tabMatches = tabManagementStore.searchTabs(
+        let tabMatches = tabManagementStore.tabs(
             matching: query,
             limit: limit,
             isPrivate: activeTabMode == .private
         ).filter { $0.id != excludingTabID }
         let historyMatches = historyStore.search(matching: query, limit: limit).items
-        let bookmarkMatches = bookmarkStore.searchBookmarksPrefix(matching: query, limit: limit)
+        let bookmarkMatches = bookmarkStore.bookmarks(matchingPrefix: query, limit: limit)
 
         var bestMatchCandidates: [UserDataSearchResult] = []
         bestMatchCandidates += bookmarkMatches
@@ -100,13 +100,13 @@ final class UserDataSearch {
         excludingTabID: UUID?
     ) -> [UserDataSearchResult] {
         let limit = Limits.resultCount
-        let tabMatches = tabManagementStore.searchTabs(
+        let tabMatches = tabManagementStore.tabs(
             matching: query,
             limit: limit,
             isPrivate: activeTabMode == .private
         ).filter { $0.id != excludingTabID }
         let historyMatches = historyStore.search(matching: query, limit: limit).items
-        let bookmarkMatches = bookmarkStore.searchBookmarks(matching: query, limit: limit)
+        let bookmarkMatches = bookmarkStore.bookmarks(matching: query, limit: limit)
 
         var matches: [UserDataSearchResult] = []
         matches += tabMatches.compactMap(tabResult)
@@ -121,7 +121,7 @@ final class UserDataSearch {
     private func bookmarkResult(from bookmark: BookmarkSnapshot) -> UserDataSearchResult {
         UserDataSearchResult(
             source: .bookmark,
-            title: URLUtils.normalizedTitle(bookmark.title, fallbackURL: bookmark.url),
+            title: resultTitle(bookmark.title, fallbackURL: bookmark.url),
             url: bookmark.url,
             tabID: nil,
             lastVisitedAt: nil
@@ -135,7 +135,7 @@ final class UserDataSearch {
 
         return UserDataSearchResult(
             source: .tab,
-            title: URLUtils.normalizedTitle(tab.title, fallbackURL: url),
+            title: resultTitle(tab.title, fallbackURL: url),
             url: url,
             tabID: tab.id,
             lastVisitedAt: nil
@@ -145,10 +145,15 @@ final class UserDataSearch {
     private func historyResult(from site: HistorySiteSnapshot) -> UserDataSearchResult {
         UserDataSearchResult(
             source: .history,
-            title: URLUtils.normalizedTitle(site.title, fallbackURL: site.url),
+            title: resultTitle(site.title, fallbackURL: site.url),
             url: site.url,
             tabID: nil,
             lastVisitedAt: site.lastVisitedAt
         )
+    }
+
+    private func resultTitle(_ title: String, fallbackURL: URL) -> String {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedTitle.isEmpty ? fallbackURL.host ?? fallbackURL.absoluteString : trimmedTitle
     }
 }

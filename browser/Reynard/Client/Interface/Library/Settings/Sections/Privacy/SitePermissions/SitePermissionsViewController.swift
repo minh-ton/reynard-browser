@@ -298,9 +298,9 @@ final class SitePermissionsViewController: SettingsTableViewController {
         
         for row in permissionOptions {
             for action in actions {
-                let entries = SitePermissionStore.shared.hosts(for: row.permission, action: action)
+                let entries = SitePermissionStore.shared.storedHosts(for: row.permission, action: action)
                 for entry in entries {
-                    SitePermissionStore.shared.removePersistedActionAndWait(for: row.permission, host: entry.host)
+                    SitePermissionStore.shared.removePersistedAction(for: row.permission, host: entry.host)
                     SiteSettingsUtils.clearGeckoPermission(for: row.permission, host: entry.host)
                 }
             }

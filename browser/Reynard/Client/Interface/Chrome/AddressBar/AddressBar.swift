@@ -867,8 +867,8 @@ final class AddressBar: UIView {
             return (attributed, strippedURL, result.url.absoluteString)
         }
 
-        let strippedQuery = URLUtils.strippedURLMatchString(from: query)
-        let strippedURLMatchValue = URLUtils.strippedURLMatchString(from: result.url.absoluteString)
+        let strippedQuery = URLUtils.normalizedURLMatchString(from: query)
+        let strippedURLMatchValue = URLUtils.normalizedURLMatchString(from: result.url.absoluteString)
         guard !strippedQuery.isEmpty else {
             return nil
         }

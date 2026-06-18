@@ -164,7 +164,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     // MARK: - Downloads
     
     private func reloadDownloads() {
-        let snapshot = DownloadStore.shared.snapshot()
+        let snapshot = DownloadStore.shared.currentSnapshot()
         updateSearchHeaderVisibility(containsDownloads: !snapshot.items.isEmpty)
         
         let updatedSections = DownloadSection.make(from: matchingDownloads(from: snapshot.items))
@@ -291,7 +291,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     
     private func showClearDownloads() {
         let clearViewController = ClearDownloadsViewController { startDate in
-            DownloadStore.shared.clearDownloadHistory(since: startDate)
+            DownloadStore.shared.clearCompletedDownloads(since: startDate)
         }
         let navigationController = UINavigationController(rootViewController: clearViewController)
         navigationController.modalPresentationStyle = .pageSheet
@@ -460,7 +460,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             
         case .completed:
             let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { _, _, completion in
-                DownloadStore.shared.deleteDownloadedItem(id: item.id)
+                DownloadStore.shared.removeDownload(id: item.id)
                 completion(true)
             }
             
@@ -556,7 +556,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             completion(false)
         })
         alert.addAction(UIAlertAction(title: "Cancel Download", style: .destructive) { _ in
-            DownloadStore.shared.cancelDownload(id: item.id)
+            DownloadStore.shared.cancel(id: item.id)
             completion(true)
         })
         present(alert, animated: true)

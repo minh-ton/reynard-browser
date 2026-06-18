@@ -120,7 +120,7 @@ final class BrowserViewController: UIViewController {
         contextMenuCoordinator.configure()
         downloadsCoordinator.startObservingStore()
         downloadsCoordinator.syncToolbarButtonState()
-        tabOverview.restoreMode(TabOverview.Mode(tabMode: TabManagementStore.shared.restoredTabMode()))
+        tabOverview.restoreMode(TabOverview.Mode(tabMode: TabManagementStore.shared.preferredRestoredMode()))
         syncBrowserNavigationChrome(animated: false)
         browserChrome.syncSidebarButton(splitViewController: splitViewController)
         applyUpdateMenuButtonBadge()

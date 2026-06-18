@@ -112,6 +112,8 @@ enum SitePermissionAction: String {
 }
 
 final class SitePermissionStore {
+    // MARK: - Types
+
     static let shared = SitePermissionStore()
     
     private struct StorageURLs {
@@ -126,6 +128,8 @@ final class SitePermissionStore {
     private var privateActions: [ObjectIdentifier: [String: [SitePermission: SitePermissionAction]]] = [:]
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
+    // MARK: - Lifecycle
+
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -161,7 +165,9 @@ final class SitePermissionStore {
         }
     }
     
-    func action(for permission: SitePermission, host: String, session: GeckoSession) -> SitePermissionAction {
+    // MARK: - Permissions
+
+    func resolvedAction(for permission: SitePermission, host: String, session: GeckoSession) -> SitePermissionAction {
         let host = URLUtils.normalizedHost(host) ?? ""
         return stateQueue.sync {
             let resolvedAction: SitePermissionAction
@@ -179,21 +185,21 @@ final class SitePermissionStore {
         }
     }
     
-    func setAction(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
+    func scheduleActionUpdate(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
         let host = URLUtils.normalizedHost(host) ?? ""
         stateQueue.async {
             self.setActionLocked(action, for: permission, host: host, session: session)
         }
     }
     
-    func setActionAndWait(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
+    func updateAction(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
         let host = URLUtils.normalizedHost(host) ?? ""
         stateQueue.sync {
             self.setActionLocked(action, for: permission, host: host, session: session)
         }
     }
     
-    func removeActionAndWait(for permission: SitePermission, host: String, session: GeckoSession) {
+    func removeAction(for permission: SitePermission, host: String, session: GeckoSession) {
         let host = URLUtils.normalizedHost(host) ?? ""
         stateQueue.sync {
             if session.isPrivateMode {
@@ -204,7 +210,7 @@ final class SitePermissionStore {
         }
     }
     
-    func removePrivatePermissions(for session: GeckoSession) {
+    func removePrivateActions(for session: GeckoSession) {
         guard session.isPrivateMode else {
             return
         }
@@ -214,19 +220,21 @@ final class SitePermissionStore {
         }
     }
     
-    func hosts(for permission: SitePermission, action: SitePermissionAction) -> [(host: String, updatedAt: Date)] {
+    func storedHosts(for permission: SitePermission, action: SitePermissionAction) -> [(host: String, updatedAt: Date)] {
         return stateQueue.sync {
             hostsLocked(for: permission, action: action)
         }
     }
     
-    func removePersistedActionAndWait(for permission: SitePermission, host: String) {
+    func removePersistedAction(for permission: SitePermission, host: String) {
         let host = URLUtils.normalizedHost(host) ?? ""
         stateQueue.sync {
             _ = deleteActionLocked(for: permission, host: host)
         }
     }
     
+    // MARK: - Storage
+
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
     }
@@ -278,6 +286,8 @@ final class SitePermissionStore {
         _ = executeLocked(sql)
     }
     
+    // MARK: - Permission Records
+
     private func actionLocked(for permission: SitePermission, host: String) -> SitePermissionAction? {
         guard let statement = prepareStatementLocked(
             """
@@ -396,6 +406,8 @@ final class SitePermissionStore {
         return entries
     }
     
+    // MARK: - SQLite
+
     private func prepareStatementLocked(_ sql: String) -> OpaquePointer? {
         guard let database else {
             return nil

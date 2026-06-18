@@ -166,7 +166,7 @@ enum SiteSettingsUtils {
 
     static func clearGeckoPermission(for permission: SitePermission, host: String) {
         let key = geckoKey(for: permission)
-        let origins = URLUtils.permissionOriginCandidates(forHost: host)
+        let origins = permissionOrigins(for: host)
 
         for origin in origins {
             PermissionDelegate.removePermission(
@@ -192,6 +192,14 @@ enum SiteSettingsUtils {
                 }
             }
         }
+    }
+
+    private static func permissionOrigins(for host: String) -> [String] {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return []
+        }
+
+        return ["http://\(host)", "https://\(host)"]
     }
 
     // MARK: - UI Helpers

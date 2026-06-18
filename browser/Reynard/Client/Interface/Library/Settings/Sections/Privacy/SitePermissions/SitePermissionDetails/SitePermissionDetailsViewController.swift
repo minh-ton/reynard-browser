@@ -284,7 +284,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
                     continue
                 }
                 
-                let entries = SitePermissionStore.shared.hosts(for: permission, action: action)
+                let entries = SitePermissionStore.shared.storedHosts(for: permission, action: action)
                 for entry in entries {
                     items.append((host: entry.host, action: action))
                 }
@@ -298,8 +298,8 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             return
         }
         
-        let allowedEntries = SitePermissionStore.shared.hosts(for: permission, action: .allowed)
-        let deniedEntries = SitePermissionStore.shared.hosts(for: permission, action: .blocked)
+        let allowedEntries = SitePermissionStore.shared.storedHosts(for: permission, action: .allowed)
+        let deniedEntries = SitePermissionStore.shared.storedHosts(for: permission, action: .blocked)
         allowedSiteEntries = allowedEntries.map { SiteEntry(host: $0.host, updatedAt: $0.updatedAt) }
         blockedSiteEntries = deniedEntries.map { SiteEntry(host: $0.host, updatedAt: $0.updatedAt) }
         customSiteActions = []
@@ -312,7 +312,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
                 return
             }
             
-            SitePermissionStore.shared.removePersistedActionAndWait(for: self.permission, host: host)
+            SitePermissionStore.shared.removePersistedAction(for: self.permission, host: host)
             SiteSettingsUtils.clearGeckoPermission(for: self.permission, host: host)
             self.reloadSiteEntries()
             self.tableView.reloadData()

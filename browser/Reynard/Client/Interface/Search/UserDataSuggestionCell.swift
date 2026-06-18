@@ -173,7 +173,7 @@ final class UserDataSuggestionCell: UITableViewCell {
     // MARK: - Favicon
 
     private func resolveFavicon(for url: URL) {
-        if let cachedImage = Self.faviconStore.cachedImage(for: url) {
+        if let cachedImage = Self.faviconStore.cachedFavicon(for: url) {
             sourceIconView.image = cachedImage
             sourceIconView.tintColor = nil
             return
@@ -185,7 +185,7 @@ final class UserDataSuggestionCell: UITableViewCell {
         faviconTask = Task { [weak self] in
             guard let self else { return }
 
-            let image = await Self.faviconStore.resolveFavicon(for: url)
+            let image = await Self.faviconStore.favicon(for: url)
             guard !Task.isCancelled else { return }
 
             await MainActor.run {

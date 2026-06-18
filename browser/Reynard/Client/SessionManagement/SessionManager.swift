@@ -89,7 +89,7 @@ final class SessionManager {
 
     func close(_ session: GeckoSession) {
         deactivate(session)
-        permissionStore.removePrivatePermissions(for: session)
+        permissionStore.removePrivateActions(for: session)
         session.close()
     }
 

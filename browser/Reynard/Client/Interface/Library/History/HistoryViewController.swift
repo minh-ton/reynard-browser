@@ -199,7 +199,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     
     private func refreshHistoryPresence() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let hasHistory = !HistoryStore.shared.snapshot(limit: 1, offset: 0).items.isEmpty
+            let hasHistory = !HistoryStore.shared.currentSnapshot(limit: 1, offset: 0).items.isEmpty
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
@@ -235,7 +235,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         
         let browserViewController = findBrowser()
         let viewController = ClearHistoryViewController(tabCount: browserViewController?.tabManager.regularTabs.count ?? 0) { [weak browserViewController] startDate, shouldCloseTabs in
-            HistoryStore.shared.clearHistory(since: startDate)
+            HistoryStore.shared.clearVisits(since: startDate)
             
             if shouldCloseTabs {
                 browserViewController?.tabManager.removeAllTabs(mode: .regular)
@@ -294,7 +294,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
                 return
             }
             
-            let items = HistoryStore.shared.snapshot(limit: Fetch.pageSize, offset: offset).items
+            let items = HistoryStore.shared.currentSnapshot(limit: Fetch.pageSize, offset: offset).items
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return
@@ -597,7 +597,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
             }
             
             self.skipsNextStoreReload = true
-            HistoryStore.shared.deleteHistoryItem(id: item.id)
+            HistoryStore.shared.removeSite(id: item.id)
             self.deleteVisibleRow(at: indexPath)
             completion(true)
         }

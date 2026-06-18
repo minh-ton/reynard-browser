@@ -135,7 +135,7 @@ final class BookmarkItemCell: UITableViewCell {
         countLabel.text = nil
         countLabel.isHidden = true
         
-        if let cachedImage = Self.faviconStore.cachedImage(for: bookmark.url) {
+        if let cachedImage = Self.faviconStore.cachedFavicon(for: bookmark.url) {
             applyIcon(cachedImage, tintColor: nil)
             return
         }
@@ -147,7 +147,7 @@ final class BookmarkItemCell: UITableViewCell {
                 return
             }
             
-            let image = await Self.faviconStore.resolveFavicon(for: expectedURL)
+            let image = await Self.faviconStore.favicon(for: expectedURL)
             guard !Task.isCancelled else {
                 return
             }

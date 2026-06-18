@@ -299,10 +299,10 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             movedGUID = folder.guid
         }
         
-        let didMove = store.moveItem(
+        let didMove = store.moveBookmarkItem(
             guid: movedGUID,
-            toIndex: sections[..<destinationIndexPath.section].reduce(0) { $0 + $1.items.count } + destinationIndexPath.row,
-            inFolderWithGUID: folderID
+            to: sections[..<destinationIndexPath.section].reduce(0) { $0 + $1.items.count } + destinationIndexPath.row,
+            in: folderID
         )
         
         if !didMove {
@@ -366,12 +366,12 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         let didDelete: Bool
         switch item {
         case let .bookmark(bookmark):
-            didDelete = store.deleteBookmark(guid: bookmark.guid)
+            didDelete = store.removeBookmark(guid: bookmark.guid)
         case let .folder(folder):
             guard !folder.isProtected else {
                 return false
             }
-            didDelete = store.deleteFolder(guid: folder.guid)
+            didDelete = store.removeFolder(guid: folder.guid)
         }
         
         reloadBookmarkRows()
@@ -526,7 +526,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     }
     
     private func reloadFolder() {
-        let snapshot = store.folderContents(parentGUID: folderID)
+        let snapshot = store.contents(of: folderID)
         sections = makeBookmarkSections(from: snapshot.items)
         title = snapshot.parent.title
         updateEmptyState()
@@ -710,7 +710,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
                 return
             }
             
-            let searchResults = self.store.searchBookmarks(matching: normalizedTerm, limit: UX.searchResultLimit)
+            let searchResults = self.store.bookmarks(matching: normalizedTerm, limit: UX.searchResultLimit)
             DispatchQueue.main.async { [weak self] in
                 guard let self else {
                     return

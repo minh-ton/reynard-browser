@@ -13,7 +13,7 @@ func makeBookmarkFolderRows(root: BookmarkFolderHierarchySnapshot, store: Bookma
     var folderRows: [BookmarkFolderRow] = []
     
     func appendDescendants(parentFolderID: String, depth: Int) {
-        for folder in store.folderHierarchy(parentGUID: parentFolderID).items {
+        for folder in store.childFolders(in: parentFolderID).items {
             folderRows.append((folder, depth))
             appendDescendants(parentFolderID: folder.guid, depth: depth + 1)
         }

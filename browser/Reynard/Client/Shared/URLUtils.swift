@@ -8,6 +8,34 @@
 import Foundation
 
 enum URLUtils {
+    struct URLMatchComponents {
+        let hostAndPort: String
+        let suffix: String
+    }
+
+    // MARK: - Validation
+
+    static func isWebURL(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(),
+              let host = url.host,
+              !host.isEmpty else {
+            return false
+        }
+
+        return scheme == "http" || scheme == "https"
+    }
+
+    static func isAbsoluteURL(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !scheme.isEmpty else {
+            return false
+        }
+
+        return !url.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // MARK: - Origins and Hosts
+
     static func httpOriginString(for url: URL) -> String? {
         guard let scheme = url.scheme?.lowercased(),
               let host = normalizedHost(url.host),
@@ -39,16 +67,7 @@ enum URLUtils {
         return host
     }
 
-    static func permissionOriginCandidates(forHost host: String) -> [String] {
-        guard let host = normalizedHost(host) else {
-            return []
-        }
-
-        return [
-            "http://\(host)",
-            "https://\(host)",
-        ]
-    }
+    // MARK: - Display
 
     static func displayString(for url: URL) -> String {
         strippedURLString(url.absoluteString, trimsTrailingSlash: true)
@@ -87,7 +106,7 @@ enum URLUtils {
         return trimsTrailingSlash ? trimmedTrailingSlash(strippedValue) : strippedValue
     }
 
-    static func strippedURLMatchString(from value: String) -> String {
+    static func normalizedURLMatchString(from value: String) -> String {
         strippedURLString(value, trimsTrailingSlash: false).lowercased()
     }
 
@@ -100,18 +119,27 @@ enum URLUtils {
         return String(lowered.dropFirst("www.".count))
     }
 
-    static func normalizedTitle(_ title: String, fallbackURL: URL) -> String {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            return trimmed
+    // MARK: - Search
+
+    static func normalizedURLStringForMatching(from value: String) -> String {
+        let remainder = removingSchemePrefix(from: value)
+        guard let userInfoEnd = remainder.range(of: "@") else {
+            return remainder.lowercased()
         }
 
-        let host = fallbackURL.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !host.isEmpty {
-            return host
-        }
+        return String(remainder[userInfoEnd.upperBound...]).lowercased()
+    }
 
-        return fallbackURL.absoluteString
+    static func urlMatchComponents(from value: String) -> URLMatchComponents {
+        let remainder = removingSchemePrefix(from: value)
+        let suffixStart = remainder.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" }) ?? remainder.endIndex
+        let authority = remainder[..<suffixStart]
+        let userInfoEnd = authority.lastIndex(of: "@")
+        let hostStart = userInfoEnd.map { remainder.index(after: $0) } ?? remainder.startIndex
+        return URLMatchComponents(
+            hostAndPort: String(remainder[hostStart..<suffixStart]),
+            suffix: String(remainder[suffixStart...])
+        )
     }
 
     static func autocompleteURLString(for query: String, url: URL) -> String? {
@@ -148,11 +176,28 @@ enum URLUtils {
         return matchedHost + path
     }
 
+    // MARK: - Private
+
     private static func autocompleteURLVariants(for url: URL) -> [String] {
         let fullURL = trimmedTrailingSlash(url.absoluteString)
         let schemeStrippedURL = strippedURLString(url.absoluteString, trimsWWW: false, trimsTrailingSlash: true)
         let normalizedURL = strippedURLString(url.absoluteString, trimsTrailingSlash: true)
         return [fullURL, schemeStrippedURL, normalizedURL]
+    }
+
+    private static func removingSchemePrefix(from value: String) -> Substring {
+        let prefix = value.prefix(64)
+        guard let colon = prefix.firstIndex(of: ":") else {
+            return value[...]
+        }
+
+        var end = value.index(after: colon)
+        if value.distance(from: end, to: value.endIndex) >= 2,
+           value[end] == "/",
+           value[value.index(after: end)] == "/" {
+            end = value.index(end, offsetBy: 2)
+        }
+        return value[end...]
     }
 
     private static func trimmedTrailingSlash(_ value: String) -> String {

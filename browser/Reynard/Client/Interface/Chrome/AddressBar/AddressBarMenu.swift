@@ -34,12 +34,12 @@ enum AddressBarMenu {
         let url = selectedURL.flatMap(URL.init(string:))
         if let url,
            url.host != nil {
-            let title = BookmarkStore.shared.bookmark(for: url) == nil ? "Add Bookmark" : "Edit Bookmark"
+            let title = BookmarkStore.shared.bookmark(savedFor: url) == nil ? "Add Bookmark" : "Edit Bookmark"
             tabActions.append(UIAction(title: title, image: UIImage(named: "reynard.book")) { _ in
                 onBookmark(false)
             })
             
-            if !BookmarkStore.shared.containsBookmarkInFavoritesHierarchy(for: url) {
+            if !BookmarkStore.shared.isSavedInFavorites(url) {
                 tabActions.append(UIAction(title: "Add to Favorites", image: UIImage(named: "reynard.star")) { _ in
                     onBookmark(true)
                 })

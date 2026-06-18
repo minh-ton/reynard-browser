@@ -43,7 +43,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
                 continue
             }
             
-            let action = permissionStore.action(for: permission, host: host, session: session)
+            let action = permissionStore.resolvedAction(for: permission, host: host, session: session)
             guard action != .askToAllow else {
                 continue
             }
@@ -85,7 +85,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
             return .prompt
         }
         
-        let action = permissionStore.action(for: sitePermission, host: host, session: session)
+        let action = permissionStore.resolvedAction(for: sitePermission, host: host, session: session)
         if sitePermission == .autoplay {
             applyPermission(action, to: sitePermission, permission: permission)
             return ContentPermission.Value(rawValue: action.autoplayValue) ?? .deny
@@ -108,7 +108,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
                 for: session
             )
             let action: SitePermissionAction = allowed ? .allowed : .blocked
-            permissionStore.setAction(action, for: sitePermission, host: host, session: session)
+            permissionStore.scheduleActionUpdate(action, for: sitePermission, host: host, session: session)
             applyPermission(action, to: sitePermission, permission: permission)
             return action.contentPermissionValue
         }
@@ -121,11 +121,11 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
             return false
         }
         
-        if requestedPermissions.contains(where: { permissionStore.action(for: $0, host: request.host, session: session) == .blocked }) {
+        if requestedPermissions.contains(where: { permissionStore.resolvedAction(for: $0, host: request.host, session: session) == .blocked }) {
             return false
         }
         
-        if requestedPermissions.allSatisfy({ permissionStore.action(for: $0, host: request.host, session: session) == .allowed }) {
+        if requestedPermissions.allSatisfy({ permissionStore.resolvedAction(for: $0, host: request.host, session: session) == .allowed }) {
             return true
         }
         
@@ -141,7 +141,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
         )
         let action: SitePermissionAction = allowed ? .allowed : .blocked
         for permission in requestedPermissions {
-            permissionStore.setAction(action, for: permission, host: request.host, session: session)
+            permissionStore.scheduleActionUpdate(action, for: permission, host: request.host, session: session)
             applyPermission(action, to: permission, uri: request.uri, privateMode: session.isPrivateMode)
         }
         

@@ -50,7 +50,7 @@ final class DownloadsCoordinator {
     }
 
     func syncToolbarButtonState() {
-        let summary = DownloadStore.shared.snapshot().summary
+        let summary = DownloadStore.shared.currentSnapshot().summary
         delegate?.downloadsCoordinator(self, didUpdate: summary)
         if delegate?.downloadsShouldRefreshLayoutForStoreChange == true {
             delegate?.downloadsCoordinatorDidRequestLayoutRefresh(self)
@@ -97,7 +97,7 @@ final class DownloadsCoordinator {
         isShowingConfirmationAlert = false
 
         if shouldStartDownload {
-            DownloadStore.shared.startDownload(pendingDownload)
+            DownloadStore.shared.start(pendingDownload)
         }
 
         DispatchQueue.main.async { [weak self] in

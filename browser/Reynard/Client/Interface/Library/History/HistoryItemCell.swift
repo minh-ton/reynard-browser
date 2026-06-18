@@ -127,7 +127,7 @@ final class HistoryItemCell: UITableViewCell {
         pageTitleLabel.text = item.title
         pageURLLabel.text = item.url.absoluteString
         
-        if let cachedImage = Self.faviconStore.cachedImage(for: item.url) {
+        if let cachedImage = Self.faviconStore.cachedFavicon(for: item.url) {
             setFavicon(cachedImage)
             return
         }
@@ -139,7 +139,7 @@ final class HistoryItemCell: UITableViewCell {
                 return
             }
             
-            let image = await Self.faviconStore.resolveFavicon(for: expectedURL)
+            let image = await Self.faviconStore.favicon(for: expectedURL)
             guard !Task.isCancelled else {
                 return
             }

@@ -20,6 +20,8 @@ struct HistorySiteSnapshot: Hashable {
 }
 
 final class HistoryStore {
+    // MARK: - Types and Constants
+
     static let shared = HistoryStore()
     
     private enum Constants {
@@ -37,6 +39,8 @@ final class HistoryStore {
     private var database: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
+    // MARK: - Lifecycle
+
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -71,13 +75,15 @@ final class HistoryStore {
         }
     }
     
-    func snapshot() -> HistoryStoreSnapshot {
+    // MARK: - History
+
+    func currentSnapshot() -> HistoryStoreSnapshot {
         stateQueue.sync {
             HistoryStoreSnapshot(items: fetchSitesLocked())
         }
     }
     
-    func snapshot(limit: Int, offset: Int) -> HistoryStoreSnapshot {
+    func currentSnapshot(limit: Int, offset: Int) -> HistoryStoreSnapshot {
         stateQueue.sync {
             HistoryStoreSnapshot(items: fetchSitesLocked(limit: limit, offset: offset))
         }
@@ -99,7 +105,7 @@ final class HistoryStore {
     
     func recordVisit(url: URL, title: String, visitedAt: Date = Date()) {
         stateQueue.async {
-            guard self.supportsHistory(url) else {
+            guard URLUtils.isWebURL(url) else {
                 return
             }
             
@@ -109,14 +115,14 @@ final class HistoryStore {
         }
     }
     
-    func updateTitle(for pageURL: URL, title: String) {
-        let normalizedTitle = normalizedTitle(title, for: pageURL)
+    func updatePageTitle(for pageURL: URL, title: String) {
+        let normalizedTitle = pageTitle(title, fallbackURL: pageURL)
         guard !normalizedTitle.isEmpty else {
             return
         }
         
         stateQueue.async {
-            guard self.supportsHistory(pageURL) else {
+            guard URLUtils.isWebURL(pageURL) else {
                 return
             }
             
@@ -126,7 +132,7 @@ final class HistoryStore {
         }
     }
     
-    func deleteHistoryItem(id: Int64) {
+    func removeSite(id: Int64) {
         stateQueue.async {
             if self.deleteHistoryItemLocked(id: id) {
                 self.postDidChange()
@@ -134,7 +140,7 @@ final class HistoryStore {
         }
     }
     
-    func clearHistory(since startDate: Date?) {
+    func clearVisits(since startDate: Date?) {
         stateQueue.async {
             if self.clearHistoryLocked(since: startDate) {
                 self.postDidChange()
@@ -142,6 +148,8 @@ final class HistoryStore {
         }
     }
     
+    // MARK: - Storage
+
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
     }
@@ -213,7 +221,7 @@ final class HistoryStore {
     }
     
     private func recordVisitLocked(url: URL, title: String, visitedAt: Date) -> Bool {
-        let normalizedTitle = normalizedTitle(title, for: url)
+        let normalizedTitle = pageTitle(title, fallbackURL: url)
         let timestamp = visitedAt.timeIntervalSince1970
         
         guard beginTransactionLocked() else {
@@ -402,6 +410,8 @@ final class HistoryStore {
         return readSnapshotsLocked(from: statement)
     }
     
+    // MARK: - Search
+
     private func searchSitesLocked(matching query: String, limit: Int) -> [HistorySiteSnapshot] {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedQuery.isEmpty, limit > 0 else {
@@ -432,7 +442,7 @@ final class HistoryStore {
     }
     
     private func heuristicMatchesLocked(matching query: String, limit: Int) -> [HistorySiteSnapshot] {
-        if looksLikeOrigin(query) {
+        if isHostOnlyQuery(query) {
             let upperBound = query + "\u{FFFF}"
             guard let statement = prepareStatementLocked(
                 """
@@ -460,12 +470,13 @@ final class HistoryStore {
             return []
         }
         
-        let (host, remainder) = splitAfterHostAndPort(query)
-        guard !host.isEmpty else {
+        let urlComponents = URLUtils.urlMatchComponents(from: query)
+        guard !urlComponents.hostAndPort.isEmpty else {
             return []
         }
         
-        let strippedPrefix = host + remainder
+        let host = urlComponents.hostAndPort
+        let strippedPrefix = host + urlComponents.suffix
         let upperBound = strippedPrefix + "\u{FFFF}"
         guard let statement = prepareStatementLocked(
             """
@@ -547,7 +558,7 @@ final class HistoryStore {
                 let urlString = string(from: statement, at: 2)
                 let visitDate = sqlite3_column_double(statement, 3)
                 
-                guard let url = URL(string: urlString), supportsHistory(url) else {
+                guard let url = URL(string: urlString), URLUtils.isWebURL(url) else {
                     continue
                 }
                 
@@ -571,7 +582,7 @@ final class HistoryStore {
     
     private func upsertHistoryLocked(url: String, title: String, timestamp: TimeInterval) -> Bool {
         let host = URL(string: url)?.host?.lowercased() ?? ""
-        let strippedURL = strippedURLString(from: url)
+        let strippedURL = URLUtils.normalizedURLStringForMatching(from: url)
         guard let statement = prepareStatementLocked(
             """
             INSERT INTO history (url, host, stripped_url, title, created_at, updated_at)
@@ -705,7 +716,7 @@ final class HistoryStore {
             let id = sqlite3_column_int64(selectStatement, 0)
             let urlString = string(from: selectStatement, at: 1)
             let updatedAt = sqlite3_column_double(selectStatement, 2)
-            guard let url = URL(string: urlString), supportsHistory(url) else {
+            guard let url = URL(string: urlString), URLUtils.isWebURL(url) else {
                 continue
             }
             
@@ -715,7 +726,7 @@ final class HistoryStore {
             sqlite3_reset(updateStatement)
             sqlite3_clear_bindings(updateStatement)
             bind(url.host?.lowercased() ?? "", to: updateStatement, at: 1)
-            bind(strippedURLString(from: urlString), to: updateStatement, at: 2)
+            bind(URLUtils.normalizedURLStringForMatching(from: urlString), to: updateStatement, at: 2)
             sqlite3_bind_int64(updateStatement, 3, Int64(visitCount))
             sqlite3_bind_int64(updateStatement, 4, Int64(frecency))
             sqlite3_bind_int64(updateStatement, 5, id)
@@ -784,6 +795,8 @@ final class HistoryStore {
         return 10
     }
     
+    // MARK: - SQLite
+
     private func executeLocked(_ sql: String) -> Bool {
         guard let database else {
             return false
@@ -825,74 +838,28 @@ final class HistoryStore {
         return String(cString: rawValue)
     }
     
-    private func normalizedTitle(_ title: String, for url: URL) -> String {
+    // MARK: - Helpers
+
+    private func pageTitle(_ title: String, fallbackURL: URL) -> String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else {
-            return url.host ?? url.absoluteString
-        }
-        
-        return trimmedTitle
+        return trimmedTitle.isEmpty ? fallbackURL.host ?? fallbackURL.absoluteString : trimmedTitle
     }
-    
-    private func strippedURLString(from value: String) -> String {
-        let (_, remainder) = splitAfterPrefix(value)
-        guard let userInfoRange = remainder.range(of: "@") else {
-            return remainder
-        }
-        
-        return String(remainder[userInfoRange.upperBound...])
-    }
-    
-    private func splitAfterPrefix(_ value: String) -> (String, String) {
-        let haystack = String(value.prefix(64))
-        guard let colonIndex = haystack.firstIndex(of: ":") else {
-            return ("", value)
-        }
-        
-        var endIndex = value.index(after: colonIndex)
-        if value.distance(from: endIndex, to: value.endIndex) >= 2,
-           value[endIndex] == "/",
-           value[value.index(after: endIndex)] == "/" {
-            endIndex = value.index(endIndex, offsetBy: 2)
-        }
-        
-        return (String(value[..<endIndex]), String(value[endIndex...]))
-    }
-    
-    private func splitAfterHostAndPort(_ value: String) -> (String, String) {
-        let (_, remainder) = splitAfterPrefix(value)
-        let boundaryIndex = remainder.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" }) ?? remainder.endIndex
-        let beforeBoundary = remainder[..<boundaryIndex]
-        let authIndex = beforeBoundary.lastIndex(of: "@")
-        let hostStart = authIndex.map { remainder.index(after: $0) } ?? remainder.startIndex
-        return (String(remainder[hostStart..<boundaryIndex]), String(remainder[boundaryIndex...]))
-    }
-    
-    private func looksLikeOrigin(_ value: String) -> Bool {
-        guard !value.isEmpty else {
+
+    private func isHostOnlyQuery(_ query: String) -> Bool {
+        guard !query.isEmpty else {
             return false
         }
-        
-        return !value.unicodeScalars.contains { scalar in
+
+        return !query.unicodeScalars.contains { scalar in
             scalar.properties.isWhitespace || scalar == "/" || scalar == "?" || scalar == "#"
         }
     }
-    
+
     private func escapedLikePattern(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
-    }
-    
-    private func supportsHistory(_ url: URL) -> Bool {
-        guard let scheme = url.scheme?.lowercased(),
-              let host = url.host,
-              !host.isEmpty else {
-            return false
-        }
-        
-        return scheme == "http" || scheme == "https"
     }
     
     private func postDidChange() {

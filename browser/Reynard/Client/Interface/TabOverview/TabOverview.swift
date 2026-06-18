@@ -300,7 +300,7 @@ final class TabOverview: UIView {
 
     private func handleTabModeChange(_ mode: Mode) {
         setMode(mode, animated: true)
-        TabManagementStore.shared.saveLastTabOverview(mode == .privateTabs ? .private : .regular)
+        TabManagementStore.shared.persistLastOverview(mode == .privateTabs ? .private : .regular)
     }
 
     private func requestNewTab() {

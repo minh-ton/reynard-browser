@@ -170,14 +170,14 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         }
         
         if let url = bookmark?.url ?? URL(string: urlField.text ?? "") {
-            if let image = FaviconStore.shared.cachedImage(for: url) {
+            if let image = FaviconStore.shared.cachedFavicon(for: url) {
                 titleFaviconView.image = image
                 titleFaviconView.tintColor = nil
                 urlFaviconView.image = image
                 urlFaviconView.tintColor = nil
             } else {
                 faviconTask = Task { [weak self] in
-                    let image = await FaviconStore.shared.resolveFavicon(for: url)
+                    let image = await FaviconStore.shared.favicon(for: url)
                     await MainActor.run {
                         guard let self, let image else {
                             return
@@ -317,9 +317,9 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         }
         
         if let bookmark {
-            _ = store.editBookmark(guid: bookmark.guid, title: title, url: url, inFolderWithGUID: selectedFolderID)
+            _ = store.updateBookmark(guid: bookmark.guid, title: title, url: url, parentGUID: selectedFolderID)
         } else {
-            _ = store.saveBookmark(title: title, url: url, inFolderWithGUID: selectedFolderID)
+            _ = store.addBookmark(title: title, url: url, to: selectedFolderID)
         }
         
         dismiss(animated: true)
@@ -330,7 +330,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
             return
         }
         
-        _ = store.deleteBookmark(guid: bookmark.guid)
+        _ = store.removeBookmark(guid: bookmark.guid)
         dismiss(animated: true)
     }
     
@@ -347,7 +347,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
     // MARK: - Folder Loading
     
     private func reloadFolderRows() {
-        let root = limitsToFavorites ? store.favoritesFolderHierarchy() : store.folderHierarchy()
+        let root = limitsToFavorites ? store.favoritesFolderHierarchy() : store.childFolders()
         folderRows = makeBookmarkFolderRows(root: root, store: store)
         if selectedFolderID == nil {
             selectedFolderID = root.parent.guid
