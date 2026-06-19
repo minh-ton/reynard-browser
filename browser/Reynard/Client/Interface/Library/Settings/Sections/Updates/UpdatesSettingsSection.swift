@@ -92,7 +92,7 @@ final class UpdatesSettingsSection {
     }
     
     private func beginUpdate(from viewController: UIViewController) {
-        guard let updateFeedData = AppUpdates.shared.sourceData,
+        guard let updateFeedData = BrowserUpdates.shared.sourceData,
               let updateFeed = try? JSONSerialization.jsonObject(with: updateFeedData) as? [String: Any],
               let appEntries = updateFeed["apps"] as? [[String: Any]],
               let appEntry = appEntries.first,

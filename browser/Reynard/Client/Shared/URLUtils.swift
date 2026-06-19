@@ -12,76 +12,70 @@ enum URLUtils {
         let hostAndPort: String
         let suffix: String
     }
-
-    // MARK: - Validation
-
+    
     static func isWebURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(),
               let host = url.host,
               !host.isEmpty else {
             return false
         }
-
+        
         return scheme == "http" || scheme == "https"
     }
-
+    
     static func isAbsoluteURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.trimmingCharacters(in: .whitespacesAndNewlines),
               !scheme.isEmpty else {
             return false
         }
-
+        
         return !url.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-
-    // MARK: - Origins and Hosts
-
+    
     static func httpOriginString(for url: URL) -> String? {
         guard let scheme = url.scheme?.lowercased(),
               let host = normalizedHost(url.host),
               scheme == "http" || scheme == "https" else {
             return nil
         }
-
+        
         if let port = url.port {
             return "\(scheme)://\(host):\(port)"
         }
         return "\(scheme)://\(host)"
     }
-
+    
     static func normalizedHost(fromRawURI rawURI: String?) -> String? {
         guard let rawURI,
               let url = URL(string: rawURI) else {
             return nil
         }
-
+        
         return normalizedHost(url.host)
     }
-
+    
     static func normalizedHost(_ host: String?) -> String? {
         guard let host = host?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
               !host.isEmpty else {
             return nil
         }
-
+        
         return host
     }
-
-    // MARK: - Display
-
+    
     static func displayString(for url: URL) -> String {
         strippedURLString(url.absoluteString, trimsTrailingSlash: true)
     }
-
+    
     static func hostDisplayString(for url: URL) -> String {
         let host = strippedHostString(from: url.host ?? "")
         guard !host.isEmpty else {
             return displayString(for: url)
         }
-
+        
         return host
     }
-
+    
     static func strippedURLString(
         _ value: String,
         trimsWWW: Bool = true,
@@ -98,38 +92,36 @@ enum URLUtils {
         } else {
             strippedValue = value
         }
-
+        
         if trimsWWW, strippedValue.lowercased().hasPrefix("www.") {
             strippedValue = String(strippedValue.dropFirst("www.".count))
         }
-
+        
         return trimsTrailingSlash ? trimmedTrailingSlash(strippedValue) : strippedValue
     }
-
+    
     static func normalizedURLMatchString(from value: String) -> String {
         strippedURLString(value, trimsTrailingSlash: false).lowercased()
     }
-
+    
     static func strippedHostString(from value: String) -> String {
         let lowered = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard lowered.hasPrefix("www.") else {
             return lowered
         }
-
+        
         return String(lowered.dropFirst("www.".count))
     }
-
-    // MARK: - Search
-
+    
     static func normalizedURLStringForMatching(from value: String) -> String {
         let remainder = removingSchemePrefix(from: value)
         guard let userInfoEnd = remainder.range(of: "@") else {
             return remainder.lowercased()
         }
-
+        
         return String(remainder[userInfoEnd.upperBound...]).lowercased()
     }
-
+    
     static func urlMatchComponents(from value: String) -> URLMatchComponents {
         let remainder = removingSchemePrefix(from: value)
         let suffixStart = remainder.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" }) ?? remainder.endIndex
@@ -141,7 +133,7 @@ enum URLUtils {
             suffix: String(remainder[suffixStart...])
         )
     }
-
+    
     static func autocompleteURLString(for query: String, url: URL) -> String? {
         let loweredQuery = query.lowercased()
         for value in autocompleteURLVariants(for: url) {
@@ -149,10 +141,10 @@ enum URLUtils {
                 return value
             }
         }
-
+        
         return nil
     }
-
+    
     static func domainCompletion(for query: String, url: URL) -> String? {
         let displayURL = strippedURLString(url.absoluteString, trimsTrailingSlash: true)
         let host = strippedHostString(from: url.host ?? "")
@@ -160,37 +152,35 @@ enum URLUtils {
               displayURL.lowercased().hasPrefix(host.lowercased()) else {
             return nil
         }
-
+        
         let hostWithDotPrefix = ".\(host)"
         guard let range = hostWithDotPrefix.range(of: ".\(query)", options: .caseInsensitive),
               let dotRange = hostWithDotPrefix[range.lowerBound...].firstIndex(of: ".") else {
             return nil
         }
-
+        
         let matchedHost = String(hostWithDotPrefix[hostWithDotPrefix.index(after: dotRange)...])
         guard matchedHost.contains(".") else {
             return nil
         }
-
+        
         let path = String(displayURL.dropFirst(host.count))
         return matchedHost + path
     }
-
-    // MARK: - Private
-
+    
     private static func autocompleteURLVariants(for url: URL) -> [String] {
         let fullURL = trimmedTrailingSlash(url.absoluteString)
         let schemeStrippedURL = strippedURLString(url.absoluteString, trimsWWW: false, trimsTrailingSlash: true)
         let normalizedURL = strippedURLString(url.absoluteString, trimsTrailingSlash: true)
         return [fullURL, schemeStrippedURL, normalizedURL]
     }
-
+    
     private static func removingSchemePrefix(from value: String) -> Substring {
         let prefix = value.prefix(64)
         guard let colon = prefix.firstIndex(of: ":") else {
             return value[...]
         }
-
+        
         var end = value.index(after: colon)
         if value.distance(from: end, to: value.endIndex) >= 2,
            value[end] == "/",
@@ -199,12 +189,12 @@ enum URLUtils {
         }
         return value[end...]
     }
-
+    
     private static func trimmedTrailingSlash(_ value: String) -> String {
         if value.count > 1, value.hasSuffix("/") {
             return String(value.dropLast())
         }
-
+        
         return value
     }
 }

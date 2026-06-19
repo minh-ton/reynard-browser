@@ -8,8 +8,6 @@
 import UIKit
 
 enum SVGIconRenderer {
-    // MARK: - CoreSVG Symbols
-    
     private typealias SVGDocumentRef = UnsafeMutableRawPointer
     private typealias CreateDocumentFunction = @convention(c) (CFData, CFDictionary?) -> SVGDocumentRef?
     private typealias ReleaseDocumentFunction = @convention(c) (SVGDocumentRef) -> Void
@@ -21,8 +19,6 @@ enum SVGIconRenderer {
     private static let releaseDocument = symbol(named: "CGSVGDocumentRelease", as: ReleaseDocumentFunction.self)
     private static let drawDocument = symbol(named: "CGContextDrawSVGDocument", as: DrawDocumentFunction.self)
     private static let getCanvasSize = symbol(named: "CGSVGDocumentGetCanvasSize", as: GetCanvasSizeFunction.self)
-    
-    // MARK: - Rendering
     
     static func render(data: Data, size: CGSize) -> UIImage? {
         guard let createDocument,
@@ -66,8 +62,6 @@ enum SVGIconRenderer {
         context.translateBy(x: origin.x, y: origin.y + scaledSize.height)
         context.scaleBy(x: scale, y: -scale)
     }
-    
-    // MARK: - Symbols
     
     private static func symbol<T>(named name: String, as type: T.Type) -> T? {
         guard let frameworkHandle,

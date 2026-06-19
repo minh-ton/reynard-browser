@@ -88,7 +88,7 @@ final class LibraryViewController: UITabBarController, UITabBarControllerDelegat
             name: .appUpdateAvailable,
             object: nil
         )
-        if AppUpdates.shared.hasUpdate {
+        if BrowserUpdates.shared.hasUpdate {
             markSettingsUpdateAvailable()
         }
     }

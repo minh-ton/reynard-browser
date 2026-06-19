@@ -17,13 +17,13 @@ extension UIApplication {
         else {
             return false
         }
-
+        
         let screenWidth = max(window.screen.bounds.width, window.screen.bounds.height)
         let windowWidth = window.bounds.width
-
+        
         return windowWidth <= (3.0 / 4.0) * screenWidth + 0.5
     }
-
+    
     func topViewController() -> UIViewController? {
         let rootViewController = connectedScenes
             .compactMap { $0 as? UIWindowScene }
@@ -31,14 +31,14 @@ extension UIApplication {
             .flatMap(\.windows)
             .first(where: \.isKeyWindow)?
             .rootViewController
-
+        
         guard let rootViewController else {
             return nil
         }
-
+        
         return topViewController(from: rootViewController)
     }
-
+    
     func topViewController(from rootViewController: UIViewController) -> UIViewController {
         var controller = rootViewController
         while let presentedController = controller.presentedViewController {

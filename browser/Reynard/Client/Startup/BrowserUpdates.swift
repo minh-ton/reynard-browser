@@ -1,5 +1,5 @@
 //
-//  AppUpdates.swift
+//  BrowserUpdates.swift
 //  Reynard
 //
 //  Created by Minh Ton on 21/4/26.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-final class AppUpdates: NSObject {
-    static let shared = AppUpdates()
+final class BrowserUpdates: NSObject {
+    static let shared = BrowserUpdates()
     
     private(set) var hasUpdate: Bool = false
     private(set) var latestVersion: String = ""

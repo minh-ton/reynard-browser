@@ -113,8 +113,8 @@ final class UpdateReleaseNotesCell: UITableViewCell {
     }
     
     private func releaseNotesTextView() -> UITextView {
-        if AppUpdates.shared.cachedReleaseNotes == nil {
-            AppUpdates.shared.cachedReleaseNotes = processReleaseNotes()
+        if BrowserUpdates.shared.cachedReleaseNotes == nil {
+            BrowserUpdates.shared.cachedReleaseNotes = processReleaseNotes()
         }
         
         let releaseNotesView = UITextView()
@@ -124,7 +124,7 @@ final class UpdateReleaseNotesCell: UITableViewCell {
         releaseNotesView.showsVerticalScrollIndicator = false
         releaseNotesView.isSelectable = false
         releaseNotesView.backgroundColor = .clear
-        releaseNotesView.attributedText = AppUpdates.shared.cachedReleaseNotes
+        releaseNotesView.attributedText = BrowserUpdates.shared.cachedReleaseNotes
         releaseNotesView.textColor = .label
         releaseNotesView.textContainerInset = UIEdgeInsets(top: UX.textViewTopSpacing, left: 0, bottom: 0, right: 0)
         releaseNotesView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: UX.releaseNotesBottomInset, right: 0)
@@ -142,10 +142,10 @@ final class UpdateReleaseNotesCell: UITableViewCell {
     
     private func currentUpdateInfo() -> UpdateInfo {
         var appName = "Reynard Browser"
-        var latestVersionString = AppUpdates.shared.latestVersion
+        var latestVersionString = BrowserUpdates.shared.latestVersion
         var sizeString = ""
         
-        if let updateFeedData = AppUpdates.shared.sourceData,
+        if let updateFeedData = BrowserUpdates.shared.sourceData,
            let updateFeed = try? JSONSerialization.jsonObject(with: updateFeedData) as? [String: Any],
            let appEntries = updateFeed["apps"] as? [[String: Any]],
            let appEntry = appEntries.first {
@@ -169,7 +169,7 @@ final class UpdateReleaseNotesCell: UITableViewCell {
     // MARK: - Release Notes
     
     private func processReleaseNotes() -> NSAttributedString {
-        guard let updateFeedData = AppUpdates.shared.sourceData,
+        guard let updateFeedData = BrowserUpdates.shared.sourceData,
               let updateFeed = try? JSONSerialization.jsonObject(with: updateFeedData) as? [String: Any],
               let appEntries = updateFeed["apps"] as? [[String: Any]],
               let appEntry = appEntries.first,

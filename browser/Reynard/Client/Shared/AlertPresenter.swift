@@ -12,7 +12,7 @@ enum AlertPresenter {
         let title: String
         let style: UIAlertAction.Style
         let handler: (() -> Void)?
-
+        
         init(
             title: String,
             style: UIAlertAction.Style = .default,
@@ -23,7 +23,7 @@ enum AlertPresenter {
             self.handler = handler
         }
     }
-
+    
     static func show(
         title: String?,
         message: String?,
@@ -33,7 +33,7 @@ enum AlertPresenter {
             guard let presenter = UIApplication.shared.topViewController() else {
                 return
             }
-
+            
             let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
             for button in buttons {
                 alert.addAction(UIAlertAction(title: button.title, style: button.style) { _ in

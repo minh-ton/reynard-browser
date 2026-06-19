@@ -578,7 +578,7 @@ final class BrowserViewController: UIViewController {
     }
     
     @objc func applyUpdateMenuButtonBadge() {
-        browserChrome.setMenuButtonIndicatesUpdate(AppUpdates.shared.hasUpdate)
+        browserChrome.setMenuButtonIndicatesUpdate(BrowserUpdates.shared.hasUpdate)
     }
     
     // MARK: - Browser UI Updates

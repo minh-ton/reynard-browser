@@ -41,7 +41,7 @@ final class SettingsViewController: SettingsTableViewController {
         var hiddenSections: Set<Section> = []
         let unsandboxed = getEntitlementValue("com.apple.private.security.no-sandbox")
         
-        if !AppUpdates.shared.hasUpdate || (unsandboxed && !updatesSection.installedThroughTrollStore) {
+        if !BrowserUpdates.shared.hasUpdate || (unsandboxed && !updatesSection.installedThroughTrollStore) {
             hiddenSections.insert(.updates)
         }
         

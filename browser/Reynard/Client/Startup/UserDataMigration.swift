@@ -1,5 +1,5 @@
 //
-//  MigrationController.swift
+//  UserDataMigration.swift
 //  Reynard
 //
 //  Created by Minh Ton on 17/5/26.
@@ -7,11 +7,8 @@
 
 import Foundation
 
-// TODO: Remove migration when out of alpha
-// Since moveItem is fast, this is run on startup, before everything else
-
-final class MigrationController {
-    static let shared = MigrationController()
+final class UserDataMigration {
+    static let shared = UserDataMigration()
     
     private let fileManager: FileManager
     private let documentsDirectoryURL: URL
@@ -106,7 +103,7 @@ final class MigrationController {
             at: documentsDirectoryURL.appendingPathComponent("ua-override.json", isDirectory: false)
         )
     }
-
+    
     private func removeLegacyStoreFolders(in appDataDirectoryURL: URL) throws {
         for folderName in ["TabManagement", "Favicons"] {
             let folderURL = appDataDirectoryURL.appendingPathComponent(folderName, isDirectory: true)

@@ -43,7 +43,7 @@ BOOL getEntitlementValue(NSString *key) {
 
 void updateJetsamControl(pid_t pid) {
     if (!getEntitlementValue(@"com.apple.private.memorystatus")) return;
-
+    
     // FIXME: Find an actual resonable limit instead of setting 75% of physical mem
     int limit = (int)((NSProcessInfo.processInfo.physicalMemory >> 20) * 0.75);
     if (memorystatus_control(MEMORYSTATUS_CMD_SET_JETSAM_TASK_LIMIT, pid, limit, NULL, 0) == -1) {

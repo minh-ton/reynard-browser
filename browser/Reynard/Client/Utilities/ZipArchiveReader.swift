@@ -9,8 +9,6 @@ import Foundation
 import zlib
 
 enum ZipArchiveReader {
-    // MARK: - Entries
-    
     static func entryData(in archiveData: Data, path: String) -> Data? {
         guard let endOfCentralDirectoryOffset = endOfCentralDirectoryOffset(in: archiveData) else {
             return nil
@@ -84,8 +82,6 @@ enum ZipArchiveReader {
         }
     }
     
-    // MARK: - Central Directory
-    
     private static func endOfCentralDirectoryOffset(in data: Data) -> Int? {
         let minimumSize = 22
         guard data.count >= minimumSize else {
@@ -102,8 +98,6 @@ enum ZipArchiveReader {
         return nil
     }
     
-    // MARK: - Reading
-    
     private static func readUInt16(in data: Data, at offset: Int) -> UInt16 {
         let lower = UInt16(data[offset])
         let upper = UInt16(data[offset + 1]) << 8
@@ -115,8 +109,6 @@ enum ZipArchiveReader {
         let upper = UInt32(readUInt16(in: data, at: offset + 2)) << 16
         return lower | upper
     }
-    
-    // MARK: - Deflate
     
     private static func inflate(data: Data, expectedSize: Int) -> Data? {
         var stream = z_stream()
