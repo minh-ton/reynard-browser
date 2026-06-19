@@ -274,9 +274,6 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         nextOffset = 0
         hasMoreItems = true
         fetchState = .idle
-        sections = []
-        tableView.reloadData()
-        updateEmptyState()
         loadNextHistoryPage()
     }
     
