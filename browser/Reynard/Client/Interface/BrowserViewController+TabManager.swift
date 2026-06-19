@@ -30,24 +30,21 @@ extension BrowserViewController: TabManagerDelegate {
     
     func tabManager(_ tabManager: TabManager, didSelectTabAt index: Int, previousIndex: Int?) {
         tabBar.setPendingExpansion(at: nil)
-        if let previousIndex {
-            captureThumbnailForVisibleTab(at: previousIndex)
-        }
-        
+
         guard let selectedTab = tabManager.activeTabs[safe: index] else {
             return
         }
-        
-        contentView.setSession(selectedTab.session)
-        addonCoordinator.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
-        
+
         browserChrome.setAddressBarLoadingProgress(
             selectedTab.state.loadingState.progress,
             isLoading: selectedTab.state.loadingState.isLoading
         )
         refreshAddressBar()
-        
         updateNavigationButtons()
+
+        contentView.setSession(selectedTab.session)
+        addonCoordinator.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
+
         if !tabOverview.isPresented {
             tabOverview.setMode(TabOverview.Mode(tabMode: tabManager.selectedTabMode), animated: false)
             tabOverview.reloadTabs()

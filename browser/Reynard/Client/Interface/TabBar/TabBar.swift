@@ -144,7 +144,9 @@ final class TabBar: UIView {
 
     func setPendingExpansion(at index: Int?) {
         pendingExpandedTabIndex = index
-        tabCollection.reloadTabs()
+        if index != nil {
+            tabCollection.reloadTabs()
+        }
     }
 
     func isTabSelected(at index: Int) -> Bool {
