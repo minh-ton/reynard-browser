@@ -156,7 +156,7 @@ final class TopToolbar: UIView {
         state: LayoutState,
         topInset: CGFloat,
         interfaceIdiom: UIUserInterfaceIdiom,
-        sidebarVisible: Bool
+        sidebarButtonVisible: Bool
     ) {
         UIView.performWithoutAnimation {
             contentTopConstraint.constant = topInset
@@ -169,12 +169,12 @@ final class TopToolbar: UIView {
             trailingButtons.isHidden = isCompact
             leadingWidthConstraint.constant = isCompact ? 0 : leadingWidth(
                 interfaceIdiom: interfaceIdiom,
-                sidebarVisible: sidebarVisible,
+                sidebarButtonVisible: sidebarButtonVisible,
                 showsDownloads: downloadButton.isShowingDownloads
             )
             trailingWidthConstraint.constant = isCompact ? 0 : UX.topToolbarStandardButtonStackWidth
 
-            sidebarButton.isHidden = interfaceIdiom != .pad || sidebarVisible
+            sidebarButton.isHidden = interfaceIdiom != .pad || !sidebarButtonVisible
             libraryButton.isHidden = interfaceIdiom == .pad
             downloadButton.isHidden = isCompact || !downloadButton.isShowingDownloads
 
@@ -268,11 +268,11 @@ final class TopToolbar: UIView {
 
     private func leadingWidth(
         interfaceIdiom: UIUserInterfaceIdiom,
-        sidebarVisible: Bool,
+        sidebarButtonVisible: Bool,
         showsDownloads: Bool
     ) -> CGFloat {
         guard interfaceIdiom == .pad else { return UX.topToolbarStandardButtonStackWidth }
-        let visibleButtonCount = (sidebarVisible ? 2 : 3) + (showsDownloads ? 1 : 0)
+        let visibleButtonCount = (sidebarButtonVisible ? 3 : 2) + (showsDownloads ? 1 : 0)
         return (CGFloat(visibleButtonCount) * UX.topToolbarButtonStackHeight)
             + (CGFloat(max(visibleButtonCount - 1, 0)) * UX.topToolbarButtonSpacing)
     }

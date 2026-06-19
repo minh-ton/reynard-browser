@@ -30,7 +30,7 @@ final class BrowserChrome: UIView {
         let search: SearchState
         let topInset: CGFloat
         let interfaceIdiom: UIUserInterfaceIdiom
-        let sidebarVisible: Bool
+        let sidebarButtonVisible: Bool
     }
 
     // MARK: - Actions
@@ -139,7 +139,7 @@ final class BrowserChrome: UIView {
             state: topState,
             topInset: state.topInset,
             interfaceIdiom: state.interfaceIdiom,
-            sidebarVisible: state.sidebarVisible
+            sidebarButtonVisible: state.sidebarButtonVisible
         )
         bottomToolbar.apply(
             state: bottomState,

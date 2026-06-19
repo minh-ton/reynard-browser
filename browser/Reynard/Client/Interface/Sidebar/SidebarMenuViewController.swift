@@ -72,18 +72,32 @@ final class SidebarMenuViewController: UIViewController, UICollectionViewDelegat
         super.viewWillAppear(animated)
         navigationController?.delegate = self
         navigationController?.setNavigationBarHidden(false, animated: animated)
-        configureCollapseButton(collapseButton)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(customView: collapseButton)
+        if (splitViewController as? SidebarViewController)?.showChromeSidebarButton == true {
+            navigationItem.leftBarButtonItem = nil
+        } else {
+            configureCollapseButton(collapseButton)
+            navigationItem.leftBarButtonItem = UIBarButtonItem(customView: collapseButton)
+        }
         navigationItem.rightBarButtonItem = nil
     }
 
     // MARK: - UINavigationControllerDelegate
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+        let showChromeSidebarButton = (splitViewController as? SidebarViewController)?.showChromeSidebarButton == true
         if viewController === self {
-            configureCollapseButton(collapseButton)
-            navigationItem.leftBarButtonItem = UIBarButtonItem(customView: collapseButton)
+            if showChromeSidebarButton {
+                navigationItem.leftBarButtonItem = nil
+            } else {
+                configureCollapseButton(collapseButton)
+                navigationItem.leftBarButtonItem = UIBarButtonItem(customView: collapseButton)
+            }
             navigationItem.rightBarButtonItem = nil
+            return
+        }
+
+        guard !showChromeSidebarButton else {
+            viewController.navigationItem.rightBarButtonItem = nil
             return
         }
 

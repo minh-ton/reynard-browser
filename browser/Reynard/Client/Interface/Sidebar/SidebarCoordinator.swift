@@ -10,6 +10,7 @@ import UIKit
 protocol SidebarContentController: AnyObject {
     var sidebarContentViewController: UIViewController { get }
     var sidebarContentChrome: BrowserChrome { get }
+    var sidebarContentLayout: BrowserLayout { get }
 
     func updateBrowserLayout(animated: Bool, duration: TimeInterval)
     func openExternalURL(_ url: URL)
@@ -41,8 +42,8 @@ final class SidebarCoordinator {
         sidebar?.contentBrowser ?? host as? SidebarContentController
     }
 
-    var isVisible: Bool {
-        (host?.sidebarSplitViewController as? SidebarViewController)?.isVisible ?? false
+    var showChromeSidebarButton: Bool {
+        (host?.sidebarSplitViewController as? SidebarViewController)?.showChromeSidebarButton ?? true
     }
 
     var hostsSidebar: Bool {
@@ -95,7 +96,7 @@ final class SidebarCoordinator {
             return
         }
 
-        (host?.sidebarSplitViewController as? SidebarViewController)?.setVisible(!isVisible)
+        (host?.sidebarSplitViewController as? SidebarViewController)?.toggleVisibility()
         host?.sidebarCoordinatorDidChangeVisibility(self, animated: animated)
     }
 

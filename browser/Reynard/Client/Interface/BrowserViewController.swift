@@ -388,7 +388,7 @@ final class BrowserViewController: UIViewController {
             search: isShowingFullscreenMedia ? .inactive : searchOverlayCoordinator.chromeState,
             topInset: browserTopInset(),
             interfaceIdiom: browserLayout.interfaceIdiom,
-            sidebarVisible: sidebarCoordinator.isVisible
+            sidebarButtonVisible: sidebarCoordinator.showChromeSidebarButton
         ))
     }
 
