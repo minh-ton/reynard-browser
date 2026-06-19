@@ -135,6 +135,10 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func loadURL(_ url: String, in tab: Tab) {
+        tab.state.loadingState = .loading(progress: 0)
+        if let location = tabLocation(for: tab.id) {
+            notifyUpdate(at: location.index, mode: location.mode, reason: .loading)
+        }
         sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
         tab.session.load(url)
     }
@@ -207,6 +211,15 @@ final class TabManagerImplementation: NSObject, TabManager {
         }
         
         return trimmedValue
+    }
+
+    private func hasDisplayURL(for tab: Tab) -> Bool {
+        switch tab.state.displayState {
+        case let .pending(url):
+            return restoredURL(from: url) != nil
+        case .committed:
+            return restoredURL(from: tab.url) != nil
+        }
     }
     
     private func remoteURL(from value: String?) -> URL? {
@@ -851,9 +864,11 @@ extension TabManagerImplementation: NavigationDelegate {
         
         let normalizedURL = url?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         
-        if tab.state.suppressInitialNavigation,
-           let normalizedURL,
-           normalizedURL.hasPrefix("about:blank") {
+        let shouldPreserveDisplayedURL = hasDisplayURL(for: tab)
+
+        if let normalizedURL,
+           normalizedURL.hasPrefix("about:blank"),
+           (tab.state.suppressInitialNavigation || shouldPreserveDisplayedURL) {
             return
         }
         
@@ -983,6 +998,12 @@ extension TabManagerImplementation: ProgressDelegate {
             return
         }
         let tab = tabs(for: location.mode)[location.index]
+
+        if url.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("about:blank"),
+           hasDisplayURL(for: tab) {
+            tab.state.isSuppressingInitialBlankPageLoad = true
+            return
+        }
         
         if sessionManager.needsSettingsUpdate(
             to: session,
@@ -1002,6 +1023,11 @@ extension TabManagerImplementation: ProgressDelegate {
             return
         }
         let tab = tabs(for: location.mode)[location.index]
+
+        if tab.state.isSuppressingInitialBlankPageLoad {
+            tab.state.isSuppressingInitialBlankPageLoad = false
+            return
+        }
         
         tab.state.loadingState = .idle
         notifyUpdate(at: location.index, mode: location.mode, reason: .loading)
