@@ -17,6 +17,11 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <string.h>
+#include <stdint.h>
+
+#define U64_MIN(a, b) ((uint64_t)((a) < (b) ? (a) : (b)))
+#define U64_MAX(a, b) ((uint64_t)((a) > (b) ? (a) : (b)))
 
 static const uint16_t rppairingPort = 49152;
 
@@ -306,69 +311,71 @@ void runDebugService(int32_t pid, DebugSession *session) {
     BOOL detachedByCommand = NO;
     
     while (YES) {
-        NSString *stopResponse = nil;
-        commandError = nil;
-        
-        if (shouldDetachDebugSessionPID(pid)) {
-            detachedByCommand = detachDebuggerSession(session->debugProxy, pid);
-            if (detachedByCommand) break;
-        }
-        
-        if (!sendDebugCommand(session->debugProxy, @"c", &stopResponse, &commandError)) {
-            if (!isNotConnectedError(commandError)) logger([NSString stringWithFormat:@"Debug loop ended for pid %d: %@", pid, commandError.localizedDescription ?: @"continue failed"]);
-            break;
-        }
-        
-        if ([stopResponse hasPrefix:@"W"] || [stopResponse hasPrefix:@"X"]) {
-            exitPacketPresent = YES;
-            logger([NSString stringWithFormat:@"Target exited for pid %d with packet %@", pid, stopResponse]);
-            break;
-        }
-        
-        NSString *threadID = packetField(stopResponse, @"thread");
-        NSString *pcField = packetField(stopResponse, @"20");
-        NSString *x0Field = packetField(stopResponse, @"00");
-        NSString *x1Field = packetField(stopResponse, @"01");
-        NSString *x16Field = packetField(stopResponse, @"10");
-        
-        uint64_t pc = parseLittleEndianHex64(pcField);
-        uint64_t x0 = x0Field ? parseLittleEndianHex64(x0Field) : 0;
-        uint64_t x1 = x1Field ? parseLittleEndianHex64(x1Field) : 0;
-        uint64_t x16 = x16Field ? parseLittleEndianHex64(x16Field) : 0;
-        
-        NSString *instructionResponse = nil;
-        NSString *readInstruction = [NSString stringWithFormat:@"m%llx,4", pc];
-        if (!sendDebugCommand(session->debugProxy, readInstruction, &instructionResponse, &commandError)) instructionResponse = nil;
-        
-        uint32_t instruction = (uint32_t)parseLittleEndianHex64(instructionResponse ?: @"");
-        if (instructionResponse.length == 0 || !instructionIsBreakpoint(instruction)) {
-            NSString *signal = packetSignal(stopResponse);
+        @autoreleasepool {
+            NSString *stopResponse = nil;
+            commandError = nil;
             
-            // continue with signal
-            if (signal && !forwardSignalStop(session->debugProxy, signal, threadID, &commandError)) break;
-            continue;
-        }
-        
-        uint16_t breakpointImmediate = (instruction >> 5) & 0xffff;
-        
-        if (breakpointImmediate == 0xf00d) {
-            if (!x0Field || !x1Field || !x16Field) break;
-            if (x16 != 1) continue;
+            if (shouldDetachDebugSessionPID(pid)) {
+                detachedByCommand = detachDebuggerSession(session->debugProxy, pid);
+                if (detachedByCommand) break;
+            }
             
-            if (x0 == 0 && x1 == 0) {
-                if (!writeRegisterValue(session->debugProxy, @"20", pc + 4, threadID, &commandError)) break;
+            if (!sendDebugCommand(session->debugProxy, @"c", &stopResponse, &commandError)) {
+                if (!isNotConnectedError(commandError)) logger([NSString stringWithFormat:@"Debug loop ended for pid %d: %@", pid, commandError.localizedDescription ?: @"continue failed"]);
+                break;
+            }
+            
+            if ([stopResponse hasPrefix:@"W"] || [stopResponse hasPrefix:@"X"]) {
+                exitPacketPresent = YES;
+                logger([NSString stringWithFormat:@"Target exited for pid %d with packet %@", pid, stopResponse]);
+                break;
+            }
+            
+            NSString *threadID = packetField(stopResponse, @"thread");
+            NSString *pcField = packetField(stopResponse, @"20");
+            NSString *x0Field = packetField(stopResponse, @"00");
+            NSString *x1Field = packetField(stopResponse, @"01");
+            NSString *x16Field = packetField(stopResponse, @"10");
+            
+            uint64_t pc = parseLittleEndianHex64(pcField);
+            uint64_t x0 = x0Field ? parseLittleEndianHex64(x0Field) : 0;
+            uint64_t x1 = x1Field ? parseLittleEndianHex64(x1Field) : 0;
+            uint64_t x16 = x16Field ? parseLittleEndianHex64(x16Field) : 0;
+            
+            NSString *instructionResponse = nil;
+            NSString *readInstruction = [NSString stringWithFormat:@"m%llx,4", pc];
+            if (!sendDebugCommand(session->debugProxy, readInstruction, &instructionResponse, &commandError)) instructionResponse = nil;
+            
+            uint32_t instruction = (uint32_t)parseLittleEndianHex64(instructionResponse ?: @"");
+            if (instructionResponse.length == 0 || !instructionIsBreakpoint(instruction)) {
+                NSString *signal = packetSignal(stopResponse);
+                
+                // continue with signal
+                if (signal && !forwardSignalStop(session->debugProxy, signal, threadID, &commandError)) break;
                 continue;
             }
             
-            if (x0 == 0) break;
+            uint16_t breakpointImmediate = (instruction >> 5) & 0xffff;
             
-            if (!prepareMemoryRegion(session->debugProxy, x0, x1, &commandError)) break;
-            if (!writeRegisterValue(session->debugProxy, @"00", x0, threadID, &commandError)) break;
-            
-            // jump over breakpoint
-            if (!writeRegisterValue(session->debugProxy, @"20", pc + 4, threadID, &commandError)) break;
-        } else {
-            continue;
+            if (breakpointImmediate == 0xf00d) {
+                if (!x0Field || !x1Field || !x16Field) break;
+                if (x16 != 1) continue;
+                
+                if (x0 == 0 && x1 == 0) {
+                    if (!writeRegisterValue(session->debugProxy, @"20", pc + 4, threadID, &commandError)) break;
+                    continue;
+                }
+                
+                if (x0 == 0) break;
+                
+                if (!prepareMemoryRegion(session->debugProxy, x0, x1, &commandError)) break;
+                if (!writeRegisterValue(session->debugProxy, @"00", x0, threadID, &commandError)) break;
+                
+                // jump over breakpoint
+                if (!writeRegisterValue(session->debugProxy, @"20", pc + 4, threadID, &commandError)) break;
+            } else {
+                continue;
+            }
         }
     }
     
@@ -409,14 +416,7 @@ DeviceProvider *createDeviceProvider(NSString *pairingFilePath, NSString *target
     
     AdapterHandle *adapter = NULL;
     RsdHandshakeHandle *handshake = NULL;
-    ffiError = tunnel_create_rppairing(
-                                       (const struct sockaddr *)&address,
-                                       (socklen_t)sizeof(address),
-                                       "Reynard",
-                                       rpPairingFile,
-                                       NULL, NULL,
-                                       &adapter, &handshake
-                                       );
+    ffiError = tunnel_create_rppairing((const struct sockaddr *)&address, (socklen_t)sizeof(address), "Reynard", rpPairingFile, NULL, NULL, &adapter, &handshake);
     rp_pairing_file_free(rpPairingFile);
 
     if (ffiError) {
