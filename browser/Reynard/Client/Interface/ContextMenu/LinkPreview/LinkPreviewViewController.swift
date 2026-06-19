@@ -9,52 +9,46 @@ import GeckoView
 import UIKit
 
 final class LinkPreviewViewController: UIViewController {
-    // MARK: - UX
-
     private enum UX {
         static let preferredPreviewSize = CGSize(width: 340, height: 480)
     }
-
-    // MARK: - State
-
+    
     private(set) var pageURL: String
     private(set) var pageTitle: String?
     private let sessionManager: SessionManager
     private var session: GeckoSession?
     private var hasClosedSession = false
-
-    // MARK: - Views
-
+    
     private let geckoView = GeckoView()
-
+    
     // MARK: - Lifecycle
-
+    
     init(url: URL, isPrivate: Bool, sessionManager: SessionManager) {
         pageURL = url.absoluteString
         self.sessionManager = sessionManager
         super.init(nibName: nil, bundle: nil)
         configurePreview(isPrivate: isPrivate)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     deinit {
         closeSession()
     }
-
+    
     override func loadView() {
         configureView()
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         loadPreview()
     }
-
+    
     // MARK: - Configuration
-
+    
     private func configurePreview(isPrivate: Bool) {
         preferredContentSize = UX.preferredPreviewSize
         let session = sessionManager.createSession(
@@ -70,15 +64,15 @@ final class LinkPreviewViewController: UIViewController {
         )
         self.session = session
     }
-
+    
     private func configureView() {
         geckoView.backgroundColor = .systemBackground
         geckoView.isUserInteractionEnabled = false
         view = geckoView
     }
-
+    
     // MARK: - Session
-
+    
     func releaseSession() -> GeckoSession? {
         hasClosedSession = true
         if let session {
@@ -89,7 +83,7 @@ final class LinkPreviewViewController: UIViewController {
         geckoView.session = nil
         return committedSession
     }
-
+    
     func closeSession() {
         guard !hasClosedSession else {
             return
@@ -101,12 +95,12 @@ final class LinkPreviewViewController: UIViewController {
         }
         session = nil
     }
-
+    
     private func loadPreview() {
         guard let session else {
             return
         }
-
+        
         sessionManager.open(session)
         geckoView.session = session
         sessionManager.activate(session)
@@ -115,14 +109,10 @@ final class LinkPreviewViewController: UIViewController {
 }
 
 extension LinkPreviewViewController: ContentDelegate, NavigationDelegate {
-    // MARK: - ContentDelegate
-
     func onTitleChange(session: GeckoSession, title: String) {
         pageTitle = title
     }
-
-    // MARK: - NavigationDelegate
-
+    
     func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission]) {
         guard let url,
               url.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("about:blank") == false else {

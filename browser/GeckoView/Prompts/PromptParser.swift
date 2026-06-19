@@ -8,50 +8,50 @@
 import Foundation
 
 func parsePromptRequest(_ data: [String: Any]) -> PromptRequest? {
-    let id = data["id"] as? String ?? ""
-    let type = data["type"] as? String ?? ""
-
-    switch type {
+    let promptID = data["id"] as? String ?? ""
+    let promptType = data["type"] as? String ?? ""
+    
+    switch promptType {
     case "alert":
         return .alert(AlertPromptRequest(
-            id: id,
+            id: promptID,
             title: data["title"] as? String ?? "",
             message: data["msg"] as? String ?? ""
         ))
-
+        
     case "button":
         return .button(ButtonPromptRequest(
-            id: id,
+            id: promptID,
             title: data["title"] as? String ?? "",
             message: data["msg"] as? String ?? "",
             buttonTitles: PayloadValue.strings(data["btnTitle"]),
             customButtonTitles: PayloadValue.strings(data["btnCustomTitle"])
         ))
-
+        
     case "text":
         return .text(TextPromptRequest(
-            id: id,
+            id: promptID,
             title: data["title"] as? String ?? "",
             message: data["msg"] as? String ?? "",
             value: data["value"] as? String ?? ""
         ))
-
+        
     case "folderUpload":
         return .folderUpload(FolderUploadPromptRequest(
-            id: id,
+            id: promptID,
             directoryName: data["directoryName"] as? String ?? ""
         ))
-
+        
     case "color":
         return .color(ColorPromptRequest(
-            id: id,
+            id: promptID,
             value: data["value"] as? String ?? "#000000",
             anchor: parseAnchor(data["rect"])
         ))
-
+        
     case "datetime":
         return .dateTime(DateTimePromptRequest(
-            id: id,
+            id: promptID,
             mode: data["mode"] as? String ?? "date",
             value: data["value"] as? String ?? "",
             min: data["min"] as? String ?? "",
@@ -59,24 +59,24 @@ func parsePromptRequest(_ data: [String: Any]) -> PromptRequest? {
             step: data["step"] as? String ?? "",
             anchor: parseAnchor(data["rect"])
         ))
-
+        
     case "file":
         return .file(FilePickerPromptRequest(
-            id: id,
+            id: promptID,
             mode: data["mode"] as? String ?? "single",
             mimeTypes: data["mimeTypes"] as? [String] ?? [],
             capture: data["capture"] as? Int ?? 0,
             anchor: parseAnchor(data["rect"])
         ))
-
+        
     case "choice":
         return .choice(SelectPromptRequest(
-            id: id,
+            id: promptID,
             mode: data["mode"] as? String ?? "single",
             choices: parseChoices(data["choices"]),
             anchor: parseAnchor(data["rect"])
         ))
-
+        
     default:
         return nil
     }
@@ -100,7 +100,7 @@ private func parseAnchor(_ value: Any?) -> PromptAnchor {
     guard let rect = value as? [String: Any] else {
         return PromptAnchor(rect: nil)
     }
-
+    
     return PromptAnchor(rect: CGRect(
         x: PayloadValue.double(rect["left"]) ?? 0,
         y: PayloadValue.double(rect["top"]) ?? 0,

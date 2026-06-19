@@ -8,50 +8,46 @@
 import UIKit
 
 extension BrowserViewController: SidebarContentController, SidebarCoordinatorHost {
-    // MARK: - SidebarContentController
-
     var sidebarContentViewController: UIViewController {
-        self
+        return self
     }
-
+    
     var sidebarContentChrome: BrowserChrome {
-        browserChrome
+        return browserChrome
     }
-
+    
     var sidebarContentLayout: BrowserLayout {
-        browserLayout
+        return browserLayout
     }
-
+    
     func openExternalURL(_ url: URL) {
         tabManager.openExternalURL(url)
     }
-
-    // MARK: - SidebarCoordinatorHost
-
+    
     var sidebarHostViewController: UIViewController {
-        self
+        return self
     }
-
+    
     var sidebarInterfaceIdiom: UIUserInterfaceIdiom {
-        browserLayout.interfaceIdiom
+        return browserLayout.interfaceIdiom
     }
-
-    var sidebarChromeMode: browserChromeMode {
-        browserLayout.chromeMode
+    
+    var sidebarChromeMode: BrowserChromeMode {
+        return browserLayout.chromeMode
     }
-
+    
     var sidebarSplitViewController: UISplitViewController? {
-        splitViewController
+        return splitViewController
     }
-
+    
     var sidebarFallbackTopInsetSourceView: UIView {
-        view
+        return view
     }
-
+    
     func makeSidebarContentController() -> SidebarContentController {
-        BrowserViewController(canHostSidebar: false)
+        return BrowserViewController(canHostSidebar: false)
     }
-
+    
     func sidebarCoordinatorDidChangeVisibility(_ coordinator: SidebarCoordinator, animated: Bool) {
         updateBrowserLayout(animated: animated)
     }

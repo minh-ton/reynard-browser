@@ -8,62 +8,58 @@
 import UIKit
 
 extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoordinatorDelegate {
-    // MARK: - ContentOverlayCoordinatorHost
-
     var overlayParentViewController: UIViewController {
-        self
+        return self
     }
-
-    // MARK: - SearchOverlayCoordinatorDelegate
-
+    
     var searchLayout: BrowserLayout {
-        browserLayout
+        return browserLayout
     }
-
+    
     var searchChrome: BrowserChrome {
-        browserChrome
+        return browserChrome
     }
-
+    
     var searchContentView: ContentView {
-        contentView
+        return contentView
     }
-
+    
     var searchSelectedTabMode: TabMode {
-        tabManager.selectedTabMode
+        return tabManager.selectedTabMode
     }
-
+    
     var searchSelectedTabID: UUID? {
-        tabManager.selectedTab?.id
+        return tabManager.selectedTab?.id
     }
-
+    
     var searchActiveTabs: [Tab] {
-        tabManager.activeTabs
+        return tabManager.activeTabs
     }
-
+    
     var isSearchAddressBarEditing: Bool {
-        browserChrome.isAddressBarEditing
+        return browserChrome.isAddressBarEditing
     }
-
+    
     var isSearchAddressBarShowingAutocomplete: Bool {
-        browserChrome.isShowingAddressBarAutocomplete
+        return browserChrome.isShowingAddressBarAutocomplete
     }
-
+    
     func refreshSearchAddressBar() {
         refreshAddressBar()
     }
-
+    
     func updateSearchLayout(animated: Bool, duration: TimeInterval) {
         updateBrowserLayout(animated: animated, duration: duration)
     }
-
+    
     func browseSearchTerm(_ term: String) {
         tabManager.browse(to: term)
     }
-
+    
     func selectSearchTab(at index: Int, mode: TabMode) {
         tabManager.selectTab(at: index, mode: mode)
     }
-
+    
     func endSearchEditing() {
         view.endEditing(true)
     }

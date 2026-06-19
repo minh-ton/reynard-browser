@@ -44,7 +44,7 @@ public struct AddonAction {
     }
     
     public func merged(with defaultAction: AddonAction) -> AddonAction {
-        AddonAction(
+        return AddonAction(
             kind: kind,
             title: title ?? defaultAction.title,
             enabled: enabled ?? defaultAction.enabled,

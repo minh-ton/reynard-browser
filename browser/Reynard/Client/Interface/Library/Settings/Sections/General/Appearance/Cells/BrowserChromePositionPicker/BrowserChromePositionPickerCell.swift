@@ -8,12 +8,8 @@
 import UIKit
 
 final class BrowserChromePositionPickerCell: UITableViewCell {
-    // MARK: - State
-
-    var onPositionChanged: ((browserChromePosition) -> Void)?
-    private(set) var selectedPosition: browserChromePosition = .bottom
-
-    // MARK: - Views
+    var onPositionChanged: ((BrowserChromePosition) -> Void)?
+    private(set) var selectedPosition: BrowserChromePosition = .bottom
     
     private let bottomPositionOption = BrowserChromePositionOptionControl(
         position: .bottom,
@@ -25,8 +21,6 @@ final class BrowserChromePositionPickerCell: UITableViewCell {
         symbolName: "reynard.platter.filled.top.iphone",
         title: "Top"
     )
-
-    // MARK: - Lifecycle
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -34,25 +28,21 @@ final class BrowserChromePositionPickerCell: UITableViewCell {
         installOptions()
         connectActions()
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
-    // MARK: - Display
-
-    func display(selectedPosition: browserChromePosition) {
+    
+    func display(selectedPosition: BrowserChromePosition) {
         self.selectedPosition = selectedPosition
         bottomPositionOption.displaySelection(selected: selectedPosition == .bottom)
         topPositionOption.displaySelection(selected: selectedPosition == .top)
     }
-
-    // MARK: - View Setup
-
+    
     private func configureCell() {
         selectionStyle = .none
     }
-
+    
     private func installOptions() {
         let stackView = UIStackView(arrangedSubviews: [bottomPositionOption, topPositionOption])
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -67,13 +57,11 @@ final class BrowserChromePositionPickerCell: UITableViewCell {
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
         ])
     }
-
+    
     private func connectActions() {
         bottomPositionOption.addTarget(self, action: #selector(selectBottomPosition), for: .touchUpInside)
         topPositionOption.addTarget(self, action: #selector(selectTopPosition), for: .touchUpInside)
     }
-
-    // MARK: - Actions
     
     @objc private func selectBottomPosition() {
         guard selectedPosition != .bottom else { return }

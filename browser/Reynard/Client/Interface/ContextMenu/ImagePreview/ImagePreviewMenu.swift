@@ -16,7 +16,7 @@ struct ImagePreviewMenu {
         guard case .image(let url) = context.target else {
             return nil
         }
-
+        
         return UIContextMenuConfiguration(identifier: UUID().uuidString as NSString) {
             ImagePreviewViewController(url: url)
         } actionProvider: { _ in
@@ -39,7 +39,7 @@ struct ImagePreviewMenu {
             ])
         }
     }
-
+    
     private static func loadImage(from url: URL, completion: @escaping @MainActor (UIImage) -> Void) {
         Task {
             guard let image = await ImagePreviewLoader.image(from: url) else {
@@ -50,7 +50,7 @@ struct ImagePreviewMenu {
             }
         }
     }
-
+    
     private static func presentShareSheet(image: UIImage, from controller: UIViewController, sourceView: UIView) {
         let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         if let popover = sheet.popoverPresentationController {

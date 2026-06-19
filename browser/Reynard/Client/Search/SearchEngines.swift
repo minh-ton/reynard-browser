@@ -16,7 +16,7 @@ enum SearchEngine: String, CaseIterable {
     case ecosia
     case startpage
     case custom
-
+    
     var displayName: String {
         switch self {
         case .google:
@@ -37,18 +37,18 @@ enum SearchEngine: String, CaseIterable {
             return "Custom"
         }
     }
-
+    
     static func destination(for query: String) -> String {
         let escapedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         return selectedQueryTemplate.replacingOccurrences(of: "%s", with: escapedQuery)
     }
-
+    
     static func canSearch(using customQueryTemplate: String) -> Bool {
         let normalizedTemplate = customQueryTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
         guard normalizedTemplate.contains("%s") else {
             return false
         }
-
+        
         let exampleDestination = normalizedTemplate.replacingOccurrences(of: "%s", with: "reynard")
         guard let components = URLComponents(string: exampleDestination),
               let scheme = components.scheme?.lowercased(),
@@ -57,10 +57,10 @@ enum SearchEngine: String, CaseIterable {
               !host.isEmpty else {
             return false
         }
-
+        
         return true
     }
-
+    
     private var queryTemplate: String? {
         switch self {
         case .google:
@@ -81,7 +81,7 @@ enum SearchEngine: String, CaseIterable {
             return nil
         }
     }
-
+    
     private static var selectedQueryTemplate: String {
         switch Prefs.SearchSettings.searchEngine {
         case .custom where canSearch(using: Prefs.SearchSettings.customSearchTemplate):

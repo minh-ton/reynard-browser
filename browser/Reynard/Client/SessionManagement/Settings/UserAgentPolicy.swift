@@ -8,12 +8,16 @@
 import Foundation
 import GeckoView
 
+// MARK: - User Agent Configuration
+
 struct UserAgentConfiguration {
     let override: String?
     let forcesMobileMode: Bool
 }
 
 struct UserAgentPolicy {
+    // MARK: - Policy Resolution
+
     func configuration(for url: String, prefersDesktopMode: Bool) -> UserAgentConfiguration {
         let host = DomainMatcher.host(from: url)
         let geckoMajorVersion = GeckoRuntime.version.split(whereSeparator: { !$0.isNumber }).first.map(String.init) ?? "0"
@@ -56,5 +60,4 @@ struct UserAgentPolicy {
             forcesMobileMode: false
         )
     }
-
 }

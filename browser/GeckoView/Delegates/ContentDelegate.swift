@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Content Models
+
 public struct ContextElement {
     public enum ElementType {
         case none
@@ -44,6 +46,8 @@ public struct SavePdfInfo {
     public let filename: String?
     public let originalUrl: String?
 }
+
+// MARK: - Content Delegate
 
 public protocol ContentDelegate {
     func onTitleChange(session: GeckoSession, title: String)
@@ -91,6 +95,8 @@ extension ContentDelegate {
     public func onSavePdf(session: GeckoSession, request: SavePdfInfo) {}
 }
 
+// MARK: - Content Events
+
 enum ContentEvents: String, CaseIterable {
     case contentCrash = "GeckoView:ContentCrash"
     case contentKill = "GeckoView:ContentKill"
@@ -111,6 +117,8 @@ enum ContentEvents: String, CaseIterable {
     case savePdf = "GeckoView:SavePdf"
     case onProductUrl = "GeckoView:OnProductUrl"
 }
+
+// MARK: - Content Handler
 
 func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -267,6 +275,8 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     }
 }
 
+// MARK: - Process Hang Handler
+
 enum ProcessHangEvents: String, CaseIterable {
     case hangReport = "GeckoView:HangReport"
 }
@@ -284,7 +294,7 @@ func newProcessHangHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         let delegate = delegate as? ContentDelegate
         switch event {
         case .hangReport:
-            let reportId = PayloadValue.int(message?["hangId"]) ?? 0
+            let reportID = PayloadValue.int(message?["hangId"]) ?? 0
             
             let response = await delegate?.onSlowScript(
                 session: session,
@@ -295,12 +305,12 @@ func newProcessHangHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             case .resume:
                 session.dispatcher.dispatch(
                     type: "GeckoView:HangReportWait",
-                    message: ["hangId": reportId]
+                    message: ["hangId": reportID]
                 )
             default:
                 session.dispatcher.dispatch(
                     type: "GeckoView:HangReportStop",
-                    message: ["hangId": reportId]
+                    message: ["hangId": reportID]
                 )
             }
             return nil

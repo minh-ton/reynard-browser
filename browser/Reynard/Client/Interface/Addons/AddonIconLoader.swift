@@ -8,8 +8,6 @@
 import UIKit
 
 enum AddonIconLoader {
-    // MARK: - Loading
-    
     static func loadImage(from iconURLString: String?, targetSize: CGSize) -> UIImage? {
         guard let iconURLString,
               let url = URL(string: iconURLString),
@@ -26,8 +24,6 @@ enum AddonIconLoader {
         }
         return resizedImage(from: image, targetSize: targetSize)
     }
-    
-    // MARK: - Data Sources
     
     private static func loadData(from url: URL) -> Data? {
         switch url.scheme?.lowercased() {
@@ -57,8 +53,6 @@ enum AddonIconLoader {
         
         return ZipArchiveReader.entryData(in: archiveData, path: components[1])
     }
-    
-    // MARK: - Rendering
     
     private static func resizedImage(from image: UIImage, targetSize: CGSize) -> UIImage? {
         let renderer = UIGraphicsImageRenderer(size: targetSize)

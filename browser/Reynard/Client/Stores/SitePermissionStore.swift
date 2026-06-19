@@ -112,8 +112,6 @@ enum SitePermissionAction: String {
 }
 
 final class SitePermissionStore {
-    // MARK: - Types
-
     static let shared = SitePermissionStore()
     
     private struct StorageURLs {
@@ -123,13 +121,13 @@ final class SitePermissionStore {
     
     private let fileManager: FileManager
     private let storage: StorageURLs
-    private let stateQueue = DispatchQueue(label: "com.minh-ton.site-permission-store", qos: .utility)
+    private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.SitePermissionStore.Queue", qos: .utility)
     private var database: OpaquePointer?
     private var privateActions: [ObjectIdentifier: [String: [SitePermission: SitePermissionAction]]] = [:]
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
     // MARK: - Lifecycle
-
+    
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -166,7 +164,7 @@ final class SitePermissionStore {
     }
     
     // MARK: - Permissions
-
+    
     func resolvedAction(for permission: SitePermission, host: String, session: GeckoSession) -> SitePermissionAction {
         let host = URLUtils.normalizedHost(host) ?? ""
         return stateQueue.sync {
@@ -234,7 +232,7 @@ final class SitePermissionStore {
     }
     
     // MARK: - Storage
-
+    
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
     }
@@ -287,7 +285,7 @@ final class SitePermissionStore {
     }
     
     // MARK: - Permission Records
-
+    
     private func actionLocked(for permission: SitePermission, host: String) -> SitePermissionAction? {
         guard let statement = prepareStatementLocked(
             """
@@ -407,7 +405,7 @@ final class SitePermissionStore {
     }
     
     // MARK: - SQLite
-
+    
     private func prepareStatementLocked(_ sql: String) -> OpaquePointer? {
         guard let database else {
             return nil

@@ -8,8 +8,6 @@
 import UIKit
 
 extension BrowserViewController {
-    // MARK: - Library
-
     func presentLibrary(initialSection: LibrarySection = .bookmarks) {
         if initialSection == .downloads {
             DownloadStore.shared.markCompletedAsViewed()
@@ -19,7 +17,7 @@ extension BrowserViewController {
                 return
             }
         }
-
+        
         let libraryController = LibraryViewController(
             initialSection: initialSection,
             isPrivateMode: tabManager.selectedTab?.isPrivate == true
@@ -30,9 +28,7 @@ extension BrowserViewController {
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
     }
-
-    // MARK: - Sharing
-
+    
     func presentShareSheet(url urlString: String? = nil) {
         let urlToShare: URL?
         if let urlString {
@@ -42,11 +38,11 @@ extension BrowserViewController {
         } else {
             urlToShare = nil
         }
-
+        
         guard let url = urlToShare else {
             return
         }
-
+        
         let activityController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let popover = activityController.popoverPresentationController {
             let sourceView = browserChrome.sharePopoverSourceView()
@@ -55,14 +51,12 @@ extension BrowserViewController {
         }
         present(activityController, animated: true)
     }
-
-    // MARK: - Tabs
-
+    
     func createNewTab() {
         browserChrome.clearAddressBarAutocomplete()
         searchOverlayCoordinator.endSearchSession()
         view.endEditing(true)
-
+        
         if tabOverview.isPresented {
             let mode = tabOverview.mode
             tabOverview.prepareNewTabInsertion { [weak self] in

@@ -8,23 +8,21 @@
 import UIKit
 
 final class SitePermissionsViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section {
         case availability
         case permissions
         case websiteActions
-
+        
         var text: SettingsSectionText {
-            SettingsSectionText()
+            return SettingsSectionText()
         }
     }
-
+    
     private enum AvailabilityRow: CaseIterable {
         case disabledPermissions
         case openSettings
     }
-
+    
     private enum WebsiteActionRow: CaseIterable {
         case resetPermissions
     }
@@ -81,8 +79,6 @@ final class SitePermissionsViewController: SettingsTableViewController {
             }
         }
     }
-
-    // MARK: - State
     
     private let permissionOptions: [Row] = [
         .autoplay,
@@ -107,24 +103,20 @@ final class SitePermissionsViewController: SettingsTableViewController {
         sections.append(.websiteActions)
         return sections
     }
-
-    // MARK: - Lifecycle
     
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Site Permissions"
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         tableView.reloadData()
     }
-
-    // MARK: - Table Data Source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         displayedSections.count
@@ -212,8 +204,6 @@ final class SitePermissionsViewController: SettingsTableViewController {
             }
         }
     }
-
-    // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
@@ -253,21 +243,13 @@ final class SitePermissionsViewController: SettingsTableViewController {
             }
         }
     }
-
+    
     override func sectionText(for section: Int) -> SettingsSectionText {
         guard displayedSections.indices.contains(section) else {
             return SettingsSectionText()
         }
         return displayedSections[section].text
     }
-    
-    // MARK: - View Setup
-
-    private func configureViewController() {
-        title = "Site Permissions"
-    }
-
-    // MARK: - Cells
     
     private func disabledPermissionMessageCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
@@ -286,8 +268,6 @@ final class SitePermissionsViewController: SettingsTableViewController {
         
         return permissionOptions[safe: indexPath.row]
     }
-
-    // MARK: - Actions
     
     private func resetSitePermissions() {
         let actions: [SitePermissionAction] = [

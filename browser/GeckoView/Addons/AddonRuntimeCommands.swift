@@ -123,9 +123,9 @@ public extension AddonRuntime {
               let addonPayload = payload["extension"] as? [String: Any?] else {
             return nil
         }
-        let updated = upsertAddon(from: addonPayload)
-        delegate?.addonController(self, didUpdate: updated)
-        return updated
+        let updatedAddon = upsertAddon(from: addonPayload)
+        delegate?.addonController(self, didUpdate: updatedAddon)
+        return updatedAddon
     }
     
     func clickAction(kind: AddonActionKind, addon: Addon) async throws -> String? {
@@ -145,8 +145,8 @@ extension AddonRuntime {
               let addonPayload = payload["extension"] as? [String: Any?] else {
             throw GeckoHandlerError("Invalid extension response")
         }
-        let updated = upsertAddon(from: addonPayload)
-        delegate?.addonController(self, didUpdate: updated)
-        return updated
+        let updatedAddon = upsertAddon(from: addonPayload)
+        delegate?.addonController(self, didUpdate: updatedAddon)
+        return updatedAddon
     }
 }

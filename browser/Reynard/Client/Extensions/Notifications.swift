@@ -8,14 +8,14 @@
 import Foundation
 
 extension Notification.Name {
-    static let addressBarPositionDidChange = Notification.Name("addressBarPositionChanged")
-    static let landscapeTabBarDidChange = Notification.Name("landscapeTabBarChanged")
-    static let appUpdateAvailable = Notification.Name("me.minh-ton.reynard.update-available")
-    static let bookmarkStoreDidChange = Notification.Name("me.minh-ton.reynard.bookmark-store-did-change")
-    static let downloadStoreDidChange = Notification.Name("me.minh-ton.reynard.download-store-did-change")
-    static let downloadStoreDidStartDownload = Notification.Name("me.minh-ton.reynard.download-store-did-start-download")
-    static let historyStoreDidChange = Notification.Name("me.minh-ton.reynard.history-store-did-change")
-    static let geckoRuntimeChildProcessDidStart = Notification.Name("GeckoRuntimeChildProcessDidStart")
-    static let jitEndpointMonitorDidFail = Notification.Name("me-minh-ton.jit.endpoint-monitor-failed")
-    static let jitlessModeDidActivate = Notification.Name("me.minh-ton.reynard.jitless-mode-activated")
+    static let addressBarPositionDidChange = Notification.Name("Chrome.AddressBarPositionDidChange")
+    static let landscapeTabBarDidChange = Notification.Name("Chrome.LandscapeTabBarDidChange")
+    static let appUpdateAvailable = Notification.Name("Settings.AppUpdateAvailable")
+    static let bookmarkStoreDidChange = Notification.Name("BookmarkStore.DidChange")
+    static let downloadStoreDidChange = Notification.Name("DownloadStore.DidChange")
+    static let downloadStoreDidStartDownload = Notification.Name("DownloadStore.DidStartDownload")
+    static let historyStoreDidChange = Notification.Name("HistoryStore.DidChange")
+    static let geckoRuntimeChildProcessDidStart = Notification.Name("GeckoRuntime.ChildProcessDidStart")
+    static let jitEndpointMonitorDidFail = Notification.Name("JIT.EndpointMonitorDidFail")
+    static let jitlessModeDidActivate = Notification.Name("JITless.ModeDidActivate")
 }

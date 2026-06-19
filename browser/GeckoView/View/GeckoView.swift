@@ -8,12 +8,6 @@
 import UIKit
 
 public class GeckoView: UIView {
-    public var session: GeckoSession? {
-        didSet {
-            embedSessionView()
-        }
-    }
-    
     public override init(frame: CGRect) {
         super.init(frame: frame)
     }
@@ -21,7 +15,13 @@ public class GeckoView: UIView {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
     }
-
+    
+    public var session: GeckoSession? {
+        didSet {
+            embedSessionView()
+        }
+    }
+    
     private func embedSessionView() {
         subviews.forEach { $0.removeFromSuperview() }
         

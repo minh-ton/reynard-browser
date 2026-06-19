@@ -18,7 +18,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func strings(_ value: Any?) -> [String] {
         if let strings = value as? [String] {
             return strings.filter { !$0.isEmpty }
@@ -31,7 +31,7 @@ enum PayloadValue {
         }
         return []
     }
-
+    
     static func int(_ value: Any?) -> Int? {
         if let value = value as? Int {
             return value
@@ -41,7 +41,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func bool(_ value: Any?) -> Bool? {
         if let value = value as? Bool {
             return value
@@ -51,7 +51,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func int32(_ value: Any?) -> Int32? {
         if let value = value as? Int32 {
             return value
@@ -61,7 +61,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func int64(_ value: Any?) -> Int64? {
         if let value = value as? Int64 {
             return value
@@ -74,7 +74,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func double(_ value: Any?) -> Double? {
         if let value = value as? Double {
             return value
@@ -87,7 +87,7 @@ enum PayloadValue {
         }
         return nil
     }
-
+    
     static func cgFloat(_ value: Any?) -> CGFloat? {
         if let value = value as? CGFloat {
             return value

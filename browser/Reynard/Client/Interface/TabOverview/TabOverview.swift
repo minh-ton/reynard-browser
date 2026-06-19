@@ -12,7 +12,7 @@ protocol TabOverviewDataSource: AnyObject {
     var privateTabs: [Tab] { get }
     var selectedMode: TabMode { get }
     var selectedIndex: Int { get }
-
+    
     func selectTab(at index: Int, mode: TabMode)
     func closeTab(at index: Int, mode: TabMode)
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
@@ -33,15 +33,13 @@ protocol TabOverviewPresentationContext: AnyObject {
     var browserChrome: BrowserChrome { get }
     var tabBar: TabBar { get }
     var browserLayout: BrowserLayout { get }
-
+    
     func setSearchFocused(_ focused: Bool, animated: Bool)
     func endEditing()
     func updateLayout(animated: Bool, duration: TimeInterval)
 }
 
 final class TabOverview: UIView {
-    // MARK: - UX
-
     private enum UX {
         static let tabCollectionContentInset: CGFloat = 16
         static let tabCollectionItemSpacing: CGFloat = 16
@@ -49,63 +47,57 @@ final class TabOverview: UIView {
         static let topToolbarContainerHeight: CGFloat = 76
         static let layoutAnimationDuration: TimeInterval = 0.22
     }
-
+    
     enum Mode: Int {
         case privateTabs = 0
         case regularTabs = 1
-
+        
         init(tabMode: TabMode) {
             self = tabMode == .private ? .privateTabs : .regularTabs
         }
-
+        
         var tabMode: TabMode {
-            self == .privateTabs ? .private : .regular
+            return self == .privateTabs ? .private : .regular
         }
     }
-
+    
     enum ToolbarPosition {
         case top
         case bottom
     }
-
-    // MARK: - State
-
+    
     weak var dataSource: TabOverviewDataSource?
     weak var delegate: TabOverviewDelegate?
     weak var presentationContext: TabOverviewPresentationContext?
-
+    
     private(set) var toolbarPosition: ToolbarPosition = .bottom
-
+    
     var mode: Mode {
-        collection.mode
+        return collection.mode
     }
-
+    
     var isPresented: Bool {
-        presentation.isPresented
+        return presentation.isPresented
     }
-
+    
     var isTransitionRunning: Bool {
-        presentation.isTransitionRunning
+        return presentation.isTransitionRunning
     }
-
+    
     var previewAspectRatio: CGFloat {
         guard let contentView = presentationContext?.contentView else {
             return 1
         }
-
+        
         let width = max(contentView.bounds.width, 1)
         return max(contentView.bounds.height, 1) / width
     }
-
-    // MARK: - Views
-
+    
     let collection: TabOverviewCollection
     let topToolbar = TabOverviewTopToolbar()
     let bottomToolbar = TabOverviewBottomToolbar()
     private(set) lazy var presentation = TabOverviewPresentation(tabOverview: self)
-
-    // MARK: - Constraints
-
+    
     private var regularTabsCollectionTopToContainerConstraint: NSLayoutConstraint!
     private var regularTabsCollectionTopToToolbarConstraint: NSLayoutConstraint!
     private var regularTabsCollectionBottomToContainerConstraint: NSLayoutConstraint!
@@ -114,9 +106,9 @@ final class TabOverview: UIView {
     private var privateTabsCollectionTopToToolbarConstraint: NSLayoutConstraint!
     private var privateTabsCollectionBottomToContainerConstraint: NSLayoutConstraint!
     private var privateTabsCollectionBottomToToolbarConstraint: NSLayoutConstraint!
-
+    
     // MARK: - Lifecycle
-
+    
     override init(frame: CGRect) {
         collection = TabOverviewCollection(
             contentInset: UX.tabCollectionContentInset,
@@ -130,13 +122,13 @@ final class TabOverview: UIView {
         collection.configure(tabOverview: self)
         applyLayout(toolbarPosition: .bottom, animated: false)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     // MARK: - Configuration
-
+    
     func configure(
         dataSource: TabOverviewDataSource,
         delegate: TabOverviewDelegate,
@@ -146,9 +138,9 @@ final class TabOverview: UIView {
         self.delegate = delegate
         self.presentationContext = presentationContext
     }
-
+    
     // MARK: - Updates
-
+    
     func applyLayout(toolbarPosition: ToolbarPosition, animated: Bool) {
         self.toolbarPosition = toolbarPosition
         let usesBottomToolbar = toolbarPosition == .bottom
@@ -163,14 +155,14 @@ final class TabOverview: UIView {
         privateTabsCollectionBottomToContainerConstraint.isActive = !usesBottomToolbar
         privateTabsCollectionBottomToToolbarConstraint.isActive = usesBottomToolbar
         updateToolbarState()
-
+        
         let changes = {
             self.layoutIfNeeded()
             self.collection.applyPresentationTransforms()
         }
         animated ? UIView.animate(withDuration: UX.layoutAnimationDuration, animations: changes) : changes()
     }
-
+    
     func setActiveToolbarAlpha(_ alpha: CGFloat) {
         switch toolbarPosition {
         case .top:
@@ -179,79 +171,79 @@ final class TabOverview: UIView {
             bottomToolbar.alpha = alpha
         }
     }
-
+    
     func setPresented(_ presented: Bool, animated: Bool) {
         presentation.setPresented(presented, animated: animated)
     }
-
+    
     func setMode(_ mode: Mode, animated: Bool) {
         collection.setMode(mode, containerWidth: bounds.width, animated: animated)
         topToolbar.setMode(mode)
         bottomToolbar.setMode(mode)
         updateToolbarState()
     }
-
+    
     func restoreMode(_ mode: Mode) {
         setMode(mode, animated: false)
         collection.refreshTabIdentitySnapshot()
     }
-
+    
     func reloadTabs() {
         collection.reloadTabCards()
         updateToolbarState()
     }
-
+    
     func applyPendingTabChanges() {
         collection.applyTabCollectionChanges()
         updateToolbarState()
     }
-
+    
     func refreshTab(at index: Int, mode: TabMode) {
         collection.refreshVisibleTabCard(at: index, mode: Mode(tabMode: mode))
     }
-
+    
     func prepareNewTabInsertion(completion: @escaping () -> Void) {
         collection.prepareInsertionPlaceholder(for: mode, completion: completion)
     }
-
+    
     func refreshForCurrentOrientation() {
         presentation.refreshForCurrentOrientation()
     }
-
+    
     func invalidateCollectionLayouts() {
         collection.invalidateCardLayouts()
     }
-
+    
     // MARK: - Presentation Access
-
+    
     func currentCollectionView() -> UICollectionView {
         collection.collectionView(for: mode)
     }
-
+    
     func itemIndex(forTabAt index: Int, mode: Mode? = nil) -> Int? {
         collection.itemIndex(forTabAt: index, mode: mode)
     }
-
+    
     func prepareDismissSelection(to index: Int, mode: TabMode, previewImage: UIImage?) {
         presentation.prepareDismissSelection(to: index, mode: mode, previewImage: previewImage)
     }
-
+    
     // MARK: - View Setup
-
+    
     private func configureAppearance() {
         translatesAutoresizingMaskIntoConstraints = false
         backgroundColor = .systemGray6
         alpha = 0
         isHidden = true
     }
-
+    
     private func configureHierarchy() {
         addSubview(collection.privateTabsCollectionView)
         addSubview(collection.regularTabsCollectionView)
         addSubview(bottomToolbar)
         addSubview(topToolbar)
     }
-
+    
     private func configureConstraints() {
         regularTabsCollectionTopToContainerConstraint = collection.regularTabsCollectionView.topAnchor.constraint(equalTo: topAnchor)
         regularTabsCollectionTopToToolbarConstraint = collection.regularTabsCollectionView.topAnchor.constraint(equalTo: topToolbar.bottomAnchor)
@@ -261,26 +253,26 @@ final class TabOverview: UIView {
         privateTabsCollectionTopToToolbarConstraint = collection.privateTabsCollectionView.topAnchor.constraint(equalTo: topToolbar.bottomAnchor)
         privateTabsCollectionBottomToContainerConstraint = collection.privateTabsCollectionView.bottomAnchor.constraint(equalTo: bottomAnchor)
         privateTabsCollectionBottomToToolbarConstraint = collection.privateTabsCollectionView.bottomAnchor.constraint(equalTo: bottomToolbar.topAnchor)
-
+        
         NSLayoutConstraint.activate([
             collection.regularTabsCollectionView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
             collection.regularTabsCollectionView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
             collection.privateTabsCollectionView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
             collection.privateTabsCollectionView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
-
+            
             topToolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             topToolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             topToolbar.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
             topToolbar.heightAnchor.constraint(equalToConstant: UX.topToolbarContainerHeight),
-
+            
             bottomToolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             bottomToolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             bottomToolbar.bottomAnchor.constraint(equalTo: bottomAnchor),
             bottomToolbar.heightAnchor.constraint(equalToConstant: UX.bottomToolbarContainerHeight),
         ])
-
+        
     }
-
+    
     private func configureActions() {
         topToolbar.onTabModeChange = { [weak self] mode in self?.handleTabModeChange(mode) }
         bottomToolbar.onTabModeChange = { [weak self] mode in self?.handleTabModeChange(mode) }
@@ -291,31 +283,31 @@ final class TabOverview: UIView {
         topToolbar.onDone = { [weak self] in self?.requestDone() }
         bottomToolbar.onDone = { [weak self] in self?.requestDone() }
     }
-
+    
     // MARK: - Actions
-
+    
     private func requestClearTabs() {
         delegate?.tabOverviewDidRequestClearTabs(self)
     }
-
+    
     private func handleTabModeChange(_ mode: Mode) {
         setMode(mode, animated: true)
         TabManagementStore.shared.persistLastOverview(mode == .privateTabs ? .private : .regular)
     }
-
+    
     private func requestNewTab() {
         delegate?.tabOverviewDidRequestNewTab(self)
     }
-
+    
     private func requestDone() {
         delegate?.tabOverviewDidRequestDone(self)
     }
-
+    
     private func updateToolbarState() {
         let regularCount = dataSource?.regularTabs.count ?? 0
         let visibleCount = mode == .privateTabs
-            ? dataSource?.privateTabs.count ?? 0
-            : regularCount
+        ? dataSource?.privateTabs.count ?? 0
+        : regularCount
         topToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)
         bottomToolbar.apply(tabCount: regularCount, hasVisibleTab: visibleCount > 0)
     }

@@ -8,20 +8,14 @@
 import UIKit
 
 final class ClearDownloadsViewController: UITableViewController {
-    // MARK: - State
-
     private let onClear: (Date?) -> Void
     private var selectedTimeframe: ClearDataTimeframe = .lastHour
-
-    // MARK: - Views
-
+    
     private lazy var clearFooterView = ClearDataFooterView(
         title: "Clear Downloads",
         target: self,
         action: #selector(confirmClearDownloads)
     )
-
-    // MARK: - Lifecycle
     
     init(onClear: @escaping (Date?) -> Void) {
         self.onClear = onClear

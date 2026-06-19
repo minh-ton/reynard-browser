@@ -12,7 +12,7 @@ struct ContextMenuContext {
         case link(URL)
         case image(URL)
     }
-
+    
     let target: Target
     let point: CGPoint
 }

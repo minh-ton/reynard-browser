@@ -8,23 +8,21 @@
 import UIKit
 
 final class BookmarksViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let searchResultLimit = 50
         static let sectionHeaderTopPadding: CGFloat = 0
         static let headerMenuButtonTrailingInset: CGFloat = 20
+        static let emptyStateFontSize: CGFloat = 16
+        static let groupedSectionHeaderHeight: CGFloat = 34
     }
-
-    // MARK: - State
-
+    
     private let folderID: String?
     private let store: BookmarkStore
     private var sections: [(title: String, items: [BookmarkContentSnapshot])] = []
     private var query = ""
     private var searchVersion = 0
     private var isRoot: Bool {
-        folderID == nil
+        return folderID == nil
     }
     private lazy var newFolderButton = UIBarButtonItem(
         title: "New Folder",
@@ -58,9 +56,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         return item
     }()
     private let showsNavigationMenu: Bool
-
-    // MARK: - Views
-
+    
     private let headerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -83,13 +79,14 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     private let emptyLabel: UILabel = {
         let label = UILabel()
         label.text = "No matching bookmarks"
-        label.font = .systemFont(ofSize: 16, weight: .medium)
+        label.font = .systemFont(ofSize: UX.emptyStateFontSize, weight: .medium)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
         return label
     }()
+    
     // MARK: - Lifecycle
-
+    
     init(folderID: String? = nil, store: BookmarkStore = .shared) {
         self.folderID = folderID
         self.store = store
@@ -105,7 +102,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -168,7 +165,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
-
+    
     // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -209,14 +206,14 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         guard sections.indices.contains(section) else {
             return nil
         }
-
+        
         return LibrarySharedUtils.makeGroupedSectionHeader(title: sections[section].title)
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        LibrarySharedUtils.UX.groupedSectionHeaderHeight
+        return UX.groupedSectionHeaderHeight
     }
-
+    
     // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
@@ -394,7 +391,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             openBookmarkURL(bookmark)
         }
     }
-
+    
     // MARK: - Actions
     
     @objc private func reloadChangedBookmarks() {
@@ -424,7 +421,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             }
         }
     }
-
+    
     // MARK: - Menu
     
     private func updateBookmarkMenu() {
@@ -513,7 +510,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         updateBookmarkMenu()
         LibraryActionButton.installNavigationAction(bookmarkMenuItem, in: navigationItem)
     }
-
+    
     // MARK: - Bookmark Loading
     
     private func reloadBookmarkRows() {
@@ -610,7 +607,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             
             let sortedItem = sortedMovableItems[movableIndex]
             movableIndex += 1
-        return sortedItem
+            return sortedItem
         }
     }
     
@@ -622,7 +619,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         
         return sections[indexPath.section].items[indexPath.row]
     }
-
+    
     // MARK: - Header
     
     private func installHeader() {
@@ -647,7 +644,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
                         guard let self, !self.isEditing else {
                             return nil
                         }
-
+                        
                         return self.makeBookmarkMenu()
                     }
                     bookmarkMenuButton.addInteraction(UIContextMenuInteraction(delegate: delegate))
@@ -671,7 +668,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
         LibrarySharedUtils.updateTableHeaderHeight(headerView, in: tableView)
     }
-
+    
     private func resizeHeaderIfNeeded() {
         guard folderID == nil else {
             return
@@ -679,7 +676,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         
         LibrarySharedUtils.syncTableHeaderWidth(headerView, in: tableView)
     }
-
+    
     // MARK: - Search
     
     private func searchBookmarks(term: String, preserveFocusOnClear: Bool = false) {
@@ -726,7 +723,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             }
         }
     }
-
+    
     // MARK: - Toolbar
     
     private func updateToolbarItems(animated: Bool) {
@@ -743,7 +740,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         }
         setToolbarItems(items, animated: animated)
     }
-
+    
     // MARK: - Navigation
     
     private func openBookmarkURL(_ bookmark: BookmarkSnapshot) {
@@ -758,7 +755,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
             navigationController?.dismiss(animated: true)
         }
     }
-
+    
     // MARK: - UISearchBarDelegate
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -769,7 +766,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-
+    
     // MARK: - UIGestureRecognizerDelegate
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {

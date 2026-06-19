@@ -8,34 +8,28 @@
 import UIKit
 
 final class CompatibilityPreferencesViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section: CaseIterable {
         case userAgent
-
+        
         var text: SettingsSectionText {
-            SettingsSectionText()
+            return SettingsSectionText()
         }
     }
-
+    
     private enum Row: CaseIterable {
         case useAndroidUserAgent
         case userAgentOverrides
     }
-
-    // MARK: - State
     
     private let androidUserAgentSwitch = UISwitch()
     
     private var displayedRows: [Row] {
-        Prefs.CompatibilitySettings.useAndroidUserAgent ? [.useAndroidUserAgent] : Row.allCases
+        return Prefs.CompatibilitySettings.useAndroidUserAgent ? [.useAndroidUserAgent] : Row.allCases
     }
-
-    // MARK: - Lifecycle
     
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Compatibility"
     }
     
     required init?(coder: NSCoder) {
@@ -53,9 +47,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         refreshDisplayedState()
         tableView.reloadData()
     }
-
-    // MARK: - Table Data Source
-
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         Section.allCases.count
     }
@@ -64,7 +56,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         guard Section.allCases.indices.contains(section) else {
             return 0
         }
-
+        
         switch Section.allCases[section] {
         case .userAgent:
             return displayedRows.count
@@ -92,8 +84,6 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
             return cell
         }
     }
-
-    // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
@@ -110,7 +100,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         guard Section.allCases.indices.contains(section) else {
             return SettingsSectionText()
         }
-
+        
         let headerTitle = Section.allCases[section].text.headerTitle
         if Prefs.CompatibilitySettings.useAndroidUserAgent {
             let footerTitle = Prefs.BrowsingSettings.requestDesktopWebsite
@@ -118,30 +108,20 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
             : "To maximize compatibility, the browser will use the Firefox for Android user agent for navigating the web. As a result, websites may identify your device as an Android device."
             return SettingsSectionText(headerTitle: headerTitle, footerTitle: footerTitle)
         }
-
+        
         return SettingsSectionText(
             headerTitle: headerTitle,
             footerTitle: "If you encounter issues such as sign-in failures, human verification challenges, or other incorrect site behavior, adding the site's URL to this user agent override list may help resolve the problem."
         )
     }
-
-    // MARK: - Display
     
     private func refreshDisplayedState() {
         androidUserAgentSwitch.isOn = Prefs.CompatibilitySettings.useAndroidUserAgent
-    }
-
-    // MARK: - View Setup
-    
-    private func configureViewController() {
-        title = "Compatibility"
     }
     
     private func configureSwitch() {
         androidUserAgentSwitch.addTarget(self, action: #selector(applyAndroidUserAgentPreference), for: .valueChanged)
     }
-
-    // MARK: - Actions
     
     @objc private func applyAndroidUserAgentPreference() {
         let nowOn = androidUserAgentSwitch.isOn

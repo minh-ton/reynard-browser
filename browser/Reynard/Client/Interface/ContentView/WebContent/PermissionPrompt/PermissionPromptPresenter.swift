@@ -19,7 +19,7 @@ struct PermissionPromptPresenter: PermissionPromptPresenting {
         guard let presenter = UIApplication.shared.topViewController() else {
             return false
         }
-
+        
         return await withCheckedContinuation { continuation in
             let alert = UIAlertController(
                 title: title,

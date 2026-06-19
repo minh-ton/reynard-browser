@@ -12,23 +12,23 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
     // MARK: - AddonCoordinatorDataSource
     
     var selectedAddonSession: GeckoSession? {
-        tabManager.selectedTab?.session
+        return tabManager.selectedTab?.session
     }
     
     var isSelectedAddonTabPrivate: Bool {
-        tabManager.selectedTab?.isPrivate == true
+        return tabManager.selectedTab?.isPrivate == true
     }
     
     var addonTabs: [Tab] {
-        tabManager.activeTabs
+        return tabManager.activeTabs
     }
     
     var selectedAddonTabMode: TabMode {
-        tabManager.selectedTabMode
+        return tabManager.selectedTabMode
     }
     
     func indexOfAddonTab(for session: GeckoSession) -> Int? {
-        tabManager.tabIndex(for: session)
+        return tabManager.tabIndex(for: session)
     }
     
     // MARK: - AddonCoordinatorDelegate
@@ -67,7 +67,7 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
         at index: Int?,
         loadImmediately: Bool
     ) -> Tab? {
-        tabManager.createRegularTab(
+        return tabManager.createRegularTab(
             selecting: selecting,
             windowId: windowId,
             target: index.map(TabInsertionTarget.index) ?? .end,

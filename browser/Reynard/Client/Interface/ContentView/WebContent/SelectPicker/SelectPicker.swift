@@ -10,8 +10,6 @@ import UIKit
 
 @MainActor
 final class SelectPicker {
-    // MARK: - State
-
     private var mode: String
     private var choices: [PromptChoice]
     private let sourceRect: CGRect
@@ -20,18 +18,16 @@ final class SelectPicker {
     private var continuation: CheckedContinuation<[String]?, Never>?
     private var anchorButton: SelectPickerMenuAnchorButton?
     private var presentedController: UIViewController?
-
-    // MARK: - Lifecycle
-
+    
     init(mode: String, choices: [PromptChoice], sourceRect: CGRect, geckoView: UIView) {
         self.mode = mode
         self.choices = choices
         self.sourceRect = sourceRect
         self.geckoView = geckoView
     }
-
+    
     // MARK: - Presentation
-
+    
     func present() async -> [String]? {
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
@@ -42,7 +38,7 @@ final class SelectPicker {
             }
         }
     }
-
+    
     func updateChoices(_ updatedChoices: [PromptChoice], mode updatedMode: String) {
         choices = updatedChoices
         mode = updatedMode
@@ -51,7 +47,7 @@ final class SelectPicker {
             multiSelectController.updateChoices(updatedChoices)
         }
     }
-
+    
     func cancelAndDismiss() {
         anchorButton?.removeFromSuperview()
         anchorButton = nil
@@ -62,15 +58,15 @@ final class SelectPicker {
             continuation.resume(returning: nil)
         }
     }
-
+    
     // MARK: - Single Select
-
+    
     private func showSingleSelect() {
         guard let geckoView = geckoView else {
             finish(nil)
             return
         }
-
+        
         guard #available(iOS 14.0, *) else {
             showSingleSelectFallback(in: geckoView)
             return
@@ -111,13 +107,13 @@ final class SelectPicker {
             }
         }
     }
-
+    
     private func showSingleSelectFallback(in geckoView: UIView) {
         guard let presenter = UIApplication.shared.topViewController() else {
             finish(nil)
             return
         }
-
+        
         let alert = UIAlertController(title: "Select Option", message: nil, preferredStyle: .actionSheet)
         for item in selectableChoices(from: choices) {
             let title = item.label.isEmpty ? "Option" : item.label
@@ -128,17 +124,17 @@ final class SelectPicker {
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
             self?.finish(nil)
         })
-
+        
         if let popover = alert.popoverPresentationController {
             popover.sourceView = geckoView
             popover.sourceRect = sourceRect
             popover.permittedArrowDirections = []
         }
-
+        
         presenter.present(alert, animated: true)
         presentedController = alert
     }
-
+    
     private func selectableChoices(from items: [PromptChoice]) -> [PromptChoice] {
         var result: [PromptChoice] = []
         for item in items where !item.separator {
@@ -197,9 +193,9 @@ final class SelectPicker {
         
         return elements
     }
-
+    
     // MARK: - Menu Dismissal
-
+    
     private func handleMenuDismissed() {
         anchorButton?.removeFromSuperview()
         anchorButton = nil
@@ -209,9 +205,9 @@ final class SelectPicker {
             continuation.resume(returning: nil)
         }
     }
-
+    
     // MARK: - Multi Select
-
+    
     private func showMultiSelect() {
         guard let geckoView = geckoView,
               let presenter = UIApplication.shared.topViewController() else {
@@ -234,9 +230,9 @@ final class SelectPicker {
         presenter.present(navigationController, animated: true)
         presentedController = navigationController
     }
-
+    
     // MARK: - Completion
-
+    
     private func finish(_ result: [String]?) {
         anchorButton?.removeFromSuperview()
         anchorButton = nil

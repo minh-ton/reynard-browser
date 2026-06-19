@@ -16,14 +16,10 @@ struct AddonUpdateBatchResult {
 }
 
 final class AddonUpdateCoordinator {
-    // MARK: - State
-    
     private var shouldRunAutomaticCheck: Bool
     private var isRunningBatch = false
     private var shouldPresentUpdatePrompts = false
     private var isSettingsVisible = false
-    
-    // MARK: - Initialization
     
     init() {
         if let lastGlobalCheckAt = Prefs.AddonSettings.lastGlobalCheckAt {
@@ -33,13 +29,9 @@ final class AddonUpdateCoordinator {
         }
     }
     
-    // MARK: - State
-    
     var hasPendingApprovals: Bool {
-        !Prefs.AddonSettings.pendingApprovalAddonIDs.isEmpty
+        return !Prefs.AddonSettings.pendingApprovalAddonIDs.isEmpty
     }
-    
-    // MARK: - Lifecycle
     
     func start() {
         prunePendingApprovals()
@@ -52,16 +44,12 @@ final class AddonUpdateCoordinator {
         }
     }
     
-    // MARK: - Settings Visibility
-    
     func setSettingsVisible(_ visible: Bool) {
         isSettingsVisible = visible
         if visible {
             prunePendingApprovals()
         }
     }
-    
-    // MARK: - Permission Prompts
     
     @MainActor
     func responseForUpdatePrompt(
@@ -81,8 +69,6 @@ final class AddonUpdateCoordinator {
         }
         return response
     }
-    
-    // MARK: - Updates
     
     func updateAllAddons(
         status: @escaping @MainActor (String, String?) -> Void
@@ -201,16 +187,12 @@ final class AddonUpdateCoordinator {
         )
     }
     
-    // MARK: - Addon Selection
-    
     private func updateCandidates() -> [Addon] {
         prunePendingApprovals()
         return AddonRuntime.shared.installedAddons.filter {
             !$0.isBuiltIn && !$0.metaData.isUnsupported
         }
     }
-    
-    // MARK: - Pending Approval State
     
     private func prunePendingApprovals() {
         let validAddonIDs = Set(AddonRuntime.shared.installedAddons.filter {

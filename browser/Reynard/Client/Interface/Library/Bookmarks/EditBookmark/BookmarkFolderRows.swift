@@ -5,8 +5,6 @@
 //  Created by Minh Ton on 21/5/26.
 //
 
-// MARK: - Bookmark Folder Rows
-
 typealias BookmarkFolderRow = (folder: BookmarkFolderSnapshot, depth: Int)
 
 func makeBookmarkFolderRows(root: BookmarkFolderHierarchySnapshot, store: BookmarkStore) -> [BookmarkFolderRow] {

@@ -16,15 +16,15 @@ final class SearchCompletion {
         case ecosia
         case startpage
     }
-
+    
     let provider: Provider
     private let urlSession: URLSession
-
+    
     init(provider: Provider = .google, urlSession: URLSession = .shared) {
         self.provider = provider
         self.urlSession = urlSession
     }
-
+    
     func fetchCompletions(
         for query: String,
         completion: @escaping ([String]) -> Void
@@ -33,14 +33,14 @@ final class SearchCompletion {
             completion([])
             return nil
         }
-
+        
         let task = urlSession.dataTask(with: url) { data, response, error in
             if let error = error as NSError?,
                error.domain == NSURLErrorDomain,
                error.code == NSURLErrorCancelled {
                 return
             }
-
+            
             completion(Self.parse(data: data, response: response))
         }
         task.resume()
@@ -97,7 +97,7 @@ private extension SearchCompletion.Provider {
             endpoint = "https://www.startpage.com/osuggestions"
             queryItems = [URLQueryItem(name: "q", value: query)]
         }
-
+        
         var components = URLComponents(string: endpoint)
         components?.queryItems = queryItems
         return components?.url
@@ -114,29 +114,29 @@ private extension SearchCompletion {
               let suggestions = payload[1] as? [Any] else {
             return []
         }
-
+        
         return suggestions.compactMap { value in
             guard let suggestion = value as? String else {
                 return nil
             }
-
+            
             let trimmed = suggestion.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
         }
     }
-
+    
     static func decodePayload(data: Data, response: URLResponse) -> [Any]? {
         if let payload = try? JSONSerialization.jsonObject(with: data) as? [Any] {
             return payload
         }
-
+        
         guard let encodingName = response.textEncodingName,
               let encoding = String.Encoding.ianaCharacterSetName(encodingName),
               let text = String(data: data, encoding: encoding),
               let utf8Data = text.data(using: .utf8) else {
             return nil
         }
-
+        
         return try? JSONSerialization.jsonObject(with: utf8Data) as? [Any]
     }
 }

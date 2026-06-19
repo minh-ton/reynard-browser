@@ -30,7 +30,7 @@ public enum PromptRequest {
     case dateTime(DateTimePromptRequest)
     case file(FilePickerPromptRequest)
     case choice(SelectPromptRequest)
-
+    
     public var id: String {
         switch self {
         case .alert(let request):

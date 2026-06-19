@@ -17,7 +17,7 @@ struct DownloadStoreSummary {
     let hasUnviewedCompletedDownloads: Bool
     
     var showsToolbarButton: Bool {
-        activeCount > 0 || (hasUnviewedCompletedDownloads && totalCount > 0)
+        return activeCount > 0 || (hasUnviewedCompletedDownloads && totalCount > 0)
     }
 }
 
@@ -47,8 +47,6 @@ struct DownloadItemSnapshot {
 }
 
 final class DownloadStore: NSObject {
-    // MARK: - Types
-
     static let shared = DownloadStore()
     
     struct PendingDownload {
@@ -135,7 +133,7 @@ final class DownloadStore: NSObject {
     
     private let fileManager: FileManager
     private let storage: StorageURLs
-    private let stateQueue = DispatchQueue(label: "com.minh-ton.download-store", qos: .userInitiated)
+    private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.DownloadStore.Queue", qos: .userInitiated)
     private lazy var session: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -150,7 +148,7 @@ final class DownloadStore: NSObject {
     private var hasUnviewedCompletedDownloads = false
     
     // MARK: - Lifecycle
-
+    
     override init() {
         self.fileManager = .default
         
@@ -180,12 +178,14 @@ final class DownloadStore: NSObject {
     }
     
     // MARK: - Downloads
-
+    
     func currentSnapshot() -> DownloadStoreSnapshot {
         stateQueue.sync {
             makeSnapshotLocked()
         }
     }
+    
+    // MARK: - Pending Downloads
     
     func pendingDownload(from response: ExternalResponseInfo) -> PendingDownload? {
         if let localFilePath = response.localFilePath,
@@ -270,6 +270,8 @@ final class DownloadStore: NSObject {
         download.startHandler()
     }
     
+    // MARK: - Imports
+    
     func importDownload(
         from sourceFileURL: URL,
         sourceURL: URL,
@@ -312,6 +314,8 @@ final class DownloadStore: NSObject {
             return ImportedDownload(fileURL: destinationURL, mimeType: mimeType, fileSize: fileSize)
         }
     }
+    
+    // MARK: - Download Management
     
     func cancel(id: UUID) {
         stateQueue.async {
@@ -368,7 +372,7 @@ final class DownloadStore: NSObject {
     }
     
     // MARK: - Active Downloads
-
+    
     private func enqueueDownload(_ request: DownloadRequest) {
         stateQueue.async {
             self.prepareStorageLocked()
@@ -406,6 +410,8 @@ final class DownloadStore: NSObject {
             self.postDidChange()
         }
     }
+    
+    // MARK: - Snapshots
     
     private func makeSnapshotLocked() -> DownloadStoreSnapshot {
         let activeItems = activeDownloads.values
@@ -473,7 +479,7 @@ final class DownloadStore: NSObject {
     }
     
     // MARK: - Persistence
-
+    
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.downloadsDirectoryURL, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: storage.appDataDirectoryURL, withIntermediateDirectories: true)
@@ -517,7 +523,7 @@ final class DownloadStore: NSObject {
     }
     
     // MARK: - Files
-
+    
     private func resolvedFileName(suggestedFileName: String?, sourceURL: URL, mimeType: String?) -> String {
         let fallbackName = sourceURL.lastPathComponent.isEmpty ? "Download" : sourceURL.lastPathComponent
         let initialName = sanitizeFileName(suggestedFileName ?? fallbackName)
@@ -623,6 +629,8 @@ final class DownloadStore: NSObject {
         }
     }
     
+    // MARK: - Transfer Lifecycle
+    
     private func completeDownload(taskIdentifier: Int, temporaryLocation: URL) {
         guard let active = activeDownloads.removeValue(forKey: taskIdentifier) else {
             return
@@ -708,6 +716,8 @@ final class DownloadStore: NSObject {
         postDidChange()
     }
     
+    // MARK: - Notifications
+    
     private func postDidChange(throttled: Bool = false) {
         if throttled {
             guard !hasQueuedProgressNotification else {
@@ -743,8 +753,6 @@ final class DownloadStore: NSObject {
 }
 
 extension DownloadStore: URLSessionDownloadDelegate {
-    // MARK: - URLSessionDownloadDelegate
-
     func urlSession(
         _ session: URLSession,
         downloadTask: URLSessionDownloadTask,

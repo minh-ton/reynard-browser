@@ -8,8 +8,6 @@
 import UIKit
 
 final class BrowserChromePositionOptionControl: UIControl {
-    // MARK: - UX
-
     private enum UX {
         static let topInset: CGFloat = 12
         static let previewHeight: CGFloat = 102
@@ -21,20 +19,14 @@ final class BrowserChromePositionOptionControl: UIControl {
         static let indicatorSymbolSize: CGFloat = 22
         static let bottomInset: CGFloat = 12
     }
-
-    // MARK: - State
-
-    let position: browserChromePosition
-
-    // MARK: - Views
-
+    
+    let position: BrowserChromePosition
+    
     private let previewImageView = UIImageView()
     private let nameLabel = UILabel()
     private let selectionIndicatorView = UIImageView()
-
-    // MARK: - Lifecycle
     
-    init(position: browserChromePosition, symbolName: String, title: String) {
+    init(position: BrowserChromePosition, symbolName: String, title: String) {
         self.position = position
         super.init(frame: .zero)
         configureAccessibility(title: title)
@@ -45,13 +37,11 @@ final class BrowserChromePositionOptionControl: UIControl {
         activateConstraints()
         displaySelection(selected: false)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
-    // MARK: - Display
-
+    
     func displaySelection(selected: Bool) {
         let accent = tintColor ?? .systemBlue
         let secondary = UIColor.secondaryLabel
@@ -64,40 +54,38 @@ final class BrowserChromePositionOptionControl: UIControl {
         )
         selectionIndicatorView.tintColor = selected ? accent : secondary
     }
-
-    // MARK: - View Setup
-
+    
     private func configureAccessibility(title: String) {
         isAccessibilityElement = true
         accessibilityLabel = title
         accessibilityTraits = [.button]
     }
-
+    
     private func configurePreview(symbolName: String) {
         previewImageView.translatesAutoresizingMaskIntoConstraints = false
         previewImageView.contentMode = .scaleAspectFit
         let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: UX.previewSymbolSize, weight: .ultraLight)
         previewImageView.image = UIImage(named: symbolName)?.applyingSymbolConfiguration(symbolConfiguration)
     }
-
+    
     private func configureNameLabel(title: String) {
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         nameLabel.font = UIFont.systemFont(ofSize: UX.labelFontSize, weight: .regular)
         nameLabel.textAlignment = .center
         nameLabel.text = title
     }
-
+    
     private func configureSelectionIndicator() {
         selectionIndicatorView.translatesAutoresizingMaskIntoConstraints = false
         selectionIndicatorView.contentMode = .scaleAspectFit
     }
-
+    
     private func installViews() {
         addSubview(previewImageView)
         addSubview(nameLabel)
         addSubview(selectionIndicatorView)
     }
-
+    
     private func activateConstraints() {
         NSLayoutConstraint.activate([
             previewImageView.topAnchor.constraint(equalTo: topAnchor, constant: UX.topInset),

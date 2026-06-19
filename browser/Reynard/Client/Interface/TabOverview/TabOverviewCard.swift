@@ -8,8 +8,6 @@
 import UIKit
 
 final class TabOverviewCard: UICollectionViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let webpagePreviewCornerRadius: CGFloat = 18
         static let webpagePreviewRestingInset: CGFloat = 1
@@ -36,29 +34,25 @@ final class TabOverviewCard: UICollectionViewCell {
         static let tabTitleFontSize: CGFloat = 14
         static let reorderLiftAnimationDuration: TimeInterval = 0.18
     }
-
+    
     enum TransitionState {
         case visible
         case hiddenForAnimation
     }
-
+    
     enum ReorderState {
         case resting
         case lifted
     }
-
+    
     static let reuseIdentifier = "TabOverviewCard"
-
-    // MARK: - State
-
+    
     var onClose: (() -> Void)?
-
+    
     private static let fallbackFaviconImage = UIImage(named: "reynard.globe")
     private(set) var transitionState: TransitionState = .visible
     private(set) var reorderState: ReorderState = .resting
-
-    // MARK: - Views
-
+    
     private let webpagePreviewShadowView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -71,14 +65,14 @@ final class TabOverviewCard: UICollectionViewCell {
         view.layer.masksToBounds = false
         return view
     }()
-
+    
     private let webpagePreviewRegionView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .clear
         return view
     }()
-
+    
     private let webpagePreviewClippingView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +82,7 @@ final class TabOverviewCard: UICollectionViewCell {
         view.layer.masksToBounds = true
         return view
     }()
-
+    
     private let webpagePreviewImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -97,7 +91,7 @@ final class TabOverviewCard: UICollectionViewCell {
         imageView.clipsToBounds = true
         return imageView
     }()
-
+    
     private let closeTabButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -112,7 +106,7 @@ final class TabOverviewCard: UICollectionViewCell {
         button.layer.cornerCurve = .continuous
         return button
     }()
-
+    
     private let tabTitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -122,7 +116,7 @@ final class TabOverviewCard: UICollectionViewCell {
         label.numberOfLines = 1
         return label
     }()
-
+    
     private let faviconImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -131,13 +125,13 @@ final class TabOverviewCard: UICollectionViewCell {
         imageView.clipsToBounds = true
         return imageView
     }()
-
+    
     private let tabMetadataContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
-
+    
     private let tabMetadataStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -147,9 +141,7 @@ final class TabOverviewCard: UICollectionViewCell {
         stackView.spacing = UX.tabMetadataItemSpacing
         return stackView
     }()
-
-    // MARK: - Constraints
-
+    
     private var webpagePreviewShadowTopConstraint: NSLayoutConstraint!
     private var webpagePreviewShadowLeadingConstraint: NSLayoutConstraint!
     private var webpagePreviewShadowTrailingConstraint: NSLayoutConstraint!
@@ -158,9 +150,9 @@ final class TabOverviewCard: UICollectionViewCell {
     private var webpagePreviewLeadingConstraint: NSLayoutConstraint!
     private var webpagePreviewTrailingConstraint: NSLayoutConstraint!
     private var webpagePreviewBottomConstraint: NSLayoutConstraint!
-
+    
     // MARK: - Lifecycle
-
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         configureAppearance()
@@ -170,11 +162,11 @@ final class TabOverviewCard: UICollectionViewCell {
         updateWebpagePreviewShadowColor()
         applyReorderState(animated: false)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func prepareForReuse() {
         super.prepareForReuse()
         webpagePreviewImageView.image = nil
@@ -184,29 +176,29 @@ final class TabOverviewCard: UICollectionViewCell {
         setTransitionState(.visible)
         setReorderState(.resting, animated: false)
     }
-
+    
     // MARK: - Content
-
+    
     func configure(with tab: Tab) {
         tabTitleLabel.text = tab.title.isEmpty ? "Homepage" : tab.title
         webpagePreviewImageView.image = tab.thumbnail
         faviconImageView.image = tab.favicon ?? Self.fallbackFaviconImage
     }
-
+    
     var previewImage: UIImage? {
-        webpagePreviewImageView.image
+        return webpagePreviewImageView.image
     }
-
+    
     // MARK: - Transition Geometry
-
+    
     func webpagePreviewRegionFrame(in targetView: UIView) -> CGRect {
         webpagePreviewRegionView.convert(webpagePreviewRegionView.bounds, to: targetView)
     }
-
+    
     func makeWebpagePreviewRegionSnapshot() -> UIView? {
         webpagePreviewRegionView.snapshotView(afterScreenUpdates: false)
     }
-
+    
     func transitionSnapshotFrame(in targetView: UIView) -> CGRect {
         layoutIfNeeded()
         contentView.layoutIfNeeded()
@@ -216,17 +208,17 @@ final class TabOverviewCard: UICollectionViewCell {
         )
         return contentView.convert(snapshotBounds, to: targetView)
     }
-
+    
     func webpagePreviewImageFrame(in targetView: UIView) -> CGRect {
         layoutIfNeeded()
         contentView.layoutIfNeeded()
         return webpagePreviewImageView.convert(webpagePreviewImageView.bounds, to: targetView)
     }
-
+    
     func makeTransitionSnapshot() -> UIView? {
         layoutIfNeeded()
         contentView.layoutIfNeeded()
-
+        
         let snapshotBounds = contentView.bounds.insetBy(
             dx: -UX.cardTransitionSnapshotOutset,
             dy: -UX.cardTransitionSnapshotOutset
@@ -239,39 +231,39 @@ final class TabOverviewCard: UICollectionViewCell {
             context.cgContext.translateBy(x: UX.cardTransitionSnapshotOutset, y: UX.cardTransitionSnapshotOutset)
             contentView.layer.render(in: context.cgContext)
         }
-
+        
         let snapshotImageView = UIImageView(image: snapshotImage)
         snapshotImageView.contentMode = .scaleToFill
         snapshotImageView.clipsToBounds = false
         return snapshotImageView
     }
-
+    
     // MARK: - State Updates
-
+    
     func setTransitionState(_ state: TransitionState) {
         transitionState = state
         contentView.alpha = state == .visible ? 1 : 0
     }
-
+    
     func setReorderState(_ state: ReorderState, animated: Bool) {
         reorderState = state
         applyReorderState(animated: animated)
     }
-
+    
     func isCloseButton(at point: CGPoint) -> Bool {
         let pointInPreview = convert(point, to: webpagePreviewClippingView)
         return closeTabButton.frame.contains(pointInPreview)
     }
-
+    
     // MARK: - View Setup
-
+    
     private func configureAppearance() {
         clipsToBounds = false
         backgroundColor = .clear
         contentView.backgroundColor = .clear
         contentView.clipsToBounds = false
     }
-
+    
     private func configureHierarchy() {
         contentView.addSubview(webpagePreviewRegionView)
         webpagePreviewRegionView.addSubview(webpagePreviewShadowView)
@@ -283,7 +275,7 @@ final class TabOverviewCard: UICollectionViewCell {
         tabMetadataStackView.addArrangedSubview(faviconImageView)
         tabMetadataStackView.addArrangedSubview(tabTitleLabel)
     }
-
+    
     private func configureConstraints() {
         webpagePreviewShadowTopConstraint = webpagePreviewShadowView.topAnchor.constraint(equalTo: webpagePreviewRegionView.topAnchor)
         webpagePreviewShadowLeadingConstraint = webpagePreviewShadowView.leadingAnchor.constraint(equalTo: webpagePreviewRegionView.leadingAnchor)
@@ -293,7 +285,7 @@ final class TabOverviewCard: UICollectionViewCell {
         webpagePreviewLeadingConstraint = webpagePreviewClippingView.leadingAnchor.constraint(equalTo: webpagePreviewRegionView.leadingAnchor)
         webpagePreviewTrailingConstraint = webpagePreviewClippingView.trailingAnchor.constraint(equalTo: webpagePreviewRegionView.trailingAnchor)
         webpagePreviewBottomConstraint = webpagePreviewClippingView.bottomAnchor.constraint(equalTo: webpagePreviewRegionView.bottomAnchor)
-
+        
         NSLayoutConstraint.activate([
             webpagePreviewRegionView.topAnchor.constraint(equalTo: contentView.topAnchor),
             webpagePreviewRegionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -331,31 +323,31 @@ final class TabOverviewCard: UICollectionViewCell {
             ),
         ])
     }
-
+    
     private func configureActions() {
         closeTabButton.addTarget(self, action: #selector(closeTabButtonTapped), for: .touchUpInside)
     }
-
+    
     // MARK: - State Rendering
-
+    
     private func applyReorderState(animated: Bool) {
         let isLifted = reorderState == .lifted
         let previewInset = isLifted ? UX.webpagePreviewLiftedInset : UX.webpagePreviewRestingInset
         updateWebpagePreviewInsets(previewInset)
-
+        
         let animations = {
             self.contentView.layoutIfNeeded()
             self.webpagePreviewShadowView.layer.shadowOpacity = isLifted
-                ? UX.webpagePreviewLiftedShadowOpacity
-                : UX.webpagePreviewRestingShadowOpacity
+            ? UX.webpagePreviewLiftedShadowOpacity
+            : UX.webpagePreviewRestingShadowOpacity
             self.webpagePreviewShadowView.layer.shadowRadius = isLifted
-                ? UX.webpagePreviewLiftedShadowRadius
-                : UX.webpagePreviewRestingShadowRadius
+            ? UX.webpagePreviewLiftedShadowRadius
+            : UX.webpagePreviewRestingShadowRadius
             self.webpagePreviewShadowView.layer.shadowOffset = isLifted
-                ? UX.webpagePreviewLiftedShadowOffset
-                : UX.webpagePreviewRestingShadowOffset
+            ? UX.webpagePreviewLiftedShadowOffset
+            : UX.webpagePreviewRestingShadowOffset
         }
-
+        
         if animated {
             UIView.animate(
                 withDuration: UX.reorderLiftAnimationDuration,
@@ -367,7 +359,7 @@ final class TabOverviewCard: UICollectionViewCell {
             animations()
         }
     }
-
+    
     private func updateWebpagePreviewInsets(_ inset: CGFloat) {
         webpagePreviewShadowTopConstraint.constant = inset
         webpagePreviewShadowLeadingConstraint.constant = inset
@@ -378,15 +370,15 @@ final class TabOverviewCard: UICollectionViewCell {
         webpagePreviewTrailingConstraint.constant = -inset
         webpagePreviewBottomConstraint.constant = -inset
     }
-
+    
     private func updateWebpagePreviewShadowColor() {
         webpagePreviewShadowView.layer.shadowColor = UITraitCollection.current.userInterfaceStyle == .dark
-            ? UIColor.white.cgColor
-            : UIColor.black.cgColor
+        ? UIColor.white.cgColor
+        : UIColor.black.cgColor
     }
-
+    
     // MARK: - Actions
-
+    
     @objc private func closeTabButtonTapped() {
         onClose?()
     }

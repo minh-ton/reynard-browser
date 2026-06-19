@@ -18,11 +18,11 @@ final class GeckoSessionHandler: GeckoSessionHandlerCommon {
     private var delegateReference: Any?
     
     func delegate<Delegate>(as type: Delegate.Type = Delegate.self) -> Delegate? {
-        delegateReference as? Delegate
+        return delegateReference as? Delegate
     }
     
     var enabled: Bool {
-        delegateReference != nil
+        return delegateReference != nil
     }
     
     func setDelegate<Delegate>(_ delegate: Delegate?) {

@@ -20,8 +20,6 @@ struct HistorySiteSnapshot: Hashable {
 }
 
 final class HistoryStore {
-    // MARK: - Types and Constants
-
     static let shared = HistoryStore()
     
     private enum Constants {
@@ -35,12 +33,12 @@ final class HistoryStore {
     
     private let fileManager: FileManager
     private let storage: StorageURLs
-    private let stateQueue = DispatchQueue(label: "com.minh-ton.history-store", qos: .userInitiated)
+    private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.HistoryStore.Queue", qos: .userInitiated)
     private var database: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
     // MARK: - Lifecycle
-
+    
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -76,7 +74,7 @@ final class HistoryStore {
     }
     
     // MARK: - History
-
+    
     func currentSnapshot() -> HistoryStoreSnapshot {
         stateQueue.sync {
             HistoryStoreSnapshot(items: fetchSitesLocked())
@@ -149,7 +147,7 @@ final class HistoryStore {
     }
     
     // MARK: - Storage
-
+    
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
     }
@@ -219,6 +217,8 @@ final class HistoryStore {
         ensureHistoryColumnLocked(name: "frecency", definition: "INTEGER NOT NULL DEFAULT 0")
         backfillHistorySearchMetadataLocked()
     }
+    
+    // MARK: - Record Mutations
     
     private func recordVisitLocked(url: URL, title: String, visitedAt: Date) -> Bool {
         let normalizedTitle = pageTitle(title, fallbackURL: url)
@@ -373,6 +373,8 @@ final class HistoryStore {
         return true
     }
     
+    // MARK: - Snapshot Queries
+    
     private func fetchSitesLocked() -> [HistorySiteSnapshot] {
         fetchSitesLocked(limit: nil, offset: 0)
     }
@@ -411,7 +413,7 @@ final class HistoryStore {
     }
     
     // MARK: - Search
-
+    
     private func searchSitesLocked(matching query: String, limit: Int) -> [HistorySiteSnapshot] {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedQuery.isEmpty, limit > 0 else {
@@ -546,6 +548,8 @@ final class HistoryStore {
         return readSnapshotsLocked(from: statement)
     }
     
+    // MARK: - Snapshot Decoding
+    
     private func readSnapshotsLocked(from statement: OpaquePointer?) -> [HistorySiteSnapshot] {
         
         var items: [HistorySiteSnapshot] = []
@@ -579,6 +583,8 @@ final class HistoryStore {
             }
         }
     }
+    
+    // MARK: - Record Persistence
     
     private func upsertHistoryLocked(url: String, title: String, timestamp: TimeInterval) -> Bool {
         let host = URL(string: url)?.host?.lowercased() ?? ""
@@ -650,16 +656,18 @@ final class HistoryStore {
     }
     
     private func beginTransactionLocked() -> Bool {
-        executeLocked("BEGIN IMMEDIATE TRANSACTION;")
+        return executeLocked("BEGIN IMMEDIATE TRANSACTION;")
     }
     
     private func commitTransactionLocked() -> Bool {
-        executeLocked("COMMIT TRANSACTION;")
+        return executeLocked("COMMIT TRANSACTION;")
     }
     
     private func rollbackTransactionLocked() {
         _ = executeLocked("ROLLBACK TRANSACTION;")
     }
+    
+    // MARK: - Schema Migration
     
     private func ensureHistoryColumnLocked(name: String, definition: String) {
         guard !historyColumnExistsLocked(name) else {
@@ -734,6 +742,8 @@ final class HistoryStore {
         }
     }
     
+    // MARK: - Frecency
+    
     private func incrementVisitStatsLocked(siteID: Int64, lastVisitedAt: Date) -> Bool {
         let recencyWeight = frecencyWeight(for: lastVisitedAt)
         guard let statement = prepareStatementLocked(
@@ -796,7 +806,7 @@ final class HistoryStore {
     }
     
     // MARK: - SQLite
-
+    
     private func executeLocked(_ sql: String) -> Bool {
         guard let database else {
             return false
@@ -839,24 +849,24 @@ final class HistoryStore {
     }
     
     // MARK: - Helpers
-
+    
     private func pageTitle(_ title: String, fallbackURL: URL) -> String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedTitle.isEmpty ? fallbackURL.host ?? fallbackURL.absoluteString : trimmedTitle
     }
-
+    
     private func isHostOnlyQuery(_ query: String) -> Bool {
         guard !query.isEmpty else {
             return false
         }
-
+        
         return !query.unicodeScalars.contains { scalar in
             scalar.properties.isWhitespace || scalar == "/" || scalar == "?" || scalar == "#"
         }
     }
-
+    
     private func escapedLikePattern(_ value: String) -> String {
-        value
+        return value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")

@@ -73,27 +73,27 @@ public struct AddonMetaData {
     }
     
     public var isBlocklisted: Bool {
-        disabledFlags.contains("blocklistDisabled")
+        return disabledFlags.contains("blocklistDisabled")
     }
     
     public var isSoftBlocked: Bool {
-        disabledFlags.contains("softBlocklistDisabled")
+        return disabledFlags.contains("softBlocklistDisabled")
     }
     
     public var isUnsigned: Bool {
-        disabledFlags.contains("signatureDisabled")
+        return disabledFlags.contains("signatureDisabled")
     }
     
     public var isUnsupported: Bool {
-        disabledFlags.contains("appDisabled")
+        return disabledFlags.contains("appDisabled")
     }
     
     public var isIncompatible: Bool {
-        disabledFlags.contains("appVersionDisabled")
+        return disabledFlags.contains("appVersionDisabled")
     }
     
     public var canBeEnabled: Bool {
-        !isBlocklisted && !isUnsigned && !isIncompatible && !isUnsupported
+        return !isBlocklisted && !isUnsigned && !isIncompatible && !isUnsupported
     }
     
     private static func resolveIconURL(from value: Any?) -> String? {
@@ -106,7 +106,7 @@ public struct AddonMetaData {
             return nil
         }
         
-        let resolvedEntries = entries
+        let availableIcons = entries
             .compactMap { key, value -> (Int, String)? in
                 guard let size = Int(key) else {
                     return nil
@@ -120,14 +120,14 @@ public struct AddonMetaData {
                 return nil
             }
         
-        let rasterEntries = resolvedEntries.filter { !$0.1.lowercased().hasSuffix(".svg") }
-        if let preferredRaster = preferredIconEntry(from: rasterEntries) {
-            return preferredRaster.1
+        let rasterIcons = availableIcons.filter { !$0.1.lowercased().hasSuffix(".svg") }
+        if let preferredRasterIcon = preferredIconEntry(from: rasterIcons) {
+            return preferredRasterIcon.1
         }
         
-        return preferredIconEntry(from: resolvedEntries)?.1
+        return preferredIconEntry(from: availableIcons)?.1
     }
-
+    
     private static func preferredIconEntry(from entries: [(Int, String)]) -> (Int, String)? {
         let minimumSize = 32
         return entries.sorted { lhs, rhs in
@@ -142,32 +142,4 @@ public enum AddonIncognitoMode: String {
     case spanning
     case split
     case notAllowed = "not_allowed"
-}
-
-public final class Addon: NSObject {
-    public let id: String
-    public let locationURI: String
-    public let isBuiltIn: Bool
-    public let flags: Int
-    public private(set) var metaData: AddonMetaData
-    
-    public internal(set) var browserAction: AddonAction?
-    public internal(set) var pageAction: AddonAction?
-    
-    init(dictionary: [String: Any?]) {
-        id = dictionary["webExtensionId"] as? String ?? ""
-        locationURI = dictionary["locationURI"] as? String ?? ""
-        isBuiltIn = dictionary["isBuiltIn"] as? Bool ?? false
-        flags = PayloadValue.int(dictionary["webExtensionFlags"] ?? nil) ?? 0
-        
-        metaData = AddonMetaData(
-            dictionary: dictionary["metaData"] as? [String: Any?] ?? [:]
-        )
-    }
-    
-    func update(from dictionary: [String: Any?]) {
-        metaData = AddonMetaData(
-            dictionary: dictionary["metaData"] as? [String: Any?] ?? [:]
-        )
-    }
 }

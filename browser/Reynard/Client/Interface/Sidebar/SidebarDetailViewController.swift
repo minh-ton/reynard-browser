@@ -8,50 +8,44 @@
 import UIKit
 
 final class SidebarDetailViewController: UIViewController {
-    // MARK: - State
-
     private let contentController: UIViewController
     private let detailTitle: String
-
-    // MARK: - Lifecycle
-
+    
     init(title: String, contentViewController: UIViewController) {
         self.detailTitle = title
         self.contentController = contentViewController
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTitle()
         configureHierarchy()
         configureConstraints()
     }
-
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(false, animated: animated)
         navigationItem.leftItemsSupplementBackButton = false
         navigationItem.leftBarButtonItem = nil
     }
-
-    // MARK: - View Setup
-
+    
     private func configureTitle() {
         title = detailTitle
     }
-
+    
     private func configureHierarchy() {
         addChild(contentController)
         contentController.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(contentController.view)
         contentController.didMove(toParent: self)
     }
-
+    
     private func configureConstraints() {
         NSLayoutConstraint.activate([
             contentController.view.topAnchor.constraint(equalTo: view.topAnchor),

@@ -51,8 +51,6 @@ struct BookmarkFolderSnapshot: Hashable {
 }
 
 final class BookmarkStore {
-    // MARK: - Types and Constants
-
     static let shared = BookmarkStore()
     
     private enum Constants {
@@ -92,12 +90,12 @@ final class BookmarkStore {
     
     private let fileManager: FileManager
     private let storage: StorageURLs
-    private let stateQueue = DispatchQueue(label: "com.minh-ton.bookmark-store", qos: .userInitiated)
+    private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.BookmarkStore.Queue", qos: .userInitiated)
     private var database: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
     // MARK: - Lifecycle
-
+    
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -138,7 +136,7 @@ final class BookmarkStore {
     }
     
     // MARK: - Bookmarks
-
+    
     func bookmarks(matchingPrefix query: String, limit: Int) -> [BookmarkSnapshot] {
         stateQueue.sync {
             searchBookmarksPrefixLocked(matching: query, limit: limit)
@@ -157,8 +155,8 @@ final class BookmarkStore {
         }
     }
     
-    // MARK: - Folders
-
+    // MARK: - Folder Queries
+    
     func childFolders(in parentGUID: String? = nil) -> BookmarkFolderHierarchySnapshot {
         stateQueue.sync {
             let requestedParentGUID = resolvedParentGUID(for: parentGUID)
@@ -196,6 +194,8 @@ final class BookmarkStore {
             )
         }
     }
+    
+    // MARK: - Bookmark Mutations
     
     @discardableResult
     func addBookmark(title: String, url: URL, to parentGUID: String? = nil) -> BookmarkSnapshot? {
@@ -347,6 +347,8 @@ final class BookmarkStore {
         }
     }
     
+    // MARK: - Folder Mutations
+    
     @discardableResult
     func addFolder(title: String, to parentGUID: String? = nil) -> BookmarkFolderSnapshot? {
         let normalizedTitle = normalizedFolderTitle(title)
@@ -403,7 +405,7 @@ final class BookmarkStore {
     }
     
     // MARK: - Storage
-
+    
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
     }
@@ -540,7 +542,7 @@ final class BookmarkStore {
     }
     
     // MARK: - Search
-
+    
     private func searchBookmarksPrefixLocked(matching query: String, limit: Int) -> [BookmarkSnapshot] {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedQuery.isEmpty, limit > 0 else {
@@ -674,6 +676,8 @@ final class BookmarkStore {
         return readBookmarkSnapshotsLocked(from: statement)
     }
     
+    // MARK: - Bookmark Lookup
+    
     private func bookmarkSnapshotLocked(url: URL) -> BookmarkSnapshot? {
         let urlString = url.absoluteString
         guard let statement = prepareStatementLocked(
@@ -779,6 +783,8 @@ final class BookmarkStore {
         return readBookmarkSnapshotsLocked(from: statement)
     }
     
+    // MARK: - Folder Lookup
+    
     private func fetchChildFoldersLocked(parentGUID: String) -> [BookmarkFolderSnapshot] {
         guard let statement = prepareStatementLocked(
    """
@@ -834,6 +840,8 @@ final class BookmarkStore {
         bind(parentGUID, to: statement, at: 1)
         return readContentSnapshotsLocked(from: statement)
     }
+    
+    // MARK: - Record Lookup
     
     private func rootFolderSnapshotLocked() -> BookmarkFolderSnapshot {
         folderSnapshotLocked(guid: Constants.rootFolderGUID) ?? BookmarkFolderSnapshot(
@@ -1006,6 +1014,8 @@ final class BookmarkStore {
         
         return childGUIDs
     }
+    
+    // MARK: - Record Mutations
     
     private func insertNodeLocked(
         guid: String,
@@ -1236,6 +1246,8 @@ final class BookmarkStore {
         return true
     }
     
+    // MARK: - Snapshot Decoding
+    
     private func readBookmarkSnapshotsLocked(from statement: OpaquePointer?) -> [BookmarkSnapshot] {
         var items: [BookmarkSnapshot] = []
         
@@ -1396,16 +1408,18 @@ final class BookmarkStore {
         return sqlite3_column_int64(statement, 0) == 0
     }
     
+    // MARK: - Transactions
+    
     private func isProtectedFolderGUID(_ guid: String) -> Bool {
-        guid == Constants.rootFolderGUID || guid == Constants.favoritesFolderGUID
+        return guid == Constants.rootFolderGUID || guid == Constants.favoritesFolderGUID
     }
     
     private func beginTransactionLocked() -> Bool {
-        executeLocked("BEGIN IMMEDIATE TRANSACTION;")
+        return executeLocked("BEGIN IMMEDIATE TRANSACTION;")
     }
     
     private func commitTransactionLocked() -> Bool {
-        executeLocked("COMMIT TRANSACTION;")
+        return executeLocked("COMMIT TRANSACTION;")
     }
     
     private func rollbackTransactionLocked() {
@@ -1413,7 +1427,7 @@ final class BookmarkStore {
     }
     
     // MARK: - SQLite
-
+    
     private func executeLocked(_ sql: String) -> Bool {
         guard let database else {
             return false
@@ -1473,24 +1487,24 @@ final class BookmarkStore {
     }
     
     // MARK: - Helpers
-
+    
     private func bookmarkTitle(_ title: String, fallbackURL: URL) -> String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedTitle.isEmpty ? fallbackURL.host ?? fallbackURL.absoluteString : trimmedTitle
     }
-
+    
     private func isHostOnlyQuery(_ query: String) -> Bool {
         guard !query.isEmpty else {
             return false
         }
-
+        
         return !query.unicodeScalars.contains { scalar in
             scalar.properties.isWhitespace || scalar == "/" || scalar == "?" || scalar == "#"
         }
     }
-
+    
     private func normalizedFolderTitle(_ title: String) -> String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     private func resolvedParentGUID(for parentGUID: String?) -> String {
@@ -1503,14 +1517,14 @@ final class BookmarkStore {
     }
     
     private func escapedLikePattern(_ value: String) -> String {
-        value
+        return value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
     }
     
     private func makeGUID() -> String {
-        UUID().uuidString.lowercased()
+        return UUID().uuidString.lowercased()
     }
     
     private func postDidChange() {

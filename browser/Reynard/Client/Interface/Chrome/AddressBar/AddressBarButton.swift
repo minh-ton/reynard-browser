@@ -8,20 +8,16 @@
 import UIKit
 
 final class AddressBarButton: UIButton {
-    // MARK: - UX
-
     private enum UX {
         static let addressBarButtonTouchTargetScale: CGFloat = 2
         static let addressBarButtonSymbolPointSize: CGFloat = 14
     }
-
+    
     private var isMenuVisible = false
-
+    
     private var pendingMenuAfterDismissal: UIMenu?
     private var pendingMenuDismissalHandlers: [() -> Void] = []
     private var legacyMenuDelegate: LegacyContextMenuDelegate?
-
-    // MARK: - Lifecycle
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -32,7 +28,7 @@ final class AddressBarButton: UIButton {
         super.init(coder: coder)
         configureAppearance()
     }
-
+    
     // MARK: - Configuration
     
     private func configureAppearance() {
@@ -63,7 +59,7 @@ final class AddressBarButton: UIButton {
         let center = NSValue(cgPoint: CGPoint(x: bounds.midX, y: bounds.midY))
         _ = interaction.perform(selector, with: center)
     }
-
+    
     // MARK: - Menu Updates
     
     func setMenuPreservingPresentation(_ menu: UIMenu?) {
@@ -118,7 +114,7 @@ final class AddressBarButton: UIButton {
         
         return nil
     }
-
+    
     // MARK: - Context Menu Lifecycle
     
     @available(iOS 14.0, *)
@@ -186,7 +182,7 @@ final class AddressBarButton: UIButton {
         
         finalizeDismissal()
     }
-
+    
     // MARK: - Hit Testing
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

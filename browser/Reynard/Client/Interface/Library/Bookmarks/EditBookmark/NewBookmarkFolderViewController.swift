@@ -8,20 +8,14 @@
 import UIKit
 
 final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let sectionHeaderTopPadding: CGFloat = 0
     }
-
-    // MARK: - State
-
+    
     private let store: BookmarkStore
     private let limitsToFavorites: Bool
     private var folderRows: [BookmarkFolderRow] = []
     private var selectedFolderID: String?
-
-    // MARK: - Views
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -48,7 +42,7 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
         textField.addTarget(self, action: #selector(validateSaveButton), for: .editingChanged)
         return textField
     }()
-
+    
     // MARK: - Lifecycle
     
     init(selectedFolderID: String? = nil, limitsToFavorites: Bool = false, store: BookmarkStore = .shared) {
@@ -94,8 +88,8 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
         
         validateSaveButton()
     }
-
-    // MARK: - UITableViewDataSource
+    
+    // MARK: - Delegates
     
     func numberOfSections(in tableView: UITableView) -> Int {
         2
@@ -132,8 +126,6 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
         cell.configure(folder: row.folder, depth: row.depth, isSelected: isSelected)
         return cell
     }
-
-    // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
@@ -143,14 +135,12 @@ final class NewBookmarkFolderViewController: UIViewController, UITableViewDataSo
             tableView.reloadSections(IndexSet(integer: 1), with: .none)
         }
     }
-
-    // MARK: - UITextFieldDelegate
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
     }
-
+    
     // MARK: - Actions
     
     @objc private func createFolder() {

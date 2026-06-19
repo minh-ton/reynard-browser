@@ -8,13 +8,9 @@
 import UIKit
 
 final class AddressBarTextField: UITextField {
-    // MARK: - State
-
     var isAutocompleteActive = false
     private var suppressTextActions = false
-
-    // MARK: - Touch Handling
-
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if isAutocompleteActive {
             suppressTextActions = true
@@ -23,17 +19,15 @@ final class AddressBarTextField: UITextField {
             }
             return
         }
-
+        
         super.touchesBegan(touches, with: event)
     }
-
-    // MARK: - Edit Menu
-
+    
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
         if isAutocompleteActive || suppressTextActions {
             return false
         }
-
+        
         return super.canPerformAction(action, withSender: sender)
     }
 }

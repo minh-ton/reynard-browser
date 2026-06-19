@@ -8,35 +8,33 @@
 import UIKit
 
 class SettingsTableViewController: UITableViewController {
-    // MARK: - Lifecycle
-
+    private enum UX {
+        static let sectionHeaderTopPadding: CGFloat = 0
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTableView()
     }
-
+    
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        sectionText(for: section).headerTitle
+        return sectionText(for: section).headerTitle
     }
-
+    
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        sectionText(for: section).footerTitle
+        return sectionText(for: section).footerTitle
     }
-
-    // MARK: - Section Text
-
+    
     func sectionText(for section: Int) -> SettingsSectionText {
-        SettingsSectionText()
+        return SettingsSectionText()
     }
-
-    // MARK: - View Setup
-
+    
     private func configureTableView() {
         tableView.alwaysBounceVertical = true
         tableView.keyboardDismissMode = .interactive
-
+        
         if #available(iOS 15.0, *) {
-            tableView.sectionHeaderTopPadding = 0
+            tableView.sectionHeaderTopPadding = UX.sectionHeaderTopPadding
         }
     }
 }

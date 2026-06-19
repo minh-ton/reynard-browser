@@ -19,7 +19,7 @@ public struct GeckoSessionSettings: Equatable {
         userAgentMode: 0,
         viewportMode: 0
     )
-
+    
     public let userAgentOverride: String?
     public let userAgentMode: Int
     public let viewportMode: Int
@@ -37,6 +37,8 @@ public enum GeckoSessionLoadFlags {
 }
 
 public class GeckoSession {
+    // MARK: - State
+    
     let dispatcher: GeckoEventDispatcherWrapper = GeckoEventDispatcherWrapper()
     var window: GeckoViewWindow?
     var id: String?
@@ -44,6 +46,8 @@ public class GeckoSession {
     public let isPrivateMode: Bool
     lazy var addonSessionListener = AddonSessionListener(session: self)
     public private(set) var settings: GeckoSessionSettings
+    
+    // MARK: - Delegates
     
     public func updateSettings(_ settings: GeckoSessionSettings) {
         self.settings = settings
@@ -110,6 +114,8 @@ public class GeckoSession {
     }
     public lazy var mediaSession = MediaSession(session: self)
     
+    // MARK: - Session Handlers
+    
     lazy var sessionHandlers: [GeckoSessionHandlerCommon] = [
         contentHandler,
         processHangHandler,
@@ -121,6 +127,8 @@ public class GeckoSession {
         mediaSessionHandler,
     ]
     
+    // MARK: - Lifecycle
+    
     public init(
         settings: GeckoSessionSettings = .default,
         isPrivateMode: Bool = false,
@@ -129,7 +137,7 @@ public class GeckoSession {
         self.settings = settings
         self.isPrivateMode = isPrivateMode
         self.isAddonPopup = isAddonPopup
-
+        
         for sessionHandler in sessionHandlers {
             for type in sessionHandler.events {
                 dispatcher.addListener(type: type, listener: sessionHandler)
@@ -178,9 +186,9 @@ public class GeckoSession {
     }
     
     public func isOpen() -> Bool { window != nil }
-
+    
     public var engineView: UIView? {
-        window?.view()
+        return window?.view()
     }
     
     public func close() {
@@ -191,7 +199,7 @@ public class GeckoSession {
         promptDelegate = nil
         selectionActionDelegate = nil
         mediaSessionDelegate = nil
-
+        
         guard let window else {
             return
         }
@@ -200,6 +208,8 @@ public class GeckoSession {
         self.window = nil
         id = nil
     }
+    
+    // MARK: - Navigation
     
     public func load(_ url: String, flags: Int = GeckoSessionLoadFlags.none) {
         dispatcher.dispatch(
@@ -239,6 +249,8 @@ public class GeckoSession {
             ])
     }
     
+    // MARK: - State Updates
+    
     public func setActive(_ active: Bool) {
         dispatcher.dispatch(type: "GeckoView:SetActive", message: ["active": active])
     }
@@ -256,7 +268,9 @@ public class GeckoSession {
         
         return PayloadValue.cgFloat(bottomRatioValue)
     }
-
+    
+    // MARK: - Selection Actions
+    
     public func executeSelectionAction(actionId: String, commandId: String) {
         dispatcher.dispatch(
             type: "GeckoView:ExecuteSelectionAction",

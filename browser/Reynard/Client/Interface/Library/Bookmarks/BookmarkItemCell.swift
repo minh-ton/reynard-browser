@@ -8,25 +8,17 @@
 import UIKit
 
 final class BookmarkItemCell: UITableViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let iconSize: CGFloat = 26
         static let titleLeadingSpacing: CGFloat = 13
         static let titleToCountSpacing: CGFloat = 8
         static let separatorLeftInset: CGFloat = 56
     }
-
-    // MARK: - Reuse
-
+    
     static let reuseIdentifier = "BookmarkItemCell"
-
-    // MARK: - Dependencies
-
+    
     private static let faviconStore = FaviconStore.shared
-
-    // MARK: - Views
-
+    
     private let itemIconView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -54,14 +46,10 @@ final class BookmarkItemCell: UITableViewCell {
         label.setContentHuggingPriority(.required, for: .horizontal)
         return label
     }()
-
-    // MARK: - State
-
+    
     private var representedURL: URL?
     private var faviconTask: Task<Void, Never>?
-
-    // MARK: - Lifecycle
-
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
@@ -89,9 +77,9 @@ final class BookmarkItemCell: UITableViewCell {
         separatorInset.left = UX.separatorLeftInset
         applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
     }
-
-    // MARK: - Updates
-
+    
+    // MARK: - Reuse And Layout
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -111,6 +99,8 @@ final class BookmarkItemCell: UITableViewCell {
         countLabel.isHidden = true
         applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
     }
+    
+    // MARK: - Configuration
     
     func configure(folder: BookmarkFolderSnapshot) {
         representedURL = nil

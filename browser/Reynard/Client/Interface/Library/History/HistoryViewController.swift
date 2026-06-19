@@ -7,28 +7,23 @@
 import UIKit
 
 final class HistoryViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let estimatedRowHeight: CGFloat = 72
         static let sectionHeaderTopPadding: CGFloat = 0
+        static let groupedSectionHeaderHeight: CGFloat = 34
         static let headerClearButtonTrailingInset: CGFloat = 20
     }
-
-    // MARK: - Fetch
-
+    
     private enum Fetch {
         static let pageSize = 100
         static let prefetchThreshold = 8
         static let searchLimit = 50
     }
-
+    
     private enum FetchState {
         case idle
         case loading
     }
-
-    // MARK: - Views
     
     private lazy var searchBar: UISearchBar = {
         let searchBar = UISearchBar(frame: .zero)
@@ -84,8 +79,6 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         view.register(HistoryItemCell.self, forCellReuseIdentifier: HistoryItemCell.reuseIdentifier)
         return view
     }()
-
-    // MARK: - State
     
     private let emptyStateView = SidebarEmptyBackgroundView(message: "Your browsing history appears here")
     private var sections: [HistorySection] = []
@@ -96,7 +89,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     private var query = ""
     private var loadVersion = 0
     private var skipsNextStoreReload = false
-
+    
     // MARK: - Lifecycle
     
     init() {
@@ -161,7 +154,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         super.viewWillAppear(animated)
         installClearHistoryNavigationActionIfNeeded()
     }
-
+    
     // MARK: - View Setup
     
     private func installHeader() {
@@ -227,7 +220,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     @objc private func dismissSearch() {
         searchBar.resignFirstResponder()
     }
-
+    
     // MARK: - Clear History
     
     @objc private func showClearHistory() {
@@ -256,7 +249,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         clearHistoryActionItem.tintColor = .label
         LibraryActionButton.installNavigationAction(clearHistoryActionItem, in: navigationItem)
     }
-
+    
     // MARK: - Loading
     
     private func reloadHistory() {
@@ -310,7 +303,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
             }
         }
     }
-
+    
     // MARK: - Paging
     
     private func appendHistoryPage(_ items: [HistorySiteSnapshot], reset: Bool) {
@@ -366,7 +359,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
             }
         }
     }
-
+    
     // MARK: - Search
     
     private func searchHistory(term: String, preserveFocusOnClear: Bool = false) {
@@ -420,7 +413,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
             }
         }
     }
-
+    
     // MARK: - Display State
     
     private func updateEmptyState() {
@@ -440,7 +433,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     }
     
     private var loadedItemCount: Int {
-        sections.reduce(0) { $0 + $1.items.count }
+        return sections.reduce(0) { $0 + $1.items.count }
     }
     
     private func flatRowIndex(for indexPath: IndexPath) -> Int {
@@ -456,7 +449,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         
         loadNextHistoryPage()
     }
-
+    
     // MARK: - Navigation
     
     private func openHistoryItem(_ item: HistorySiteSnapshot) {
@@ -509,7 +502,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         
         return controller.children.compactMap { findBrowser(from: $0) }.first
     }
-
+    
     // MARK: - Deletion
     
     private func deleteVisibleRow(at indexPath: IndexPath) {
@@ -530,7 +523,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         updateEmptyState()
         refreshHistoryPresence()
     }
-
+    
     // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -570,9 +563,9 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        LibrarySharedUtils.UX.groupedSectionHeaderHeight
+        return UX.groupedSectionHeaderHeight
     }
-
+    
     // MARK: - UITableViewDelegate
     
     func tableView(
@@ -612,7 +605,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         tableView.deselectRow(at: indexPath, animated: true)
         openHistoryItem(item)
     }
-
+    
     // MARK: - UISearchBarDelegate
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -623,7 +616,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-
+    
     // MARK: - UIGestureRecognizerDelegate
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {

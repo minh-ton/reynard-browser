@@ -9,32 +9,30 @@ import GeckoView
 import UIKit
 
 extension BrowserViewController: ContextMenuCoordinatorHost {
-    // MARK: - ContextMenuCoordinatorHost
-
     var contextMenuPresenter: UIViewController {
-        self
+        return self
     }
-
+    
     var contextMenuSourceView: ContentView {
-        contentView
+        return contentView
     }
-
+    
     var contextMenuTabActions: ContextMenuTabActions {
-        ContextMenuTabActions(tabManager: tabManager)
+        return ContextMenuTabActions(tabManager: tabManager)
     }
-
+    
     var contextMenuSelectedTabIsPrivate: Bool {
-        tabManager.selectedTab?.isPrivate ?? false
+        return tabManager.selectedTab?.isPrivate ?? false
     }
-
+    
     var contextMenuSelectedSession: GeckoSession? {
-        tabManager.selectedTab?.session
+        return tabManager.selectedTab?.session
     }
-
+    
     func contextMenuShareLink(_ url: URL) {
         presentShareSheet(url: url.absoluteString)
     }
-
+    
     func contextMenuRestoreInteraction(for session: GeckoSession) {
         contentView.restoreInteraction(for: session)
         sessionManager.activate(session)

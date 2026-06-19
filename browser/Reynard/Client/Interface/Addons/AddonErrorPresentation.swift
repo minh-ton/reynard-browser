@@ -14,12 +14,10 @@ public struct AddonErrorPresentation {
 }
 
 public struct AddonErrorPresenter {
-    // MARK: - Public API
-    
     public static func updateRequiresPermissions(_ error: Error) -> Bool {
-        normalizeCode(installErrorDetails(from: error).code) == "ERROR_POSTPONED"
+        return normalizeCode(installErrorDetails(from: error).code) == "ERROR_POSTPONED"
     }
-
+    
     public static func installErrorPresentation(
         for error: Error,
         addonName: String?
@@ -32,7 +30,7 @@ public struct AddonErrorPresenter {
             cancelledByUser: details.cancelledByUser
         )
     }
-
+    
     public static func updateErrorPresentation(
         for error: Error,
         addonName: String?
@@ -45,8 +43,6 @@ public struct AddonErrorPresenter {
             cancelledByUser: details.cancelledByUser
         )
     }
-    
-    // MARK: - Error Extraction
     
     private static func installErrorDetails(from error: Error) -> (code: String?, cancelledByUser: Bool) {
         guard let value = Mirror(reflecting: error).descendant("value") as? [String: Any?] else {
@@ -78,8 +74,6 @@ public struct AddonErrorPresenter {
         return (installError, cancelledByUser)
     }
     
-    // MARK: - Presentation
-    
     private static func presentation(
         code: String?,
         addonName: String?,
@@ -87,7 +81,12 @@ public struct AddonErrorPresenter {
         cancelledByUser: Bool = false
     ) -> AddonErrorPresentation {
         let trimmedAddonName = addonName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedAddonName = trimmedAddonName?.isEmpty == false ? trimmedAddonName! : "This extension"
+        let resolvedAddonName: String
+        if let trimmedAddonName, !trimmedAddonName.isEmpty {
+            resolvedAddonName = trimmedAddonName
+        } else {
+            resolvedAddonName = "This extension"
+        }
         let normalizedCode = normalizeCode(code)
         
         if cancelledByUser || normalizedCode == "ERROR_USER_CANCELED" || normalizedCode == "ERROR_ABORTED" {
@@ -156,8 +155,6 @@ public struct AddonErrorPresenter {
         }
         return "Failed to install this extension."
     }
-    
-    // MARK: - Codes
     
     private static func normalizeCode(_ code: String?) -> String? {
         guard let code = code?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty else {

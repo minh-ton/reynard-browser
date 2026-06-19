@@ -8,8 +8,6 @@
 import UIKit
 
 struct GeneralSettingsSection {
-    // MARK: - Rows
-
     enum Row: CaseIterable {
         case addons
         case browsing
@@ -17,20 +15,16 @@ struct GeneralSettingsSection {
         case appearance
         case compatibility
     }
-
-    // MARK: - State
-
+    
     var rowCount: Int {
-        Row.allCases.count
+        return Row.allCases.count
     }
-
-    // MARK: - Cells
-
+    
     func cell(at index: Int) -> UITableViewCell {
         guard Row.allCases.indices.contains(index) else {
             return UITableViewCell()
         }
-
+        
         switch Row.allCases[index] {
         case .addons:
             return SettingsViewUtils.disclosureCell(title: "Add-ons")
@@ -44,14 +38,12 @@ struct GeneralSettingsSection {
             return SettingsViewUtils.disclosureCell(title: "Compatibility")
         }
     }
-
-    // MARK: - Selection
-
+    
     func selectRow(at index: Int, from viewController: UIViewController) {
         guard Row.allCases.indices.contains(index) else {
             return
         }
-
+        
         let destination: UIViewController
         switch Row.allCases[index] {
         case .addons:

@@ -9,25 +9,21 @@ import UIKit
 
 @MainActor
 final class DateTimePicker: NSObject, UIPopoverPresentationControllerDelegate {
-    // MARK: - State
-
     let inputMode: String
     let anchorRect: CGRect
     weak var geckoView: UIView?
     
     private var continuation: CheckedContinuation<String?, Never>?
     private weak var presentedController: UIViewController?
-
-    // MARK: - Lifecycle
-
+    
     init(inputMode: String, anchorRect: CGRect, geckoView: UIView) {
         self.inputMode = inputMode
         self.anchorRect = anchorRect
         self.geckoView = geckoView
     }
-
+    
     // MARK: - Presentation
-
+    
     func present(value: String, min: String, max: String, step: String) async -> String? {
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
@@ -67,9 +63,9 @@ final class DateTimePicker: NSObject, UIPopoverPresentationControllerDelegate {
         presenter.present(datePickerController, animated: true)
         presentedController = datePickerController
     }
-
+    
     // MARK: - UIPopoverPresentationControllerDelegate
-
+    
     nonisolated func adaptivePresentationStyle(
         for controller: UIPresentationController,
         traitCollection: UITraitCollection
@@ -89,23 +85,23 @@ final class DateTimePicker: NSObject, UIPopoverPresentationControllerDelegate {
         }
         return true
     }
-
+    
     // MARK: - Completion
-
+    
     private func finish(_ result: String?) {
         guard let continuation else { return }
         presentedController = nil
         self.continuation = nil
         continuation.resume(returning: result)
     }
-
+    
     func cancelAndDismiss() {
         presentedController?.dismiss(animated: false)
         finish(nil)
     }
-
-    // MARK: - Parsing
-
+    
+    // MARK: - Parsing & Formatters
+    
     private func resolvedPickerMode() -> UIDatePicker.Mode {
         switch inputMode {
         case "time": return .time
@@ -152,9 +148,7 @@ final class DateTimePicker: NSObject, UIPopoverPresentationControllerDelegate {
         let validIntervals = [2, 3, 4, 5, 6, 10, 12, 15, 20, 30]
         return validIntervals.last(where: { $0 <= minutes }) ?? 1
     }
-
-    // MARK: - Formatters
-
+    
     private static func utcFormatter(_ format: String) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

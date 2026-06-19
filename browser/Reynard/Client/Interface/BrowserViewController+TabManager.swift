@@ -30,21 +30,21 @@ extension BrowserViewController: TabManagerDelegate {
     
     func tabManager(_ tabManager: TabManager, didSelectTabAt index: Int, previousIndex: Int?) {
         tabBar.setPendingExpansion(at: nil)
-
+        
         guard let selectedTab = tabManager.activeTabs[safe: index] else {
             return
         }
-
+        
         browserChrome.setAddressBarLoadingProgress(
             selectedTab.state.loadingState.progress,
             isLoading: selectedTab.state.loadingState.isLoading
         )
         refreshAddressBar()
         updateNavigationButtons()
-
+        
         contentView.setSession(selectedTab.session)
         addonCoordinator.handleTabSelectionChange(selectedIndex: index, previousIndex: previousIndex)
-
+        
         if !tabOverview.isPresented {
             tabOverview.setMode(TabOverview.Mode(tabMode: tabManager.selectedTabMode), animated: false)
             tabOverview.reloadTabs()
@@ -96,8 +96,8 @@ extension BrowserViewController: TabManagerDelegate {
             }
             tabBar.reloadTab(at: index)
             tabOverview.isPresented
-                ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
-                : tabOverview.reloadTabs()
+            ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
+            : tabOverview.reloadTabs()
             
         case .location:
             if index == tabManager.selectedTabIndex {
@@ -108,8 +108,8 @@ extension BrowserViewController: TabManagerDelegate {
         case .favicon:
             tabBar.reloadTab(at: index)
             tabOverview.isPresented
-                ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
-                : tabOverview.reloadTabs()
+            ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
+            : tabOverview.reloadTabs()
             
         case .navigationState:
             if index == tabManager.selectedTabIndex {
@@ -130,8 +130,8 @@ extension BrowserViewController: TabManagerDelegate {
                 captureThumbnailForVisibleTab(at: index)
             }
             tabOverview.isPresented
-                ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
-                : tabOverview.reloadTabs()
+            ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
+            : tabOverview.reloadTabs()
         }
     }
     
@@ -140,7 +140,7 @@ extension BrowserViewController: TabManagerDelegate {
             completion()
             return
         }
-
+        
         tabBar.setPendingExpansion(at: index)
         browserChrome.animateAutomaticNewTabTransition(to: tabManager.activeTabs[index], completion: completion)
     }
@@ -152,13 +152,11 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, shouldHandleExternalResponse response: ExternalResponseInfo, for session: GeckoSession) -> Bool {
-        addonCoordinator.handleExternalResponse(response)
+        return addonCoordinator.handleExternalResponse(response)
     }
 }
 
 extension BrowserViewController {
-    // MARK: - Tab Thumbnails
-
     func captureThumbnailForVisibleTab(at index: Int) {
         guard !contentView.isHidden,
               let tab = tabManager.activeTabs[safe: index],
@@ -166,7 +164,7 @@ extension BrowserViewController {
               let image = contentView.makeThumbnail() else {
             return
         }
-
+        
         tabManager.updateThumbnail(image, forTabAt: index)
     }
 }

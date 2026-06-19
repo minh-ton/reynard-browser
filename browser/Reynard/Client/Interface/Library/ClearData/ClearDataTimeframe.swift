@@ -8,15 +8,11 @@
 import UIKit
 
 enum ClearDataTimeframe: Int, CaseIterable {
-    // MARK: - Cases
-
     case lastHour
     case today
     case todayAndYesterday
     case allTime
-
-    // MARK: - Display
-
+    
     var title: String {
         switch self {
         case .lastHour:
@@ -29,9 +25,7 @@ enum ClearDataTimeframe: Int, CaseIterable {
             return "All history"
         }
     }
-
-    // MARK: - Dates
-
+    
     func cutoffDate(from now: Date = Date(), calendar: Calendar = .current) -> Date? {
         switch self {
         case .lastHour:
@@ -44,9 +38,7 @@ enum ClearDataTimeframe: Int, CaseIterable {
             return nil
         }
     }
-
-    // MARK: - Cells
-
+    
     static func configureCell(_ cell: UITableViewCell, at indexPath: IndexPath, selectedTimeframe: ClearDataTimeframe) {
         let option = allCases[indexPath.row]
         cell.textLabel?.text = option.title

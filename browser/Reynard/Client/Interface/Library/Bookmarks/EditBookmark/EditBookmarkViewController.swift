@@ -8,8 +8,6 @@
 import UIKit
 
 final class EditBookmarkViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let sectionHeaderTopPadding: CGFloat = 0
         static let faviconCornerRadius: CGFloat = 12
@@ -17,9 +15,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         static let fieldLeadingSpacing: CGFloat = 68
         static let titleSeparatorLeftInset: CGFloat = 75
     }
-
-    // MARK: - State
-
+    
     private let store: BookmarkStore
     private let bookmark: BookmarkSnapshot?
     private let draftTitle: String
@@ -29,8 +25,6 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
     private var selectedFolderID: String?
     private var faviconTask: Task<Void, Never>?
     private var storeObserver: NSObjectProtocol?
-
-    // MARK: - Views
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -98,7 +92,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         textField.addTarget(self, action: #selector(validateSaveButton), for: .editingChanged)
         return textField
     }()
-
+    
     // MARK: - Lifecycle
     
     init(
@@ -193,7 +187,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         
         validateSaveButton()
     }
-
+    
     // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -274,7 +268,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         cell.configure(folder: row.folder, depth: row.depth, isSelected: isSelected)
         return cell
     }
-
+    
     // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -294,7 +288,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
             tableView.reloadSections(IndexSet(integer: 2), with: .none)
         }
     }
-
+    
     // MARK: - UITextFieldDelegate
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -305,7 +299,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         }
         return true
     }
-
+    
     // MARK: - Actions
     
     @objc private func saveBookmark() {
@@ -343,7 +337,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         let urlString = urlField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         navigationItem.rightBarButtonItem?.isEnabled = !title.isEmpty && URL(string: urlString) != nil
     }
-
+    
     // MARK: - Folder Loading
     
     private func reloadFolderRows() {

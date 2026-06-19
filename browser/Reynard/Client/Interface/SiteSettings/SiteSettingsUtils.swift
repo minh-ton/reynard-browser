@@ -11,23 +11,21 @@ import GeckoView
 import UIKit
 
 enum SiteSettingsUtils {
-    // MARK: - Permission Availability
-
     static func isCameraPermissionDisabled() -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         return status == .restricted || status == .denied
     }
-
+    
     static func isMicrophonePermissionDisabled() -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
         return status == .restricted || status == .denied
     }
-
+    
     static func isLocationPermissionDisabled() -> Bool {
         let status = CLLocationManager.authorizationStatus()
         return status == .restricted || status == .denied
     }
-
+    
     static func isSystemDisabled(_ permission: SitePermission) -> Bool {
         switch permission {
         case .camera:
@@ -40,10 +38,10 @@ enum SiteSettingsUtils {
             return false
         }
     }
-
+    
     static func disabledPermissionNames() -> [String] {
         var permissions: [String] = []
-
+        
         if isCameraPermissionDisabled() {
             permissions.append("Camera")
         }
@@ -53,29 +51,29 @@ enum SiteSettingsUtils {
         if isLocationPermissionDisabled() {
             permissions.append("Location")
         }
-
+        
         return permissions
     }
-
+    
     static func disabledPermissionMessage() -> String {
         let names = disabledPermissionNames()
         let permissionList = formattedPermissionList(names)
-
+        
         if names.count == 1 {
             return "\(permissionList) is currently disabled for Reynard. Open the Settings app to enable this permission."
         }
-
+        
         return "\(permissionList) are currently disabled for Reynard. Open the Settings app to enable these permissions."
     }
-
+    
     // MARK: - Permission Actions
-
+    
     static func actionTitles(for permission: SitePermission) -> [String] {
         [.allowed, .askToAllow, .blocked].map {
             actionTitle(for: $0, permission: permission)
         }
     }
-
+    
     static func actionTitle(for action: SitePermissionAction, permission: SitePermission) -> String {
         switch permission {
         case .autoplay:
@@ -98,12 +96,12 @@ enum SiteSettingsUtils {
             }
         }
     }
-
+    
     static func defaultAction(for permission: SitePermission) -> SitePermissionAction {
         if isSystemDisabled(permission) {
             return .blocked
         }
-
+        
         switch permission {
         case .autoplay:
             return Prefs.SitePermissionSettings.defaultAutoplayPermission
@@ -127,7 +125,7 @@ enum SiteSettingsUtils {
             return .askToAllow
         }
     }
-
+    
     static func setDefaultAction(_ action: SitePermissionAction, for permission: SitePermission) {
         switch permission {
         case .autoplay:
@@ -152,9 +150,9 @@ enum SiteSettingsUtils {
             return
         }
     }
-
+    
     // MARK: - Gecko Permissions
-
+    
     static func geckoKey(for permission: SitePermission) -> String {
         switch permission {
         case .location:
@@ -163,11 +161,11 @@ enum SiteSettingsUtils {
             return permission.rawValue
         }
     }
-
+    
     static func clearGeckoPermission(for permission: SitePermission, host: String) {
         let key = geckoKey(for: permission)
         let origins = permissionOrigins(for: host)
-
+        
         for origin in origins {
             PermissionDelegate.removePermission(
                 uri: origin,
@@ -175,43 +173,43 @@ enum SiteSettingsUtils {
                 privateMode: false
             )
         }
-
+        
         Task {
             for origin in origins {
                 let permissions = (try? await PermissionDelegate.permissions(
                     for: origin,
                     privateMode: false
                 )) ?? []
-
+                
                 for resolvedPermission in permissions {
                     guard SitePermission(contentPermission: resolvedPermission) == permission else {
                         continue
                     }
-
+                    
                     PermissionDelegate.removePermission(resolvedPermission)
                 }
             }
         }
     }
-
+    
     private static func permissionOrigins(for host: String) -> [String] {
         guard let host = URLUtils.normalizedHost(host) else {
             return []
         }
-
+        
         return ["http://\(host)", "https://\(host)"]
     }
-
+    
     // MARK: - UI Helpers
-
+    
     static func openAppSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else {
             return
         }
-
+        
         UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
-
+    
     static func makeDismissButton(target: Any?, action: Selector) -> UIBarButtonItem {
         let button: UIBarButtonItem
         if #available(iOS 26.0, *) {
@@ -222,22 +220,20 @@ enum SiteSettingsUtils {
         }
         return button
     }
-
-    // MARK: - Text
-
+    
     private static func formattedPermissionList(_ names: [String]) -> String {
         if names.isEmpty {
             return ""
         }
-
+        
         if names.count == 1 {
             return names[0]
         }
-
+        
         if names.count == 2 {
             return "\(names[0]) and \(names[1])"
         }
-
+        
         let head = names.dropLast().joined(separator: ", ")
         let tail = names[names.count - 1]
         return "\(head), and \(tail)"

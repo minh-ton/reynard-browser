@@ -38,8 +38,6 @@ private enum AddonHostPermissionKind: Equatable {
 }
 
 public enum AddonPermissionSupport {
-    // MARK: - User-Facing Text
-    
     public static let allowForAllSitesTitle = "Allow for all sites"
     public static let allowForAllSitesSubtitle = "If you trust this extension, you can give it permission on every website."
     public static let noPermissionsRequiredDescription = "This extension doesn’t require any permissions."
@@ -106,10 +104,8 @@ public enum AddonPermissionSupport {
         "websiteContent": "Share website content with extension developer",
     ]
     
-    // MARK: - Permission Localization
-    
     public static func localizePermissions(_ permissions: [String], forUpdate: Bool = false) -> [String] {
-        var localizedUrlAccessPermissions: [String] = []
+        var localizedURLAccessPermissions: [String] = []
         let requireAllUrlsAccess = permissions.contains("<all_urls>")
         var notFoundPermissions: [String] = []
         
@@ -123,10 +119,10 @@ public enum AddonPermissionSupport {
         }
         
         if !requireAllUrlsAccess && !notFoundPermissions.isEmpty {
-            localizedUrlAccessPermissions = localizeURLAccessPermissions(notFoundPermissions, forUpdate: forUpdate)
+            localizedURLAccessPermissions = localizeURLAccessPermissions(notFoundPermissions, forUpdate: forUpdate)
         }
         
-        return localizedNormalPermissions + localizedUrlAccessPermissions
+        return localizedNormalPermissions + localizedURLAccessPermissions
     }
     
     public static func localizeOptionalPermissions(
@@ -168,8 +164,6 @@ public enum AddonPermissionSupport {
         return localizedPermissions
     }
     
-    // MARK: - Origin Localization
-    
     public static func localizeOptionalOrigins(
         _ origins: [String],
         grantedOrigins: [String]
@@ -192,8 +186,6 @@ public enum AddonPermissionSupport {
         
         return localizedOrigins
     }
-    
-    // MARK: - Data Collection Localization
     
     public static func localizeDataCollectionPermissions(_ permissions: [String]) -> [String] {
         permissions.compactMap { dataCollectionShortDescriptions[$0] }
@@ -256,8 +248,6 @@ public enum AddonPermissionSupport {
         
         return "New required permissions: \(localizedPermissions.joined(separator: " "))"
     }
-    
-    // MARK: - Host Permission Classification
     
     public static func allSiteOriginPermissions(_ origins: [String]) -> [String] {
         origins.filter { hostPermissionKind(for: $0) == .allUrls }

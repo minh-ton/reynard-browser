@@ -14,14 +14,16 @@ protocol ContextMenuCoordinatorHost: AnyObject {
     var contextMenuTabActions: ContextMenuTabActions { get }
     var contextMenuSelectedTabIsPrivate: Bool { get }
     var contextMenuSelectedSession: GeckoSession? { get }
-
+    
     func contextMenuShareLink(_ url: URL)
     func contextMenuRestoreInteraction(for session: GeckoSession)
 }
 
 final class ContextMenuCoordinator: NSObject {
-    // MARK: - State
-
+    private enum UX {
+        static let targetedPreviewSideLength: CGFloat = 1
+    }
+    
     private weak var host: ContextMenuCoordinatorHost?
     private let sessionManager: SessionManager
     private var pendingContext: ContextMenuContext?
@@ -29,61 +31,53 @@ final class ContextMenuCoordinator: NSObject {
     private var linkPreview: LinkPreviewViewController?
     private var isCommitting = false
     private var isPresenting = false
-
-    // MARK: - Lifecycle
-
+    
     init(host: ContextMenuCoordinatorHost, sessionManager: SessionManager) {
         self.host = host
         self.sessionManager = sessionManager
         super.init()
     }
-
-    // MARK: - Configuration
-
+    
     func configure() {
         guard interaction == nil,
               let host else {
             return
         }
-
+        
         let interaction = UIContextMenuInteraction(delegate: self)
         host.contextMenuSourceView.addWebViewInteraction(interaction)
         self.interaction = interaction
     }
-
-    // MARK: - Presentation
-
+    
     func present(at point: CGPoint, target: ContextMenuContext.Target) {
         guard let interaction else {
             return
         }
-
+        
         let context = ContextMenuContext(target: target, point: point)
         closePreview()
         pendingContext = context
         isCommitting = false
         isPresenting = true
-
+        
         let selector = NSSelectorFromString("_presentMenuAtLocation:")
         guard interaction.responds(to: selector) else {
             isPresenting = false
             pendingContext = nil
             return
         }
-
+        
         Haptics.rigid()
         _ = interaction.perform(selector, with: NSValue(cgPoint: context.point))
     }
-
-    // MARK: - Link Actions
-
+    
     private func openLinkPreviewInNewTab() {
         guard let host,
               let preview = linkPreview,
               let session = preview.releaseSession() else {
             return
         }
-
+        
         isCommitting = true
         host.contextMenuTabActions.openPreviewSession(
             session,
@@ -93,26 +87,24 @@ final class ContextMenuCoordinator: NSObject {
         )
         linkPreview = nil
     }
-
+    
     private func openLinkPreviewInNewPrivateTab() {
         guard let host,
               let preview = linkPreview else {
             return
         }
-
+        
         isCommitting = true
         let previewURL = preview.pageURL
         closePreview()
         host.contextMenuTabActions.openURL(previewURL, disposition: .newPrivateTab)
     }
-
-    // MARK: - Preview
-
+    
     private func makeTargetedPreview() -> UITargetedPreview? {
         guard let host else {
             return nil
         }
-
+        
         let sourcePoint = pendingContext?.point ?? CGPoint(
             x: host.contextMenuSourceView.bounds.midX,
             y: host.contextMenuSourceView.bounds.midY
@@ -120,31 +112,35 @@ final class ContextMenuCoordinator: NSObject {
         let target = UIPreviewTarget(container: host.contextMenuSourceView, center: sourcePoint)
         let parameters = UIPreviewParameters()
         parameters.backgroundColor = .clear
-        parameters.visiblePath = UIBezierPath(rect: CGRect(x: 0, y: 0, width: 1, height: 1))
-
-        let view = UIView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let previewFrame = CGRect(
+            x: 0,
+            y: 0,
+            width: UX.targetedPreviewSideLength,
+            height: UX.targetedPreviewSideLength
+        )
+        parameters.visiblePath = UIBezierPath(rect: previewFrame)
+        
+        let view = UIView(frame: previewFrame)
         view.backgroundColor = .clear
         return UITargetedPreview(view: view, parameters: parameters, target: target)
     }
-
-    // MARK: - Cleanup
-
+    
     private func closePreview() {
         linkPreview?.closeSession()
         linkPreview = nil
     }
-
+    
     private func restoreSelectedTabInteraction() {
         DispatchQueue.main.async { [weak self] in
             guard let host = self?.host,
                   let session = host.contextMenuSelectedSession else {
                 return
             }
-
+            
             host.contextMenuRestoreInteraction(for: session)
         }
     }
-
+    
     private func endPresentation() {
         if !isCommitting {
             closePreview()
@@ -157,8 +153,6 @@ final class ContextMenuCoordinator: NSObject {
 }
 
 extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
-    // MARK: - UIContextMenuInteractionDelegate
-
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         configurationForMenuAtLocation location: CGPoint
@@ -170,7 +164,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
             return nil
         }
         isPresenting = false
-
+        
         if let imageConfiguration = ImagePreviewMenu.configuration(
             for: context,
             presentingController: host.contextMenuPresenter,
@@ -178,7 +172,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         ) {
             return imageConfiguration
         }
-
+        
         return LinkPreviewMenu.configuration(
             for: context,
             isPrivate: host.contextMenuSelectedTabIsPrivate,
@@ -197,7 +191,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
             }
         )
     }
-
+    
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration,
@@ -210,7 +204,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
               let session = preview.releaseSession() else {
             return
         }
-
+        
         isCommitting = true
         host.contextMenuTabActions.openPreviewSession(
             session,
@@ -219,13 +213,13 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
             disposition: .currentTab
         )
         linkPreview = nil
-
+        
         animator.addCompletion { [weak self] in
             self?.isCommitting = false
             self?.pendingContext = nil
         }
     }
-
+    
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration
@@ -233,10 +227,10 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         guard interaction === self.interaction else {
             return nil
         }
-
+        
         return makeTargetedPreview()
     }
-
+    
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
@@ -244,10 +238,10 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         guard interaction === self.interaction else {
             return nil
         }
-
+        
         return makeTargetedPreview()
     }
-
+    
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         willEndFor configuration: UIContextMenuConfiguration,
@@ -256,12 +250,12 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         guard interaction === self.interaction else {
             return
         }
-
+        
         guard let animator else {
             endPresentation()
             return
         }
-
+        
         animator.addCompletion { [weak self] in
             self?.endPresentation()
         }

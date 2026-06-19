@@ -13,7 +13,7 @@ struct UserDataSearchResult: Equatable {
         case history
         case tab
     }
-
+    
     let source: Source
     let title: String
     let url: URL
@@ -31,11 +31,11 @@ final class UserDataSearch {
         static let bestMatchCandidateCount = 10
         static let resultCount = 5
     }
-
+    
     private let bookmarkStore: BookmarkStore
     private let historyStore: HistoryStore
     private let tabManagementStore: TabManagementStore
-
+    
     init(
         bookmarkStore: BookmarkStore = .shared,
         historyStore: HistoryStore = .shared,
@@ -45,7 +45,9 @@ final class UserDataSearch {
         self.historyStore = historyStore
         self.tabManagementStore = tabManagementStore
     }
-
+    
+    // MARK: - Search
+    
     func search(
         query: String,
         activeTabMode: TabMode?,
@@ -64,7 +66,7 @@ final class UserDataSearch {
         )
         return UserDataSearchResults(bestMatch: bestMatch, results: results)
     }
-
+    
     private func findBestMatch(
         query: String,
         activeTabMode: TabMode?,
@@ -78,7 +80,7 @@ final class UserDataSearch {
         ).filter { $0.id != excludingTabID }
         let historyMatches = historyStore.search(matching: query, limit: limit).items
         let bookmarkMatches = bookmarkStore.bookmarks(matchingPrefix: query, limit: limit)
-
+        
         var bestMatchCandidates: [UserDataSearchResult] = []
         bestMatchCandidates += bookmarkMatches
             .map(bookmarkResult)
@@ -89,10 +91,10 @@ final class UserDataSearch {
         bestMatchCandidates += historyMatches
             .map(historyResult)
             .filter { SearchRanking.isBestMatchCandidate($0, query: query) }
-
+        
         return SearchRanking.rankedMatches(from: bestMatchCandidates, query: query, limit: 1).first
     }
-
+    
     private func findResults(
         query: String,
         activeTabMode: TabMode?,
@@ -107,17 +109,19 @@ final class UserDataSearch {
         ).filter { $0.id != excludingTabID }
         let historyMatches = historyStore.search(matching: query, limit: limit).items
         let bookmarkMatches = bookmarkStore.bookmarks(matching: query, limit: limit)
-
+        
         var matches: [UserDataSearchResult] = []
         matches += tabMatches.compactMap(tabResult)
         matches += historyMatches.map(historyResult)
         matches += bookmarkMatches
             .map(bookmarkResult)
             .filter { $0.url != bestMatch?.url }
-
+        
         return SearchRanking.rankedMatches(from: matches, query: query, limit: limit)
     }
-
+    
+    // MARK: - Result Mapping
+    
     private func bookmarkResult(from bookmark: BookmarkSnapshot) -> UserDataSearchResult {
         UserDataSearchResult(
             source: .bookmark,
@@ -127,12 +131,12 @@ final class UserDataSearch {
             lastVisitedAt: nil
         )
     }
-
+    
     private func tabResult(from tab: TabManagementStore.TabSnapshot) -> UserDataSearchResult? {
         guard let urlString = tab.url, let url = URL(string: urlString) else {
             return nil
         }
-
+        
         return UserDataSearchResult(
             source: .tab,
             title: resultTitle(tab.title, fallbackURL: url),
@@ -141,7 +145,7 @@ final class UserDataSearch {
             lastVisitedAt: nil
         )
     }
-
+    
     private func historyResult(from site: HistorySiteSnapshot) -> UserDataSearchResult {
         UserDataSearchResult(
             source: .history,
@@ -151,7 +155,7 @@ final class UserDataSearch {
             lastVisitedAt: site.lastVisitedAt
         )
     }
-
+    
     private func resultTitle(_ title: String, fallbackURL: URL) -> String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedTitle.isEmpty ? fallbackURL.host ?? fallbackURL.absoluteString : trimmedTitle

@@ -20,7 +20,7 @@ struct LinkPreviewMenu {
         guard case .link(let url) = context.target else {
             return nil
         }
-
+        
         return UIContextMenuConfiguration(identifier: url as NSURL) { [url] in
             let viewController = LinkPreviewViewController(
                 url: url,

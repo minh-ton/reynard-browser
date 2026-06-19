@@ -8,12 +8,10 @@
 import UIKit
 
 final class SearchEnginePreferencesViewController: SettingsTableViewController, UITextFieldDelegate {
-    // MARK: - Sections
-
     private enum Section: CaseIterable {
         case engines
         case customTemplate
-
+        
         var text: SettingsSectionText {
             switch self {
             case .engines:
@@ -23,22 +21,18 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
             }
         }
     }
-
+    
     private enum CustomTemplateRow: CaseIterable {
         case template
     }
-
-    // MARK: - State
-
+    
     private var displayedSections: [Section] {
-        Prefs.SearchSettings.searchEngine == .custom ? Section.allCases : [.engines]
+        return Prefs.SearchSettings.searchEngine == .custom ? Section.allCases : [.engines]
     }
-
-    // MARK: - Lifecycle
-
+    
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Search Engine"
     }
     
     required init?(coder: NSCoder) {
@@ -54,8 +48,6 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         super.viewWillAppear(animated)
         tableView.reloadData()
     }
-
-    // MARK: - Table Data Source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         displayedSections.count
@@ -65,7 +57,7 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         guard displayedSections.indices.contains(section) else {
             return 0
         }
-
+        
         switch displayedSections[section] {
         case .engines:
             return SearchEngine.allCases.count
@@ -78,7 +70,7 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         guard displayedSections.indices.contains(indexPath.section) else {
             return UITableViewCell()
         }
-
+        
         switch displayedSections[indexPath.section] {
         case .customTemplate:
             guard CustomTemplateRow.allCases.indices.contains(indexPath.row) else {
@@ -105,8 +97,6 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
             return cell
         }
     }
-
-    // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
@@ -135,7 +125,7 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         guard displayedSections.indices.contains(section) else {
             return SettingsSectionText()
         }
-
+        
         let displayedSection = displayedSections[section]
         guard displayedSection == .customTemplate else {
             return displayedSection.text
@@ -147,8 +137,6 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
         }
         return SettingsSectionText(footerTitle: "\(baseText). The current value must be a valid http(s) URL.")
     }
-
-    // MARK: - Text Field Delegate
     
     func textFieldDidEndEditing(_ textField: UITextField) {
         Prefs.SearchSettings.customSearchTemplate = textField.text ?? ""
@@ -164,12 +152,6 @@ final class SearchEnginePreferencesViewController: SettingsTableViewController, 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
-    }
-
-    // MARK: - View Setup
-    
-    private func configureViewController() {
-        title = "Search Engine"
     }
     
     private func registerCells() {

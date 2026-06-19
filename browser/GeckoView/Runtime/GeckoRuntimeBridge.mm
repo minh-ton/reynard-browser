@@ -12,7 +12,7 @@
 @implementation GeckoRuntimeBridge
 
 + (NSString *)version {
-  return @MOZILLA_VERSION;
+    return @MOZILLA_VERSION;
 }
 
 @end

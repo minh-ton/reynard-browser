@@ -29,15 +29,15 @@ extension AddonRuntime {
     
     func upsertAddon(from dictionary: [String: Any?]) -> Addon {
         let id = dictionary["webExtensionId"] as? String ?? ""
-        if let existing = addonsByID[id] {
-            existing.update(from: dictionary)
-            notifyActionDelegateAttached(for: existing)
-            return existing
+        if let existingAddon = addonsByID[id] {
+            existingAddon.update(from: dictionary)
+            notifyActionDelegateAttached(for: existingAddon)
+            return existingAddon
         }
-        let created = Addon(dictionary: dictionary)
-        addonsByID[id] = created
-        notifyActionDelegateAttached(for: created)
-        return created
+        let createdAddon = Addon(dictionary: dictionary)
+        addonsByID[id] = createdAddon
+        notifyActionDelegateAttached(for: createdAddon)
+        return createdAddon
     }
     
     func removeAddon(from message: [String: Any?]?) -> Addon? {

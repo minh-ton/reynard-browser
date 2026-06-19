@@ -8,36 +8,28 @@
 import UIKit
 
 final class DateTimePickerViewController: UIViewController {
-    // MARK: - UX
-
     private enum UX {
         static let contentSize = CGSize(width: 320, height: 216)
     }
-
-    // MARK: - State
-
+    
     private let datePicker = UIDatePicker()
     private let date: Date
     private let pickerMode: UIDatePicker.Mode
     private let minDate: Date?
     private let maxDate: Date?
     private let minuteInterval: Int
-
+    
     var selectedDate: Date {
         datePicker.date
     }
-
-    // MARK: - Overrides
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureView()
         configureDatePicker()
         installDatePicker()
     }
-
-    // MARK: - Lifecycle
-
+    
     init(date: Date, pickerMode: UIDatePicker.Mode, minDate: Date?, maxDate: Date?, minuteInterval: Int) {
         self.date = date
         self.pickerMode = pickerMode
@@ -46,17 +38,15 @@ final class DateTimePickerViewController: UIViewController {
         self.minuteInterval = minuteInterval
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
-
-    // MARK: - Setup
-
+    
     private func configureView() {
         view.backgroundColor = .systemBackground
         preferredContentSize = UX.contentSize
     }
-
+    
     private func configureDatePicker() {
         datePicker.datePickerMode = pickerMode
         if #available(iOS 13.4, *) {
@@ -69,7 +59,7 @@ final class DateTimePickerViewController: UIViewController {
             datePicker.minuteInterval = minuteInterval
         }
     }
-
+    
     private func installDatePicker() {
         datePicker.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(datePicker)

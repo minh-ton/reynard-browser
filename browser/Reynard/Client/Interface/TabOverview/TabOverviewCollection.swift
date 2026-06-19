@@ -8,8 +8,6 @@
 import UIKit
 
 final class TabOverviewCollection: NSObject {
-    // MARK: - UX
-
     private enum UX {
         static let privateModeIntroIconSideLength: CGFloat = 80
         static let privateModeIntroMaximumWidth: CGFloat = 360
@@ -19,24 +17,22 @@ final class TabOverviewCollection: NSObject {
         static let tabCardReorderStartDelay: TimeInterval = 0.06
         static let insertionPlaceholderScrollDuration: TimeInterval = 0.4
     }
-
+    
     enum ReorderState {
         case idle
         case pending(cell: TabOverviewCard, workItem: DispatchWorkItem)
         case active(cell: TabOverviewCard)
     }
-
+    
     private final class TabChangeAnimationState {
         var hasTabIdentitySnapshot = false
         var regularTabIDs: [UUID] = []
         var privateTabIDs: [UUID] = []
         var insertionPlaceholderMode: TabOverview.Mode?
     }
-
+    
     static let insertionPlaceholderReuseIdentifier = "TabOverviewInsertionPlaceholderCell"
-
-    // MARK: - State
-
+    
     weak var tabOverview: TabOverview?
     private let collectionContentInset: CGFloat
     private let collectionItemSpacing: CGFloat
@@ -44,11 +40,9 @@ final class TabOverviewCollection: NSObject {
     private var presentationVerticalOffset: CGFloat = 0
     private var reorderState: ReorderState = .idle
     private(set) var mode: TabOverview.Mode = .regularTabs
-
-    // MARK: - Views
-
+    
     lazy var regularTabsCollectionView = makeTabCollectionView()
-
+    
     lazy var privateTabsCollectionView: UICollectionView = {
         let view = makeTabCollectionView()
         view.transform = CGAffineTransform(translationX: -1, y: 0)
@@ -56,44 +50,40 @@ final class TabOverviewCollection: NSObject {
         view.backgroundView = privateModeIntroView
         return view
     }()
-
+    
     private lazy var privateModeIntroView = makePrivateModeIntroView()
-
+    
     var allCollectionViews: [UICollectionView] {
-        [privateTabsCollectionView, regularTabsCollectionView]
+        return [privateTabsCollectionView, regularTabsCollectionView]
     }
-
-    // MARK: - Lifecycle
-
+    
     init(contentInset: CGFloat, itemSpacing: CGFloat) {
         collectionContentInset = contentInset
         collectionItemSpacing = itemSpacing
         super.init()
     }
-
-    // MARK: - Configuration
-
+    
     func configure(tabOverview: TabOverview) {
         self.tabOverview = tabOverview
     }
-
+    
     // MARK: - Updates
-
+    
     func collectionView(for mode: TabOverview.Mode) -> UICollectionView {
         mode == .privateTabs ? privateTabsCollectionView : regularTabsCollectionView
     }
-
+    
     func tabs(for mode: TabOverview.Mode) -> [Tab] {
         guard let dataSource = tabOverview?.dataSource else { return [] }
         return mode == .privateTabs ? dataSource.privateTabs : dataSource.regularTabs
     }
-
+    
     func tabMode(for collectionView: UICollectionView) -> TabOverview.Mode? {
         if collectionView === privateTabsCollectionView { return .privateTabs }
         if collectionView === regularTabsCollectionView { return .regularTabs }
         return nil
     }
-
+    
     func itemIndex(forTabAt index: Int, mode: TabOverview.Mode? = nil) -> Int? {
         guard let selectedMode = tabOverview?.dataSource?.selectedMode else { return nil }
         let resolvedMode = mode ?? self.mode
@@ -103,13 +93,13 @@ final class TabOverviewCollection: NSObject {
         }
         return index
     }
-
+    
     func setMode(_ mode: TabOverview.Mode, containerWidth: CGFloat, animated: Bool) {
         let modeChanged = mode != self.mode
         self.mode = mode
         privateTabsCollectionView.isUserInteractionEnabled = mode == .privateTabs
         regularTabsCollectionView.isUserInteractionEnabled = mode == .regularTabs
-
+        
         let width = max(containerWidth, 1)
         let animations = {
             self.applyPresentationTransforms(width: width)
@@ -120,12 +110,12 @@ final class TabOverviewCollection: NSObject {
             animations()
         }
     }
-
+    
     func setPresentationVerticalOffset(_ offset: CGFloat) {
         presentationVerticalOffset = offset
         applyPresentationTransforms()
     }
-
+    
     func applyPresentationTransforms(width: CGFloat? = nil) {
         let resolvedWidth = width ?? max(tabOverview?.bounds.width ?? 0, 1)
         let regularX = mode == .regularTabs ? 0 : resolvedWidth
@@ -133,24 +123,24 @@ final class TabOverviewCollection: NSObject {
         regularTabsCollectionView.transform = CGAffineTransform(translationX: regularX, y: presentationVerticalOffset)
         privateTabsCollectionView.transform = CGAffineTransform(translationX: privateX, y: presentationVerticalOffset)
     }
-
+    
     func invalidateCardLayouts() {
         allCollectionViews.forEach { $0.collectionViewLayout.invalidateLayout() }
     }
-
+    
     func reloadTabCards() {
         tabChangeAnimationState.insertionPlaceholderMode = nil
         allCollectionViews.forEach { $0.reloadData() }
         refreshTabIdentitySnapshot()
     }
-
+    
     func refreshTabIdentitySnapshot() {
         updateTabIdentitySnapshot(
             regularIDs: tabs(for: .regularTabs).map(\.id),
             privateIDs: tabs(for: .privateTabs).map(\.id)
         )
     }
-
+    
     func refreshVisibleTabCard(at index: Int, mode: TabOverview.Mode) {
         let modeTabs = tabs(for: mode)
         guard modeTabs.indices.contains(index),
@@ -159,7 +149,7 @@ final class TabOverviewCollection: NSObject {
         }
         cell.configure(with: modeTabs[index])
     }
-
+    
     func prepareInsertionPlaceholder(for mode: TabOverview.Mode, completion: @escaping () -> Void) {
         guard tabOverview?.isPresented == true,
               tabOverview?.isTransitionRunning == false,
@@ -167,7 +157,7 @@ final class TabOverviewCollection: NSObject {
             completion()
             return
         }
-
+        
         let collectionView = collectionView(for: mode)
         let fakeIndexPath = IndexPath(item: tabs(for: mode).count, section: 0)
         tabChangeAnimationState.insertionPlaceholderMode = mode
@@ -204,7 +194,7 @@ final class TabOverviewCollection: NSObject {
             }
         }
     }
-
+    
     func applyTabCollectionChanges() {
         let regularIDs = tabs(for: .regularTabs).map(\.id)
         let privateIDs = tabs(for: .privateTabs).map(\.id)
@@ -214,7 +204,7 @@ final class TabOverviewCollection: NSObject {
             reloadTabCards()
             return
         }
-
+        
         let previousRegularCount = tabChangeAnimationState.regularTabIDs.count
         let previousPrivateCount = tabChangeAnimationState.privateTabIDs.count
         let insertionPlaceholderMode = tabChangeAnimationState.insertionPlaceholderMode
@@ -223,10 +213,10 @@ final class TabOverviewCollection: NSObject {
         let regularDeletions = deletedTabCardIndexPaths(previousIDs: tabChangeAnimationState.regularTabIDs, currentIDs: regularIDs)
         let privateDeletions = deletedTabCardIndexPaths(previousIDs: tabChangeAnimationState.privateTabIDs, currentIDs: privateIDs)
         let isPureInsertion = previousRegularCount + regularInsertions.count == regularIDs.count
-            && previousPrivateCount + privateInsertions.count == privateIDs.count
+        && previousPrivateCount + privateInsertions.count == privateIDs.count
         let isPureDeletion = regularIDs.count + regularDeletions.count == previousRegularCount
-            && privateIDs.count + privateDeletions.count == previousPrivateCount
-
+        && privateIDs.count + privateDeletions.count == previousPrivateCount
+        
         updateTabIdentitySnapshot(regularIDs: regularIDs, privateIDs: privateIDs)
         tabChangeAnimationState.insertionPlaceholderMode = nil
         guard ((!regularInsertions.isEmpty || !privateInsertions.isEmpty) && isPureInsertion)
@@ -234,15 +224,15 @@ final class TabOverviewCollection: NSObject {
             reloadTabCards()
             return
         }
-
+        
         insertTabCards(regularInsertions, in: regularTabsCollectionView, insertionPlaceholderMode: insertionPlaceholderMode, mode: .regularTabs, previousCount: previousRegularCount)
         deleteTabCards(regularDeletions, in: regularTabsCollectionView)
         insertTabCards(privateInsertions, in: privateTabsCollectionView, insertionPlaceholderMode: insertionPlaceholderMode, mode: .privateTabs, previousCount: previousPrivateCount)
         deleteTabCards(privateDeletions, in: privateTabsCollectionView)
     }
-
+    
     // MARK: - Collection Setup
-
+    
     private func makeTabCollectionView() -> UICollectionView {
         let layout = TabOverviewCollectionLayout()
         layout.minimumLineSpacing = collectionItemSpacing
@@ -262,7 +252,7 @@ final class TabOverviewCollection: NSObject {
         view.register(TabOverviewCard.self, forCellWithReuseIdentifier: TabOverviewCard.reuseIdentifier)
         return view
     }
-
+    
     private func makePrivateModeIntroView() -> UIView {
         let container = UIView()
         container.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -302,34 +292,34 @@ final class TabOverviewCollection: NSObject {
         ])
         return container
     }
-
+    
     // MARK: - Animation Helpers
-
+    
     func hasInsertionPlaceholder(for mode: TabOverview.Mode) -> Bool {
         tabChangeAnimationState.insertionPlaceholderMode == mode
     }
-
+    
     func isInsertionPlaceholder(in collectionView: UICollectionView, at indexPath: IndexPath) -> Bool {
         guard let mode = tabMode(for: collectionView), hasInsertionPlaceholder(for: mode) else { return false }
         return indexPath.item == tabs(for: mode).count
     }
-
+    
     private func updateTabIdentitySnapshot(regularIDs: [UUID], privateIDs: [UUID]) {
         tabChangeAnimationState.hasTabIdentitySnapshot = true
         tabChangeAnimationState.regularTabIDs = regularIDs
         tabChangeAnimationState.privateTabIDs = privateIDs
     }
-
+    
     private func insertedTabCardIndexPaths(previousIDs: [UUID], currentIDs: [UUID]) -> [IndexPath] {
         let previous = Set(previousIDs)
         return currentIDs.indices.compactMap { previous.contains(currentIDs[$0]) ? nil : IndexPath(item: $0, section: 0) }
     }
-
+    
     private func deletedTabCardIndexPaths(previousIDs: [UUID], currentIDs: [UUID]) -> [IndexPath] {
         let current = Set(currentIDs)
         return previousIDs.indices.compactMap { current.contains(previousIDs[$0]) ? nil : IndexPath(item: $0, section: 0) }
     }
-
+    
     private func insertTabCards(_ indexPaths: [IndexPath], in collectionView: UICollectionView, insertionPlaceholderMode: TabOverview.Mode?, mode: TabOverview.Mode, previousCount: Int) {
         guard !indexPaths.isEmpty else { return }
         let placeholderDeletion = insertionPlaceholderMode == mode ? [IndexPath(item: previousCount, section: 0)] : []
@@ -342,13 +332,13 @@ final class TabOverviewCollection: NSObject {
             collectionView.insertItems(at: indexPaths)
         }
     }
-
+    
     private func deleteTabCards(_ indexPaths: [IndexPath], in collectionView: UICollectionView) {
         guard !indexPaths.isEmpty else { return }
         collectionView.layoutIfNeeded()
         collectionView.performBatchUpdates { collectionView.deleteItems(at: indexPaths) }
     }
-
+    
     private func contentOffsetForBottomAlignedItem(at indexPath: IndexPath, in collectionView: UICollectionView) -> CGPoint? {
         collectionView.layoutIfNeeded()
         guard let attributes = collectionView.layoutAttributesForItem(at: indexPath) else { return nil }
@@ -358,7 +348,7 @@ final class TabOverviewCollection: NSObject {
         let targetY = min(max(attributes.frame.maxY - collectionView.bounds.height + inset.bottom, minimumY), maximumY)
         return CGPoint(x: collectionView.contentOffset.x, y: targetY)
     }
-
+    
     private func completeWhenScrollReachesTarget(_ collectionView: UICollectionView, targetContentOffset: CGPoint, timeout: TimeInterval, completion: @escaping () -> Void) {
         let deadline = Date().addingTimeInterval(timeout)
         func checkScrollPosition() {
@@ -370,9 +360,9 @@ final class TabOverviewCollection: NSObject {
         }
         DispatchQueue.main.async(execute: checkScrollPosition)
     }
-
+    
     // MARK: - Reordering
-
+    
     @objc private func handleTabCardReorderLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let collectionView = gestureRecognizer.view as? UICollectionView else { return }
         let location = gestureRecognizer.location(in: collectionView)
@@ -403,7 +393,7 @@ final class TabOverviewCollection: NSObject {
             finishTabCardReordering(in: collectionView, cancelled: true)
         }
     }
-
+    
     private func finishTabCardReordering(in collectionView: UICollectionView, cancelled: Bool) {
         switch reorderState {
         case .pending(let cell, let workItem):

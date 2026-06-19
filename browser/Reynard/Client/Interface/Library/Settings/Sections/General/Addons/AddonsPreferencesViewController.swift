@@ -11,20 +11,16 @@ import UniformTypeIdentifiers
 import MobileCoreServices
 
 final class AddonsPreferencesViewController: SettingsTableViewController {
-    // MARK: - UX
-
     private enum UX {
         static let iconSize = CGSize(width: 24, height: 24)
         static let disabledIconAlpha: CGFloat = 0.5
     }
-
-    // MARK: - Sections
-
+    
     private enum Section {
         case installed
         case unsupported
         case more
-
+        
         var text: SettingsSectionText {
             switch self {
             case .installed:
@@ -36,19 +32,17 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
         }
     }
-
+    
     private enum MoreRow: CaseIterable {
         case discover
         case installFromFile
         case updateAll
     }
-
-    // MARK: - State
     
     private static let sharedIconCache = NSCache<NSString, UIImage>()
     private static var hasLoadedInstalledAddons = false
     
-    private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.addons-settings-icon-queue", qos: .utility)
+    private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.Reynard.AddonsPreferencesViewController.IconLoadingQueue", qos: .utility)
     private var loadingIconIDs = Set<String>()
     private var installedAddons: [Addon] = []
     private var unsupportedAddons: [Addon] = []
@@ -74,15 +68,15 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }
     
     private var listedAddonCount: Int {
-        installedAddons.count + unsupportedAddons.count
+        return installedAddons.count + unsupportedAddons.count
     }
     
     private var canCheckForAddonUpdates: Bool {
-        listedAddonCount > 0
+        return listedAddonCount > 0
     }
-
+    
     private var displayedMoreRows: [MoreRow] {
-        canCheckForAddonUpdates ? MoreRow.allCases : [.discover, .installFromFile]
+        return canCheckForAddonUpdates ? MoreRow.allCases : [.discover, .installFromFile]
     }
     
     private var addonUpdateActionTitle: String {
@@ -95,12 +89,12 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         }
         return "Update All Add-ons"
     }
-
+    
     // MARK: - Lifecycle
     
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Add-ons"
     }
     
     required init?(coder: NSCoder) {
@@ -124,7 +118,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         super.viewDidDisappear(animated)
         LibrarySharedUtils.resolvedBrowserViewController(from: self)?.addonCoordinator.updateCoordinator.setSettingsVisible(false)
     }
-
+    
     // MARK: - Table Data Source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -218,7 +212,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return cell
         }
     }
-
+    
     // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -262,7 +256,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         guard displayedSections.indices.contains(section) else {
             return SettingsSectionText()
         }
-
+        
         let displayedSection = displayedSections[section]
         switch displayedSection {
         case .installed:
@@ -284,13 +278,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return displayedSection.text
         }
     }
-
-    // MARK: - View Setup
     
-    private func configureViewController() {
-        title = "Add-ons"
-    }
-
     // MARK: - Add-on Loading
     
     private func loadCachedAddons() {
@@ -331,7 +319,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             self.tableView.reloadData()
         }
     }
-
+    
     // MARK: - Selection
     
     private func addonForSelection(at indexPath: IndexPath) -> Addon? {
@@ -355,7 +343,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return nil
         }
     }
-
+    
     // MARK: - Installation
     
     private func chooseAddonPackage() {
@@ -443,7 +431,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         try fileManager.copyItem(at: packageURL, to: destinationURL)
         return destinationURL
     }
-
+    
     // MARK: - Icons
     
     private func loadIcon(for addon: Addon) {
@@ -501,7 +489,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         cell.detailTextLabel?.textColor = .tertiaryLabel
         cell.imageView?.alpha = UX.disabledIconAlpha
     }
-
+    
     // MARK: - Updates
     
     private func clearUpdateStatus() {
@@ -618,8 +606,6 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         tableView.reloadSections(IndexSet(integer: section), with: .none)
     }
 }
-
-// MARK: - UIDocumentPickerDelegate
 
 extension AddonsPreferencesViewController: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {

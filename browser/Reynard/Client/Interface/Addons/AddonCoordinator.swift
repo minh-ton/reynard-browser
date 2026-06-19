@@ -37,7 +37,9 @@ protocol AddonCoordinatorDelegate: AnyObject {
 }
 
 final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
-    // MARK: - State
+    private enum UX {
+        static let menuIconSize: CGFloat = 18
+    }
     
     private weak var dataSource: AddonCoordinatorDataSource?
     private weak var delegate: AddonCoordinatorDelegate?
@@ -45,11 +47,9 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     private var browserActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private var pageActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private let iconCache = NSCache<NSString, UIImage>()
-    private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.addons-coordinator-icon-queue", qos: .utility)
+    private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.Reynard.AddonCoordinator.IconLoadingQueue", qos: .utility)
     private var loadingIconIDs = Set<String>()
     let updateCoordinator: AddonUpdateCoordinator
-    
-    // MARK: - Initialization
     
     init(
         dataSource: AddonCoordinatorDataSource,
@@ -61,10 +61,6 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         self.sessionManager = sessionManager
         updateCoordinator = AddonUpdateCoordinator()
         super.init()
-        configureIconCache()
-    }
-    
-    private func configureIconCache() {
         iconCache.countLimit = 64
     }
     
@@ -124,7 +120,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     // MARK: - Menu Actions
     
     func currentSiteMenuItems() -> [AddonMenuItem] {
-        guard let session = selectedSession() else {
+        guard let session = dataSource?.selectedAddonSession else {
             return []
         }
         
@@ -234,7 +230,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
             pageActionsBySession[key] = actions
         }
         
-        if session === selectedSession() {
+        if session === dataSource?.selectedAddonSession {
             delegate?.refreshAddonChrome(self)
         }
     }
@@ -312,10 +308,6 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     }
     
     // MARK: - Action State
-    
-    private func selectedSession() -> GeckoSession? {
-        dataSource?.selectedAddonSession
-    }
     
     private func clearCachedActions(for addonID: String) {
         browserActionsBySession = browserActionsBySession.reduce(into: [:]) { result, entry in
@@ -458,7 +450,10 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
             guard let self else {
                 return
             }
-            let image = AddonIconLoader.loadImage(from: iconURL, targetSize: CGSize(width: 18, height: 18))
+            let image = AddonIconLoader.loadImage(
+                from: iconURL,
+                targetSize: CGSize(width: UX.menuIconSize, height: UX.menuIconSize)
+            )
             DispatchQueue.main.async {
                 self.loadingIconIDs.remove(addon.id)
                 if let image {
@@ -470,7 +465,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     }
     
     func prepareMenuIcons() {
-        guard let session = selectedSession() else {
+        guard let session = dataSource?.selectedAddonSession else {
             return
         }
         

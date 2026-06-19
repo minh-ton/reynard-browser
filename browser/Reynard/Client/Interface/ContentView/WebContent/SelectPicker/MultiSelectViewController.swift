@@ -9,25 +9,19 @@ import GeckoView
 import UIKit
 
 final class MultiSelectViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    // MARK: - State
-
     private let cellReuseIdentifier = "cell"
     private var choices: [PromptChoice]
     private var selectedIds: Set<String>
     private var sections: [(title: String?, items: [PromptChoice])] = []
     private var tableView: UITableView!
     private var onDone: (([String]?) -> Void)?
-
-    // MARK: - Overrides
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureNavigation()
         configureTableView()
     }
-
-    // MARK: - Lifecycle
-
+    
     init(choices: [PromptChoice], onDone: @escaping ([String]?) -> Void) {
         self.choices = choices
         self.onDone = onDone
@@ -35,20 +29,20 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         super.init(nibName: nil, bundle: nil)
         rebuildSections()
     }
-
+    
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
-
+    
     // MARK: - Updates
-
+    
     func updateChoices(_ updatedChoices: [PromptChoice]) {
         choices = updatedChoices
         rebuildSections()
         tableView?.reloadData()
     }
-
+    
     // MARK: - Setup
-
+    
     private func configureNavigation() {
         title = "Select Options"
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -62,7 +56,7 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
             action: #selector(cancelTapped)
         )
     }
-
+    
     private func configureTableView() {
         tableView = UITableView(frame: view.bounds, style: .insetGrouped)
         tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -71,19 +65,19 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellReuseIdentifier)
         view.addSubview(tableView)
     }
-
+    
     // MARK: - Sections
-
+    
     private func rebuildSections() {
         sections = []
         var currentItems: [PromptChoice] = []
-
+        
         for item in choices {
             if item.separator {
                 appendSection(items: &currentItems)
                 continue
             }
-
+            
             if let subItems = item.items {
                 appendSection(items: &currentItems)
                 sections.append((title: item.label, items: subItems.filter { !$0.separator }))
@@ -91,10 +85,10 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
                 currentItems.append(item)
             }
         }
-
+        
         appendSection(items: &currentItems)
     }
-
+    
     private func appendSection(items: inout [PromptChoice]) {
         guard !items.isEmpty else {
             return
@@ -102,7 +96,7 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         sections.append((title: nil, items: items))
         items = []
     }
-
+    
     private static func collectSelectedIds(from choices: [PromptChoice]) -> Set<String> {
         var ids = Set<String>()
         for choice in choices {
@@ -115,9 +109,9 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         }
         return ids
     }
-
+    
     // MARK: - Actions
-
+    
     @objc private func doneTapped() {
         let result = Array(selectedIds)
         dismiss(animated: true) { [weak self] in
@@ -125,28 +119,28 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
             self?.onDone = nil
         }
     }
-
+    
     @objc private func cancelTapped() {
         dismiss(animated: true) { [weak self] in
             self?.onDone?(nil)
             self?.onDone = nil
         }
     }
-
+    
     // MARK: - UITableViewDataSource
-
+    
     func numberOfSections(in tableView: UITableView) -> Int {
         sections.count
     }
-
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         sections[section].items.count
     }
-
+    
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         sections[section].title
     }
-
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier, for: indexPath)
         let item = sections[indexPath.section].items[indexPath.row]
@@ -156,14 +150,14 @@ final class MultiSelectViewController: UIViewController, UITableViewDataSource, 
         cell.selectionStyle = item.disabled ? .none : .default
         return cell
     }
-
+    
     // MARK: - UITableViewDelegate
-
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = sections[indexPath.section].items[indexPath.row]
         guard !item.disabled else { return }
-
+        
         if selectedIds.contains(item.id) {
             selectedIds.remove(item.id)
         } else {

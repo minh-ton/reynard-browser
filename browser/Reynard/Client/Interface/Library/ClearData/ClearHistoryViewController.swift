@@ -8,23 +8,17 @@
 import UIKit
 
 final class ClearHistoryViewController: UITableViewController {
-    // MARK: - State
-
     private let tabCount: Int
     private let onClear: (Date?, Bool) -> Void
     private var selectedTimeframe: ClearDataTimeframe = .lastHour
-
-    // MARK: - Views
-
+    
     private let closeAllTabsSwitch = UISwitch()
-
+    
     private lazy var clearFooterView = ClearDataFooterView(
         title: "Clear History",
         target: self,
         action: #selector(confirmClearHistory)
     )
-
-    // MARK: - Lifecycle
     
     init(tabCount: Int, onClear: @escaping (Date?, Bool) -> Void) {
         self.tabCount = tabCount

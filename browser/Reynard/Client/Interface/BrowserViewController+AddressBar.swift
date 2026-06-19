@@ -9,7 +9,7 @@ import UIKit
 
 extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     // MARK: - Address Bar State
-
+    
     func refreshAddressBar() {
         let selectedTab = tabManager.selectedTab
         let displayText: String?
@@ -18,7 +18,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         } else {
             displayText = nil
         }
-
+        
         let selectedURL = selectedTab?.url
         browserChrome.setAddressBarText(
             displayText?.isEmpty == false ? displayText : selectedURL,
@@ -41,13 +41,13 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             usesDesktopWebsite: usesDesktopWebsite
         )
     }
-
+    
     // MARK: - AddressBarDelegate
-
+    
     func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar) {
         tabManager.reloadOrStopSelectedTab()
     }
-
+    
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem] {
         addonCoordinator.currentSiteMenuItems().map { item in
             AddressBarMenu.AddonItem(
@@ -56,83 +56,83 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             )
         }
     }
-
+    
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
         addonCoordinator.activateMenuItem(item)
     }
-
+    
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
         guard tabManager.changeWebsiteModeForSelectedTab() else {
             return
         }
-
+        
         refreshAddressBar()
     }
-
+    
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
         presentWebsiteSettings()
     }
-
+    
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool) {
         presentBookmarkEditor(addToFavorites: favorites)
     }
-
+    
     // MARK: - AddressBarGestureDelegate
-
+    
     var transitionContainerView: UIView {
-        view
+        return view
     }
-
+    
     var transitionContentView: ContentView {
-        contentView
+        return contentView
     }
-
-    var chromeMode: browserChromeMode {
-        browserLayout.chromeMode
+    
+    var chromeMode: BrowserChromeMode {
+        return browserLayout.chromeMode
     }
-
+    
     var isSearchFocused: Bool {
-        searchOverlayCoordinator.isFocused
+        return searchOverlayCoordinator.isFocused
     }
-
+    
     var isTabOverviewPresented: Bool {
-        tabOverview.isPresented
+        return tabOverview.isPresented
     }
-
+    
     var isTabOverviewTransitionRunning: Bool {
-        tabOverview.isTransitionRunning
+        return tabOverview.isTransitionRunning
     }
-
+    
     var selectedTabIndex: Int {
-        tabManager.selectedTabIndex
+        return tabManager.selectedTabIndex
     }
-
+    
     var selectedTabMode: TabMode {
-        tabManager.selectedTabMode
+        return tabManager.selectedTabMode
     }
-
+    
     var activeTabs: [Tab] {
-        tabManager.activeTabs
+        return tabManager.activeTabs
     }
-
+    
     func selectTabFromGesture(at index: Int, mode: TabMode) {
         tabManager.selectTab(at: index, mode: mode)
     }
-
+    
     func createTabForSwipe() -> Int {
-        tabManager.createTab(selecting: true)
+        return tabManager.createTab(selecting: true)
     }
-
+    
     func setPendingTabExpansion(at index: Int?) {
         tabBar.setPendingExpansion(at: index)
     }
-
+    
     func presentTabOverviewFromGesture(animated: Bool) {
         setTabOverviewVisible(true, animated: animated)
     }
-
+    
     // MARK: - Website Actions
-
+    
     private func presentWebsiteSettings() {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -140,19 +140,19 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
               let settingsController = SiteSettingsViewController(url: url, session: selectedTab.session) else {
             return
         }
-
+        
         let navigationController = UINavigationController(rootViewController: settingsController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
     }
-
+    
     private func presentBookmarkEditor(addToFavorites: Bool) {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: urlString) else {
             return
         }
-
+        
         let title = selectedTab.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let bookmarkController: EditBookmarkViewController
         if addToFavorites {
@@ -166,7 +166,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         } else {
             bookmarkController = EditBookmarkViewController(title: title, url: url)
         }
-
+        
         let navigationController = UINavigationController(rootViewController: bookmarkController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)

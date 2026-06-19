@@ -67,7 +67,7 @@ extension TabManager {
     }
     
     var activeTabs: [Tab] {
-        selectedTabMode == .private ? privateTabs : regularTabs
+        return selectedTabMode == .private ? privateTabs : regularTabs
     }
     
     func index(for target: TabInsertionTarget, mode: TabMode) -> Int? {
@@ -118,7 +118,7 @@ extension TabManagerImplementation {
               ) else {
             return false
         }
-
+        
         switch navigationAction {
         case .reload:
             sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)

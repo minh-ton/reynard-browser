@@ -9,14 +9,12 @@ import MobileCoreServices
 import UniformTypeIdentifiers
 
 extension FilePicker {
-    // MARK: - Accepted Types
-
     static func resolveAcceptedTypes(from mimeTypes: [String]) -> AcceptedTypes {
         let filters = mimeTypes
             .flatMap { $0.split(separator: ",").map(String.init) }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty }
-
+        
         if filters.isEmpty || filters.contains("*/*") {
             return AcceptedTypes(
                 documentTypeIdentifiers: [kUTTypeItem as String],
@@ -25,13 +23,13 @@ extension FilePicker {
                 captureMediaKind: nil
             )
         }
-
+        
         var documentTypeIdentifiers: [String] = []
         var legacyDocumentTypes: [String] = []
         var mediaTypes: Set<String> = []
         var captureMediaKinds: Set<MediaKind> = []
         var hasNonCaptureType = false
-
+        
         for filter in filters {
             switch filter {
             case "image/*":
@@ -54,12 +52,12 @@ extension FilePicker {
             default:
                 break
             }
-
+            
             guard let typeIdentifier = typeIdentifier(forAcceptFilter: filter) else {
                 hasNonCaptureType = true
                 continue
             }
-
+            
             documentTypeIdentifiers.append(typeIdentifier)
             legacyDocumentTypes.append(typeIdentifier)
             if typeConforms(typeIdentifier, to: kUTTypeImage as String) {
@@ -75,14 +73,14 @@ extension FilePicker {
                 hasNonCaptureType = true
             }
         }
-
+        
         if documentTypeIdentifiers.isEmpty {
             documentTypeIdentifiers = [kUTTypeItem as String]
         }
         if legacyDocumentTypes.isEmpty {
             legacyDocumentTypes = [kUTTypeItem as String]
         }
-
+        
         return AcceptedTypes(
             documentTypeIdentifiers: Array(Set(documentTypeIdentifiers)).sorted(),
             legacyDocumentTypes: Array(Set(legacyDocumentTypes)).sorted(),
@@ -92,45 +90,45 @@ extension FilePicker {
             : captureMediaKinds.first
         )
     }
-
+    
     private static func typeIdentifier(forAcceptFilter filter: String) -> String? {
         if filter.hasPrefix(".") {
             let filenameExtension = String(filter.dropFirst())
             guard !filenameExtension.isEmpty else { return nil }
             return typeIdentifier(forFilenameExtension: filenameExtension)
         }
-
+        
         if filter.contains("/") {
             return typeIdentifier(forMIMEType: filter)
         }
-
+        
         return filter
     }
-
+    
     private static func typeIdentifier(forFilenameExtension filenameExtension: String) -> String? {
         if #available(iOS 14.0, *) {
             return UTType(filenameExtension: filenameExtension)?.identifier
         }
-
+        
         return UTTypeCreatePreferredIdentifierForTag(
             kUTTagClassFilenameExtension,
             filenameExtension as CFString,
             nil
         )?.takeRetainedValue() as String?
     }
-
+    
     private static func typeIdentifier(forMIMEType mimeType: String) -> String? {
         if #available(iOS 14.0, *) {
             return UTType(mimeType: mimeType)?.identifier
         }
-
+        
         return UTTypeCreatePreferredIdentifierForTag(
             kUTTagClassMIMEType,
             mimeType as CFString,
             nil
         )?.takeRetainedValue() as String?
     }
-
+    
     static func typeConforms(_ typeIdentifier: String, to parentIdentifier: String) -> Bool {
         if #available(iOS 14.0, *) {
             guard let type = UTType(typeIdentifier),
@@ -139,7 +137,7 @@ extension FilePicker {
             }
             return type.conforms(to: parentType)
         }
-
+        
         return UTTypeConformsTo(typeIdentifier as CFString, parentIdentifier as CFString)
     }
 }

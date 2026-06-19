@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Progress Delegate
+
 public protocol ProgressDelegate {
     func onPageStart(session: GeckoSession, url: String)
     func onPageStop(session: GeckoSession, success: Bool)
@@ -19,6 +21,8 @@ extension ProgressDelegate {
     public func onProgressChange(session: GeckoSession, progress: Int) {}
 }
 
+// MARK: - Progress Events
+
 enum ProgressEvents: String, CaseIterable {
     case pageStart = "GeckoView:PageStart"
     case pageStop = "GeckoView:PageStop"
@@ -26,6 +30,8 @@ enum ProgressEvents: String, CaseIterable {
     case securityChanged = "GeckoView:SecurityChanged"
     case stateUpdated = "GeckoView:StateUpdated"
 }
+
+// MARK: - Progress Handler
 
 func newProgressHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(

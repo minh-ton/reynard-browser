@@ -17,19 +17,19 @@ protocol PromptPresenting {
 @MainActor
 final class PromptCoordinator: PromptDelegate {
     private let presenter: PromptPresenting
-
+    
     init(presenter: PromptPresenting) {
         self.presenter = presenter
     }
-
+    
     func onPrompt(session: GeckoSession, request: PromptRequest) async -> PromptResponse? {
         await presenter.present(request, for: session)
     }
-
+    
     func onPromptUpdate(session: GeckoSession, request: PromptRequest) {
         presenter.update(request)
     }
-
+    
     func onPromptDismiss(session: GeckoSession, promptId: String) {
         presenter.dismiss(promptID: promptId)
     }

@@ -9,16 +9,14 @@ import UIKit
 
 enum AddressBarMenu {
     private struct Identifier {
-        static let addressBarMenu = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu")
-        static let manageAddonsMenu = UIMenu.Identifier("me.minh-ton.reynard.address-bar-menu.manage-addons")
+        static let addressBarMenu = UIMenu.Identifier("com.minh-ton.Reynard.AddressBarMenu")
+        static let manageAddonsMenu = UIMenu.Identifier("com.minh-ton.Reynard.AddressBarMenu.ManageAddons")
     }
-
+    
     struct AddonItem {
         let menuItem: AddonMenuItem
         let image: UIImage?
     }
-
-    // MARK: - Menu Construction
     
     static func makeMenu(
         selectedURL: String?,

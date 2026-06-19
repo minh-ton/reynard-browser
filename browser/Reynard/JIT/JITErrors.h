@@ -14,12 +14,12 @@ FOUNDATION_EXPORT NSErrorDomain const ErrorDomain;
 FOUNDATION_EXPORT NSString *const ErrorCategory;
 
 typedef NS_ENUM(NSInteger, ErrorGroup) {
-  ErrorGroupUnknown = 0,
-  ErrorGroupSharedSetup = 1,
-  ErrorGroupModernPath = 2,
-  ErrorGroupPairing = 3,
-  ErrorGroupProtocol = 4,
-  ErrorGroupTrollStore = 5,
+    ErrorGroupUnknown = 0,
+    ErrorGroupSharedSetup = 1,
+    ErrorGroupModernPath = 2,
+    ErrorGroupPairing = 3,
+    ErrorGroupProtocol = 4,
+    ErrorGroupTrollStore = 5,
 };
 
 typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
@@ -30,10 +30,10 @@ typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
     DeviceProviderCreateFailed = -4,
     PairingFileReadFailed = -5,
     HeartbeatConnectFailed = -6,
-
+    
     // RSD service bootstrap
     LockdowndConnectFailed = -7,
-
+    
     // Attach
     ProcessControlCreateFailed = -8,
     RemoteServerConnectFailed = -9,
@@ -41,7 +41,7 @@ typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
     NoAckConfigureFailed = -11,
     AttachDebugProxyFailed = -12,
     SessionAllocationFailed = -13,
-
+    
     // Protocol handling and command execution
     DebugCommandCreateFailed = -14,
     DebugCommandSendFailed = -15,
@@ -49,7 +49,7 @@ typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
     UnexpectedNoAckResponse = -17,
     MemoryPrepareReadFailed = -18,
     UnexpectedPrepareRegionResponse = -19,
-
+    
     // Developer Disk Image mounting
     DDIMountPathResolveFailed = -20,
     DDIFileReadFailed = -21,
@@ -58,13 +58,13 @@ typedef NS_ERROR_ENUM(ErrorDomain, ErrorCode){
     UniqueChipIDReadFailed = -24,
     UniqueChipIDInvalid = -25,
     ModernDDIMountFailed = -26,
-
+    
     // Runtime connectivity monitoring
     EndpointConnectivityLost = -27,
-
+    
     // RPPairing tunnel
     TunnelCreateFailed = -28,
-
+    
     // TrollStore ptrace attach path
     TSPtraceHelperMissing = -29,
     TSPtraceHelperAttachFailed = -30,

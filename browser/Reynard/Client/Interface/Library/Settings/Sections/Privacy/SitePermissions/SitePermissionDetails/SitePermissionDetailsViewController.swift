@@ -8,8 +8,6 @@
 import UIKit
 
 final class SitePermissionDetailsViewController: SettingsTableViewController {
-    // MARK: - Models
-
     private struct ActionOption {
         let title: String
         let action: SitePermissionAction
@@ -25,7 +23,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         case allowedSiteEntries
         case blockedSiteEntries
         case customSiteActions
-
+        
         var text: SettingsSectionText {
             switch self {
             case .defaultBehavior:
@@ -39,8 +37,6 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             }
         }
     }
-
-    // MARK: - State
     
     private let permission: SitePermission
     private var allowedSiteEntries: [SiteEntry] = []
@@ -52,8 +48,6 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         formatter.timeStyle = .short
         return formatter
     }()
-
-    // MARK: - Lifecycle
     
     init(permission: SitePermission, title: String) {
         self.permission = permission
@@ -64,14 +58,12 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         reloadSiteEntries()
         tableView.reloadData()
     }
-
-    // MARK: - Table Structure
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         displayedSections.count
@@ -100,9 +92,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         }
         return displayedSections[section].text
     }
-
-    // MARK: - Cells
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard displayedSections.indices.contains(indexPath.section) else {
             return UITableViewCell()
@@ -119,8 +109,6 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             return customSiteActionCell(for: indexPath)
         }
     }
-
-    // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
@@ -160,14 +148,10 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             return nil
         }
     }
-
-    // MARK: - View Setup
     
     private func configureViewController(title: String) {
         self.title = title
     }
-
-    // MARK: - Sections
     
     private var displayedSections: [Section] {
         if permission == .autoplay {
@@ -192,9 +176,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             return defaultActionOptions(for: [.askToAllow, .allowed, .blocked])
         }
     }
-
-    // MARK: - Cells
-
+    
     private func defaultActionCell(for indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         guard defaultActionOptions.indices.contains(indexPath.row) else {
@@ -206,7 +188,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         cell.accessoryType = option.action == SiteSettingsUtils.defaultAction(for: permission) ? .checkmark : .none
         return cell
     }
-
+    
     private func allowedSiteEntryCell(for indexPath: IndexPath) -> UITableViewCell {
         guard !allowedSiteEntries.isEmpty else {
             return emptySiteEntryCell()
@@ -214,11 +196,11 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         guard allowedSiteEntries.indices.contains(indexPath.row) else {
             return UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         }
-
+        
         let site = allowedSiteEntries[indexPath.row]
         return siteEntryCell(host: site.host, subtitle: siteActionSubtitle(for: .allowed, at: site.updatedAt))
     }
-
+    
     private func blockedSiteEntryCell(for indexPath: IndexPath) -> UITableViewCell {
         guard !blockedSiteEntries.isEmpty else {
             return emptySiteEntryCell()
@@ -226,11 +208,11 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         guard blockedSiteEntries.indices.contains(indexPath.row) else {
             return UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         }
-
+        
         let site = blockedSiteEntries[indexPath.row]
         return siteEntryCell(host: site.host, subtitle: siteActionSubtitle(for: .blocked, at: site.updatedAt))
     }
-
+    
     private func customSiteActionCell(for indexPath: IndexPath) -> UITableViewCell {
         guard !customSiteActions.isEmpty else {
             return emptySiteEntryCell()
@@ -238,14 +220,14 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         guard customSiteActions.indices.contains(indexPath.row) else {
             return UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         }
-
+        
         let site = customSiteActions[indexPath.row]
         return siteEntryCell(
             host: site.host,
             subtitle: SiteSettingsUtils.actionTitle(for: site.action, permission: permission)
         )
     }
-
+    
     private func emptySiteEntryCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.textLabel?.text = "No Sites Added"
@@ -253,7 +235,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         cell.selectionStyle = .none
         return cell
     }
-
+    
     private func siteEntryCell(host: String, subtitle: String) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.textLabel?.text = host
@@ -263,9 +245,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         cell.selectionStyle = .default
         return cell
     }
-
-    // MARK: - Site Actions
-
+    
     private func defaultActionOptions(for actions: [SitePermissionAction]) -> [ActionOption] {
         actions.map {
             ActionOption(

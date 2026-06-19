@@ -21,7 +21,7 @@ protocol PermissionPromptPresenting {
 final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
     private let permissionStore: SitePermissionStore
     private let promptPresenter: PermissionPromptPresenting
-
+    
     init(
         permissionStore: SitePermissionStore = .shared,
         promptPresenter: PermissionPromptPresenting
@@ -29,7 +29,9 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
         self.permissionStore = permissionStore
         self.promptPresenter = promptPresenter
     }
-
+    
+    // MARK: - Permission Restoration
+    
     func restorePermissions(for session: GeckoSession, at urlString: String?) {
         guard let urlString,
               let url = URL(string: urlString),
@@ -66,6 +68,8 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
             }
         }
     }
+    
+    // MARK: - PermissionEmbedderDelegate
     
     @MainActor
     func permissionDelegate(decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value {
@@ -147,6 +151,8 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
         
         return allowed
     }
+    
+    // MARK: - Permission Resolution
     
     private func requestedPermissions(for request: MediaPermissionRequest) -> [SitePermission] {
         var permissions: [SitePermission] = []

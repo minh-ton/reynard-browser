@@ -14,8 +14,6 @@ protocol SearchViewControllerDelegate: AnyObject {
 }
 
 final class SearchViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let limitedCompletionCountWithUserData = 4
         static let tableInset: CGFloat = 8
@@ -26,36 +24,31 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         static let headerLabelTrailing: CGFloat = 16
         static let headerLabelTop: CGFloat = 10
         static let headerLabelBottom: CGFloat = 6
+        static let sectionHeaderFontSize: CGFloat = 15
     }
-
+    
     private enum SuggestionSection: Int, CaseIterable {
         case primarySuggestion
         case typedQuery
         case completions
         case userDataResults
     }
-
+    
     private enum SuggestionRow {
         case bestMatch(UserDataSearchResult)
         case autocomplete(query: String)
         case completion(String)
         case userDataResult(UserDataSearchResult)
     }
-
-    // MARK: - Delegate
-
+    
     weak var delegate: SearchViewControllerDelegate?
     var overlayContentHeightDidChange: ((CGFloat) -> Void)?
-
-    // MARK: - State
-
+    
     private let viewModel: SearchViewModel
     private var results = SearchResults.empty
-    private var browserChromeMode: browserChromeMode = .phone
+    private var chromeMode: BrowserChromeMode = .phone
     private var lastReportedOverlayContentHeight: CGFloat = -1
-
-    // MARK: - Views
-
+    
     private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -70,28 +63,28 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         }
         return tableView
     }()
-
+    
     private lazy var bestMatchSpacerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         return view
     }()
-
+    
     private lazy var completionsHeaderView = makeSectionHeaderView(title: "\(viewModel.completionProvider.name) Suggestions")
     private lazy var userDataHeaderView = makeSectionHeaderView(title: "Bookmarks, History, and Tabs")
-
+    
     // MARK: - Lifecycle
-
+    
     init(viewModel: SearchViewModel = SearchViewModel()) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
         configureViewModel()
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         configureAppearance()
@@ -99,14 +92,14 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         configureHierarchy()
         configureConstraints()
     }
-
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         reportOverlayContentHeightIfNeeded()
     }
-
+    
     // MARK: - Public API
-
+    
     func updateQuery(
         _ query: String,
         activeTabMode: TabMode?,
@@ -118,27 +111,27 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             excludingTabID: excludingTabID
         )
     }
-
+    
     func clearSuggestions() {
         viewModel.clear()
     }
-
-    func setChromeMode(_ browserChromeMode: browserChromeMode) {
-        guard self.browserChromeMode != browserChromeMode else {
+    
+    func setChromeMode(_ chromeMode: BrowserChromeMode) {
+        guard self.chromeMode != chromeMode else {
             return
         }
-
-        self.browserChromeMode = browserChromeMode
+        
+        self.chromeMode = chromeMode
         tableView.reloadData()
         reportOverlayContentHeightIfNeeded()
     }
-
+    
     // MARK: - UITableViewDataSource
-
+    
     func numberOfSections(in tableView: UITableView) -> Int {
         SuggestionSection.allCases.count
     }
-
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         guard let sectionKind = SuggestionSection(rawValue: section) else { return 0 }
         switch sectionKind {
@@ -152,12 +145,12 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             return results.userDataResults.count
         }
     }
-
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let suggestionRow = suggestionRow(at: indexPath) else {
             return UITableViewCell(style: .default, reuseIdentifier: nil)
         }
-
+        
         switch suggestionRow {
         case let .bestMatch(result):
             let cell = tableView.dequeueReusableCell(
@@ -183,7 +176,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             ) as! SearchSuggestionCell
             cell.apply(text: completion, query: results.query)
             cell.setTrailingIconVisible(true)
-            cell.setTrailingIconDirection(upward: browserChromeMode != .phone)
+            cell.setTrailingIconDirection(upward: chromeMode != .phone)
             cell.setFilledBackgroundVisible(false)
             return cell
         case let .userDataResult(result):
@@ -196,14 +189,14 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             return cell
         }
     }
-
+    
     // MARK: - UITableViewDelegate
-
+    
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         guard let sectionKind = SuggestionSection(rawValue: section) else {
             return nil
         }
-
+        
         switch sectionKind {
         case .primarySuggestion:
             return results.bestMatch == nil ? nil : bestMatchSpacerView
@@ -215,12 +208,12 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             return showsUserDataResults ? userDataHeaderView : nil
         }
     }
-
+    
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         guard let sectionKind = SuggestionSection(rawValue: section) else {
             return .leastNormalMagnitude
         }
-
+        
         switch sectionKind {
         case .primarySuggestion:
             return results.bestMatch == nil ? .leastNormalMagnitude : UX.bestMatchHeaderHeight
@@ -232,7 +225,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             return showsUserDataResults ? UX.sectionHeaderHeight : .leastNormalMagnitude
         }
     }
-
+    
     func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
         guard let sectionKind = SuggestionSection(rawValue: section),
               sectionKind == .primarySuggestion,
@@ -241,7 +234,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         }
         return UIView()
     }
-
+    
     func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
         guard let sectionKind = SuggestionSection(rawValue: section),
               sectionKind == .primarySuggestion,
@@ -250,13 +243,13 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         }
         return UX.bestMatchHeaderHeight
     }
-
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let suggestionRow = suggestionRow(at: indexPath) else {
             return
         }
-
+        
         switch suggestionRow {
         case let .bestMatch(result), let .userDataResult(result):
             delegate?.searchViewController(self, didSelectSuggestion: result.url.absoluteString, result: result)
@@ -264,19 +257,19 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             delegate?.searchViewController(self, didSelectSuggestion: query, result: nil)
         }
     }
-
+    
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         delegate?.searchViewControllerDidStartScrolling(self)
     }
-
+    
     // MARK: - View Model
-
+    
     private func configureViewModel() {
         viewModel.resultsDidChange = { [weak self] updatedResults in
             self?.applyResults(updatedResults)
         }
     }
-
+    
     private func applyResults(_ newResults: SearchResults) {
         results = newResults
         tableView.reloadData()
@@ -287,13 +280,13 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         )
         reportOverlayContentHeightIfNeeded()
     }
-
+    
     // MARK: - Configuration
-
+    
     private func configureAppearance() {
         view.backgroundColor = .clear
     }
-
+    
     private func configureTableView() {
         tableView.dataSource = self
         tableView.delegate = self
@@ -303,11 +296,11 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         tableView.register(SearchSuggestionCell.self, forCellReuseIdentifier: SearchSuggestionCell.reuseIdentifier)
         tableView.register(UserDataSuggestionCell.self, forCellReuseIdentifier: UserDataSuggestionCell.reuseIdentifier)
     }
-
+    
     private func configureHierarchy() {
         view.addSubview(tableView)
     }
-
+    
     private func configureConstraints() {
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -316,17 +309,17 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
-
+    
     private func makeSectionHeaderView(title: String) -> UIView {
         let container = UIView()
         container.backgroundColor = .clear
-
+        
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15, weight: .semibold)
+        label.font = .systemFont(ofSize: UX.sectionHeaderFontSize, weight: .semibold)
         label.textColor = .secondaryLabel
         label.text = title
-
+        
         container.addSubview(label)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: UX.headerLabelLeading),
@@ -334,33 +327,33 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
             label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -UX.headerLabelBottom),
             label.topAnchor.constraint(equalTo: container.topAnchor, constant: UX.headerLabelTop),
         ])
-
+        
         return container
     }
-
+    
     // MARK: - Rows
-
+    
     private var hasQuery: Bool {
-        !results.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return !results.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-
+    
     private var showsUserDataResults: Bool {
-        hasQuery && !results.userDataResults.isEmpty
+        return hasQuery && !results.userDataResults.isEmpty
     }
-
+    
     private var visibleCompletions: [String] {
         guard showsUserDataResults else {
             return results.completions
         }
-
+        
         return Array(results.completions.prefix(UX.limitedCompletionCountWithUserData))
     }
-
+    
     private func suggestionRow(at indexPath: IndexPath) -> SuggestionRow? {
         guard let sectionKind = SuggestionSection(rawValue: indexPath.section) else {
             return nil
         }
-
+        
         switch sectionKind {
         case .primarySuggestion:
             guard indexPath.row == 0,
@@ -368,42 +361,42 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
                   let bestMatch = results.bestMatch else {
                 return nil
             }
-
+            
             return .bestMatch(bestMatch)
         case .typedQuery:
             guard indexPath.row == 0, hasQuery else {
                 return nil
             }
-
+            
             return .autocomplete(query: results.query)
         case .completions:
             guard visibleCompletions.indices.contains(indexPath.row) else {
                 return nil
             }
-
+            
             return .completion(visibleCompletions[indexPath.row])
         case .userDataResults:
             guard results.userDataResults.indices.contains(indexPath.row) else {
                 return nil
             }
-
+            
             return .userDataResult(results.userDataResults[indexPath.row])
         }
     }
-
+    
     // MARK: - Content Height
-
+    
     private func reportOverlayContentHeightIfNeeded() {
         guard isViewLoaded else {
             return
         }
-
+        
         tableView.layoutIfNeeded()
         let contentHeight = tableView.contentSize.height
         guard abs(contentHeight - lastReportedOverlayContentHeight) > 0.5 else {
             return
         }
-
+        
         lastReportedOverlayContentHeight = contentHeight
         DispatchQueue.main.async { [weak self] in
             guard self?.lastReportedOverlayContentHeight == contentHeight else {

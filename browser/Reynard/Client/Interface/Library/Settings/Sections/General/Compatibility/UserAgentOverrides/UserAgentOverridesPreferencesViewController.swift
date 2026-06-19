@@ -8,36 +8,30 @@
 import UIKit
 
 final class UserAgentOverridesPreferencesViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section: CaseIterable {
         case overrides
-
+        
         var text: SettingsSectionText {
-            SettingsSectionText(
+            return SettingsSectionText(
                 footerTitle: "Navigations to these websites will use the browser's compatibility user agent. Depending on your Request Desktop Website setting, these websites may identify your device as either an Android device or a desktop Linux device."
             )
         }
     }
-
+    
     private enum Row {
         case domain(String)
         case addWebsite
     }
-
-    // MARK: - State
-
+    
     private var overrideDomains: [String] = []
-
+    
     private var displayedRows: [Row] {
-        overrideDomains.map(Row.domain) + [.addWebsite]
+        return overrideDomains.map(Row.domain) + [.addWebsite]
     }
-
-    // MARK: - Lifecycle
     
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "User Agent Overrides"
     }
     
     required init?(coder: NSCoder) {
@@ -48,13 +42,11 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
         super.viewDidLoad()
         overrideDomains = Prefs.CompatibilitySettings.androidUserAgentDomains
     }
-
-    // MARK: - Table Data Source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         Section.allCases.count
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         guard Section.allCases.indices.contains(section) else {
             return 0
@@ -67,7 +59,7 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
               displayedRows.indices.contains(indexPath.row) else {
             return UITableViewCell()
         }
-
+        
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         switch displayedRows[indexPath.row] {
         case .domain(let domain):
@@ -98,8 +90,6 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
         Prefs.CompatibilitySettings.androidUserAgentDomains = overrideDomains
         tableView.deleteRows(at: [indexPath], with: .automatic)
     }
-
-    // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
@@ -117,14 +107,6 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
         }
         return Section.allCases[section].text
     }
-
-    // MARK: - View Setup
-    
-    private func configureViewController() {
-        title = "User Agent Overrides"
-    }
-
-    // MARK: - Actions
     
     private func promptForOverrideDomain() {
         let alert = UIAlertController(title: "Add Website", message: nil, preferredStyle: .alert)

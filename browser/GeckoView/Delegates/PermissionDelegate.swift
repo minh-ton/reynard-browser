@@ -7,12 +7,16 @@
 
 import Foundation
 
+// MARK: - Permission Models
+
 public struct MediaPermissionRequest {
     public let uri: String
     public let host: String
     public let videoRequested: Bool
     public let audioRequested: Bool
 }
+
+// MARK: - Permission Delegate
 
 public protocol PermissionEmbedderDelegate: AnyObject {
     @MainActor
@@ -33,10 +37,14 @@ public extension PermissionEmbedderDelegate {
     }
 }
 
+// MARK: - Permission Events
+
 private enum PermissionEvents: String, CaseIterable {
     case contentPermission = "GeckoView:ContentPermission"
     case mediaPermission = "GeckoView:MediaPermission"
 }
+
+// MARK: - Permission Commands
 
 public enum PermissionDelegate {
     public static func permissions(for uri: String, privateMode: Bool = false, contextId: String? = nil) async throws -> [ContentPermission] {
@@ -123,14 +131,16 @@ public enum PermissionDelegate {
             return false
         }
         
-        let videoId = (videoSources?.first?["rawId"] as? String) ?? (videoSources?.first?["id"] as? String)
-        let audioId = (audioSources?.first?["rawId"] as? String) ?? (audioSources?.first?["id"] as? String)
+        let selectedVideoID = (videoSources?.first?["rawId"] as? String) ?? (videoSources?.first?["id"] as? String)
+        let selectedAudioID = (audioSources?.first?["rawId"] as? String) ?? (audioSources?.first?["id"] as? String)
         return [
-            "video": videoId as Any? ?? NSNull(),
-            "audio": audioId as Any? ?? NSNull(),
+            "video": selectedVideoID as Any? ?? NSNull(),
+            "audio": selectedAudioID as Any? ?? NSNull(),
         ]
     }
 }
+
+// MARK: - Permission Handler
 
 func newPermissionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(

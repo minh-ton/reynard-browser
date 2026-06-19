@@ -8,11 +8,9 @@
 import UIKit
 
 struct SettingsSectionText {
-    // MARK: - State
-
     let headerTitle: String?
     let footerTitle: String?
-
+    
     init(headerTitle: String? = nil, footerTitle: String? = nil) {
         self.headerTitle = headerTitle
         self.footerTitle = footerTitle
@@ -20,32 +18,30 @@ struct SettingsSectionText {
 }
 
 enum SettingsViewUtils {
-    // MARK: - UX
-
     private enum UX {
         static let minimumProgressTopSpacing: CGFloat = 12
         static let alertContentSpacing: CGFloat = 16
         static let fallbackProgressTopSpacing: CGFloat = 20
     }
-
+    
     // MARK: - Cells
-
+    
     static func disclosureCell(title: String) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.textLabel?.text = title
         cell.accessoryType = .disclosureIndicator
         return cell
     }
-
+    
     static func actionCell(title: String, tintColor: UIColor?) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.textLabel?.text = title
         cell.textLabel?.textColor = tintColor
         return cell
     }
-
+    
     // MARK: - Alerts
-
+    
     static func dismissPresentedAlert(
         _ alert: UIAlertController,
         from viewController: UIViewController,
@@ -55,20 +51,20 @@ enum SettingsViewUtils {
             completion()
             return
         }
-
+        
         alert.dismiss(animated: true, completion: completion)
     }
-
+    
     static func addProgressView(_ progressView: UIProgressView, to alert: UIAlertController) {
         guard let messageText = alert.message,
               let messageLabel = alert.view.firstDescendantLabel(withText: messageText) else {
             return
         }
-
+        
         alert.view.addSubview(progressView)
-
+        
         let cancelAnchorView = alert.view.firstDescendantButton(withTitle: "Cancel") ??
-            alert.view.firstDescendantView(containingLabelText: "Cancel")
+        alert.view.firstDescendantView(containingLabelText: "Cancel")
         var constraints = [
             progressView.widthAnchor.constraint(equalTo: messageLabel.widthAnchor),
             progressView.centerXAnchor.constraint(equalTo: messageLabel.centerXAnchor),
@@ -77,7 +73,7 @@ enum SettingsViewUtils {
                 constant: UX.minimumProgressTopSpacing
             ),
         ]
-
+        
         if let cancelAnchorView {
             let verticalGuide = UILayoutGuide()
             alert.view.addLayoutGuide(verticalGuide)
@@ -100,7 +96,7 @@ enum SettingsViewUtils {
                 )
             )
         }
-
+        
         NSLayoutConstraint.activate(constraints)
     }
 }

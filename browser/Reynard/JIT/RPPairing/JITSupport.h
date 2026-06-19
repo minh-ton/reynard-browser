@@ -14,10 +14,10 @@ NS_ASSUME_NONNULL_BEGIN
 typedef struct DeviceProvider DeviceProvider;
 
 typedef struct {
-  AdapterHandle *adapter;
-  RsdHandshakeHandle *handshake;
-  RemoteServerHandle *remoteServer;
-  DebugProxyHandle *debugProxy;
+    AdapterHandle *adapter;
+    RsdHandshakeHandle *handshake;
+    RemoteServerHandle *remoteServer;
+    DebugProxyHandle *debugProxy;
 } DebugSession;
 
 dispatch_queue_t debugServiceQueue(void);
@@ -26,8 +26,8 @@ NSMutableSet<NSNumber *> *activeDebugSessionPIDs(void);
 NSMutableSet<NSNumber *> *detachRequestedDebugSessionPIDs(void);
 
 DeviceProvider *_Nullable createDeviceProvider(
-    NSString *pairingFilePath, NSString *targetAddress,
-    NSError *_Nullable *_Nullable error);
+                                               NSString *pairingFilePath, NSString *targetAddress,
+                                               NSError *_Nullable *_Nullable error);
 BOOL ensureDDIMounted(DeviceProvider *provider,
                       NSError *_Nullable *_Nullable error);
 

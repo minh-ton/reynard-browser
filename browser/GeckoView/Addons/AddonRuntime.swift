@@ -30,7 +30,7 @@ public final class AddonRuntime: NSObject, GeckoEventListenerInternal {
     var installCounter = 0
     
     public var installedAddons: [Addon] {
-        Array(addonsByID.values).sorted {
+        return Array(addonsByID.values).sorted {
             ($0.metaData.name ?? $0.id).localizedCaseInsensitiveCompare($1.metaData.name ?? $1.id) == .orderedAscending
         }
     }
@@ -50,5 +50,4 @@ public final class AddonRuntime: NSObject, GeckoEventListenerInternal {
             session.dispatcher.addListener(type: event, listener: sessionListener)
         }
     }
-    
 }

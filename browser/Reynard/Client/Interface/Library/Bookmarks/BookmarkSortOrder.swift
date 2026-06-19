@@ -5,8 +5,6 @@
 //  Created by Minh Ton on 17/6/26.
 //
 
-// MARK: - Bookmark Sort Order
-
 enum BookmarkSortOrder: String {
     case none
     case date_added

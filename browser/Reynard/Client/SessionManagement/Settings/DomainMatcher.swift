@@ -14,7 +14,7 @@ enum DomainMatcher {
         }
         return URL(string: "https://" + url)?.host?.lowercased()
     }
-
+    
     static func matches(host: String, domain: String) -> Bool {
         let domain = domain.lowercased()
         return host == domain || host.hasSuffix("." + domain)

@@ -7,13 +7,19 @@
 
 import Foundation
 
+// MARK: - Website Mode Action
+
 enum WebsiteModeAction {
     case reload
     case load(String)
 }
 
 final class WebsiteModePolicy {
+    // MARK: - State
+
     private var desktopOverridesByTab: [UUID: [String: Bool]] = [:]
+
+    // MARK: - Mode Resolution
 
     func prefersDesktopMode(for url: String, tabID: UUID?) -> Bool {
         guard let tabID else {
@@ -34,6 +40,8 @@ final class WebsiteModePolicy {
             DomainMatcher.matches(host: host, domain: $0.key) || DomainMatcher.matches(host: $0.key, domain: host)
         })?.value ?? Prefs.BrowsingSettings.requestDesktopWebsite
     }
+
+    // MARK: - Overrides
 
     func toggle(for url: String, tabID: UUID) -> WebsiteModeAction? {
         guard let host = DomainMatcher.host(from: url),
@@ -71,6 +79,8 @@ final class WebsiteModePolicy {
     func clearOverrides(for tabID: UUID) {
         desktopOverridesByTab.removeValue(forKey: tabID)
     }
+
+    // MARK: - URL Resolution
 
     private func desktopURL(from url: String) -> String? {
         guard var components = URLComponents(string: url),

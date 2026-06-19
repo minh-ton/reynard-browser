@@ -11,13 +11,13 @@ import UIKit
 
 extension FilePicker {
     // MARK: - Availability
-
+    
     @available(iOS 14.0, *)
     var photoLibraryFilter: PHPickerFilter? {
         let mediaTypes = Set(acceptedTypes.mediaTypes)
         let supportsImages = mediaTypes.contains(kUTTypeImage as String)
         let supportsVideos = mediaTypes.contains(kUTTypeMovie as String)
-
+        
         switch (supportsImages, supportsVideos) {
         case (true, true):
             return .any(of: [.images, .videos])
@@ -29,38 +29,38 @@ extension FilePicker {
             return nil
         }
     }
-
+    
     var canUsePhotoLibrary: Bool {
         guard !acceptedTypes.mediaTypes.isEmpty else {
             return false
         }
-
+        
         if #available(iOS 14.0, *) {
             return photoLibraryFilter != nil
         }
-
+        
         return UIImagePickerController.isSourceTypeAvailable(.photoLibrary) &&
         !resolvedAvailableMediaTypes(for: .photoLibrary).isEmpty
     }
-
+    
     var canUseCamera: Bool {
         !acceptedTypes.mediaTypes.isEmpty &&
         UIImagePickerController.isSourceTypeAvailable(.camera) &&
         !resolvedAvailableMediaTypes(for: .camera).isEmpty
     }
-
+    
     // MARK: - Media Picker
-
+    
     func presentMediaPicker(sourceType: UIImagePickerController.SourceType) {
         if sourceType == .photoLibrary,
            #available(iOS 14.0, *) {
             presentPhotoLibraryPicker()
             return
         }
-
+        
         presentLegacyMediaPicker(sourceType: sourceType)
     }
-
+    
     @available(iOS 14.0, *)
     private func presentPhotoLibraryPicker() {
         guard let presenter = UIApplication.shared.topViewController(),
@@ -68,42 +68,42 @@ extension FilePicker {
             finish(with: nil)
             return
         }
-
+        
         var configuration = PHPickerConfiguration()
         configuration.filter = filter
         configuration.preferredAssetRepresentationMode = .current
         configuration.selectionLimit = mode == .multiple ? 0 : 1
-
+        
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = self
         picker.presentationController?.delegate = self
         presenter.present(picker, animated: true)
         presentedController = picker
     }
-
+    
     private func presentLegacyMediaPicker(sourceType: UIImagePickerController.SourceType) {
         guard let presenter = UIApplication.shared.topViewController() else {
             finish(with: nil)
             return
         }
-
+        
         let mediaTypes = resolvedAvailableMediaTypes(for: sourceType)
         guard !mediaTypes.isEmpty else {
             finish(with: nil)
             return
         }
-
+        
         let picker = UIImagePickerController()
         picker.delegate = self
         picker.sourceType = sourceType
         picker.mediaTypes = mediaTypes
         picker.presentationController?.delegate = self
         configureCameraIfNeeded(picker, mediaTypes: mediaTypes, sourceType: sourceType)
-
+        
         presenter.present(picker, animated: true)
         presentedController = picker
     }
-
+    
     private func configureCameraIfNeeded(
         _ picker: UIImagePickerController,
         mediaTypes: [String],
@@ -112,7 +112,7 @@ extension FilePicker {
         guard sourceType == .camera else {
             return
         }
-
+        
         picker.modalPresentationStyle = .fullScreen
         picker.isModalInPresentation = true
         if let preferredDevice = resolvedCameraDevice(),
@@ -123,14 +123,14 @@ extension FilePicker {
             picker.cameraCaptureMode = .video
         }
     }
-
+    
     func resolvedAvailableMediaTypes(
         for sourceType: UIImagePickerController.SourceType
     ) -> [String] {
         let availableTypes = Set(UIImagePickerController.availableMediaTypes(for: sourceType) ?? [])
         return acceptedTypes.mediaTypes.filter { availableTypes.contains($0) }
     }
-
+    
     private func resolvedCameraDevice() -> UIImagePickerController.CameraDevice? {
         switch capture {
         case .user:
@@ -141,16 +141,16 @@ extension FilePicker {
             return nil
         }
     }
-
+    
     // MARK: - Result Preparation
-
+    
     func prepareMediaResult(
         mediaURL: URL?,
         imageURL: URL?,
         imageData: Data?
     ) async -> SelectionResult? {
         let stagingDirectoryURL = self.stagingDirectoryURL
-
+        
         return await Task.detached(priority: .userInitiated) {
             if let mediaURL {
                 return try? Self.stageFiles(from: [mediaURL], in: stagingDirectoryURL)
@@ -164,20 +164,20 @@ extension FilePicker {
             return nil
         }.value
     }
-
+    
     @available(iOS 14.0, *)
     func preparePhotoLibraryResult(from results: [PHPickerResult]) async -> SelectionResult? {
         let selectedResults = mode == .multiple ? results : Array(results.prefix(1))
         guard !selectedResults.isEmpty else {
             return nil
         }
-
+        
         do {
             try Self.prepareDirectory(stagingDirectoryURL)
         } catch {
             return nil
         }
-
+        
         var stagedFiles: [String] = []
         for result in selectedResults {
             guard let stagedURL = await Self.stageItemProvider(
@@ -189,11 +189,11 @@ extension FilePicker {
             }
             stagedFiles.append(stagedURL.path)
         }
-
+        
         guard !stagedFiles.isEmpty else {
             return nil
         }
-
+        
         return SelectionResult(files: stagedFiles, filesInWebKitDirectory: [])
     }
 }

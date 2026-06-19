@@ -10,14 +10,14 @@ struct BrowserLayout: Equatable {
         case portrait
         case landscape
     }
-
+    
     let interfaceIdiom: UIUserInterfaceIdiom
     let orientation: ViewportOrientation
-    let chromeMode: browserChromeMode
-    let chromePosition: browserChromePosition
+    let chromeMode: BrowserChromeMode
+    let chromePosition: BrowserChromePosition
     let tabOverviewToolbarPosition: TabOverview.ToolbarPosition
     let overlayHost: OverlayCoordinator.Host
-
+    
     static func initial(interfaceIdiom: UIUserInterfaceIdiom) -> BrowserLayout {
         BrowserLayout(
             interfaceIdiom: interfaceIdiom,

@@ -9,8 +9,6 @@ import GeckoView
 import UIKit
 
 final class AddonPopupViewController: UIViewController, ContentDelegate, NavigationDelegate {
-    // MARK: - UX
-    
     private enum UX {
         static let maxSheetWidth: CGFloat = 430
         static let mediumHeightMultiplier: CGFloat = 0.7
@@ -24,8 +22,6 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         static let shadowOffset = CGSize(width: 0, height: -4)
         static let borderWidth: CGFloat = 0.5
     }
-    
-    // MARK: - State
     
     private let url: String
     private let sessionManager: SessionManager
@@ -209,13 +205,11 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         ])
     }
     
-    // MARK: - Actions
+    // MARK: - Actions & Delegates
     
     @objc private func closeTapped() {
         onCloseRequest(session: session)
     }
-    
-    // MARK: - ContentDelegate
     
     func onCloseRequest(session: GeckoSession) {
         closeSessionIfNeeded()
@@ -225,8 +219,6 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
             dismiss(animated: true)
         }
     }
-    
-    // MARK: - NavigationDelegate
     
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
         guard request.target == .new else {
@@ -238,10 +230,8 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     }
     
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? {
-        createSession(uri, windowId)
+        return createSession(uri, windowId)
     }
-    
-    // MARK: - Session Ownership
     
     private func closeSessionIfNeeded() {
         guard !hasClosedSession else {

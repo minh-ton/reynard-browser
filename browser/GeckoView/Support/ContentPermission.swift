@@ -86,7 +86,7 @@ public struct ContentPermission {
     }
     
     var geckoDictionary: [String: Any?] {
-        [
+        return [
             "uri": uri,
             "thirdPartyOrigin": thirdPartyOrigin,
             "privateMode": privateMode,

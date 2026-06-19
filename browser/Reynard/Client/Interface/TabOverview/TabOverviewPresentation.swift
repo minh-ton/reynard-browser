@@ -8,8 +8,6 @@
 import UIKit
 
 final class TabOverviewPresentation {
-    // MARK: - UX
-
     private enum UX {
         static let cardCollectionItemSpacing: CGFloat = 16
         static let cardMinimumPreviewAspectRatio: CGFloat = 0.4
@@ -27,25 +25,23 @@ final class TabOverviewPresentation {
         static let dismissalSpringDamping: CGFloat = 0.9
         static let transitionPreviewCornerRadius: CGFloat = 18
     }
-
-    // MARK: - State
-
+    
     enum State {
         case dismissed
         case presenting
         case presented
         case dismissing
     }
-
+    
     private unowned let tabOverview: TabOverview
-
+    
     private var dataSource: TabOverviewDataSource {
         guard let dataSource = tabOverview.dataSource else {
             preconditionFailure("TabOverview requires a data source")
         }
         return dataSource
     }
-
+    
     private var context: TabOverviewPresentationContext {
         guard let context = tabOverview.presentationContext else {
             preconditionFailure("TabOverview requires a presentation context")
@@ -61,31 +57,29 @@ final class TabOverviewPresentation {
     private var pendingSelectionPreviewImage: UIImage?
     
     private(set) var state: State = .dismissed
-
+    
     var isPresented: Bool {
-        state == .presented || state == .presenting
-    }
-
-    var isTransitionRunning: Bool {
-        state == .presenting || state == .dismissing
+        return state == .presented || state == .presenting
     }
     
-    // MARK: - Lifecycle
-
+    var isTransitionRunning: Bool {
+        return state == .presenting || state == .dismissing
+    }
+    
     init(tabOverview: TabOverview) {
         self.tabOverview = tabOverview
     }
     
     // MARK: - Layout
-
+    
     func cardSize(in collectionView: UICollectionView) -> CGSize {
         let horizontalInsets = collectionView.adjustedContentInset.left + collectionView.adjustedContentInset.right
         let availableWidth = collectionView.bounds.width - horizontalInsets
         let tabViewAspectRatio = max(UX.cardMinimumPreviewAspectRatio, tabOverview.previewAspectRatio)
         
         let targetWidth = context.browserLayout.chromeMode == .phone
-            ? UX.phoneCardTargetWidth
-            : UX.padCardTargetWidth
+        ? UX.phoneCardTargetWidth
+        : UX.padCardTargetWidth
         let computedColumns = Int((availableWidth + UX.cardCollectionItemSpacing) / (targetWidth + UX.cardCollectionItemSpacing))
         let columns = max(UX.minimumTabCardColumnCount, computedColumns)
         
@@ -109,7 +103,7 @@ final class TabOverviewPresentation {
     }
     
     // MARK: - Selection
-
+    
     func prepareDismissSelection(to index: Int, mode: TabMode, previewImage: UIImage?) {
         let selectedIndex = dataSource.selectedMode == mode ? dataSource.selectedIndex : nil
         dismissalTargetTabIndex = index
@@ -120,7 +114,7 @@ final class TabOverviewPresentation {
     }
     
     // MARK: - Presentation
-
+    
     func setPresented(_ visible: Bool, animated: Bool) {
         if isTransitionRunning {
             return
@@ -166,9 +160,9 @@ final class TabOverviewPresentation {
         context.updateLayout(animated: false, duration: 0)
         context.tabBar.updateLayout()
     }
-
+    
     // MARK: - Presentation Progress
-
+    
     func applyPresentationProgress(_ progress: CGFloat) {
         let clamped = max(0, min(1, progress))
         presentationProgress = clamped
@@ -193,7 +187,7 @@ final class TabOverviewPresentation {
     }
     
     // MARK: - Phone Animations
-
+    
     private func presentOnPhone() {
         state = .presenting
         presentationProgress = 1
@@ -365,7 +359,7 @@ final class TabOverviewPresentation {
     }
     
     // MARK: - Pad Animations
-
+    
     private func presentOnPad() {
         state = .presenting
         presentationProgress = 1
@@ -527,11 +521,11 @@ final class TabOverviewPresentation {
     }
     
     // MARK: - Transition Helpers
-
+    
     private func tabs(for mode: TabMode) -> [Tab] {
-        mode == .private ? dataSource.privateTabs : dataSource.regularTabs
+        return mode == .private ? dataSource.privateTabs : dataSource.regularTabs
     }
-
+    
     private func makeDismissalPreviewSnapshot(for index: Int) -> UIView? {
         let mode = dismissalTargetTabMode ?? dataSource.selectedMode
         let tabs = tabs(for: mode)

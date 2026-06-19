@@ -9,16 +9,12 @@ import GeckoView
 import UIKit
 
 final class AddonPermissionPromptViewController: UITableViewController {
-    // MARK: - UX
-    
     private enum UX {
         static let footerHeight: CGFloat = 88
         static let actionButtonTopInset: CGFloat = 24
         static let actionButtonHeight: CGFloat = 50
         static let actionButtonCornerRadius: CGFloat = 25
     }
-    
-    // MARK: - Types
     
     private enum Section {
         case message
@@ -32,8 +28,6 @@ final class AddonPermissionPromptViewController: UITableViewController {
         case showAllSites
         case permission(String)
     }
-    
-    // MARK: - State
     
     private let cellReuseIdentifier = "Cell"
     private let prompt: AddonPermissionPrompt
@@ -365,12 +359,8 @@ final class AddonPermissionPromptViewController: UITableViewController {
 }
 
 private final class AddonPromptSiteListViewController: UITableViewController {
-    // MARK: - State
-    
     private let cellReuseIdentifier = "SiteCell"
     private let sites: [String]
-    
-    // MARK: - Lifecycle
     
     init(sites: [String]) {
         self.sites = sites

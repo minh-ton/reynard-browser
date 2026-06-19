@@ -11,18 +11,12 @@ import UniformTypeIdentifiers
 import MobileCoreServices
 
 final class DownloadFileIconProvider {
-    // MARK: - Shared Provider
-
     static let shared = DownloadFileIconProvider()
-
-    // MARK: - Dependencies
     
     private let thumbnailGenerator = QLThumbnailGenerator.shared
     private let thumbnailCache = NSCache<NSURL, UIImage>()
     private let placeholderCache = NSCache<NSString, UIImage>()
     private let fileManager = FileManager.default
-
-    // MARK: - Placeholders
     
     func placeholderIcon(for fileURL: URL) -> UIImage? {
         let fileName = fileURL.lastPathComponent
@@ -39,8 +33,6 @@ final class DownloadFileIconProvider {
         placeholderCache.setObject(image, forKey: cacheKey)
         return image
     }
-
-    // MARK: - Icons
     
     func genericPlaceholderIcon() -> UIImage? {
         let cacheKey: NSString = "generic"
@@ -79,10 +71,8 @@ final class DownloadFileIconProvider {
     }
     
     func cachedIcon(for fileURL: URL) -> UIImage? {
-        thumbnailCache.object(forKey: fileURL as NSURL)
+        return thumbnailCache.object(forKey: fileURL as NSURL)
     }
-
-    // MARK: - Thumbnail Generation
     
     private func generateIcon(
         for fileURL: URL,
@@ -110,8 +100,6 @@ final class DownloadFileIconProvider {
             }
         }
     }
-
-    // MARK: - Fallbacks
     
     private func fallbackIcon(for fileURL: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
         let fileName = fileURL.lastPathComponent
@@ -139,8 +127,6 @@ final class DownloadFileIconProvider {
             completion(resolvedImage)
         }
     }
-
-    // MARK: - Placeholder Files
     
     private func placeholderFileURL(fileName: String, mimeType: String?) -> URL? {
         guard let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
@@ -171,8 +157,6 @@ final class DownloadFileIconProvider {
         
         return placeholderFileURL
     }
-
-    // MARK: - Content Types
     
     private func placeholderCacheKey(fileName: String, mimeType: String?) -> NSString {
         let pathExtension = URL(fileURLWithPath: fileName).pathExtension.lowercased()
@@ -217,8 +201,6 @@ final class DownloadFileIconProvider {
             kUTTagClassFilenameExtension
         )?.takeRetainedValue() as String?
     }
-
-    // MARK: - Document Interaction Icons
     
     private func documentInteractionIcon(for fileURL: URL, uti: String? = nil, name: String? = nil) -> UIImage? {
         let controller = UIDocumentInteractionController(url: fileURL)
@@ -229,6 +211,6 @@ final class DownloadFileIconProvider {
     }
     
     private func bestDocumentInteractionIcon(from icons: [UIImage]) -> UIImage? {
-        icons.last
+        return icons.last
     }
 }

@@ -21,7 +21,7 @@ struct SessionDelegates {
     var prompt: PromptDelegate?
     var selectionAction: SelectionActionDelegate?
     var mediaSession: MediaSessionDelegate?
-
+    
     init(
         content: ContentDelegate? = nil,
         navigation: NavigationDelegate? = nil,

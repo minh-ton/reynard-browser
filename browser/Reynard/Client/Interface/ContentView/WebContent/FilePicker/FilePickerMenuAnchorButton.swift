@@ -8,12 +8,8 @@
 import UIKit
 
 final class FilePickerMenuAnchorButton: UIButton {
-    // MARK: - State
-
     var onMenuDismissed: (() -> Void)?
-
-    // MARK: - Overrides
-
+    
     @available(iOS 14.0, *)
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,

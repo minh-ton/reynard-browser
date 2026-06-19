@@ -8,28 +8,25 @@
 import UIKit
 
 final class SidebarViewController: UISplitViewController, UISplitViewControllerDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let preferredPrimaryWidth: CGFloat = 320
         static let minimumPrimaryWidth: CGFloat = 280
         static let maximumPrimaryWidth: CGFloat = 360
         static let collapseAnimationDuration: TimeInterval = 0.14
+        static let layoutAnimationDuration: TimeInterval = 0.22
     }
-
-    // MARK: - State
-
+    
     private let contentController: SidebarContentController
     private var sidebarVisible = false
-
+    
     var contentBrowser: SidebarContentController {
-        contentController
+        return contentController
     }
-
+    
     var isSidebarVisible: Bool {
         return sidebarVisible
     }
-
+    
     var showChromeSidebarButton: Bool {
         guard sidebarVisible else {
             return true
@@ -39,29 +36,27 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         }
         return false
     }
-
-    // MARK: - View Controllers
-
+    
     private lazy var menuController = SidebarMenuViewController()
-
+    
     private lazy var browserNavigationController: UINavigationController = {
         let navigationController = UINavigationController(rootViewController: contentController.sidebarContentViewController)
         navigationController.setNavigationBarHidden(true, animated: false)
         return navigationController
     }()
-
+    
     private lazy var menuNavigationController: UINavigationController = {
         let navigationController = UINavigationController(rootViewController: menuController)
         navigationController.navigationBar.tintColor = .label
         return navigationController
     }()
-
+    
     // MARK: - Lifecycle
-
+    
     override var childForStatusBarHidden: UIViewController? {
-        browserNavigationController
+        return browserNavigationController
     }
-
+    
     init(contentController: SidebarContentController) {
         self.contentController = contentController
         if #available(iOS 14.0, *) {
@@ -72,22 +67,22 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         configureSplitView()
         observeApplicationActivation()
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-
+    
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         updateSplitBehavior()
     }
-
+    
     // MARK: - Visibility
-
+    
     func setVisible(_ visible: Bool) {
         sidebarVisible = visible
         if #available(iOS 14.0, *) {
@@ -102,11 +97,11 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         }
         updateBrowserLayoutIfNeeded()
     }
-
+    
     func toggleVisibility() {
         setVisible(!sidebarVisible)
     }
-
+    
     func collapse(from sourceView: UIView?) {
         guard let sourceView,
               contentController.sidebarContentViewController.isViewLoaded,
@@ -115,19 +110,19 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
             setVisible(false)
             return
         }
-
+        
         let sourceFrame = sourceView.convert(sourceView.bounds, to: containerView)
         snapshot.frame = sourceFrame
         containerView.addSubview(snapshot)
-
+        
         sourceView.isHidden = true
         setVisible(false)
         containerView.layoutIfNeeded()
         contentController.sidebarContentViewController.view.layoutIfNeeded()
-
+        
         let destinationFrame = contentController.sidebarContentChrome.sidebarButtonFrame(in: containerView)
         contentController.sidebarContentChrome.setSidebarButtonTransition(alpha: 0, hidden: false)
-
+        
         UIView.animate(withDuration: UX.collapseAnimationDuration, delay: 0, options: [.curveEaseOut]) {
             snapshot.frame = destinationFrame
             self.contentController.sidebarContentChrome.setSidebarButtonTransition(alpha: 1, hidden: false)
@@ -137,34 +132,34 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
             snapshot.removeFromSuperview()
         }
     }
-
+    
     func refreshVisibility() {
         sidebarVisible = displayMode != .secondaryOnly
         updateBrowserLayoutIfNeeded()
     }
-
+    
     // MARK: - Sections
-
+    
     func showSection(_ section: LibrarySection) {
         setVisible(true)
         menuController.showSection(section, animated: false)
     }
-
+    
     // MARK: - UISplitViewControllerDelegate
-
+    
     func splitViewController(_ svc: UISplitViewController, willChangeTo displayMode: UISplitViewController.DisplayMode) {
         sidebarVisible = displayMode != .secondaryOnly
         updateBrowserLayoutIfNeeded()
     }
-
+    
     // MARK: - Notifications
-
+    
     @objc private func applicationDidBecomeActive() {
         refreshVisibility()
     }
-
+    
     // MARK: - View Setup
-
+    
     private func configureSplitView() {
         delegate = self
         presentsWithGesture = false
@@ -186,7 +181,7 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
             viewControllers = [menuNavigationController, browserNavigationController]
         }
     }
-
+    
     private func observeApplicationActivation() {
         NotificationCenter.default.addObserver(
             self,
@@ -195,25 +190,25 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
             object: nil
         )
     }
-
+    
     private func updateSplitBehavior() {
         guard #available(iOS 14.0, *) else {
             return
         }
-
+        
         let browserLayout = contentController.sidebarContentLayout
         let shouldOverlay = browserLayout.orientation == .portrait
-            || (UIApplication.shared.isSidebarOverlayWidth && browserLayout.chromeMode != .compact)
+        || (UIApplication.shared.isSidebarOverlayWidth && browserLayout.chromeMode != .compact)
         let splitBehavior: UISplitViewController.SplitBehavior = shouldOverlay ? .overlay : .tile
-
+        
         if preferredSplitBehavior != splitBehavior {
             preferredSplitBehavior = splitBehavior
         }
     }
-
+    
     private func updateBrowserLayoutIfNeeded() {
         if contentController.sidebarContentViewController.isViewLoaded {
-            contentController.updateBrowserLayout(animated: false, duration: 0.22)
+            contentController.updateBrowserLayout(animated: false, duration: UX.layoutAnimationDuration)
         }
     }
 }

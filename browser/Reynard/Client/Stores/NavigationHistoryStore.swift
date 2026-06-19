@@ -8,8 +8,6 @@
 import Foundation
 
 final class NavigationHistoryStore {
-    // MARK: - Types
-
     static let shared = NavigationHistoryStore()
     
     struct Snapshot {
@@ -19,11 +17,11 @@ final class NavigationHistoryStore {
         let usesStoredHistory: Bool
         
         var canGoBack: Bool {
-            !backHistory.isEmpty
+            return !backHistory.isEmpty
         }
         
         var canGoForward: Bool {
-            !forwardHistory.isEmpty
+            return !forwardHistory.isEmpty
         }
     }
     
@@ -32,7 +30,7 @@ final class NavigationHistoryStore {
         var backHistory: [String]
         var forwardHistory: [String]
         var usesStoredHistory: Bool?
-
+        
         private enum CodingKeys: String, CodingKey {
             case currentURL
             case backHistory = "backList"
@@ -43,10 +41,8 @@ final class NavigationHistoryStore {
     
     private let fileManager: FileManager
     private let storageURL: URL
-    private let queue = DispatchQueue(label: "com.minh-ton.navigation-history-store", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.minh-ton.Reynard.NavigationHistoryStore.Queue", qos: .userInitiated)
     
-    // MARK: - Lifecycle
-
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -63,8 +59,6 @@ final class NavigationHistoryStore {
         }
     }
     
-    // MARK: - Navigation
-
     func currentSnapshot(for tabID: UUID) -> Snapshot {
         queue.sync {
             let history = loadHistory(for: tabID)
@@ -153,8 +147,6 @@ final class NavigationHistoryStore {
         }
     }
     
-    // MARK: - Persistence
-
     private func createStorageDirectory() {
         try? fileManager.createDirectory(at: storageURL, withIntermediateDirectories: true)
     }

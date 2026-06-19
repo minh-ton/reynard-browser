@@ -46,7 +46,7 @@ final class BrowserPreferences {
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
             
             // Appearance
-            key("AppearanceSettings", "addressBarPosition"): browserChromePosition.bottom.rawValue,
+            key("AppearanceSettings", "addressBarPosition"): BrowserChromePosition.bottom.rawValue,
             key("AppearanceSettings", "showsLandscapeTabBar"): true,
             
             // Bookmarks
@@ -270,10 +270,10 @@ final class BrowserPreferences {
     
     // MARK: - Appearance
     struct AppearanceSettings {
-        static var addressBarPosition: browserChromePosition {
+        static var addressBarPosition: BrowserChromePosition {
             get {
-                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "addressBarPosition") ?? browserChromePosition.bottom.rawValue
-                return browserChromePosition(rawValue: rawValue) ?? .bottom
+                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "addressBarPosition") ?? BrowserChromePosition.bottom.rawValue
+                return BrowserChromePosition(rawValue: rawValue) ?? .bottom
             }
             set {
                 prefs.set(newValue.rawValue, forSetting: "AppearanceSettings", key: "addressBarPosition")

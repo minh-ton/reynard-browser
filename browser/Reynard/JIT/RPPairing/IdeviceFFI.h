@@ -26,9 +26,9 @@ typedef struct RsdHandshakeHandle RsdHandshakeHandle;
 typedef void *plist_t;
 
 typedef struct IdeviceFfiError {
-  int32_t code;
-  int32_t sub_code;
-  const char *message;
+    int32_t code;
+    int32_t sub_code;
+    const char *message;
 } IdeviceFfiError;
 
 IdeviceFfiError *rp_pairing_file_read(const char *path,
@@ -59,11 +59,11 @@ IdeviceFfiError *image_mounter_copy_devices(ImageMounterHandle *client,
                                             plist_t **devices,
                                             size_t *devices_len);
 IdeviceFfiError *image_mounter_mount_personalized_rsd(
-    ImageMounterHandle *client, AdapterHandle *provider,
-    RsdHandshakeHandle *handshake, const uint8_t *image, size_t image_len,
-    const uint8_t *trust_cache, size_t trust_cache_len,
-    const uint8_t *build_manifest, size_t build_manifest_len,
-    const void *info_plist, uint64_t unique_chip_id);
+                                                      ImageMounterHandle *client, AdapterHandle *provider,
+                                                      RsdHandshakeHandle *handshake, const uint8_t *image, size_t image_len,
+                                                      const uint8_t *trust_cache, size_t trust_cache_len,
+                                                      const uint8_t *build_manifest, size_t build_manifest_len,
+                                                      const void *info_plist, uint64_t unique_chip_id);
 
 IdeviceFfiError *heartbeat_connect_rsd(AdapterHandle *provider,
                                        RsdHandshakeHandle *handshake,

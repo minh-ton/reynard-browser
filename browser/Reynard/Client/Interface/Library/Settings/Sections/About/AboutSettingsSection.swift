@@ -9,8 +9,6 @@ import GeckoView
 import UIKit
 
 struct AboutSettingsSection {
-    // MARK: - Rows
-
     enum Row: CaseIterable {
         case appVersion
         case engineVersion
@@ -18,20 +16,16 @@ struct AboutSettingsSection {
         case supportProject
         case githubProfile
     }
-
-    // MARK: - State
-
+    
     var rowCount: Int {
-        Row.allCases.count
+        return Row.allCases.count
     }
-
-    // MARK: - Cells
-
+    
     func cell(at index: Int) -> UITableViewCell {
         guard Row.allCases.indices.contains(index) else {
             return UITableViewCell()
         }
-
+        
         switch Row.allCases[index] {
         case .appVersion:
             let info = Bundle.main.infoDictionary
@@ -48,20 +42,16 @@ struct AboutSettingsSection {
             return linkCell(title: "GitHub - @minh-ton")
         }
     }
-
-    // MARK: - Selection
-
+    
     func selectRow(at index: Int) {
         guard Row.allCases.indices.contains(index),
               let url = url(for: Row.allCases[index]) else {
             return
         }
-
+        
         UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
-
-    // MARK: - Helpers
-
+    
     private func url(for row: Row) -> URL? {
         switch row {
         case .sourceCode:
@@ -74,7 +64,7 @@ struct AboutSettingsSection {
             return nil
         }
     }
-
+    
     private func valueCell(title: String, value: String) -> UITableViewCell {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.textLabel?.text = title
@@ -84,7 +74,7 @@ struct AboutSettingsSection {
         cell.accessoryType = .none
         return cell
     }
-
+    
     private func linkCell(title: String) -> UITableViewCell {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.textLabel?.text = title

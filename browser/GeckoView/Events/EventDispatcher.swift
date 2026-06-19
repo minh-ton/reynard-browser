@@ -9,7 +9,7 @@ import Foundation
 
 struct GeckoHandlerError: Error {
     let value: Any?
-
+    
     init(_ value: Any?) {
         self.value = value
     }
@@ -38,24 +38,24 @@ extension GeckoEventListenerInternal {
 public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
     static var runtimeInstance = GeckoEventDispatcherWrapper()
     static var dispatchers: [String: GeckoEventDispatcherWrapper] = [:]
-
+    
     struct QueuedMessage {
         let type: String
         let message: [String: Any?]?
         let callback: EventCallback?
     }
-
+    
     var gecko: (any GeckoEventDispatcher)?
     var queue: [QueuedMessage]? = []
     var listeners: [String: [GeckoEventListenerInternal]] = [:]
     var name: String?
-
+    
     override init() {}
-
+    
     init(name: String) {
         self.name = name
     }
-
+    
     public static func lookup(byName: String) -> GeckoEventDispatcherWrapper {
         if let dispatcher = dispatchers[byName] {
             return dispatcher
@@ -64,11 +64,11 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
         dispatchers[byName] = dispatcher
         return dispatcher
     }
-
+    
     func addListener(type: String, listener: GeckoEventListenerInternal) {
         listeners[type, default: []] += [listener]
     }
-
+    
     public func dispatch(
         type: String, message: [String: Any?]? = nil, callback: EventCallback? = nil
     ) {
@@ -77,12 +77,12 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
                 listener.handleMessage(type: type, message: message, callback: callback)
             }
         } else if queue != nil {
-            queue!.append(QueuedMessage(type: type, message: message, callback: callback))
+            queue?.append(QueuedMessage(type: type, message: message, callback: callback))
         } else {
             gecko?.dispatch(toGecko: type, message: message, callback: callback)
         }
     }
-
+    
     public func query(type: String, message: [String: Any?]? = nil) async throws -> Any? {
         class AsyncCallback: NSObject, EventCallback {
             var continuation: CheckedContinuation<Any?, Error>?
@@ -102,16 +102,16 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
                 continuation = nil
             }
         }
-
-        return try await withCheckedThrowingContinuation({
+        
+        return try await withCheckedThrowingContinuation {
             dispatch(type: type, message: message, callback: AsyncCallback($0))
-        })
+        }
     }
-
+    
     public func attach(_ dispatcher: (any GeckoEventDispatcher)?) {
         gecko = dispatcher
     }
-
+    
     public func dispatch(toSwift type: String!, message: Any!, callback: EventCallback?) {
         let message = message as! [String: Any?]?
         if let registeredListeners = listeners[type] {
@@ -120,7 +120,7 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
             }
         }
     }
-
+    
     public func activate() {
         if let queue = self.queue {
             self.queue = nil
@@ -129,7 +129,7 @@ public class GeckoEventDispatcherWrapper: NSObject, SwiftEventDispatcher {
             }
         }
     }
-
+    
     public func hasListener(_ type: String!) -> Bool {
         listeners.keys.contains(type)
     }

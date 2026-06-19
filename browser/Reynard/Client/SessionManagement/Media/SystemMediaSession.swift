@@ -70,7 +70,7 @@ final class SystemMediaSession: MediaSessionDelegate {
         info[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
         nowPlayingCenter.nowPlayingInfo = info
     }
-
+    
     func onPlaybackPaused(session: GeckoSession) {
         guard activeSession === session else { return }
         var info = nowPlayingCenter.nowPlayingInfo ?? [:]

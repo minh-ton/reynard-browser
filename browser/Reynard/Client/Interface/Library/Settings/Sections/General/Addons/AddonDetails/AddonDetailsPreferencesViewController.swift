@@ -9,15 +9,13 @@ import GeckoView
 import UIKit
 
 final class AddonDetailsPreferencesViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section {
         case status
         case actions
         case destinations
-
+        
         var text: SettingsSectionText {
-            SettingsSectionText()
+            return SettingsSectionText()
         }
     }
     
@@ -29,7 +27,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         case permissions
         case remove
     }
-
+    
     private enum StatusRow: CaseIterable {
         case message
     }
@@ -38,8 +36,6 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         let text: String
         let color: UIColor
     }
-
-    // MARK: - State
     
     private let addonID: String
     private let enableSwitch = UISwitch()
@@ -135,13 +131,13 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         
         return nil
     }
-
+    
     // MARK: - Lifecycle
     
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Add-on"
     }
     
     required init?(coder: NSCoder) {
@@ -159,7 +155,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             await self?.refreshAddon()
         }
     }
-
+    
     // MARK: - Table Data Source
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -201,7 +197,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             return addonNavigationCell(for: indexPath)
         }
     }
-
+    
     // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -249,14 +245,14 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         }
     }
-
+    
     override func sectionText(for section: Int) -> SettingsSectionText {
         guard displayedSections.indices.contains(section) else {
             return SettingsSectionText()
         }
         return displayedSections[section].text
     }
-
+    
     // MARK: - Actions
     
     @objc private func privateBrowsingSwitchChanged(_ sender: UISwitch) {
@@ -326,12 +322,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         }
     }
-
-    // MARK: - View Setup
     
-    private func configureViewController() {
-        title = "Add-on"
-    }
+    // MARK: - View Setup
     
     private func configureSwitches() {
         enableSwitch.isEnabled = false
@@ -339,7 +331,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         privateBrowsingSwitch.isEnabled = false
         privateBrowsingSwitch.addTarget(self, action: #selector(privateBrowsingSwitchChanged(_:)), for: .valueChanged)
     }
-
+    
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
@@ -369,7 +361,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         privateBrowsingSwitch.isEnabled = addon.metaData.incognito != .notAllowed && !isUpdatingAddon
         tableView.reloadData()
     }
-
+    
     // MARK: - Cells
     
     private func statusMessageCell() -> UITableViewCell {
@@ -450,7 +442,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         
         return cell
     }
-
+    
     // MARK: - Removal
     
     private func confirmRemoval() {

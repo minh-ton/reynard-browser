@@ -9,15 +9,15 @@ import CoreGraphics
 import Foundation
 
 func parseSelectionActionRequest(_ message: [String: Any?]?) -> SelectionActionRequest? {
-    guard let actionId = message?["actionId"] as? String,
+    guard let actionID = message?["actionId"] as? String,
           let actions = message?["actions"] as? [String],
           let selection = message?["selection"] as? String,
           let screenRect = parseScreenRect(message?["screenRect"] ?? nil) else {
         return nil
     }
-
+    
     return SelectionActionRequest(
-        actionId: actionId,
+        actionId: actionID,
         actions: actions,
         selection: selection,
         editable: message?["editable"] as? Bool ?? false,
@@ -35,12 +35,12 @@ private func parseScreenRect(_ value: Any?) -> CGRect? {
           let bottom = PayloadValue.cgFloat(rect["bottom"]) else {
         return nil
     }
-
+    
     let width = max(0, right - left)
     let height = max(0, bottom - top)
     guard width > 0, height > 0 else {
         return nil
     }
-
+    
     return CGRect(x: left, y: top, width: width, height: height)
 }

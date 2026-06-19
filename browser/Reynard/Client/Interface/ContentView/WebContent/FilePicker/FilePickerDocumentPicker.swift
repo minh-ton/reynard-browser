@@ -10,14 +10,12 @@ import UIKit
 import UniformTypeIdentifiers
 
 extension FilePicker {
-    // MARK: - Document Picker
-
     func presentDocumentPicker() {
         guard let presenter = UIApplication.shared.topViewController() else {
             finish(with: nil)
             return
         }
-
+        
         let picker = documentPicker()
         picker.delegate = self
         picker.presentationController?.delegate = self
@@ -25,7 +23,7 @@ extension FilePicker {
         presenter.present(picker, animated: true)
         presentedController = picker
     }
-
+    
     private func documentPicker() -> UIDocumentPickerViewController {
         if #available(iOS 14.0, *) {
             if mode == .folder {
@@ -34,26 +32,24 @@ extension FilePicker {
                     asCopy: false
                 )
             }
-
+            
             let contentTypes = acceptedTypes.documentTypeIdentifiers.compactMap { UTType($0) }
             return UIDocumentPickerViewController(
                 forOpeningContentTypes: contentTypes.isEmpty ? [UTType.item] : contentTypes
             )
         }
-
+        
         let legacyTypes = acceptedTypes.legacyDocumentTypes.isEmpty
         ? [kUTTypeItem as String]
         : acceptedTypes.legacyDocumentTypes
         return UIDocumentPickerViewController(documentTypes: legacyTypes, in: .open)
     }
-
-    // MARK: - Result Preparation
-
+    
     func prepareDocumentResult(from urls: [URL]) async -> SelectionResult? {
         let selectedURLs = mode == .multiple ? urls : Array(urls.prefix(1))
         let mode = self.mode
         let stagingDirectoryURL = self.stagingDirectoryURL
-
+        
         return await Task.detached(priority: .userInitiated) {
             switch mode {
             case .folder:

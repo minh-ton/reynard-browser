@@ -8,16 +8,13 @@
 import UIKit
 
 final class DownloadsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
-    // MARK: - UX
-
     private enum UX {
         static let estimatedRowHeight: CGFloat = 96
         static let sectionHeaderTopPadding: CGFloat = 0
+        static let groupedSectionHeaderHeight: CGFloat = 34
         static let headerMenuButtonTrailingInset: CGFloat = 20
     }
-
-    // MARK: - Views
-
+    
     private lazy var searchBar: UISearchBar = {
         let searchBar = UISearchBar(frame: .zero)
         searchBar.autocapitalizationType = .none
@@ -72,8 +69,6 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         view.register(DownloadItemCell.self, forCellReuseIdentifier: DownloadItemCell.reuseIdentifier)
         return view
     }()
-
-    // MARK: - State
     
     private let emptyStateView = SidebarEmptyBackgroundView(message: "Files you download appear here")
     private var sections: [DownloadSection] = []
@@ -81,7 +76,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     private var appActiveObserver: NSObjectProtocol?
     private var isSwipeEditing = false
     private var query = ""
-
+    
     // MARK: - Lifecycle
     
     init() {
@@ -101,7 +96,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         installGestures()
         reloadDownloads()
     }
-
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         LibrarySharedUtils.syncTableHeaderWidth(headerView, in: tableView)
@@ -123,12 +118,12 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             NotificationCenter.default.removeObserver(appActiveObserver)
         }
     }
-
+    
     // MARK: - View Setup
-
+    
     private func installLayout() {
         view.addSubview(tableView)
-
+        
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -136,7 +131,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
-
+    
     private func observeStore() {
         storeObserver = NotificationCenter.default.addObserver(
             forName: .downloadStoreDidChange,
@@ -153,14 +148,14 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             self?.reloadDownloads()
         }
     }
-
+    
     private func installGestures() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissSearch))
         tapGesture.cancelsTouchesInView = false
         tapGesture.delegate = self
         tableView.addGestureRecognizer(tapGesture)
     }
-
+    
     // MARK: - Downloads
     
     private func reloadDownloads() {
@@ -253,7 +248,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     @objc private func dismissSearch() {
         searchBar.resignFirstResponder()
     }
-
+    
     // MARK: - Menu
     
     @objc private func didTapDownloadsMenu() {
@@ -312,7 +307,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         }
         LibraryActionButton.installNavigationAction(downloadsMenuItem, in: navigationItem)
     }
-
+    
     // MARK: - Search
     
     private func matchingDownloads(from items: [DownloadItemSnapshot]) -> [DownloadItemSnapshot] {
@@ -345,7 +340,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         query = normalizedTerm
         reloadDownloads()
     }
-
+    
     // MARK: - Display State
     
     private func updateEmptyState() {
@@ -407,7 +402,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         lhs.downloadedBytes == rhs.downloadedBytes &&
         lhs.bytesPerSecond == rhs.bytesPerSecond
     }
-
+    
     // MARK: - UITableViewDataSource
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -436,9 +431,9 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        LibrarySharedUtils.UX.groupedSectionHeaderHeight
+        return UX.groupedSectionHeaderHeight
     }
-
+    
     // MARK: - UITableViewDelegate
     
     func tableView(
@@ -519,7 +514,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     func tableView(_ tableView: UITableView, didEndEditingRowAt indexPath: IndexPath?) {
         isSwipeEditing = false
     }
-
+    
     // MARK: - UISearchBarDelegate
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
@@ -530,7 +525,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-
+    
     // MARK: - UIGestureRecognizerDelegate
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -540,7 +535,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         
         return LibrarySharedUtils.isTapOutsideSearchBar(touch, in: tableView, ignoring: searchBar)
     }
-
+    
     // MARK: - Item Actions
     
     private func confirmCancelDownload(

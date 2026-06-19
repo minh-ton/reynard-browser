@@ -8,6 +8,8 @@
 import Foundation
 import MediaPlayer
 
+// MARK: - Media Session Models
+
 public struct MediaSessionMetadata {
     public let title: String?
     public let artist: String?
@@ -37,6 +39,8 @@ public struct MediaSessionFeatures: OptionSet {
     public static let muteAudio = MediaSessionFeatures(rawValue: 1 << 9)
 }
 
+// MARK: - Media Session Delegate
+
 public protocol MediaSessionDelegate: AnyObject {
     func onActivated(session: GeckoSession)
     func onDeactivated(session: GeckoSession)
@@ -58,6 +62,8 @@ public extension MediaSessionDelegate {
     func onFeatures(session: GeckoSession, features: MediaSessionFeatures) {}
     func onPositionState(session: GeckoSession, state: MediaSessionPositionState) {}
 }
+
+// MARK: - Media Session Commands
 
 // Allows the host app to send playback control commands to Gecko.
 public class MediaSession {
@@ -103,6 +109,8 @@ public class MediaSession {
     }
 }
 
+// MARK: - Media Session Events
+
 private enum MediaSessionEvent: String, CaseIterable {
     case activated = "GeckoView:MediaSession:Activated"
     case deactivated = "GeckoView:MediaSession:Deactivated"
@@ -113,6 +121,8 @@ private enum MediaSessionEvent: String, CaseIterable {
     case features = "GeckoView:MediaSession:Features"
     case positionState = "GeckoView:MediaSession:PositionState"
 }
+
+// MARK: - Media Session Handler
 
 func newMediaSessionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -135,12 +145,12 @@ func newMediaSessionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             
         case .metadata:
             if let metadataPayload = message?["metadata"] as? [String: Any] {
-                let artworkUrl = (metadataPayload["artwork"] as? [[String: Any]])?.first?["src"] as? String
+                let artworkURL = (metadataPayload["artwork"] as? [[String: Any]])?.first?["src"] as? String
                 let metadata = MediaSessionMetadata(
                     title: metadataPayload["title"] as? String,
                     artist: metadataPayload["artist"] as? String,
                     album: metadataPayload["album"] as? String,
-                    artworkUrl: artworkUrl
+                    artworkUrl: artworkURL
                 )
                 delegate?.onMetadata(session: session, metadata: metadata)
             }
@@ -170,11 +180,11 @@ func newMediaSessionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             delegate?.onFeatures(session: session, features: features)
             
         case .positionState:
-            if let stateDict = message?["state"] as? [String: Any] {
+            if let positionPayload = message?["state"] as? [String: Any] {
                 let positionState = MediaSessionPositionState(
-                    duration: stateDict["duration"] as? Double ?? 0,
-                    playbackRate: stateDict["playbackRate"] as? Double ?? 1,
-                    position: stateDict["position"] as? Double ?? 0
+                    duration: positionPayload["duration"] as? Double ?? 0,
+                    playbackRate: positionPayload["playbackRate"] as? Double ?? 1,
+                    position: positionPayload["position"] as? Double ?? 0
                 )
                 delegate?.onPositionState(session: session, state: positionState)
             }

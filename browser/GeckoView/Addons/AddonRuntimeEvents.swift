@@ -106,7 +106,7 @@ extension AddonRuntime {
             return nil
         }
     }
-
+    
     private func handleOpenOptionsPage(message: [String: Any?]?) async throws {
         guard let extensionID = message?["extensionId"] as? String,
               let addon = try await addon(byID: extensionID) else {
@@ -114,7 +114,7 @@ extension AddonRuntime {
         }
         delegate?.addonController(self, didRequestOpenOptionsPageFor: addon)
     }
-
+    
     private func handleNewTab(message: [String: Any?]?) async throws -> Bool {
         guard let extensionID = message?["extensionId"] as? String,
               let newSessionID = message?["newSessionId"] as? String,
@@ -131,7 +131,7 @@ extension AddonRuntime {
             newSessionID: newSessionID
         ) ?? false
     }
-
+    
     private func installPromptResponse(message: [String: Any?]?) async throws -> [String: Any] {
         guard let prompt = try await permissionPrompt(for: .installPrompt, message: message) else {
             return [
@@ -147,7 +147,7 @@ extension AddonRuntime {
             "isTechnicalAndInteractionDataGranted": response.technicalAndInteractionDataGranted,
         ]
     }
-
+    
     private func permissionPromptResponse(
         for event: AddonRuntimeEvent,
         message: [String: Any?]?

@@ -16,15 +16,15 @@ protocol SelectionActionPresenting {
 @MainActor
 final class SelectionActionCoordinator: SelectionActionDelegate {
     private let presenter: SelectionActionPresenting
-
+    
     init(presenter: SelectionActionPresenting) {
         self.presenter = presenter
     }
-
+    
     func onShowSelectionAction(session: GeckoSession, request: SelectionActionRequest) {
         presenter.show(request, for: session)
     }
-
+    
     func onHideSelectionAction(session: GeckoSession) {
         presenter.hide(for: session)
     }

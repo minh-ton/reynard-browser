@@ -37,7 +37,7 @@ extension ContentPermission {
             return nil
         }
     }
-
+    
     var alertMessage: String? {
         switch permission {
         case .storageAccess:
@@ -58,7 +58,7 @@ extension ContentPermission {
             return nil
         }
     }
-
+    
     static func mediaAlertTitle(uri: String, videoRequested: Bool, audioRequested: Bool) -> String {
         let host = permissionHost(from: uri)
         switch (videoRequested, audioRequested) {

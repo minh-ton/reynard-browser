@@ -9,52 +9,48 @@ import UIKit
 
 @MainActor
 final class FilePicker: NSObject {
-    // MARK: - UX
-
     enum UX {
         static let imageCompressionQuality: CGFloat = 0.92
     }
-
-    // MARK: - Types
-
+    
     enum Mode: String, Sendable {
         case single
         case multiple
         case folder
     }
-
+    
     enum Capture: Int {
         case none = 0
         case any = 1
         case user = 2
         case environment = 3
     }
-
+    
     enum PickerAction {
         case photoLibrary
         case camera
         case chooseFile
     }
-
+    
     enum MediaKind: Sendable {
         case image
         case video
     }
-
+    
     struct AcceptedTypes: Sendable {
         let documentTypeIdentifiers: [String]
         let legacyDocumentTypes: [String]
         let mediaTypes: [String]
         let captureMediaKind: MediaKind?
     }
-
+    
     struct FolderEntry: Sendable {
         let filePath: String
         let relativePath: String
         let name: String
         let type: String
         let lastModified: Double
-
+        
         var dictionary: [String: Any] {
             [
                 "filePath": filePath,
@@ -65,11 +61,11 @@ final class FilePicker: NSObject {
             ]
         }
     }
-
+    
     struct SelectionResult: Sendable {
         let files: [String]
         let filesInWebKitDirectory: [FolderEntry]
-
+        
         var promptResult: [String: Any] {
             var result: [String: Any] = ["files": files]
             if !filesInWebKitDirectory.isEmpty {
@@ -78,24 +74,22 @@ final class FilePicker: NSObject {
             return result
         }
     }
-
-    // MARK: - State
-
+    
     let mode: Mode
     let capture: Capture
     let anchorRect: CGRect
     weak var geckoView: UIView?
-
+    
     let acceptedTypes: AcceptedTypes
     let stagingDirectoryURL: URL
-
+    
     var continuation: CheckedContinuation<[String: Any]?, Never>?
     var anchorButton: FilePickerMenuAnchorButton?
     weak var presentedController: UIViewController?
     var launchedFollowupPicker = false
-
+    
     // MARK: - Lifecycle
-
+    
     init(
         promptId: String,
         mode: String,
@@ -112,9 +106,9 @@ final class FilePicker: NSObject {
         self.stagingDirectoryURL = Self.stagingDirectoryURL(promptId: promptId)
         super.init()
     }
-
+    
     // MARK: - Presentation
-
+    
     func present() async -> [String: Any]? {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
@@ -124,7 +118,7 @@ final class FilePicker: NSObject {
                 }
                 return
             }
-
+            
             let actions = availableActions
             if actions.count == 1, let action = actions.first {
                 DispatchQueue.main.async { [weak self] in
@@ -135,7 +129,7 @@ final class FilePicker: NSObject {
             }
         }
     }
-
+    
     func cancelAndDismiss() {
         anchorButton?.removeFromSuperview()
         anchorButton = nil
@@ -143,9 +137,9 @@ final class FilePicker: NSObject {
         presentedController = nil
         finish(with: nil)
     }
-
+    
     // MARK: - Actions
-
+    
     func performAction(_ action: PickerAction) {
         switch action {
         case .photoLibrary:
@@ -156,17 +150,17 @@ final class FilePicker: NSObject {
             presentDocumentPicker()
         }
     }
-
+    
     // MARK: - Completion
-
+    
     func finish(with result: [String: Any]?) {
         guard let continuation else { return }
         self.continuation = nil
         continuation.resume(returning: result)
     }
-
+    
     // MARK: - Helpers
-
+    
     static func stagingDirectoryURL(promptId: String) -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("GeckoFilePicker", isDirectory: true)

@@ -8,15 +8,15 @@
 import UIKit
 
 enum LibrarySection: Int, CaseIterable {
-    // MARK: - Cases
-
+    private enum UX {
+        static let itemSymbolPointSize: CGFloat = 18
+    }
+    
     case bookmarks
     case history
     case downloads
     case settings
-
-    // MARK: - Display
-
+    
     var title: String {
         switch self {
         case .bookmarks:
@@ -29,7 +29,7 @@ enum LibrarySection: Int, CaseIterable {
             return "Settings"
         }
     }
-
+    
     var symbolName: String {
         switch self {
         case .bookmarks:
@@ -42,7 +42,7 @@ enum LibrarySection: Int, CaseIterable {
             return "reynard.gearshape"
         }
     }
-
+    
     private var selectedSymbolName: String {
         switch self {
         case .bookmarks:
@@ -55,11 +55,9 @@ enum LibrarySection: Int, CaseIterable {
             return "reynard.gearshape.fill"
         }
     }
-
-    // MARK: - Tab Bar
-
+    
     var tabBarItem: UITabBarItem {
-        let configuration = UIImage.SymbolConfiguration(pointSize: LibraryTabBarStyle.UX.itemSymbolPointSize, weight: .regular)
+        let configuration = UIImage.SymbolConfiguration(pointSize: UX.itemSymbolPointSize, weight: .regular)
         let item = UITabBarItem(
             title: title,
             image: UIImage(named: symbolName, in: .main, with: configuration),

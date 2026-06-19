@@ -13,10 +13,10 @@ final class SessionSettingsManager {
         static let mobile = 0
         static let desktop = 1
     }
-
+    
     private let websiteMode: WebsiteModePolicy
     private let userAgentPolicy: UserAgentPolicy
-
+    
     init(
         websiteMode: WebsiteModePolicy = WebsiteModePolicy(),
         userAgentPolicy: UserAgentPolicy = UserAgentPolicy()
@@ -24,7 +24,7 @@ final class SessionSettingsManager {
         self.websiteMode = websiteMode
         self.userAgentPolicy = userAgentPolicy
     }
-
+    
     func settings(for url: String, tabID: UUID?) -> GeckoSessionSettings {
         let prefersDesktopMode = websiteMode.prefersDesktopMode(for: url, tabID: tabID)
         let userAgent = userAgentPolicy.configuration(
@@ -39,23 +39,23 @@ final class SessionSettingsManager {
             viewportMode: mode
         )
     }
-
+    
     func update(_ session: GeckoSession, for url: String, tabID: UUID?) {
         session.updateSettings(settings(for: url, tabID: tabID))
     }
-
+    
     func isDesktopMode(for url: String, tabID: UUID) -> Bool? {
-        websiteMode.isDesktopMode(for: url, tabID: tabID)
+        return websiteMode.isDesktopMode(for: url, tabID: tabID)
     }
-
+    
     func toggleWebsiteMode(for url: String, tabID: UUID) -> WebsiteModeAction? {
-        websiteMode.toggle(for: url, tabID: tabID)
+        return websiteMode.toggle(for: url, tabID: tabID)
     }
-
+    
     func clearWebsiteOverrides(for tabID: UUID) {
         websiteMode.clearOverrides(for: tabID)
     }
-
+    
     func needsUpdate(
         to session: GeckoSession,
         currentURL: String?,
@@ -70,5 +70,4 @@ final class SessionSettingsManager {
         }
         return session.settings != settings(for: requestedURL, tabID: tabID)
     }
-
 }

@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
                hasTXM26:(BOOL)hasTXM26
                   error:(NSError *_Nullable *_Nullable)error
 
-    NS_SWIFT_NAME(enableJIT(forPID:hasTXM26:));
+NS_SWIFT_NAME(enableJIT(forPID:hasTXM26:));
 
 - (void)detachAllJITSessions NS_SWIFT_NAME(detachAllJITSessions());
 

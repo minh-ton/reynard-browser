@@ -12,22 +12,22 @@ struct ImagePreviewLoader {
         if url.isFileURL {
             return UIImage(contentsOfFile: url.path)
         }
-
+        
         if url.scheme?.lowercased() == "data" {
             return imageFromDataURL(url.absoluteString)
         }
-
+        
         guard let (data, _) = try? await URLSession.shared.data(from: url) else {
             return nil
         }
         return UIImage(data: data)
     }
-
+    
     private static func imageFromDataURL(_ value: String) -> UIImage? {
         guard let commaIndex = value.firstIndex(of: ",") else {
             return nil
         }
-
+        
         let payload = value[value.index(after: commaIndex)...]
         let data: Data?
         if value[..<commaIndex].lowercased().contains(";base64") {
@@ -35,7 +35,7 @@ struct ImagePreviewLoader {
         } else {
             data = String(payload).removingPercentEncoding?.data(using: .utf8)
         }
-
+        
         guard let data else {
             return nil
         }

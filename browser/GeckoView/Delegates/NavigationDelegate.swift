@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Navigation Models
+
 public enum LoadRequestTarget {
     case current
     case new
@@ -20,6 +22,8 @@ public struct LoadRequest {
     public let hasUserGesture: Bool
     public let isDirectNavigation: Bool
 }
+
+// MARK: - Navigation Delegate
 
 public protocol NavigationDelegate {
     func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission])
@@ -39,12 +43,16 @@ extension NavigationDelegate {
     public func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? { nil }
 }
 
+// MARK: - Navigation Events
+
 enum NavigationEvents: String, CaseIterable {
     case locationChange = "GeckoView:LocationChange"
     case onNewSession = "GeckoView:OnNewSession"
     case onLoadError = "GeckoView:OnLoadError"
     case onLoadRequest = "GeckoView:OnLoadRequest"
 }
+
+// MARK: - Navigation Handler
 
 func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -78,7 +86,7 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         case .onNewSession:
             guard
                 let uri = message?["uri"] as? String,
-                let newSessionId = message?["newSessionId"] as? String
+                let requestedWindowID = message?["newSessionId"] as? String
             else {
                 return false
             }
@@ -86,15 +94,15 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             if let newSession = await delegate?.onNewSession(
                 session: session,
                 uri: uri,
-                windowId: newSessionId
+                windowId: requestedWindowID
             ) {
                 if let windowId = newSession.id,
-                   windowId != newSessionId {
+                   windowId != requestedWindowID {
                     assertionFailure("GeckoSession was opened with mismatched window id")
                     return false
                 }
                 if !newSession.isOpen() {
-                    newSession.open(windowId: newSessionId)
+                    newSession.open(windowId: requestedWindowID)
                 }
                 return true
             }

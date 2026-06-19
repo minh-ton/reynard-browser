@@ -9,12 +9,10 @@ import GeckoView
 import UIKit
 
 final class AddonPermissionsPreferencesViewController: SettingsTableViewController {
-    // MARK: - Models
-
     private struct SectionModel {
         let text: SettingsSectionText
         let displayedRows: [Row]
-
+        
         init(headerTitle: String? = nil, footerTitle: String? = nil, displayedRows: [Row]) {
             text = SettingsSectionText(headerTitle: headerTitle, footerTitle: footerTitle)
             self.displayedRows = displayedRows
@@ -33,8 +31,6 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
         case origin(String)
         case optionalDataCollection(String)
     }
-
-    // MARK: - State
     
     private let addonID: String
     private var addon: Addon?
@@ -165,13 +161,13 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
         
         return sections
     }
-
+    
     // MARK: - Lifecycle
     
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Permissions"
     }
     
     required init?(coder: NSCoder) {
@@ -184,7 +180,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
             await self?.refreshAddon()
         }
     }
-
+    
     // MARK: - Table Structure
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -205,9 +201,9 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
         }
         return permissionSections[section].text
     }
-
+    
     // MARK: - Cells
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard permissionSections.indices.contains(indexPath.section),
               permissionSections[indexPath.section].displayedRows.indices.contains(indexPath.row) else {
@@ -245,7 +241,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
             return cell
         }
     }
-
+    
     // MARK: - Actions
     
     @objc private func permissionSwitchDidChange(_ sender: UISwitch) {
@@ -307,7 +303,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
             }
         }
     }
-
+    
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
@@ -329,10 +325,5 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
             }
         }
     }
-
-    // MARK: - View Setup
     
-    private func configureViewController() {
-        title = "Permissions"
-    }
 }

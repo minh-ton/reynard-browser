@@ -8,8 +8,6 @@
 import UIKit
 
 final class DownloadItemCell: UITableViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let labelsStackSpacing: CGFloat = 4
         static let iconSize: CGFloat = 44
@@ -17,16 +15,13 @@ final class DownloadItemCell: UITableViewCell {
         static let labelsLeadingSpacing: CGFloat = 13
         static let labelsVerticalInset: CGFloat = 13
         static let separatorLeftInset: CGFloat = 73
+        static let thumbnailRequestSize = CGSize(width: 56, height: 56)
     }
-
-    // MARK: - Reuse
-
+    
     static let reuseIdentifier = "DownloadItemCell"
-
-    // MARK: - Formatters
     
     private static let iconProvider = DownloadFileIconProvider.shared
-
+    
     private static let sizeNumberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -35,8 +30,6 @@ final class DownloadItemCell: UITableViewCell {
         return formatter
     }()
     
-    // MARK: - Views
-
     private let fileIconView: UIImageView = {
         let view = UIImageView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -72,11 +65,11 @@ final class DownloadItemCell: UITableViewCell {
         return view
     }()
     
-    // MARK: - State
-
     private var representedFileURL: URL?
     private var representedDownloadID: UUID?
     private var lastStatusUpdateTime: TimeInterval = 0
+    
+    // MARK: - Lifecycle
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -130,6 +123,8 @@ final class DownloadItemCell: UITableViewCell {
         fileIconView.transform = .identity
         fileIconView.tintColor = .label
     }
+    
+    // MARK: - Configuration
     
     func configure(with item: DownloadItemSnapshot) {
         fileNameLabel.text = item.fileName
@@ -198,7 +193,7 @@ final class DownloadItemCell: UITableViewCell {
                 return
             }
             
-            Self.iconProvider.icon(for: fileURL, size: CGSize(width: 56, height: 56)) { [weak self] image in
+            Self.iconProvider.icon(for: fileURL, size: UX.thumbnailRequestSize) { [weak self] image in
                 guard let self, self.representedFileURL == fileURL else {
                     return
                 }
@@ -211,6 +206,8 @@ final class DownloadItemCell: UITableViewCell {
             }
         }
     }
+    
+    // MARK: - Formatting
     
     private static func formattedByteCount(_ byteCount: Int64) -> String {
         let units = ["bytes", "KB", "MB", "GB", "TB"]

@@ -10,8 +10,6 @@ import SQLite3
 import UIKit
 
 final class TabManagementStore {
-    // MARK: - Types
-
     static let shared = TabManagementStore()
     
     enum LastTabOverview: String, Codable {
@@ -57,12 +55,12 @@ final class TabManagementStore {
     
     private let fileManager: FileManager
     private let storage: StorageURLs
-    private let stateQueue = DispatchQueue(label: "com.minh-ton.tab-management-store", qos: .userInitiated)
+    private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.TabManagementStore.Queue", qos: .userInitiated)
     private var database: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     
     // MARK: - Lifecycle
-
+    
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
         
@@ -100,7 +98,7 @@ final class TabManagementStore {
     }
     
     // MARK: - Tabs
-
+    
     func currentSnapshot() -> Snapshot {
         stateQueue.sync {
             let state = persistedStateLocked()
@@ -114,7 +112,7 @@ final class TabManagementStore {
             )
         }
     }
-
+    
     func preferredRestoredMode() -> TabMode {
         let snapshot = currentSnapshot()
         if snapshot.selectedTabMode == .private, !snapshot.privateTabs.isEmpty {
@@ -213,7 +211,7 @@ final class TabManagementStore {
     }
     
     // MARK: - Storage
-
+    
     private func prepareStorageLocked() {
         try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: storage.thumbnailCacheDirectoryURL, withIntermediateDirectories: true)
@@ -283,6 +281,8 @@ final class TabManagementStore {
         )
     }
     
+    // MARK: - Persisted State
+    
     private func persistedStateLocked() -> PersistedState {
         let defaultState = PersistedState(
             selectedRegularTabID: nil,
@@ -348,6 +348,8 @@ final class TabManagementStore {
         bind(lastTabOverview.rawValue, to: statement, at: 4)
         return sqlite3_step(statement) == SQLITE_DONE
     }
+    
+    // MARK: - Tab Queries
     
     private func fetchTabsLocked(isPrivate: Bool) -> [TabSnapshot] {
         guard let statement = prepareStatementLocked(
@@ -417,6 +419,8 @@ final class TabManagementStore {
         return matches
     }
     
+    // MARK: - Tab Persistence
+    
     private func insertTabsLocked(_ tabs: [PersistedTab], isPrivate: Bool) -> Bool {
         guard let statement = prepareStatementLocked(
             """
@@ -449,7 +453,7 @@ final class TabManagementStore {
     }
     
     // MARK: - Thumbnails
-
+    
     private func loadThumbnailLocked(for tabID: UUID) -> UIImage? {
         guard let data = try? Data(contentsOf: thumbnailFileURL(for: tabID)) else {
             return nil
@@ -468,21 +472,22 @@ final class TabManagementStore {
         }
         
         for fileURL in fileURLs {
-            let tabID = UUID(uuidString: fileURL.deletingPathExtension().lastPathComponent)
-            if tabID == nil || !validTabIDs.contains(tabID!) {
+            guard let tabID = UUID(uuidString: fileURL.deletingPathExtension().lastPathComponent),
+                  validTabIDs.contains(tabID) else {
                 try? fileManager.removeItem(at: fileURL)
+                continue
             }
         }
     }
     
     private func thumbnailFileURL(for tabID: UUID) -> URL {
-        storage.thumbnailCacheDirectoryURL
+        return storage.thumbnailCacheDirectoryURL
             .appendingPathComponent(tabID.uuidString, isDirectory: false)
             .appendingPathExtension("png")
     }
     
     // MARK: - SQLite
-
+    
     private func executeLocked(_ sql: String) -> Bool {
         guard let database else {
             return false
@@ -540,5 +545,4 @@ final class TabManagementStore {
         
         return string(from: statement, at: index)
     }
-    
 }

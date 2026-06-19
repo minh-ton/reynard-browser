@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Prompt Delegate
+
 public protocol PromptDelegate: AnyObject {
     @MainActor
     func onPrompt(session: GeckoSession, request: PromptRequest) async -> PromptResponse?
@@ -19,19 +21,23 @@ public protocol PromptDelegate: AnyObject {
 public extension PromptDelegate {
     @MainActor
     func onPrompt(session: GeckoSession, request: PromptRequest) async -> PromptResponse? { nil }
-
+    
     @MainActor
     func onPromptUpdate(session: GeckoSession, request: PromptRequest) {}
-
+    
     @MainActor
     func onPromptDismiss(session: GeckoSession, promptId: String) {}
 }
+
+// MARK: - Prompt Events
 
 private enum PromptEvents: String, CaseIterable {
     case prompt = "GeckoView:Prompt"
     case promptUpdate = "GeckoView:Prompt:Update"
     case promptDismiss = "GeckoView:Prompt:Dismiss"
 }
+
+// MARK: - Prompt Handler
 
 func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -42,7 +48,7 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         guard let event = PromptEvents(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
-
+        
         let delegate = delegate as? PromptDelegate
         switch event {
         case .prompt:
@@ -51,7 +57,7 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 return nil
             }
             return await delegate?.onPrompt(session: session, request: request)?.geckoMessage
-
+            
         case .promptUpdate:
             guard let promptData = message?["prompt"] as? [String: Any],
                   let request = parsePromptRequest(promptData) else {
@@ -59,11 +65,11 @@ func newPromptHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             }
             delegate?.onPromptUpdate(session: session, request: request)
             return nil
-
+            
         case .promptDismiss:
             let prompt = message?["prompt"] as? [String: Any]
-            let promptId = prompt?["id"] as? String ?? message?["id"] as? String ?? ""
-            delegate?.onPromptDismiss(session: session, promptId: promptId)
+            let promptID = prompt?["id"] as? String ?? message?["id"] as? String ?? ""
+            delegate?.onPromptDismiss(session: session, promptId: promptID)
             return nil
         }
     }

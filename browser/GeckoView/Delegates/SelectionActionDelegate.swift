@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Selection Action Delegate
+
 public protocol SelectionActionDelegate: AnyObject {
     @MainActor
     func onShowSelectionAction(session: GeckoSession, request: SelectionActionRequest)
@@ -17,15 +19,19 @@ public protocol SelectionActionDelegate: AnyObject {
 public extension SelectionActionDelegate {
     @MainActor
     func onShowSelectionAction(session: GeckoSession, request: SelectionActionRequest) {}
-
+    
     @MainActor
     func onHideSelectionAction(session: GeckoSession) {}
 }
+
+// MARK: - Selection Action Events
 
 private enum SelectionActionEvent: String, CaseIterable {
     case show = "GeckoView:ShowSelectionAction"
     case hide = "GeckoView:HideSelectionAction"
 }
+
+// MARK: - Selection Action Handler
 
 func newSelectionActionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
     GeckoSessionHandler(
@@ -36,7 +42,7 @@ func newSelectionActionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         guard let event = SelectionActionEvent(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
-
+        
         let delegate = delegate as? SelectionActionDelegate
         switch event {
         case .show:
@@ -45,11 +51,11 @@ func newSelectionActionHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 return nil
             }
             delegate?.onShowSelectionAction(session: session, request: request)
-
+            
         case .hide:
             delegate?.onHideSelectionAction(session: session)
         }
-
+        
         return nil
     }
 }

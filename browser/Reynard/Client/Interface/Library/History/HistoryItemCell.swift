@@ -8,8 +8,6 @@
 import UIKit
 
 final class HistoryItemCell: UITableViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let labelsStackSpacing: CGFloat = 4
         static let faviconSize: CGFloat = 26
@@ -18,17 +16,11 @@ final class HistoryItemCell: UITableViewCell {
         static let labelsVerticalInset: CGFloat = 13
         static let separatorLeftInset: CGFloat = 56
     }
-
-    // MARK: - Reuse
-
+    
     static let reuseIdentifier = "HistoryItemCell"
-
-    // MARK: - Dependencies
-
+    
     private static let faviconStore = FaviconStore.shared
-
-    // MARK: - Views
-
+    
     private let faviconView: UIImageView = {
         let view = UIImageView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -55,14 +47,12 @@ final class HistoryItemCell: UITableViewCell {
         label.numberOfLines = 1
         return label
     }()
-
-    // MARK: - State
-
+    
     private var representedURL: URL?
     private var faviconTask: Task<Void, Never>?
-
+    
     // MARK: - Lifecycle
-
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
@@ -97,9 +87,9 @@ final class HistoryItemCell: UITableViewCell {
         
         setFavicon(nil)
     }
-
-    // MARK: - Updates
-
+    
+    // MARK: - Reuse And Layout
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -118,6 +108,8 @@ final class HistoryItemCell: UITableViewCell {
         pageURLLabel.text = nil
         setFavicon(nil)
     }
+    
+    // MARK: - Configuration
     
     func configure(with item: HistorySiteSnapshot) {
         representedURL = item.url

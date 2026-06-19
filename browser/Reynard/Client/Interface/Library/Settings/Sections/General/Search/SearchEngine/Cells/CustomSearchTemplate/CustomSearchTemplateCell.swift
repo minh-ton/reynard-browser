@@ -8,17 +8,11 @@
 import UIKit
 
 final class CustomSearchTemplateCell: UITableViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let verticalInset: CGFloat = 12
     }
-
-    // MARK: - Views
-
+    
     let textField = UITextField()
-
-    // MARK: - Lifecycle
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -26,17 +20,15 @@ final class CustomSearchTemplateCell: UITableViewCell {
         configureTextField()
         installTextField()
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
-    // MARK: - View Setup
-
+    
     private func configureCell() {
         selectionStyle = .none
     }
-
+    
     private func configureTextField() {
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.borderStyle = .none
@@ -45,7 +37,7 @@ final class CustomSearchTemplateCell: UITableViewCell {
         textField.clearButtonMode = .whileEditing
         textField.returnKeyType = .done
     }
-
+    
     private func installTextField() {
         contentView.addSubview(textField)
         NSLayoutConstraint.activate([

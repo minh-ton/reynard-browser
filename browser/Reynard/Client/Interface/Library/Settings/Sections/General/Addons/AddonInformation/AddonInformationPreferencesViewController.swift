@@ -9,13 +9,11 @@ import GeckoView
 import UIKit
 
 final class AddonInformationPreferencesViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section {
         case description
         case information
         case links
-
+        
         var text: SettingsSectionText {
             switch self {
             case .description:
@@ -33,12 +31,10 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         let value: String
         let link: String?
     }
-
+    
     private enum DescriptionRow: CaseIterable {
         case description
     }
-
-    // MARK: - State
     
     private let addonID: String
     private var addon: Addon?
@@ -125,13 +121,13 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         
         return rows
     }
-
+    
     // MARK: - Lifecycle
     
     init(addonID: String) {
         self.addonID = addonID
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Details"
     }
     
     required init?(coder: NSCoder) {
@@ -144,7 +140,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             await self?.refreshAddon()
         }
     }
-
+    
     // MARK: - Table Structure
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -172,9 +168,9 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         }
         return displayedSections[section].text
     }
-
+    
     // MARK: - Cells
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard displayedSections.indices.contains(indexPath.section) else {
             return UITableViewCell()
@@ -218,7 +214,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             return cell
         }
     }
-
+    
     // MARK: - Table Delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -245,7 +241,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             LibrarySharedUtils.openLinkInBrowser(url, from: self)
         }
     }
-
+    
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
@@ -267,13 +263,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             }
         }
     }
-
-    // MARK: - View Setup
     
-    private func configureViewController() {
-        title = "Details"
-    }
-
     // MARK: - Formatting
     
     private func normalizedURLString(_ value: String?) -> String? {

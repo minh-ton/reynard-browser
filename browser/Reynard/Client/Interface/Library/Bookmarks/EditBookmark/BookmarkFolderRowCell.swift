@@ -8,8 +8,6 @@
 import UIKit
 
 final class BookmarkFolderRowCell: UITableViewCell {
-    // MARK: - UX
-
     private enum UX {
         static let hierarchyIndentWidth: CGFloat = 28
         static let iconSize: CGFloat = 24
@@ -17,17 +15,11 @@ final class BookmarkFolderRowCell: UITableViewCell {
         static let titleVerticalInset: CGFloat = 10
         static let separatorTitleOffset: CGFloat = 40
     }
-
-    // MARK: - State
-
+    
     private var hierarchyDepth = 0
-
-    // MARK: - Constraints
-
+    
     private var folderIconLeadingConstraint: NSLayoutConstraint?
-
-    // MARK: - Views
-
+    
     private let folderIconView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -35,7 +27,7 @@ final class BookmarkFolderRowCell: UITableViewCell {
         imageView.tintColor = .systemBlue
         return imageView
     }()
-
+    
     private let folderTitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -44,8 +36,6 @@ final class BookmarkFolderRowCell: UITableViewCell {
         label.adjustsFontForContentSizeCategory = true
         return label
     }()
-
-    // MARK: - Lifecycle
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -86,9 +76,7 @@ final class BookmarkFolderRowCell: UITableViewCell {
             right: contentView.layoutMargins.right
         )
     }
-
-    // MARK: - Updates
-
+    
     func configure(folder: BookmarkFolderSnapshot, depth: Int, isSelected: Bool) {
         hierarchyDepth = depth
         folderTitleLabel.text = folder.title

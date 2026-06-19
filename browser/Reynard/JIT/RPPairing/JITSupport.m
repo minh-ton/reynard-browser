@@ -35,7 +35,7 @@ dispatch_queue_t debugServiceQueue(void) {
     static dispatch_queue_t queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken,^{
-        queue = dispatch_queue_create("me.minh-ton.jit.debug-service", DISPATCH_QUEUE_CONCURRENT);
+        queue = dispatch_queue_create("com.minh-ton.Reynard.JITSupport.DebugServiceQueue", DISPATCH_QUEUE_CONCURRENT);
     });
     return queue;
 }
@@ -44,7 +44,7 @@ dispatch_queue_t debugSessionStateQueue(void) {
     static dispatch_queue_t queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("me.minh-ton.jit.debug-service-state", DISPATCH_QUEUE_SERIAL);
+        queue = dispatch_queue_create("com.minh-ton.Reynard.JITSupport.DebugSessionStateQueue", DISPATCH_QUEUE_SERIAL);
     });
     return queue;
 }
@@ -53,7 +53,7 @@ static dispatch_queue_t endpointMonitorQueue(void) {
     static dispatch_queue_t queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("me.minh-ton.jit.endpoint-monitor", DISPATCH_QUEUE_SERIAL);
+        queue = dispatch_queue_create("com.minh-ton.Reynard.JITSupport.EndpointMonitorQueue", DISPATCH_QUEUE_SERIAL);
     });
     return queue;
 }
@@ -107,7 +107,7 @@ static BOOL shouldDetachDebugSessionPID(int32_t pid) {
 }
 
 static void startHeartbeat(DeviceProvider *provider) {
-    dispatch_queue_t heartbeatQueue = dispatch_queue_create("me.minh-ton.jit.provider-heartbeat",DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t heartbeatQueue = dispatch_queue_create("com.minh-ton.Reynard.JITSupport.ProviderHeartbeatQueue",DISPATCH_QUEUE_SERIAL);
     provider->heartbeatRunning = YES;
     
     dispatch_async(heartbeatQueue, ^{
@@ -229,7 +229,7 @@ BOOL connectDebugSession(DeviceProvider *provider, DebugSession *session, NSStri
                                        &session->adapter, &session->handshake
                                        );
     rp_pairing_file_free(rpPairingFile);
-
+    
     if (ffiError) {
         if (error) *error = MakeError(TunnelCreateFailed);
         idevice_error_free(ffiError);
@@ -413,7 +413,7 @@ DeviceProvider *createDeviceProvider(NSString *pairingFilePath, NSString *target
     RsdHandshakeHandle *handshake = NULL;
     ffiError = tunnel_create_rppairing((const struct sockaddr *)&address, (socklen_t)sizeof(address), "Reynard", rpPairingFile, NULL, NULL, &adapter, &handshake);
     rp_pairing_file_free(rpPairingFile);
-
+    
     if (ffiError) {
         if (error) *error = MakeError(TunnelCreateFailed);
         idevice_error_free(ffiError);
@@ -433,7 +433,7 @@ DeviceProvider *createDeviceProvider(NSString *pairingFilePath, NSString *target
     uint64_t nextInterval = 0;
     ffiError = heartbeat_get_marco(heartbeatClient, 2, &nextInterval);
     if (!ffiError) ffiError = heartbeat_send_polo(heartbeatClient);
-
+    
     DeviceProvider *provider = calloc(1, sizeof(*provider));
     if (!provider) {
         heartbeat_client_free(heartbeatClient);
@@ -553,7 +553,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     
     ddiDirectory = ddiDirectoryURL(error);
     if (!ddiDirectory) goto cleanup;
-
+    
     imageData = ddiFileData(ddiDirectory, @"Image.dmg", error);
     if (!imageData) goto cleanup;
     
@@ -569,7 +569,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         idevice_error_free(ffiError);
         goto cleanup;
     }
-
+    
     ffiError = lockdownd_get_value(lockdownClient, "UniqueChipID", NULL, &chipIDNode);
     if (ffiError) {
         if (error) *error = MakeError(UniqueChipIDReadFailed);

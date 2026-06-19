@@ -8,11 +8,9 @@
 import UIKit
 
 final class AppearancePreferencesViewController: SettingsTableViewController {
-    // MARK: - Sections
-
     private enum Section: CaseIterable {
         case tabs
-
+        
         var text: SettingsSectionText {
             switch self {
             case .tabs:
@@ -20,25 +18,21 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             }
         }
     }
-
+    
     private enum Row: CaseIterable {
-        case browserChromePosition
+        case BrowserChromePosition
         case landscapeTabBar
     }
-
-    // MARK: - State
-
+    
     private let landscapeTabBarSwitch = UISwitch()
     
     private var displayedSections: [Section] {
-        UIDevice.current.userInterfaceIdiom == .pad ? [] : Section.allCases
+        return UIDevice.current.userInterfaceIdiom == .pad ? [] : Section.allCases
     }
-
-    // MARK: - Lifecycle
     
     init() {
         super.init(style: .insetGrouped)
-        configureViewController()
+        title = "Appearance"
     }
     
     required init?(coder: NSCoder) {
@@ -56,8 +50,6 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         refreshDisplayedState()
         tableView.reloadData()
     }
-
-    // MARK: - Table Structure
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         displayedSections.count
@@ -76,17 +68,15 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         }
         return displayedSections[section].text
     }
-
-    // MARK: - Cells
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard displayedSections.indices.contains(indexPath.section),
               Row.allCases.indices.contains(indexPath.row) else {
             return UITableViewCell()
         }
-
+        
         switch Row.allCases[indexPath.row] {
-        case .browserChromePosition:
+        case .BrowserChromePosition:
             let cell = BrowserChromePositionPickerCell(style: .default, reuseIdentifier: nil)
             cell.display(selectedPosition: Prefs.AppearanceSettings.addressBarPosition)
             cell.onPositionChanged = { position in
@@ -101,24 +91,14 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             return cell
         }
     }
-
-    // MARK: - View Setup
-    
-    private func configureViewController() {
-        title = "Appearance"
-    }
     
     private func configureSwitch() {
         landscapeTabBarSwitch.addTarget(self, action: #selector(landscapeTabBarSwitchDidChange), for: .valueChanged)
     }
-
-    // MARK: - Display
     
     private func refreshDisplayedState() {
         landscapeTabBarSwitch.isOn = Prefs.AppearanceSettings.showsLandscapeTabBar
     }
-
-    // MARK: - Actions
     
     @objc private func landscapeTabBarSwitchDidChange() {
         Prefs.AppearanceSettings.showsLandscapeTabBar = landscapeTabBarSwitch.isOn
