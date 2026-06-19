@@ -1,0 +1,128 @@
+name: Build Latest Reynard IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    name: Build unsigned SideStore IPA from latest main
+    runs-on: macos-26
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Reynard
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Show build identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git rev-parse --short HEAD
+          git log -1 --oneline
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install ldid || true
+          rustup target add aarch64-apple-ios
+
+      - name: Make scripts executable
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x tools/development/*.sh
+          chmod +x tools/release/*.sh
+
+      - name: Update Gecko source
+        shell: zsh {0}
+        run: |
+          set -euxo pipefail
+          ./tools/development/update-gecko.sh
+
+      - name: Apply Gecko patches
+        shell: zsh {0}
+        run: |
+          set -euxo pipefail
+          ./tools/development/apply-patches.sh
+
+      - name: Build idevice FFI
+        shell: zsh {0}
+        run: |
+          set -euxo pipefail
+          ./tools/development/build-idevice.sh
+
+      - name: Build Gecko
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./tools/development/build-gecko.sh
+
+      - name: Disable Xcode code signing for archive
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("tools/release/build-app.sh")
+          s = p.read_text()
+
+          old = '-configuration Release -xcconfig "$DIST_DIR/Reynard.xcconfig"'
+          new = '-configuration Release -xcconfig "$DIST_DIR/Reynard.xcconfig" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""'
+
+          if old not in s:
+              raise SystemExit("Expected xcodebuild argument string not found in tools/release/build-app.sh")
+
+          p.write_text(s.replace(old, new))
+          PY
+
+      - name: Build Reynard app archive
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./tools/release/build-app.sh
+
+      - name: Create IPA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./tools/release/create-ipa.sh || test -f dist/Reynard.ipa
+
+      - name: Verify IPA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f dist/Reynard.ipa
+          ls -lah dist/Reynard.ipa
+          shasum -a 256 dist/Reynard.ipa
+          unzip -l dist/Reynard.ipa | grep -E 'Payload/Reynard.app/(Reynard|PlugIns/Reynard Helper.appex|PlugIns/OpenIn.appex)' || true
+
+      - name: Upload Reynard IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-latest-main-ipa
+          path: dist/Reynard.ipa
+          retention-days: 14
+
+      - name: Upload logs and dist for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-build-debug
+          path: |
+            dist
+            engine/release.txt
+            browser/Configuration/Reynard.xcconfig
+          retention-days: 7
