@@ -58,10 +58,6 @@ void image_mounter_free(ImageMounterHandle *handle);
 IdeviceFfiError *image_mounter_copy_devices(ImageMounterHandle *client,
                                             plist_t **devices,
                                             size_t *devices_len);
-IdeviceFfiError *image_mounter_lookup_image(ImageMounterHandle *client,
-                                            const char *image_type,
-                                            uint8_t **signature,
-                                            size_t *signature_len);
 IdeviceFfiError *image_mounter_mount_personalized_rsd(
     ImageMounterHandle *client, AdapterHandle *provider,
     RsdHandshakeHandle *handshake, const uint8_t *image, size_t image_len,

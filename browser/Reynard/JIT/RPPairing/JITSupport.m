@@ -501,27 +501,25 @@ static NSData *ddiFileData(NSURL *ddiDirectory, NSString *fileName, NSError **er
     return data;
 }
 
-static BOOL isImageMounted(ImageMounterHandle *mounterClient, const char *imageType, BOOL *mountedOut, NSError **error) {
-    uint8_t *signature = NULL;
-    size_t signatureLength = 0;
-    
-    IdeviceFfiError *ffiError = image_mounter_lookup_image(mounterClient, imageType, &signature, &signatureLength);
-    if (!ffiError) {
-        if (signature) idevice_data_free(signature, signatureLength);
-        if (mountedOut) *mountedOut = YES;
-        return YES;
+static BOOL isDDIMounted(ImageMounterHandle *mounterClient, BOOL *mountedOut, NSError **error) {
+    plist_t *devices = NULL;
+    size_t deviceCount = 0;
+    IdeviceFfiError *ffiError = image_mounter_copy_devices(mounterClient, &devices, &deviceCount);
+    if (ffiError) {
+        if (error) *error = MakeError(DDIMountStateQueryFailed);
+        idevice_error_free(ffiError);
+        return NO;
     }
     
-    BOOL notFound = ffiError->code == -14;
-    idevice_error_free(ffiError);
-    
-    if (notFound) {
-        if (mountedOut) *mountedOut = NO;
-        return YES;
+    if (devices) {
+        for (size_t index = 0; index < deviceCount; index++) {
+            if (devices[index]) plist_free(devices[index]);
+        }
+        idevice_data_free((uint8_t *)devices, deviceCount * sizeof(plist_t));
     }
     
-    if (error) *error = MakeError(DDIMountStateQueryFailed);
-    return NO;
+    if (mountedOut) *mountedOut = deviceCount > 0;
+    return YES;
 }
 
 BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
@@ -529,9 +527,6 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         if (error) *error = MakeError(DeviceProviderCreateFailed);
         return NO;
     }
-    
-    NSURL *ddiDirectory = ddiDirectoryURL(error);
-    if (!ddiDirectory) return NO;
     
     LockdowndClientHandle *lockdownClient = NULL;
     ImageMounterHandle *mounterClient = NULL;
@@ -544,13 +539,6 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     uint64_t uniqueChipID = 0;
     BOOL success = NO;
     
-    ffiError = lockdownd_connect_rsd(provider->adapter, provider->handshake, &lockdownClient);
-    if (ffiError) {
-        if (error) *error = MakeError(LockdowndConnectFailed);
-        idevice_error_free(ffiError);
-        goto cleanup;
-    }
-    
     ffiError = image_mounter_connect_rsd(provider->adapter, provider->handshake, &mounterClient);
     if (ffiError) {
         if (error) *error = MakeError(ImageMounterConnectFailed);
@@ -558,7 +546,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         goto cleanup;
     }
     
-    if (!isImageMounted(mounterClient, "Personalized", &mounted, error)) {
+    if (!isDDIMounted(mounterClient, &mounted, error)) {
         goto cleanup;
     }
     
@@ -567,6 +555,9 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         goto cleanup;
     }
     
+    NSURL *ddiDirectory = ddiDirectoryURL(error);
+    if (!ddiDirectory) goto cleanup;
+
     imageData = ddiFileData(ddiDirectory, @"Image.dmg", error);
     if (!imageData) goto cleanup;
     
@@ -576,6 +567,13 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     buildManifestData = ddiFileData(ddiDirectory, @"BuildManifest.plist", error);
     if (!buildManifestData) goto cleanup;
     
+    ffiError = lockdownd_connect_rsd(provider->adapter, provider->handshake, &lockdownClient);
+    if (ffiError) {
+        if (error) *error = MakeError(LockdowndConnectFailed);
+        idevice_error_free(ffiError);
+        goto cleanup;
+    }
+
     ffiError = lockdownd_get_value(lockdownClient, "UniqueChipID", NULL, &chipIDNode);
     if (ffiError) {
         if (error) *error = MakeError(UniqueChipIDReadFailed);
