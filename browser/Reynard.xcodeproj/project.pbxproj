@@ -535,7 +535,7 @@
 					"-lgkcodecs",
 					"-lmozinference",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -603,7 +603,7 @@
 					"-lgkcodecs",
 					"-lmozinference",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -780,7 +780,7 @@
 					"-lgkcodecs",
 					"-lmozinference",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.GeckoView";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.GeckoView";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -837,7 +837,7 @@
 					"-lgkcodecs",
 					"-lmozinference",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.GeckoView";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.GeckoView";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -892,7 +892,7 @@
 					"-lmozinference",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Helper";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard.Helper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -940,7 +940,7 @@
 					"-lmozinference",
 					"-Wl,-u,_NSExtensionMain",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.Helper";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard.Helper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -977,7 +977,7 @@
 				LIBRARY_SEARCH_PATHS = "";
 				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.OpenIn";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard.OpenIn";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1014,7 +1014,7 @@
 				LIBRARY_SEARCH_PATHS = "";
 				MARKETING_VERSION = "$(CURRENT_VERSION)";
 				OTHER_LDFLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = "me.minh-ton.Reynard.OpenIn";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.minh-ton.Reynard.OpenIn";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
