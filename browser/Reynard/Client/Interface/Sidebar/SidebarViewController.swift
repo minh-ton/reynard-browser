@@ -26,6 +26,10 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         contentController
     }
 
+    var isSidebarVisible: Bool {
+        return sidebarVisible
+    }
+
     var showChromeSidebarButton: Bool {
         guard sidebarVisible else {
             return true

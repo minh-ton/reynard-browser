@@ -33,6 +33,7 @@ final class SidebarCoordinator {
     private weak var host: SidebarCoordinatorHost?
     private let canHostSidebar: Bool
     private var sidebar: SidebarViewController?
+    private var preFullscreenVisibility: Bool?
 
     var statusBarController: UIViewController? {
         hostsSidebar ? sidebar : nil
@@ -102,6 +103,20 @@ final class SidebarCoordinator {
 
     func refreshVisibility() {
         sidebar?.refreshVisibility()
+    }
+
+    func setFullscreen(_ fullscreen: Bool) {
+        guard let splitViewController = host?.sidebarSplitViewController as? SidebarViewController else {
+            return
+        }
+
+        if fullscreen {
+            preFullscreenVisibility = splitViewController.isSidebarVisible
+            splitViewController.setVisible(false)
+        } else if let preFullscreenVisibility {
+            splitViewController.setVisible(preFullscreenVisibility)
+            self.preFullscreenVisibility = nil
+        }
     }
 
     @discardableResult

@@ -621,7 +621,8 @@ final class BrowserViewController: UIViewController {
             searchOverlayCoordinator.setFocused(false, animated: false)
             view.endEditing(true)
         }
-        
+
+        sidebarCoordinator.setFullscreen(fullScreen)
         isShowingFullscreenMedia = fullScreen
         updateBrowserLayout(animated: true)
         updateFullscreenOrientation(fullScreen)
