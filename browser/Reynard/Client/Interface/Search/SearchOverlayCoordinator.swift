@@ -289,15 +289,16 @@ extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControll
             endSearchSession()
         }
 
-        delegate?.endSearchEditing()
         if let result,
            result.source == .tab,
            let tabID = result.tabID {
+            delegate?.endSearchEditing()
             switchToTab(id: tabID)
             return
         }
 
         delegate?.browseSearchTerm(suggestion)
+        delegate?.endSearchEditing()
     }
 
     func searchViewController(_ controller: SearchViewController, didUpdateAutocompleteFor query: String, result: UserDataSearchResult?) {
