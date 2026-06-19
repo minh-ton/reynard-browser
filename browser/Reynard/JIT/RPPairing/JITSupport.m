@@ -17,11 +17,6 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdint.h>
-
-#define U64_MIN(a, b) ((uint64_t)((a) < (b) ? (a) : (b)))
-#define U64_MAX(a, b) ((uint64_t)((a) > (b) ? (a) : (b)))
 
 static const uint16_t rppairingPort = 49152;
 
@@ -533,6 +528,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
     IdeviceFfiError *ffiError = NULL;
     plist_t chipIDNode = NULL;
     BOOL mounted = NO;
+    NSURL *ddiDirectory = nil;
     NSData *imageData = nil;
     NSData *trustCacheData = nil;
     NSData *buildManifestData = nil;
@@ -555,7 +551,7 @@ BOOL ensureDDIMounted(DeviceProvider *provider, NSError **error) {
         goto cleanup;
     }
     
-    NSURL *ddiDirectory = ddiDirectoryURL(error);
+    ddiDirectory = ddiDirectoryURL(error);
     if (!ddiDirectory) goto cleanup;
 
     imageData = ddiFileData(ddiDirectory, @"Image.dmg", error);
