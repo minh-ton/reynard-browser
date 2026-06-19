@@ -144,6 +144,18 @@ final class TabBar: UIView {
 
     func setPendingExpansion(at index: Int?) {
         pendingExpandedTabIndex = index
+        tabCollection.reloadTabs()
+    }
+
+    func isTabSelected(at index: Int) -> Bool {
+        guard let tabs = dataSource?.tabs,
+              tabs.indices.contains(index) else {
+            return false
+        }
+
+        let selectedTabID = pendingExpandedTabIndex.flatMap { tabs[safe: $0]?.id }
+            ?? dataSource?.selectedTabID
+        return tabs[index].id == selectedTabID
     }
 
     func setPresentationAlpha(_ alpha: CGFloat) {
@@ -222,9 +234,9 @@ final class TabBar: UIView {
             return false
         }
 
-        let selectedTabID = dataSource?.selectedTabID
-        let pendingTabID = pendingExpandedTabIndex.flatMap { tabs[safe: $0]?.id }
-        return tab.id == selectedTabID || tab.id == pendingTabID
+        let selectedTabID = pendingExpandedTabIndex.flatMap { tabs[safe: $0]?.id }
+            ?? dataSource?.selectedTabID
+        return tab.id == selectedTabID
     }
 
     private func displayedTab(at index: Int, in tabs: [Tab]) -> Tab? {

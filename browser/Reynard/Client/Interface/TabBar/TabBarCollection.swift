@@ -72,6 +72,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     func reloadTabs() {
         reloadData()
         updateLayout()
+        refreshVisibleTabs()
     }
 
     func reloadTab(at index: Int) {
@@ -128,6 +129,32 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
             return
         }
         layoutIfNeeded()
+    }
+
+    private func refreshVisibleTabs() {
+        for case let tabBarCell as TabBarCell in visibleCells {
+            guard let indexPath = indexPath(for: tabBarCell) else {
+                continue
+            }
+            configure(tabBarCell, at: indexPath)
+        }
+    }
+
+    private func configure(_ tabBarCell: TabBarCell, at indexPath: IndexPath) {
+        guard let tabBar,
+              let tabs = tabBar.dataSource?.tabs,
+              tabs.indices.contains(indexPath.item) else {
+            return
+        }
+
+        let tab = tabs[indexPath.item]
+        let cellLayout = tabBar.cellLayout(at: indexPath.item)
+        tabBarCell.configure(
+            tab: tab,
+            isSelected: tabBar.isTabSelected(at: indexPath.item),
+            layoutMode: cellLayout.mode,
+            cellWidth: cellLayout.width
+        )
     }
 
     // MARK: - View Setup
@@ -366,14 +393,7 @@ extension TabBarCollection: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        let tab = tabs[indexPath.item]
-        let cellLayout = tabBar.cellLayout(at: indexPath.item)
-        tabBarCell.configure(
-            tab: tab,
-            isSelected: tab.id == tabBar.dataSource?.selectedTabID,
-            layoutMode: cellLayout.mode,
-            cellWidth: cellLayout.width
-        )
+        configure(tabBarCell, at: indexPath)
         tabBarCell.closeHandler = { [weak self, weak tabBarCell] in
             guard let self,
                   let tabBarCell,

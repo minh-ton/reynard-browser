@@ -143,7 +143,8 @@ extension BrowserViewController: TabManagerDelegate {
             completion()
             return
         }
-        
+
+        tabBar.setPendingExpansion(at: index)
         browserChrome.animateAutomaticNewTabTransition(to: tabManager.activeTabs[index], completion: completion)
     }
     
