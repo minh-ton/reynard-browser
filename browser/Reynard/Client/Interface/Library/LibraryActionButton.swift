@@ -36,7 +36,7 @@ final class LibraryActionButton: UIButton {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        guard #available(iOS 26.0, *) else {
+        guard #unavailable(iOS 26.0) else {
             return
         }
 
