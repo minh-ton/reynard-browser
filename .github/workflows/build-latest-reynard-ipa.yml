@@ -13,6 +13,11 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 360
 
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      MOZBUILD_STATE_PATH: /Users/runner/.mozbuild
+      MOZCONFIG: /Users/runner/work/reynard-browser/reynard-browser/engine/firefox/.mozconfig
+
     steps:
       - name: Checkout Reynard
         uses: actions/checkout@v4
@@ -34,9 +39,13 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          brew update
-          brew install ldid || true
+          brew list ldid >/dev/null 2>&1 || brew install ldid
+          brew list llvm >/dev/null 2>&1 || brew install llvm
           rustup target add aarch64-apple-ios
+          echo "/opt/homebrew/opt/llvm/bin" >> "$GITHUB_PATH"
+          /opt/homebrew/opt/llvm/bin/clang --version
+          /opt/homebrew/opt/llvm/bin/ld64.lld --version || true
+          /opt/homebrew/opt/llvm/bin/ld.lld --version || true
 
       - name: Make scripts executable
         shell: bash
@@ -63,8 +72,42 @@ jobs:
           set -euxo pipefail
           ./tools/development/build-idevice.sh
 
+      - name: Force Gecko to use Homebrew LLVM/lld
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("tools/development/build-gecko.sh")
+          s = p.read_text()
+
+          needle = 'echo "ac_add_options --target=$TARGET"\n'
+          insert = '''echo "ac_add_options --target=$TARGET"
+            echo "CC=/opt/homebrew/opt/llvm/bin/clang"
+            echo "CXX=/opt/homebrew/opt/llvm/bin/clang++"
+            echo "HOST_CC=/opt/homebrew/opt/llvm/bin/clang"
+            echo "HOST_CXX=/opt/homebrew/opt/llvm/bin/clang++"
+            echo "ac_add_options --enable-linker=lld"
+          '''
+
+          if needle not in s:
+              raise SystemExit("Expected target line not found in tools/development/build-gecko.sh")
+
+          p.write_text(s.replace(needle, insert, 1))
+          PY
+
+          echo "Patched build-gecko.sh:"
+          sed -n '1,120p' tools/development/build-gecko.sh
+
       - name: Build Gecko
         shell: bash
+        env:
+          PATH: /opt/homebrew/opt/llvm/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          CC: /opt/homebrew/opt/llvm/bin/clang
+          CXX: /opt/homebrew/opt/llvm/bin/clang++
+          HOST_CC: /opt/homebrew/opt/llvm/bin/clang
+          HOST_CXX: /opt/homebrew/opt/llvm/bin/clang++
         run: |
           set -euxo pipefail
           ./tools/development/build-gecko.sh
@@ -85,7 +128,7 @@ jobs:
           if old not in s:
               raise SystemExit("Expected xcodebuild argument string not found in tools/release/build-app.sh")
 
-          p.write_text(s.replace(old, new))
+          p.write_text(s.replace(old, new, 1))
           PY
 
       - name: Build Reynard app archive
@@ -124,5 +167,8 @@ jobs:
           path: |
             dist
             engine/release.txt
+            engine/firefox/.mozconfig
+            engine/firefox/config.log
+            engine/firefox/obj-aarch64-apple-ios/.mozbuild/logs
             browser/Configuration/Reynard.xcconfig
           retention-days: 7
