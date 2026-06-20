@@ -78,55 +78,41 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64,
-          # not lld. This is the correct Darwin/iOS linker family for Xcode.
+          # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64.
           p = Path("tools/development/build-gecko.sh")
           s = p.read_text()
 
-          needle = 'echo "ac_add_options --target=$TARGET"\n'
-          insert = '''echo "ac_add_options --target=$TARGET"
-            echo "ac_add_options --enable-linker=ld64"
-          '''
+          target_line = 'echo "ac_add_options --target=$TARGET"'
+          ld64_line = '  echo "ac_add_options --enable-linker=ld64"'
 
-          if needle not in s:
-              raise SystemExit("Expected target line not found in tools/development/build-gecko.sh")
+          if ld64_line not in s:
+              if target_line not in s:
+                  raise SystemExit("Expected target line not found in tools/development/build-gecko.sh")
+              s = s.replace(target_line, target_line + "\n" + ld64_line, 1)
+              p.write_text(s)
 
-          p.write_text(s.replace(needle, insert, 1))
-
-          # 2) Patch Mozilla's linker probe for modern Xcode/macOS runners.
-          # ld64 does not reliably identify itself through the old -Wl,--version
-          # + LD_PRINT_OPTIONS probe, even though the compiler/linker path is valid.
+          # 2) Patch Firefox 152 linker detection with a robust single-line anchor.
           q = Path("engine/firefox/build/moz.configure/toolchain.configure")
           t = q.read_text()
 
-          old = '''        if retcode == 1 and "Logging ld64 options" in stderr:
+          anchor = 'if retcode == 1 and "Logging ld64 options" in stderr:'
+          replacement = '''if linker == "ld64" and target.kernel == "Darwin" and retcode != 0:
                       kind = "ld64"
+                  elif retcode == 1 and "Logging ld64 options" in stderr:'''
 
-                  elif retcode != 0:
-                      return None
-          '''
+          if replacement not in t:
+              if anchor not in t:
+                  raise SystemExit("ld64 anchor line not found in Firefox toolchain.configure")
+              t = t.replace(anchor, replacement, 1)
+              q.write_text(t)
 
-          new = '''        if linker == "ld64" and target.kernel == "Darwin" and retcode != 0:
-                      kind = "ld64"
-
-                  elif retcode == 1 and "Logging ld64 options" in stderr:
-                      kind = "ld64"
-
-                  elif retcode != 0:
-                      return None
-          '''
-
-          if old not in t:
-              raise SystemExit("Expected ld64 detection block not found in Firefox toolchain.configure")
-
-          q.write_text(t.replace(old, new, 1))
           PY
 
           echo "Patched build-gecko.sh:"
-          sed -n '1,90p' tools/development/build-gecko.sh
+          sed -n '1,100p' tools/development/build-gecko.sh
 
-          echo "Patched linker detection block:"
-          grep -n -A14 -B4 'linker == "ld64"' engine/firefox/build/moz.configure/toolchain.configure
+          echo "Patched linker detection context:"
+          grep -n -A10 -B6 'Logging ld64 options' engine/firefox/build/moz.configure/toolchain.configure
 
       - name: Build Gecko
         shell: bash
