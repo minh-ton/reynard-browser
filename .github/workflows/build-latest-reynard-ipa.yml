@@ -77,9 +77,9 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
-          # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64.
+          # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64
+          # for the iOS target linker.
           p = Path("tools/development/build-gecko.sh")
           s = p.read_text()
 
@@ -92,30 +92,34 @@ jobs:
               s = s.replace(target_line, target_line + "\n" + ld64_line, 1)
               p.write_text(s)
 
-          # 2) Patch Firefox linker detection while preserving real indentation.
+          # 2) Patch Firefox linker detection for both:
+          #    - explicit target linker: linker == "ld64"
+          #    - implicit host linker fallback: linker is None
+          #
+          # Do NOT accept linker == "lld" here. The host probe tries lld first,
+          # and only the no-explicit-linker fallback should be treated as Xcode ld64.
           q = Path("engine/firefox/build/moz.configure/toolchain.configure")
           t = q.read_text()
 
-          pattern = r'^(?P<indent>[ \t]*)if retcode == 1 and "Logging ld64 options" in stderr:\n(?P=indent)[ \t]+kind = "ld64"'
-          m = re.search(pattern, t, flags=re.MULTILINE)
+          marker = 'target.kernel == "Darwin" and linker in (None, "ld64") and retcode != 0'
+          if marker not in t:
+              lines = t.splitlines()
+              for i, line in enumerate(lines):
+                  stripped = line.lstrip()
+                  indent = line[: len(line) - len(stripped)]
 
-          if not m:
-              raise SystemExit("Could not find exact ld64 detection block with indentation")
+                  if stripped == 'if retcode == 1 and "Logging ld64 options" in stderr:':
+                      child = indent + "    "
+                      lines[i] = f'{indent}if {marker}:'
+                      lines.insert(i + 1, f'{child}kind = "ld64"')
+                      lines.insert(i + 2, f'{indent}elif retcode == 1 and "Logging ld64 options" in stderr:')
+                      break
+              else:
+                  raise SystemExit("Could not find ld64 detection anchor in Firefox toolchain.configure")
 
-          indent = m.group("indent")
-          child = indent + "    "
+              q.write_text("\n".join(lines) + "\n")
 
-          replacement = (
-              f'{indent}if linker == "ld64" and target.kernel == "Darwin" and retcode != 0:\n'
-              f'{child}kind = "ld64"\n'
-              f'{indent}elif retcode == 1 and "Logging ld64 options" in stderr:\n'
-              f'{child}kind = "ld64"'
-          )
-
-          t = t[:m.start()] + replacement + t[m.end():]
-          q.write_text(t)
-
-          # 3) Validate patched Python syntax before wasting another run.
+          # 3) Validate patched Python syntax before running configure.
           compile(q.read_text(), str(q), "exec")
           PY
 
@@ -123,7 +127,7 @@ jobs:
           sed -n '1,100p' tools/development/build-gecko.sh
 
           echo "Patched linker detection context:"
-          grep -n -A10 -B6 'Logging ld64 options' engine/firefox/build/moz.configure/toolchain.configure
+          grep -n -A12 -B6 'Logging ld64 options' engine/firefox/build/moz.configure/toolchain.configure
 
       - name: Build Gecko
         shell: bash
