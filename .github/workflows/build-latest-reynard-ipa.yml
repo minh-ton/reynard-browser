@@ -77,6 +77,7 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64.
           p = Path("tools/development/build-gecko.sh")
@@ -91,21 +92,31 @@ jobs:
               s = s.replace(target_line, target_line + "\n" + ld64_line, 1)
               p.write_text(s)
 
-          # 2) Patch Firefox 152 linker detection with a robust single-line anchor.
+          # 2) Patch Firefox linker detection while preserving real indentation.
           q = Path("engine/firefox/build/moz.configure/toolchain.configure")
           t = q.read_text()
 
-          anchor = 'if retcode == 1 and "Logging ld64 options" in stderr:'
-          replacement = '''if linker == "ld64" and target.kernel == "Darwin" and retcode != 0:
-                      kind = "ld64"
-                  elif retcode == 1 and "Logging ld64 options" in stderr:'''
+          pattern = r'^(?P<indent>[ \t]*)if retcode == 1 and "Logging ld64 options" in stderr:\n(?P=indent)[ \t]+kind = "ld64"'
+          m = re.search(pattern, t, flags=re.MULTILINE)
 
-          if replacement not in t:
-              if anchor not in t:
-                  raise SystemExit("ld64 anchor line not found in Firefox toolchain.configure")
-              t = t.replace(anchor, replacement, 1)
-              q.write_text(t)
+          if not m:
+              raise SystemExit("Could not find exact ld64 detection block with indentation")
 
+          indent = m.group("indent")
+          child = indent + "    "
+
+          replacement = (
+              f'{indent}if linker == "ld64" and target.kernel == "Darwin" and retcode != 0:\n'
+              f'{child}kind = "ld64"\n'
+              f'{indent}elif retcode == 1 and "Logging ld64 options" in stderr:\n'
+              f'{child}kind = "ld64"'
+          )
+
+          t = t[:m.start()] + replacement + t[m.end():]
+          q.write_text(t)
+
+          # 3) Validate patched Python syntax before wasting another run.
+          compile(q.read_text(), str(q), "exec")
           PY
 
           echo "Patched build-gecko.sh:"
