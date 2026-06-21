@@ -43,7 +43,10 @@ jobs:
         run: |
           set -euxo pipefail
           brew list ldid >/dev/null 2>&1 || brew install ldid
+          brew list cbindgen >/dev/null 2>&1 || brew install cbindgen
           rustup target add aarch64-apple-ios
+          echo "CBINDGEN=/opt/homebrew/bin/cbindgen" >> "$GITHUB_ENV"
+          /opt/homebrew/bin/cbindgen --version
 
       - name: Make scripts executable
         shell: bash
