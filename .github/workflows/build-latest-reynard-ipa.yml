@@ -42,6 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+
           brew list ldid >/dev/null 2>&1 || brew install ldid
           brew list cbindgen >/dev/null 2>&1 || brew install cbindgen
           brew list llvm >/dev/null 2>&1 || brew install llvm
@@ -49,14 +50,45 @@ jobs:
 
           rustup target add aarch64-apple-ios
 
+          WASI_WRAPPER_DIR="$RUNNER_TEMP/wasi-bin"
+          mkdir -p "$WASI_WRAPPER_DIR"
+
+          cat > "$WASI_WRAPPER_DIR/clang" <<'SH'
+          #!/usr/bin/env bash
+          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+          exec /opt/homebrew/opt/llvm/bin/clang "$@"
+          SH
+
+          cat > "$WASI_WRAPPER_DIR/clang++" <<'SH'
+          #!/usr/bin/env bash
+          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+          exec /opt/homebrew/opt/llvm/bin/clang++ "$@"
+          SH
+
+          chmod +x "$WASI_WRAPPER_DIR/clang" "$WASI_WRAPPER_DIR/clang++"
+
           echo "CBINDGEN=/opt/homebrew/bin/cbindgen" >> "$GITHUB_ENV"
-          echo "WASM_CC=/opt/homebrew/opt/llvm/bin/clang" >> "$GITHUB_ENV"
-          echo "WASM_CXX=/opt/homebrew/opt/llvm/bin/clang++" >> "$GITHUB_ENV"
+          echo "WASM_CC=$WASI_WRAPPER_DIR/clang" >> "$GITHUB_ENV"
+          echo "WASM_CXX=$WASI_WRAPPER_DIR/clang++" >> "$GITHUB_ENV"
 
           /opt/homebrew/bin/cbindgen --version
           /opt/homebrew/opt/llvm/bin/clang --version
-          /opt/homebrew/opt/llvm/bin/clang --target=wasm32-wasi -c -x c /dev/null -o /tmp/wasm-test.o
-          ls -lah /tmp/wasm-test.o
+          /opt/homebrew/opt/llvm/bin/wasm-ld --version
+          test -d /opt/homebrew/share/wasi-sysroot
+          ls -lah /opt/homebrew/share/wasi-sysroot
+
+          cat > /tmp/wasm-test.c <<'C'
+          int main(void) { return 0; }
+          C
+
+          PATH="/opt/homebrew/opt/llvm/bin:$PATH" \
+            /opt/homebrew/opt/llvm/bin/clang \
+            --target=wasm32-unknown-wasi \
+            --sysroot=/opt/homebrew/share/wasi-sysroot \
+            /tmp/wasm-test.c \
+            -o /tmp/wasm-test.wasm
+
+          ls -lah /tmp/wasm-test.wasm
 
       - name: Make scripts executable
         shell: bash
@@ -146,7 +178,7 @@ jobs:
       - name: Build Gecko
         shell: bash
         env:
-          PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          PATH: /opt/homebrew/opt/llvm/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
           CC: /usr/bin/clang
           CXX: /usr/bin/clang++
           HOST_CC: /usr/bin/clang
