@@ -22,6 +22,7 @@ final class TabOverviewCard: UICollectionViewCell {
         static let closeButtonTopInset: CGFloat = 10
         static let closeButtonTrailingInset: CGFloat = 10
         static let closeButtonSideLength: CGFloat = 24
+        static let closeButtonTouchTargetScale: CGFloat = 2
         static let closeButtonCornerRadius: CGFloat = 12
         static let closeButtonSymbolPointSize: CGFloat = 12
         static let closeButtonBackgroundAlpha: CGFloat = 0.6
@@ -92,9 +93,10 @@ final class TabOverviewCard: UICollectionViewCell {
         return imageView
     }()
     
-    private let closeTabButton: UIButton = {
-        let button = UIButton(type: .system)
+    private let closeTabButton: TabOverviewCardCloseTabButton = {
+        let button = TabOverviewCardCloseTabButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.touchTargetScale = UX.closeButtonTouchTargetScale
         button.setImage(UIImage(named: "reynard.xmark"), for: .normal)
         button.setPreferredSymbolConfiguration(
             UIImage.SymbolConfiguration(pointSize: UX.closeButtonSymbolPointSize, weight: .medium),
@@ -251,8 +253,8 @@ final class TabOverviewCard: UICollectionViewCell {
     }
     
     func isCloseButton(at point: CGPoint) -> Bool {
-        let pointInPreview = convert(point, to: webpagePreviewClippingView)
-        return closeTabButton.frame.contains(pointInPreview)
+        let pointInButton = convert(point, to: closeTabButton)
+        return closeTabButton.containsHitTarget(pointInButton)
     }
     
     // MARK: - View Setup
@@ -269,7 +271,7 @@ final class TabOverviewCard: UICollectionViewCell {
         webpagePreviewRegionView.addSubview(webpagePreviewShadowView)
         webpagePreviewRegionView.addSubview(webpagePreviewClippingView)
         webpagePreviewClippingView.addSubview(webpagePreviewImageView)
-        webpagePreviewClippingView.addSubview(closeTabButton)
+        webpagePreviewRegionView.addSubview(closeTabButton)
         contentView.addSubview(tabMetadataContainerView)
         tabMetadataContainerView.addSubview(tabMetadataStackView)
         tabMetadataStackView.addArrangedSubview(faviconImageView)
