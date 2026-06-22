@@ -45,6 +45,8 @@ final class BrowserPreferences {
             
             // Browsing
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
+            key("BrowsingSettings", "showLinkPreviews"): true,
+            key("BrowsingSettings", "showImagePreviews"): true,
             
             // Appearance
             key("AppearanceSettings", "addressBarPosition"): BrowserChromePosition.bottom.rawValue,
@@ -130,10 +132,28 @@ final class BrowserPreferences {
     struct BrowsingSettings {
         static var requestDesktopWebsite: Bool {
             get {
-                prefs.bool(forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
+                return prefs.bool(forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
             }
             set {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
+            }
+        }
+        
+        static var showLinkPreviews: Bool {
+            get {
+                return prefs.bool(forSetting: "BrowsingSettings", key: "showLinkPreviews")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "showLinkPreviews")
+            }
+        }
+        
+        static var showImagePreviews: Bool {
+            get {
+                return prefs.bool(forSetting: "BrowsingSettings", key: "showImagePreviews")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "showImagePreviews")
             }
         }
     }

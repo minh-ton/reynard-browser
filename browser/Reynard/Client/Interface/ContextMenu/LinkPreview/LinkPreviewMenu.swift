@@ -10,6 +10,7 @@ import UIKit
 struct LinkPreviewMenu {
     static func configuration(
         for context: ContextMenuContext,
+        showsPreview: Bool,
         isPrivate: Bool,
         sessionManager: SessionManager,
         onPreviewCreated: @escaping (LinkPreviewViewController) -> Void,
@@ -21,7 +22,7 @@ struct LinkPreviewMenu {
             return nil
         }
         
-        return UIContextMenuConfiguration(identifier: url as NSURL) { [url] in
+        let previewProvider: UIContextMenuContentPreviewProvider? = showsPreview ? { [url] in
             let viewController = LinkPreviewViewController(
                 url: url,
                 isPrivate: isPrivate,
@@ -29,7 +30,9 @@ struct LinkPreviewMenu {
             )
             onPreviewCreated(viewController)
             return viewController
-        } actionProvider: { _ in
+        } : nil
+        
+        return UIContextMenuConfiguration(identifier: url as NSURL, previewProvider: previewProvider) { _ in
             UIMenu(title: "", children: [
                 UIAction(title: "Open in New Tab", image: UIImage(named: "reynard.plus.square.on.square")) { _ in
                     openInNewTab()

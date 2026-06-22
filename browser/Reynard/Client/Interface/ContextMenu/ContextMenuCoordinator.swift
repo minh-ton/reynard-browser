@@ -167,6 +167,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         
         if let imageConfiguration = ImagePreviewMenu.configuration(
             for: context,
+            showsPreview: Prefs.BrowsingSettings.showImagePreviews,
             presentingController: host.contextMenuPresenter,
             sourceView: host.contextMenuSourceView
         ) {
@@ -175,6 +176,7 @@ extension ContextMenuCoordinator: UIContextMenuInteractionDelegate {
         
         return LinkPreviewMenu.configuration(
             for: context,
+            showsPreview: Prefs.BrowsingSettings.showLinkPreviews,
             isPrivate: host.contextMenuSelectedTabIsPrivate,
             sessionManager: sessionManager,
             onPreviewCreated: { [weak self] preview in

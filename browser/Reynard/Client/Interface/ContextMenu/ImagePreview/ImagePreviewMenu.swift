@@ -10,6 +10,7 @@ import UIKit
 struct ImagePreviewMenu {
     static func configuration(
         for context: ContextMenuContext,
+        showsPreview: Bool,
         presentingController: UIViewController,
         sourceView: UIView
     ) -> UIContextMenuConfiguration? {
@@ -17,9 +18,11 @@ struct ImagePreviewMenu {
             return nil
         }
         
-        return UIContextMenuConfiguration(identifier: UUID().uuidString as NSString) {
+        let previewProvider: UIContextMenuContentPreviewProvider? = showsPreview ? {
             ImagePreviewViewController(url: url)
-        } actionProvider: { _ in
+        } : nil
+        
+        return UIContextMenuConfiguration(identifier: UUID().uuidString as NSString, previewProvider: previewProvider) { _ in
             UIMenu(title: "", children: [
                 UIAction(title: "Share Image", image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
                     loadImage(from: url) { image in
