@@ -80,7 +80,9 @@ Latest inspected workflow failure:
 - [x] Copy Gecko Stuff signing failure root cause identified.
 - [x] Copy Gecko Stuff unsigned-archive fix committed and pushed as `49556ae`.
 - [x] Unaccelerated rerun `28001189594` cancelled before another full Gecko rebuild.
-- [ ] Gecko build caching and checkpointing implemented and rerun.
+- [x] Gecko build caching and checkpointing implemented and first rerun attempted.
+- [x] Fast configure failure in run `28001837486` identified and patched.
+- [ ] Checkpointed workflow rerun succeeds through Gecko artifact upload.
 - [ ] IPA artifact downloaded and inspected.
 - [ ] Page Zoom architecture inspected.
 - [ ] Page Zoom implemented.
@@ -101,6 +103,8 @@ Latest inspected workflow failure:
 - Run `27994353614` proved the Gecko build now completes, then failed in `Build Reynard app archive` after 3h6m47s. The first real archive error was in `PhaseScriptExecution Copy Gecko Stuff`: `Apple Development: no identity found`, followed by `Command PhaseScriptExecution failed with a nonzero exit code`.
 - The failing script was `browser/Scripts/AddGecko.sh`. It used `SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"` and invoked `codesign` unconditionally, even though the workflow archive command passed `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""`.
 - Run `28001189594` was started from commit `49556ae` but was cancelled at about 10m27s before entering a long Gecko rebuild. This preserves GitHub runner time while acceleration/checkpointing is added.
+- Run `28001837486` validated the new workflow shape through dependency install, `actions/cache/restore`, Gecko source checkout, patches, idevice FFI, and ld64 detection patching. It failed quickly in `Build Gecko` configure before a long rebuild.
+- The first real error in run `28001837486` was `mozbuild.configure.options.InvalidOptionError: MOZ_LINKER takes 0 values`. The generated `.mozconfig` already had `--enable-linker=ld64`; the problem was leaving the `MOZ_LINKER=ld64` environment variable visible to Firefox configure.
 
 ## Decision Log
 
@@ -124,6 +128,10 @@ Latest inspected workflow failure:
   - Reason: Run `27994353614` already proved the expensive Gecko compile passes; repeating it for every archive-stage failure creates a 2.5-3 hour feedback loop.
   - Evidence: Run `28001189594` was only about ten minutes old when cancelled, while `27994353614` spent roughly 2h53m in `Build Gecko` before the later archive failure.
   - Consequence: The next workflow run must include `sccache`, a saved Gecko dist checkpoint, and an archive job/path that can retry IPA packaging without rebuilding Gecko.
+- Decision: Consume and unset `MOZ_LINKER` inside `tools/development/build-gecko.sh`.
+  - Reason: The script needs `MOZ_LINKER` to write durable `.mozconfig`, but Firefox configure rejects the environment variable when it remains set.
+  - Evidence: Run `28001837486`, `Build Gecko`, `InvalidOptionError: MOZ_LINKER takes 0 values`.
+  - Consequence: The workflow can still set `MOZ_LINKER=ld64`, while `mach build` only sees the supported `--enable-linker=ld64` configure option.
 
 ## Build Acceleration Objective
 
@@ -230,6 +238,8 @@ gh api repos/minh-ton/reynard-browser/forks --paginate --jq '.[] | {full_name, p
 gh run view 27994353614 --repo lowestprime/reynard-browser --log-failed
 gh run download 27994353614 --repo lowestprime/reynard-browser --name Reynard-build-debug --dir "$env:USERPROFILE\Desktop\reynard-build-debug-latest"
 gh run cancel 28001189594 --repo lowestprime/reynard-browser
+gh run view 28001837486 --repo lowestprime/reynard-browser --log-failed
+gh run download 28001837486 --repo lowestprime/reynard-browser --name Reynard-build-debug-gecko --dir "$env:USERPROFILE\Desktop\reynard-build-debug-28001837486"
 ```
 
 ## Validation

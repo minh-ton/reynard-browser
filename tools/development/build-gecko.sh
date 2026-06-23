@@ -8,6 +8,8 @@ FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
 TARGET="aarch64-apple-ios"
 MOZ_BUILD_JOBS="${MOZ_BUILD_JOBS:-12}"
+CONFIGURED_MOZ_LINKER="${MOZ_LINKER:-}"
+CONFIGURED_WASI_SYSROOT="${WASI_SYSROOT:-}"
 
 cd "$ROOT_DIR"
 
@@ -22,11 +24,11 @@ rm -f "$FIREFOX_DIR/.mozconfig"
 {
 	echo "ac_add_options --enable-application=mobile/ios"
 	echo "ac_add_options --target=$TARGET"
-	if [ -n "${MOZ_LINKER:-}" ]; then
-		echo "ac_add_options --enable-linker=$MOZ_LINKER"
+	if [ -n "$CONFIGURED_MOZ_LINKER" ]; then
+		echo "ac_add_options --enable-linker=$CONFIGURED_MOZ_LINKER"
 	fi
-	if [ -n "${WASI_SYSROOT:-}" ]; then
-		echo "ac_add_options --with-wasi-sysroot=$WASI_SYSROOT"
+	if [ -n "$CONFIGURED_WASI_SYSROOT" ]; then
+		echo "ac_add_options --with-wasi-sysroot=$CONFIGURED_WASI_SYSROOT"
 	fi
 	if [ -n "${SCCACHE_BIN:-}" ] && [ -x "$SCCACHE_BIN" ]; then
 		echo "ac_add_options CCACHE=$SCCACHE_BIN"
@@ -43,6 +45,8 @@ if ! rustup target list | grep -q "^$TARGET (installed)"; then
 fi
 
 cd "$FIREFOX_DIR"
+unset MOZ_LINKER
+
 if [ -n "${SCCACHE_BIN:-}" ] && [ -x "$SCCACHE_BIN" ]; then
 	"$SCCACHE_BIN" -s || true
 fi
