@@ -78,7 +78,9 @@ Latest inspected workflow failure:
 - [x] Quick upstream/fork release audit completed; no clearly newer downloadable IPA was found.
 - [x] Latest-main run `27994353614` completed Gecko and failed in Xcode archive signing.
 - [x] Copy Gecko Stuff signing failure root cause identified.
-- [ ] Copy Gecko Stuff unsigned-archive fix committed and rerun.
+- [x] Copy Gecko Stuff unsigned-archive fix committed and pushed as `49556ae`.
+- [x] Unaccelerated rerun `28001189594` cancelled before another full Gecko rebuild.
+- [ ] Gecko build caching and checkpointing implemented and rerun.
 - [ ] IPA artifact downloaded and inspected.
 - [ ] Page Zoom architecture inspected.
 - [ ] Page Zoom implemented.
@@ -98,6 +100,7 @@ Latest inspected workflow failure:
 - A quick GitHub release/fork audit found upstream releases only through `0.4.0`, and sampled recent forks did not expose newer release assets. No third-party IPA has better provenance than completing this fork's workflow.
 - Run `27994353614` proved the Gecko build now completes, then failed in `Build Reynard app archive` after 3h6m47s. The first real archive error was in `PhaseScriptExecution Copy Gecko Stuff`: `Apple Development: no identity found`, followed by `Command PhaseScriptExecution failed with a nonzero exit code`.
 - The failing script was `browser/Scripts/AddGecko.sh`. It used `SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"` and invoked `codesign` unconditionally, even though the workflow archive command passed `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""`.
+- Run `28001189594` was started from commit `49556ae` but was cancelled at about 10m27s before entering a long Gecko rebuild. This preserves GitHub runner time while acceleration/checkpointing is added.
 
 ## Decision Log
 
@@ -117,6 +120,66 @@ Latest inspected workflow failure:
   - Reason: The workflow intentionally builds an unsigned SideStore IPA and already passes Xcode signing suppression flags; the copy script must not invent `Apple Development` when no identity exists.
   - Evidence: Run `27994353614`, `Build Reynard app archive`, `Apple Development: no identity found`.
   - Consequence: Local signed Xcode builds can still sign Gecko artifacts when Xcode provides an identity, while CI unsigned archives can proceed to IPA packaging.
+- Decision: Stop rerunning the monolithic workflow and add caching/checkpointing before the next build.
+  - Reason: Run `27994353614` already proved the expensive Gecko compile passes; repeating it for every archive-stage failure creates a 2.5-3 hour feedback loop.
+  - Evidence: Run `28001189594` was only about ten minutes old when cancelled, while `27994353614` spent roughly 2h53m in `Build Gecko` before the later archive failure.
+  - Consequence: The next workflow run must include `sccache`, a saved Gecko dist checkpoint, and an archive job/path that can retry IPA packaging without rebuilding Gecko.
+
+## Build Acceleration Objective
+
+Baseline timing evidence:
+
+- Run `27994353614`: total job time was 3h6m52s.
+- `Build Gecko` started at `2026-06-23T01:01:27Z`; `Build Reynard app archive` started at `2026-06-23T03:54:26Z`, so the successful Gecko step took about 2h53m wall time on the free `macos-26` runner.
+- The first post-Gecko failure was archive-stage signing in `browser/Scripts/AddGecko.sh`, proving archive and IPA debugging should not require another full Gecko compile.
+- Run `28001189594` was cancelled at about 10m27s before the long Gecko build repeated.
+
+macOS-only stages:
+
+- Final `xcodebuild archive`, iPhoneOS SDK usage, `xcrun`, app-extension validation, `ldid` IPA packaging, and all direct use of Xcode must stay on a macOS runner.
+- Gecko iOS target compilation currently depends on Apple/Xcode clang for host/target paths and must remain on macOS unless a separate toolchain experiment proves otherwise.
+
+Cacheable/checkpointable stages:
+
+- Gecko C/C++/Rust object compilation can use local `sccache` on the macOS runner.
+- The `sccache` directory is capped at `8G` and keyed by runner OS/arch, `engine/release.txt`, the workflow file, `tools/development/build-gecko.sh`, and patch hashes.
+- `engine/firefox/obj-aarch64-apple-ios/dist` plus `engine/firefox/toolkit/mozapps/extensions/default-theme` is uploaded as short-retention artifact `gecko-dist-aarch64-apple-ios` after a successful Gecko build.
+
+WSL2 feasibility:
+
+- The user's ThinkPad has i7-12800H, 14 cores / 20 logical processors, 64 GB RAM, and NVMe SSD, so it is a strong candidate for a Linux `sccache-dist` worker for compatible compile actions.
+- WSL2 must not run Xcode, iPhoneOS SDK, `xcrun`, signing, or IPA packaging.
+- WSL2 distributed compilation is not considered working until `sccache --dist-status` and `sccache -s` show useful distributed compilations. If distributed compilations remain zero, WSL acceleration has not worked.
+- Tailscale or equivalent network setup would require user-provided credentials/secrets. Exact likely GitHub secrets, if pursued later, are `SCCACHE_DIST_AUTH_TOKEN`, `TAILSCALE_AUTHKEY`, and a server address/port value such as `SCCACHE_DIST_SCHEDULER_URL`; these are not guessed or added in this pass.
+
+Exact workflow/script changes:
+
+- `tools/development/build-gecko.sh` now honors `MOZ_BUILD_JOBS`, `MOZ_LINKER`, `WASI_SYSROOT`, and executable `SCCACHE_BIN`, writes matching `.mozconfig` options, runs `./mach build -j "$MOZ_BUILD_JOBS"`, and prints `sccache -s` before/after.
+- `.github/workflows/build-latest-reynard-ipa.yml` is split into `build-gecko` and `archive-ipa` jobs.
+- `build-gecko` installs `sccache`, restores/saves `.sccache`, builds Gecko, records cache size/statistics, and uploads `gecko-dist-aarch64-apple-ios`.
+- `archive-ipa` downloads `gecko-dist-aarch64-apple-ios`, rebuilds idevice FFI, archives with `REYNARD_UNSIGNED_ARCHIVE=1`, creates/verifies the IPA, and uploads `Reynard-latest-main-ipa`.
+- `.github/workflows/archive-reynard-ipa-from-gecko-dist.yml` is a manual archive-only diagnostic workflow with a required `run_id` input that downloads a prior Gecko checkpoint artifact.
+
+Validation commands:
+
+```powershell
+bash -n tools/development/build-gecko.sh
+bash -n tools/release/build-app.sh
+bash -n browser/Scripts/AddGecko.sh
+git diff --check
+gh workflow run "Build Latest Reynard IPA" --repo lowestprime/reynard-browser --ref main
+gh run watch <RUN_ID> --repo lowestprime/reynard-browser
+gh run view <RUN_ID> --repo lowestprime/reynard-browser --log-failed
+gh run download <RUN_ID> --repo lowestprime/reynard-browser --name gecko-dist-aarch64-apple-ios --dir "$env:USERPROFILE\Desktop\reynard-gecko-dist-latest"
+gh workflow run "Archive Reynard IPA From Gecko Dist" --repo lowestprime/reynard-browser --ref main -f run_id=<RUN_ID>
+```
+
+Rollback path:
+
+- If `sccache` breaks configure/build, remove the `CCACHE=$SCCACHE_BIN` `.mozconfig` option and keep the split checkpoint artifact.
+- If the Gecko dist artifact is too large or incomplete, keep local `sccache` and temporarily merge the archive job back into the Gecko job while recording the artifact size/failure.
+- If archive-only download cannot find the run artifact, rerun the main checkpoint workflow once to produce a fresh `gecko-dist-aarch64-apple-ios` artifact and use that run ID.
+- If cache restore/save causes eviction/thrashing, reduce `SCCACHE_CACHE_SIZE` below `8G` or narrow restore keys; do not cache the full Firefox object directory without measured size evidence.
 
 ## Plan of Work
 
@@ -166,6 +229,7 @@ gh api repos/minh-ton/reynard-browser/releases --paginate --jq '.[] | {tag_name,
 gh api repos/minh-ton/reynard-browser/forks --paginate --jq '.[] | {full_name, pushed_at, default_branch, html_url}'
 gh run view 27994353614 --repo lowestprime/reynard-browser --log-failed
 gh run download 27994353614 --repo lowestprime/reynard-browser --name Reynard-build-debug --dir "$env:USERPROFILE\Desktop\reynard-build-debug-latest"
+gh run cancel 28001189594 --repo lowestprime/reynard-browser
 ```
 
 ## Validation

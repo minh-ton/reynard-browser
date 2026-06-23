@@ -7,6 +7,7 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
 TARGET="aarch64-apple-ios"
+MOZ_BUILD_JOBS="${MOZ_BUILD_JOBS:-12}"
 
 cd "$ROOT_DIR"
 
@@ -21,6 +22,15 @@ rm -f "$FIREFOX_DIR/.mozconfig"
 {
 	echo "ac_add_options --enable-application=mobile/ios"
 	echo "ac_add_options --target=$TARGET"
+	if [ -n "${MOZ_LINKER:-}" ]; then
+		echo "ac_add_options --enable-linker=$MOZ_LINKER"
+	fi
+	if [ -n "${WASI_SYSROOT:-}" ]; then
+		echo "ac_add_options --with-wasi-sysroot=$WASI_SYSROOT"
+	fi
+	if [ -n "${SCCACHE_BIN:-}" ] && [ -x "$SCCACHE_BIN" ]; then
+		echo "ac_add_options CCACHE=$SCCACHE_BIN"
+	fi
 	echo "ac_add_options --enable-ios-target=13.0"
 	echo "ac_add_options --enable-webrtc"
 	echo "ac_add_options --enable-optimize"
@@ -33,4 +43,12 @@ if ! rustup target list | grep -q "^$TARGET (installed)"; then
 fi
 
 cd "$FIREFOX_DIR"
-./mach build
+if [ -n "${SCCACHE_BIN:-}" ] && [ -x "$SCCACHE_BIN" ]; then
+	"$SCCACHE_BIN" -s || true
+fi
+
+./mach build -j "$MOZ_BUILD_JOBS"
+
+if [ -n "${SCCACHE_BIN:-}" ] && [ -x "$SCCACHE_BIN" ]; then
+	"$SCCACHE_BIN" -s || true
+fi

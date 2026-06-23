@@ -7,23 +7,29 @@ permissions:
   contents: read
   actions: read
 
+env:
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  HOMEBREW_NO_ENV_HINTS: "1"
+  MOZBUILD_STATE_PATH: /Users/runner/.mozbuild
+  MOZCONFIG: ${{ github.workspace }}/engine/firefox/.mozconfig
+  MOZ_BUILD_JOBS: "12"
+  MOZ_LINKER: ld64
+  SCCACHE_BIN: /opt/homebrew/bin/sccache
+  SCCACHE_CACHE_SIZE: 8G
+  SCCACHE_DIR: ${{ github.workspace }}/.sccache
+  SCCACHE_IDLE_TIMEOUT: "0"
+  WASI_SYSROOT: /opt/homebrew/share/wasi-sysroot
+
 jobs:
-  build:
-    name: Build unsigned SideStore IPA from latest main
+  build-gecko:
+    name: Build Gecko checkpoint
     runs-on: macos-26
     timeout-minutes: 360
-
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: "1"
-      HOMEBREW_NO_ENV_HINTS: "1"
-      MOZBUILD_STATE_PATH: /Users/runner/.mozbuild
-      MOZCONFIG: /Users/runner/work/reynard-browser/reynard-browser/engine/firefox/.mozconfig
 
     steps:
       - name: Checkout Reynard
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 1
 
       - name: Show build identity
@@ -38,7 +44,7 @@ jobs:
           /usr/bin/clang --version
           /usr/bin/clang++ --version
 
-      - name: Install build dependencies
+      - name: Install Gecko build dependencies
         shell: bash
         run: |
           set -euxo pipefail
@@ -47,13 +53,14 @@ jobs:
           brew list cbindgen >/dev/null 2>&1 || brew install cbindgen
           brew list llvm >/dev/null 2>&1 || brew install llvm
           brew list lld >/dev/null 2>&1 || brew install lld
+          brew list sccache >/dev/null 2>&1 || brew install sccache
           brew list wasi-libc >/dev/null 2>&1 || brew install wasi-libc
           brew list wasi-runtimes >/dev/null 2>&1 || brew install wasi-runtimes
 
           rustup target add aarch64-apple-ios
 
           WASI_WRAPPER_DIR="$RUNNER_TEMP/wasi-bin"
-          mkdir -p "$WASI_WRAPPER_DIR"
+          mkdir -p "$WASI_WRAPPER_DIR" "$SCCACHE_DIR"
 
           cat > "$WASI_WRAPPER_DIR/clang" <<'SH'
           #!/usr/bin/env bash
@@ -74,13 +81,14 @@ jobs:
           echo "WASM_CXX=$WASI_WRAPPER_DIR/clang++" >> "$GITHUB_ENV"
 
           /opt/homebrew/bin/cbindgen --version
+          /opt/homebrew/bin/sccache --version
           /opt/homebrew/opt/llvm/bin/clang --version
           PATH="/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin:$PATH"
           command -v wasm-ld
           wasm-ld --version
-          test -d /opt/homebrew/share/wasi-sysroot
+          test -d "$WASI_SYSROOT"
           test -f /opt/homebrew/share/wasi-runtimes/lib/wasm32-unknown-wasi/libclang_rt.builtins.a
-          ls -lah /opt/homebrew/share/wasi-sysroot
+          ls -lah "$WASI_SYSROOT"
           /opt/homebrew/opt/llvm/bin/clang \
             -resource-dir=/opt/homebrew/share/wasi-runtimes \
             --target=wasm32-unknown-wasi \
@@ -93,11 +101,20 @@ jobs:
           /opt/homebrew/opt/llvm/bin/clang \
             -resource-dir=/opt/homebrew/share/wasi-runtimes \
             --target=wasm32-unknown-wasi \
-            --sysroot=/opt/homebrew/share/wasi-sysroot \
+            --sysroot="$WASI_SYSROOT" \
             /tmp/wasm-test.c \
             -o /tmp/wasm-test.wasm
 
           ls -lah /tmp/wasm-test.wasm
+
+      - name: Restore sccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .sccache
+          key: gecko-sccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('engine/release.txt', '.github/workflows/build-latest-reynard-ipa.yml', 'tools/development/build-gecko.sh', 'patches/**/*.patch') }}-${{ github.run_id }}
+          restore-keys: |
+            gecko-sccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('engine/release.txt', '.github/workflows/build-latest-reynard-ipa.yml', 'tools/development/build-gecko.sh', 'patches/**/*.patch') }}-
+            gecko-sccache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Make scripts executable
         shell: bash
@@ -124,7 +141,7 @@ jobs:
           set -euxo pipefail
           ./tools/development/build-idevice.sh
 
-      - name: Force Gecko to use Xcode ld64
+      - name: Patch Firefox ld64 detection
         shell: bash
         run: |
           set -euxo pipefail
@@ -132,27 +149,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          # 1) Make Reynard's generated Gecko mozconfig explicitly request ld64
-          # for the iOS target linker.
-          p = Path("tools/development/build-gecko.sh")
-          s = p.read_text()
-
-          target_line = 'echo "ac_add_options --target=$TARGET"'
-          ld64_line = '''  echo "ac_add_options --enable-linker=ld64"
-          echo "ac_add_options --with-wasi-sysroot=/opt/homebrew/share/wasi-sysroot"'''
-
-          if ld64_line not in s:
-              if target_line not in s:
-                  raise SystemExit("Expected target line not found in tools/development/build-gecko.sh")
-              s = s.replace(target_line, target_line + "\n" + ld64_line, 1)
-              p.write_text(s)
-
-          # 2) Patch Firefox linker detection for both:
-          #    - explicit target linker: linker == "ld64"
-          #    - implicit host linker fallback: linker is None
-          #
-          # Do NOT accept linker == "lld" here. The host probe tries lld first,
-          # and only the no-explicit-linker fallback should be treated as Xcode ld64.
           q = Path("engine/firefox/build/moz.configure/toolchain.configure")
           t = q.read_text()
 
@@ -174,12 +170,8 @@ jobs:
 
               q.write_text("\n".join(lines) + "\n")
 
-          # 3) Validate patched Python syntax before running configure.
           compile(q.read_text(), str(q), "exec")
           PY
-
-          echo "Patched build-gecko.sh:"
-          sed -n '1,100p' tools/development/build-gecko.sh
 
           echo "Patched linker detection context:"
           grep -n -A12 -B6 'Logging ld64 options' engine/firefox/build/moz.configure/toolchain.configure
@@ -194,29 +186,104 @@ jobs:
           HOST_CXX: /usr/bin/clang++
         run: |
           set -euxo pipefail
+          mkdir -p "$SCCACHE_DIR"
+          du -sh "$SCCACHE_DIR" || true
+          "$SCCACHE_BIN" -s || true
           ./tools/development/build-gecko.sh
+          "$SCCACHE_BIN" -s || true
+          du -sh "$SCCACHE_DIR" || true
+          du -sh engine/firefox/obj-aarch64-apple-ios/dist
 
-      - name: Disable Xcode code signing for archive
+      - name: Save sccache
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: .sccache
+          key: gecko-sccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('engine/release.txt', '.github/workflows/build-latest-reynard-ipa.yml', 'tools/development/build-gecko.sh', 'patches/**/*.patch') }}-${{ github.run_id }}
+
+      - name: Upload Gecko dist checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: gecko-dist-aarch64-apple-ios
+          path: |
+            engine/firefox/obj-aarch64-apple-ios/dist
+            engine/firefox/toolkit/mozapps/extensions/default-theme
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload Gecko build debug
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-build-debug-gecko
+          path: |
+            engine/release.txt
+            engine/firefox/.mozconfig
+            engine/firefox/config.log
+            engine/firefox/obj-aarch64-apple-ios/.mozbuild/logs
+          retention-days: 7
+
+  archive-ipa:
+    name: Archive IPA from Gecko checkpoint
+    runs-on: macos-26
+    needs: build-gecko
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Reynard
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show archive identity
         shell: bash
         run: |
           set -euxo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
+          git rev-parse --short HEAD
+          git log -1 --oneline
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
 
-          p = Path("tools/release/build-app.sh")
-          s = p.read_text()
+      - name: Install archive dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew list ldid >/dev/null 2>&1 || brew install ldid
+          rustup target add aarch64-apple-ios
 
-          old = '-configuration Release -xcconfig "$DIST_DIR/Reynard.xcconfig"'
-          new = '-configuration Release -xcconfig "$DIST_DIR/Reynard.xcconfig" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""'
+      - name: Make scripts executable
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x tools/development/*.sh
+          chmod +x tools/release/*.sh
 
-          if old not in s:
-              raise SystemExit("Expected xcodebuild argument string not found in tools/release/build-app.sh")
+      - name: Download Gecko dist checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: gecko-dist-aarch64-apple-ios
+          path: engine/firefox
 
-          p.write_text(s.replace(old, new, 1))
-          PY
+      - name: Inspect Gecko checkpoint
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -d engine/firefox/obj-aarch64-apple-ios/dist/bin
+          test -d engine/firefox/toolkit/mozapps/extensions/default-theme
+          du -sh engine/firefox/obj-aarch64-apple-ios/dist
+          find engine/firefox/obj-aarch64-apple-ios/dist -maxdepth 2 | head -100
+
+      - name: Build idevice FFI
+        shell: zsh {0}
+        run: |
+          set -euxo pipefail
+          ./tools/development/build-idevice.sh
 
       - name: Build Reynard app archive
         shell: bash
+        env:
+          REYNARD_UNSIGNED_ARCHIVE: "1"
         run: |
           set -euxo pipefail
           ./tools/release/build-app.sh
@@ -234,7 +301,10 @@ jobs:
           test -f dist/Reynard.ipa
           ls -lah dist/Reynard.ipa
           shasum -a 256 dist/Reynard.ipa
-          unzip -l dist/Reynard.ipa | grep -E 'Payload/Reynard.app/(Reynard|PlugIns/Reynard Helper.appex|PlugIns/OpenIn.appex)' || true
+          unzip -l dist/Reynard.ipa | tee /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/Reynard$' /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/PlugIns/Reynard Helper.appex/(Reynard Helper|Info.plist)$' /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/PlugIns/OpenIn.appex/(OpenIn|Info.plist)$' /tmp/Reynard.ipa.list
 
       - name: Upload Reynard IPA
         uses: actions/upload-artifact@v4
@@ -251,8 +321,5 @@ jobs:
           path: |
             dist
             engine/release.txt
-            engine/firefox/.mozconfig
-            engine/firefox/config.log
-            engine/firefox/obj-aarch64-apple-ios/.mozbuild/logs
             browser/Configuration/Reynard.xcconfig
           retention-days: 7

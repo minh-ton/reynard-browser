@@ -1,0 +1,121 @@
+name: Archive Reynard IPA From Gecko Dist
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: GitHub Actions run ID containing gecko-dist-aarch64-apple-ios
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  archive-ipa:
+    name: Archive IPA from existing Gecko dist
+    runs-on: macos-26
+    timeout-minutes: 90
+
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+
+    steps:
+      - name: Checkout Reynard
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show archive identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git rev-parse --short HEAD
+          git log -1 --oneline
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Install archive dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew list ldid >/dev/null 2>&1 || brew install ldid
+          rustup target add aarch64-apple-ios
+
+      - name: Make scripts executable
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x tools/development/*.sh
+          chmod +x tools/release/*.sh
+
+      - name: Download Gecko dist checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: gecko-dist-aarch64-apple-ios
+          path: engine/firefox
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Inspect Gecko checkpoint
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -d engine/firefox/obj-aarch64-apple-ios/dist/bin
+          test -d engine/firefox/toolkit/mozapps/extensions/default-theme
+          du -sh engine/firefox/obj-aarch64-apple-ios/dist
+          find engine/firefox/obj-aarch64-apple-ios/dist -maxdepth 2 | head -100
+
+      - name: Build idevice FFI
+        shell: zsh {0}
+        run: |
+          set -euxo pipefail
+          ./tools/development/build-idevice.sh
+
+      - name: Build Reynard app archive
+        shell: bash
+        env:
+          REYNARD_UNSIGNED_ARCHIVE: "1"
+        run: |
+          set -euxo pipefail
+          ./tools/release/build-app.sh
+
+      - name: Create IPA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./tools/release/create-ipa.sh || test -f dist/Reynard.ipa
+
+      - name: Verify IPA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f dist/Reynard.ipa
+          ls -lah dist/Reynard.ipa
+          shasum -a 256 dist/Reynard.ipa
+          unzip -l dist/Reynard.ipa | tee /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/Reynard$' /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/PlugIns/Reynard Helper.appex/(Reynard Helper|Info.plist)$' /tmp/Reynard.ipa.list
+          grep -E 'Payload/Reynard.app/PlugIns/OpenIn.appex/(OpenIn|Info.plist)$' /tmp/Reynard.ipa.list
+
+      - name: Upload Reynard IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-latest-main-ipa
+          path: dist/Reynard.ipa
+          retention-days: 14
+
+      - name: Upload logs and dist for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-build-debug
+          path: |
+            dist
+            engine/release.txt
+            browser/Configuration/Reynard.xcconfig
+          retention-days: 7
