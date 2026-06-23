@@ -305,6 +305,15 @@ Implemented native-only changes in this continuation:
 - Address bar autocomplete: suggestions now always include local common-domain/URL fallback completions, search-engine suggestions are opt-in in Search settings and debounced, and private browsing no longer surfaces regular history matches.
 - Appearance: Appearance settings now include theme mode, OLED Black, and accent color choices; app windows/chrome/settings/library surfaces apply the selected theme/accent without restart.
 
+Archive-only validation attempt:
+
+- Run `28058053384` used archive-only workflow `Archive Reynard IPA From Gecko Dist` at commit `7fe5048ecbbbe89873970a144aed0d7e07de53c3` with Gecko checkpoint run `28038685786`.
+- The checkpoint path was proven: checkout, archive dependency install, Gecko dist artifact download, checkpoint inspection, and idevice FFI all succeeded without a Gecko rebuild.
+- The archive failed in `Build Reynard app archive` with Xcode exit `65`.
+- First real source error: `ContentView.swift:184` attempted to call `min(max(bottomRatio, 0), 1)` where `GeckoSession.focusedInputBottomRatio()` returns `CGFloat?`.
+- Fix: handle `nil` focused-input geometry by clearing/resetting focused-input relocation, then clamp only non-optional ratios.
+- Repeated local validation after the fix: `git diff --check`, `bash -n tools/development/build-gecko.sh`, `bash -n tools/release/build-app.sh`, and `bash -n browser/Scripts/AddGecko.sh` all returned zero.
+
 Build strategy:
 
 - Avoid Gecko edits for this batch unless inspection proves they are necessary.

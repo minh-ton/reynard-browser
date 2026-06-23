@@ -180,6 +180,15 @@ final class ContentView: UIView {
             guard let self else { return }
             let bottomRatio = await session.focusedInputBottomRatio()
             guard !Task.isCancelled else { return }
+            guard let bottomRatio else {
+                inputBottomRatio = nil
+                guard focusedInputOffset != 0 else { return }
+
+                focusedInputOffset = 0
+                updateLayoutOffsets()
+                animateLayout(duration: animationDuration, options: animationOptions)
+                return
+            }
             
             inputBottomRatio = min(max(bottomRatio, 0), 1)
             superview?.layoutIfNeeded()
