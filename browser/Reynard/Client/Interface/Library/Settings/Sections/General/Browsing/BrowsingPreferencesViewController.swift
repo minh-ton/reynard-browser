@@ -10,19 +10,29 @@ import UIKit
 final class BrowsingPreferencesViewController: SettingsTableViewController {
     private enum Section: CaseIterable {
         case desktopWebsite
+        case pageZoom
         
         var text: SettingsSectionText {
             switch self {
             case .desktopWebsite:
                 return SettingsSectionText(headerTitle: "Request Desktop Website On")
+            case .pageZoom:
+                return SettingsSectionText(
+                    headerTitle: "Page Zoom",
+                    footerTitle: "Sites use the default zoom unless a site-specific value is set from the page menu."
+                )
             }
         }
     }
     
-    private enum Row: CaseIterable {
+    private enum DesktopWebsiteRow: CaseIterable {
         case allWebsites
     }
     
+    private enum PageZoomRow: CaseIterable {
+        case defaultZoom
+    }
+
     private let requestDesktopWebsiteSwitch = UISwitch()
     
     init() {
@@ -43,6 +53,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         refreshDisplayedState()
+        tableView.reloadData()
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -56,7 +67,9 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
         
         switch Section.allCases[section] {
         case .desktopWebsite:
-            return Row.allCases.count
+            return DesktopWebsiteRow.allCases.count
+        case .pageZoom:
+            return PageZoomRow.allCases.count
         }
     }
     
@@ -68,18 +81,50 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard Section.allCases.indices.contains(indexPath.section),
-              Row.allCases.indices.contains(indexPath.row) else {
+        guard Section.allCases.indices.contains(indexPath.section) else {
             return UITableViewCell()
         }
         
-        switch Row.allCases[indexPath.row] {
-        case .allWebsites:
+        switch Section.allCases[indexPath.section] {
+        case .desktopWebsite:
+            guard DesktopWebsiteRow.allCases.indices.contains(indexPath.row) else {
+                return UITableViewCell()
+            }
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             cell.selectionStyle = .none
             cell.textLabel?.text = "All Website"
             cell.accessoryView = requestDesktopWebsiteSwitch
             return cell
+        case .pageZoom:
+            guard PageZoomRow.allCases.indices.contains(indexPath.row) else {
+                return UITableViewCell()
+            }
+            let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
+            cell.textLabel?.text = "Default Page Zoom"
+            cell.detailTextLabel?.text = PageZoomLevel.displayTitle(for: PageZoomStore.shared.defaultPercent)
+            cell.detailTextLabel?.textColor = .secondaryLabel
+            cell.accessoryType = .disclosureIndicator
+            return cell
+        }
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        defer { tableView.deselectRow(at: indexPath, animated: true) }
+        guard Section.allCases.indices.contains(indexPath.section) else {
+            return
+        }
+
+        switch Section.allCases[indexPath.section] {
+        case .desktopWebsite:
+            guard DesktopWebsiteRow.allCases.indices.contains(indexPath.row) else {
+                return
+            }
+            return
+        case .pageZoom:
+            guard PageZoomRow.allCases.indices.contains(indexPath.row) else {
+                return
+            }
+            navigationController?.pushViewController(PageZoomPreferencesViewController(), animated: true)
         }
     }
     

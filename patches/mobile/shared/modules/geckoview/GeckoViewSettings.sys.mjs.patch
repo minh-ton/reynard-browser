@@ -1,0 +1,33 @@
+diff --git a/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs b/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs
+--- a/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs
++++ b/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs
+@@ -84,6 +84,7 @@ export class GeckoViewSettings extends GeckoViewModule {
+     this.allowJavascript = settings.allowJavascript;
+     this.viewportMode = settings.viewportMode;
+     this.useTrackingProtection = !!settings.useTrackingProtection;
+-
++    this.pageZoom = settings.pageZoom ?? 1.0;
++
+     if (settings.isExtensionPopup) {
+       // NOTE: Only add the webextension-view-type and emit extension-browser-inserted
+@@ -134,6 +135,19 @@ export class GeckoViewSettings extends GeckoViewModule {
+       aViewportMode == VIEWPORT_MODE_DESKTOP;
+   }
+-
++
++  set pageZoom(aPageZoom) {
++    const zoom = Number(aPageZoom ?? 1.0);
++    if (!Number.isFinite(zoom) || zoom <= 0) {
++      return;
++    }
++
++    if (this.browsingContext.fullZoom.toFixed(2) === zoom.toFixed(2)) {
++      return;
++    }
++
++    this.browsingContext.fullZoom = zoom;
++  }
++
+   get userAgentMode() {
+     return this._userAgentMode;
+   }

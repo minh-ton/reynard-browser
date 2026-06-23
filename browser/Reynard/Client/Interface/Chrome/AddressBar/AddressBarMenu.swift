@@ -18,13 +18,25 @@ enum AddressBarMenu {
         let image: UIImage?
     }
     
+    struct PageZoomState {
+        let percent: Int
+        let defaultPercent: Int
+        let hasSiteOverride: Bool
+        let canZoomOut: Bool
+        let canZoomIn: Bool
+    }
+
     static func makeMenu(
         selectedURL: String?,
         usesDesktopWebsite: Bool?,
+        pageZoom: PageZoomState?,
         addonItems: [AddonItem],
         onAddonSelected: @escaping (AddonMenuItem) -> Void,
         onChangeWebsiteMode: @escaping () -> Void,
         onWebsiteSettings: @escaping () -> Void,
+        onPageZoomOut: @escaping () -> Void,
+        onPageZoomIn: @escaping () -> Void,
+        onPageZoomReset: @escaping () -> Void,
         onBookmark: @escaping (Bool) -> Void
     ) -> UIMenu {
         var tabActions: [UIMenuElement] = []
@@ -78,6 +90,15 @@ enum AddressBarMenu {
             })
         }
         
+        if let pageZoom {
+            pageActions.append(pageZoomMenu(
+                state: pageZoom,
+                onZoomOut: onPageZoomOut,
+                onZoomIn: onPageZoomIn,
+                onReset: onPageZoomReset
+            ))
+        }
+
         var settingsActions: [UIMenuElement] = []
         if url?.host != nil {
             settingsActions.append(UIAction(title: "Website Settings", image: UIImage(named: "reynard.gear")) { _ in
@@ -88,5 +109,49 @@ enum AddressBarMenu {
         let children = tabActions + [UIMenu(options: .displayInline, children: pageActions)] + [UIMenu(options: .displayInline, children: settingsActions)]
         
         return UIMenu(title: "", image: nil, identifier: Identifier.addressBarMenu, options: [], children: children)
+    }
+
+    private static func pageZoomMenu(
+        state: PageZoomState,
+        onZoomOut: @escaping () -> Void,
+        onZoomIn: @escaping () -> Void,
+        onReset: @escaping () -> Void
+    ) -> UIMenu {
+        let zoomOutAttributes: UIMenuElement.Attributes = state.canZoomOut ? [] : .disabled
+        let zoomInAttributes: UIMenuElement.Attributes = state.canZoomIn ? [] : .disabled
+        let resetAttributes: UIMenuElement.Attributes = state.hasSiteOverride ? [] : .disabled
+        let defaultTitle = PageZoomLevel.displayTitle(for: state.defaultPercent)
+
+        return UIMenu(
+            title: "Page Zoom",
+            image: UIImage(systemName: "textformat.size"),
+            children: [
+                UIAction(
+                    title: "Zoom Out",
+                    image: UIImage(systemName: "minus.magnifyingglass"),
+                    attributes: zoomOutAttributes
+                ) { _ in
+                    onZoomOut()
+                },
+                UIAction(
+                    title: PageZoomLevel.displayTitle(for: state.percent),
+                    attributes: .disabled
+                ) { _ in },
+                UIAction(
+                    title: "Zoom In",
+                    image: UIImage(systemName: "plus.magnifyingglass"),
+                    attributes: zoomInAttributes
+                ) { _ in
+                    onZoomIn()
+                },
+                UIAction(
+                    title: "Reset to Default (\(defaultTitle))",
+                    image: UIImage(named: "reynard.arrow.clockwise"),
+                    attributes: resetAttributes
+                ) { _ in
+                    onReset()
+                },
+            ]
+        )
     }
 }

@@ -44,6 +44,8 @@ final class BrowserPreferences {
             
             // Browsing
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
+            key("BrowsingSettings", "defaultPageZoomPercent"): PageZoomLevel.defaultPercent,
+            key("BrowsingSettings", "pageZoomOverrides"): Data(),
             
             // Appearance
             key("AppearanceSettings", "addressBarPosition"): BrowserChromePosition.bottom.rawValue,
@@ -81,6 +83,10 @@ final class BrowserPreferences {
         UserDefaults.standard.data(forKey: key(setting, name))
     }
     
+    func integer(forSetting setting: String, key name: String) -> Int {
+        UserDefaults.standard.integer(forKey: key(setting, name))
+    }
+
     func set(_ value: Bool, forSetting setting: String, key name: String) {
         UserDefaults.standard.set(value, forKey: key(setting, name))
     }
@@ -93,6 +99,10 @@ final class BrowserPreferences {
         UserDefaults.standard.set(value, forKey: key(setting, name))
     }
     
+    func set(_ value: Int, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+
     // MARK: - Search
     struct SearchSettings {
         static var searchEngine: SearchEngine {
@@ -123,6 +133,38 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
+            }
+        }
+
+        static var defaultPageZoomPercent: Int {
+            get {
+                PageZoomLevel.normalizedPercent(
+                    prefs.integer(forSetting: "BrowsingSettings", key: "defaultPageZoomPercent")
+                )
+            }
+            set {
+                prefs.set(
+                    PageZoomLevel.normalizedPercent(newValue),
+                    forSetting: "BrowsingSettings",
+                    key: "defaultPageZoomPercent"
+                )
+                NotificationCenter.default.post(name: .pageZoomPreferencesDidChange, object: nil)
+            }
+        }
+
+        static var pageZoomOverrides: [String: Int] {
+            get {
+                guard let data = prefs.data(forSetting: "BrowsingSettings", key: "pageZoomOverrides"),
+                      !data.isEmpty,
+                      let overrides = try? JSONDecoder().decode([String: Int].self, from: data) else {
+                    return [:]
+                }
+                return overrides
+            }
+            set {
+                let data = try? JSONEncoder().encode(newValue)
+                prefs.set(data, forSetting: "BrowsingSettings", key: "pageZoomOverrides")
+                NotificationCenter.default.post(name: .pageZoomPreferencesDidChange, object: nil)
             }
         }
     }

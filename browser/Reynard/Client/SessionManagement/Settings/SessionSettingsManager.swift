@@ -16,13 +16,16 @@ final class SessionSettingsManager {
     
     private let websiteMode: WebsiteModePolicy
     private let userAgentPolicy: UserAgentPolicy
+    private let pageZoomStore: PageZoomStore
     
     init(
         websiteMode: WebsiteModePolicy = WebsiteModePolicy(),
-        userAgentPolicy: UserAgentPolicy = UserAgentPolicy()
+        userAgentPolicy: UserAgentPolicy = UserAgentPolicy(),
+        pageZoomStore: PageZoomStore = .shared
     ) {
         self.websiteMode = websiteMode
         self.userAgentPolicy = userAgentPolicy
+        self.pageZoomStore = pageZoomStore
     }
     
     func settings(for url: String, tabID: UUID?) -> GeckoSessionSettings {
@@ -36,7 +39,8 @@ final class SessionSettingsManager {
         return GeckoSessionSettings(
             userAgentOverride: userAgent.override,
             userAgentMode: mode,
-            viewportMode: mode
+            viewportMode: mode,
+            pageZoom: pageZoomStore.zoomScale(for: url)
         )
     }
     

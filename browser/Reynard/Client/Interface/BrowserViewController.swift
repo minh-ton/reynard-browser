@@ -559,6 +559,12 @@ final class BrowserViewController: UIViewController {
             name: .appUpdateAvailable,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(pageZoomPreferencesDidChange),
+            name: .pageZoomPreferencesDidChange,
+            object: nil
+        )
     }
     
     // MARK: - Keyboard
@@ -634,6 +640,11 @@ final class BrowserViewController: UIViewController {
         browserChrome.setMenuButtonIndicatesUpdate(BrowserUpdates.shared.hasUpdate)
     }
     
+    @objc func pageZoomPreferencesDidChange() {
+        applyPageZoomToSelectedTab()
+        refreshAddressBar()
+    }
+
     // MARK: - Browser UI Updates
     
     func syncBrowserNavigationChrome(animated: Bool) {

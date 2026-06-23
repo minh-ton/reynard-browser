@@ -49,6 +49,19 @@ Initial `git status --short --branch`:
 - Build identity evidence: archive log showed `CURRENT_BUILD=5f2bfd4` and `CURRENT_PROJECT_VERSION=5f2bfd4`, so this is a post-0.4.0 build identity, not only public build `63836c3`.
 - Page Zoom can begin from this verified baseline IPA. The full split `Build Latest Reynard IPA` workflow still has not been rerun after the pipefail-safe patch because the user explicitly prioritized archive-only reuse of the existing Gecko checkpoint.
 
+## Page Zoom Implementation
+
+Current implementation state:
+
+- Reynard's tab/session/settings/menu architecture has been inspected. The feature is wired through the existing `SessionSettingsManager`, `GeckoSessionSettings`, address-bar page menu, and browsing settings screens.
+- The page menu exposes `Page Zoom` controls for host-backed pages: zoom out, current percentage, zoom in, and reset to the configured default.
+- Zoom levels are normalized to `50%, 75%, 85%, 100%, 115%, 125%, 150%, 175%, 200%, 250%, 300%`.
+- Default zoom is stored under `Prefs.BrowsingSettings.defaultPageZoomPercent`.
+- Site-specific overrides are stored under `Prefs.BrowsingSettings.pageZoomOverrides`, keyed by normalized host and matched through existing `DomainMatcher` behavior.
+- Active-tab changes are applied immediately by sending updated `GeckoSessionSettings` to the selected `GeckoSession`.
+- Durable Gecko source behavior is represented as a root-level patch: `patches/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs.patch`. The patch applies `settings.pageZoom` to `browsingContext.fullZoom`.
+- Local Windows validation has confirmed `git diff --check` for tracked changes and `git -C engine/firefox apply --check` for the Gecko patch. Swift/Xcode compilation is deferred to GitHub Actions because this Windows host does not provide `swift` or `xcodebuild`.
+
 Recent commits include:
 
 ```text
@@ -100,10 +113,10 @@ Latest inspected workflow failure:
 - [x] Unaccelerated rerun `28001189594` cancelled before another full Gecko rebuild.
 - [x] Gecko build caching and checkpointing implemented and first rerun attempted.
 - [x] Fast configure failure in run `28001837486` identified and patched.
-- [ ] Checkpointed workflow rerun succeeds through Gecko artifact upload.
-- [ ] IPA artifact downloaded and inspected.
-- [ ] Page Zoom architecture inspected.
-- [ ] Page Zoom implemented.
+- [x] Checkpointed workflow rerun succeeds through Gecko artifact upload.
+- [x] IPA artifact downloaded and inspected.
+- [x] Page Zoom architecture inspected.
+- [x] Page Zoom implemented.
 - [ ] Final Page Zoom build and artifact verified.
 - [ ] Final outcome recorded.
 

@@ -17,17 +17,20 @@ public struct GeckoSessionSettings: Equatable {
     public static let `default` = GeckoSessionSettings(
         userAgentOverride: nil,
         userAgentMode: 0,
-        viewportMode: 0
+        viewportMode: 0,
+        pageZoom: 1.0
     )
     
     public let userAgentOverride: String?
     public let userAgentMode: Int
     public let viewportMode: Int
+    public let pageZoom: Double
     
-    public init(userAgentOverride: String?, userAgentMode: Int, viewportMode: Int) {
+    public init(userAgentOverride: String?, userAgentMode: Int, viewportMode: Int, pageZoom: Double) {
         self.userAgentOverride = userAgentOverride
         self.userAgentMode = userAgentMode
         self.viewportMode = viewportMode
+        self.pageZoom = pageZoom
     }
 }
 
@@ -61,6 +64,7 @@ public class GeckoSession {
                 "userAgentOverride": uaValue,
                 "userAgentMode": settings.userAgentMode,
                 "viewportMode": settings.viewportMode,
+                "pageZoom": settings.pageZoom,
             ])
     }
     
@@ -161,6 +165,7 @@ public class GeckoSession {
             "userAgentMode": settings.userAgentMode,
             "userAgentOverride": settings.userAgentOverride,
             "viewportMode": settings.viewportMode,
+            "pageZoom": settings.pageZoom,
             "displayMode": 0,
             "suspendMediaWhenInactive": false,
             "allowJavascript": true,

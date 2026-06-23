@@ -38,7 +38,8 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         }
         browserChrome.updateAddressBarMenu(
             url: selectedURL,
-            usesDesktopWebsite: usesDesktopWebsite
+            usesDesktopWebsite: usesDesktopWebsite,
+            pageZoom: selectedTab.flatMap(pageZoomMenuState)
         )
     }
     
@@ -72,7 +73,28 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
         presentWebsiteSettings()
     }
-    
+
+    func addressBarDidRequestPageZoomOut(_ addressBar: AddressBar) {
+        changePageZoom { store, url in
+            store.lowerPercent(for: url)
+        }
+    }
+
+    func addressBarDidRequestPageZoomIn(_ addressBar: AddressBar) {
+        changePageZoom { store, url in
+            store.higherPercent(for: url)
+        }
+    }
+
+    func addressBarDidRequestPageZoomReset(_ addressBar: AddressBar) {
+        guard let selectedTab = tabManager.selectedTab,
+              let url = selectedTab.url else {
+            return
+        }
+
+        PageZoomStore.shared.resetOverride(for: url)
+    }
+
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool) {
         presentBookmarkEditor(addToFavorites: favorites)
     }
@@ -170,5 +192,45 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         let navigationController = UINavigationController(rootViewController: bookmarkController)
         navigationController.modalPresentationStyle = .pageSheet
         present(navigationController, animated: true)
+    }
+
+    private func pageZoomMenuState(for tab: Tab) -> AddressBarMenu.PageZoomState? {
+        guard let url = tab.url,
+              DomainMatcher.host(from: url) != nil else {
+            return nil
+        }
+
+        let store = PageZoomStore.shared
+        let percent = store.zoomPercent(for: url)
+        return AddressBarMenu.PageZoomState(
+            percent: percent,
+            defaultPercent: store.defaultPercent,
+            hasSiteOverride: store.hasOverride(for: url),
+            canZoomOut: PageZoomLevel.lowerPercent(than: percent) != nil,
+            canZoomIn: PageZoomLevel.higherPercent(than: percent) != nil
+        )
+    }
+
+    private func changePageZoom(_ nextPercent: (PageZoomStore, String) -> Int?) {
+        guard let selectedTab = tabManager.selectedTab,
+              let url = selectedTab.url,
+              let percent = nextPercent(PageZoomStore.shared, url) else {
+            return
+        }
+
+        PageZoomStore.shared.setOverridePercent(percent, for: url)
+    }
+
+    func applyPageZoomToSelectedTab() {
+        guard let selectedTab = tabManager.selectedTab,
+              let url = selectedTab.url else {
+            return
+        }
+
+        applyPageZoom(to: selectedTab, url: url)
+    }
+
+    private func applyPageZoom(to tab: Tab, url: String) {
+        sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
     }
 }

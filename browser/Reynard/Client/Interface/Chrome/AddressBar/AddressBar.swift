@@ -13,6 +13,9 @@ protocol AddressBarDelegate: AnyObject {
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
+    func addressBarDidRequestPageZoomOut(_ addressBar: AddressBar)
+    func addressBarDidRequestPageZoomIn(_ addressBar: AddressBar)
+    func addressBarDidRequestPageZoomReset(_ addressBar: AddressBar)
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
 }
 
@@ -282,10 +285,15 @@ final class AddressBar: UIView {
         applyState()
     }
     
-    func updateMenu(url: String?, usesDesktopWebsite: Bool?) {
+    func updateMenu(
+        url: String?,
+        usesDesktopWebsite: Bool?,
+        pageZoom: AddressBarMenu.PageZoomState?
+    ) {
         addonsMenu = AddressBarMenu.makeMenu(
             selectedURL: url,
             usesDesktopWebsite: usesDesktopWebsite,
+            pageZoom: pageZoom,
             addonItems: delegate?.addressBarAddonItems(self) ?? [],
             onAddonSelected: { [weak self] item in
                 guard let self else { return }
@@ -298,6 +306,18 @@ final class AddressBar: UIView {
             onWebsiteSettings: { [weak self] in
                 guard let self else { return }
                 self.delegate?.addressBarDidRequestWebsiteSettings(self)
+            },
+            onPageZoomOut: { [weak self] in
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestPageZoomOut(self)
+            },
+            onPageZoomIn: { [weak self] in
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestPageZoomIn(self)
+            },
+            onPageZoomReset: { [weak self] in
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestPageZoomReset(self)
             },
             onBookmark: { [weak self] favorites in
                 guard let self else { return }
