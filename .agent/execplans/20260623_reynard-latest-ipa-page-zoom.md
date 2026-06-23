@@ -75,6 +75,10 @@ Latest inspected workflow failure:
 - [x] Second targeted WASI runtime patch applied.
 - [x] Non-final run confirmed dependencies passed and reached `Build Gecko`.
 - [x] Latest upstream `minh-ton/reynard-browser@main` merged.
+- [x] Quick upstream/fork release audit completed; no clearly newer downloadable IPA was found.
+- [x] Latest-main run `27994353614` completed Gecko and failed in Xcode archive signing.
+- [x] Copy Gecko Stuff signing failure root cause identified.
+- [ ] Copy Gecko Stuff unsigned-archive fix committed and rerun.
 - [ ] IPA artifact downloaded and inspected.
 - [ ] Page Zoom architecture inspected.
 - [ ] Page Zoom implemented.
@@ -90,6 +94,10 @@ Latest inspected workflow failure:
 - Run `27993866717` passed `Install build dependencies`, `Update Gecko source`, `Apply Gecko patches`, `Build idevice FFI`, and `Force Gecko to use Xcode ld64`; it reached `Build Gecko` before being intentionally canceled because the fork had not yet merged latest upstream main.
 - After `git fetch upstream main`, `upstream/main...HEAD` was `9 13`, proving the fork was missing nine upstream commits. The upstream head was `0fcee2c40f8629c50a9481419dfb9184c75c0236` (`Hide tab bar when in iPad 1/3 split screen`).
 - `git merge upstream/main --no-edit` completed without conflicts and produced merge commit `6190269606d3c09e97b70db08a9f85ecaf1d861e`; `git merge-base --is-ancestor upstream/main HEAD` then confirmed upstream is contained in the fork.
+- Run `27994353614` uses head SHA `b37d9a14ce07b3e01e65891cb8ab2e808e74984e`, which includes the upstream merge and the build-plan update. The job passed dependency installation, Gecko source checkout, patch application, idevice FFI, and ld64 patching, then remained in `Build Gecko` for more than two hours with no live logs exposed by `gh`.
+- A quick GitHub release/fork audit found upstream releases only through `0.4.0`, and sampled recent forks did not expose newer release assets. No third-party IPA has better provenance than completing this fork's workflow.
+- Run `27994353614` proved the Gecko build now completes, then failed in `Build Reynard app archive` after 3h6m47s. The first real archive error was in `PhaseScriptExecution Copy Gecko Stuff`: `Apple Development: no identity found`, followed by `Command PhaseScriptExecution failed with a nonzero exit code`.
+- The failing script was `browser/Scripts/AddGecko.sh`. It used `SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"` and invoked `codesign` unconditionally, even though the workflow archive command passed `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""`.
 
 ## Decision Log
 
@@ -105,6 +113,10 @@ Latest inspected workflow failure:
   - Reason: A successful artifact from that run would not have satisfied the latest-main requirement because upstream/main was not contained in the fork.
   - Evidence: `git rev-list --left-right --count upstream/main...HEAD` returned `9 13`.
   - Consequence: The next workflow run must use a merged commit after `6190269606d3c09e97b70db08a9f85ecaf1d861e`.
+- Decision: Make `browser/Scripts/AddGecko.sh` skip Gecko artifact signing for unsigned archives.
+  - Reason: The workflow intentionally builds an unsigned SideStore IPA and already passes Xcode signing suppression flags; the copy script must not invent `Apple Development` when no identity exists.
+  - Evidence: Run `27994353614`, `Build Reynard app archive`, `Apple Development: no identity found`.
+  - Consequence: Local signed Xcode builds can still sign Gecko artifacts when Xcode provides an identity, while CI unsigned archives can proceed to IPA packaging.
 
 ## Plan of Work
 
@@ -150,6 +162,10 @@ git fetch upstream main
 git merge-base --is-ancestor upstream/main HEAD
 git rev-list --left-right --count upstream/main...HEAD
 git merge upstream/main --no-edit
+gh api repos/minh-ton/reynard-browser/releases --paginate --jq '.[] | {tag_name, name, published_at, target_commitish, assets: [.assets[] | {name, browser_download_url, size}]}'
+gh api repos/minh-ton/reynard-browser/forks --paginate --jq '.[] | {full_name, pushed_at, default_branch, html_url}'
+gh run view 27994353614 --repo lowestprime/reynard-browser --log-failed
+gh run download 27994353614 --repo lowestprime/reynard-browser --name Reynard-build-debug --dir "$env:USERPROFILE\Desktop\reynard-build-debug-latest"
 ```
 
 ## Validation
