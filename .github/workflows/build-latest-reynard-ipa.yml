@@ -46,6 +46,7 @@ jobs:
           brew list ldid >/dev/null 2>&1 || brew install ldid
           brew list cbindgen >/dev/null 2>&1 || brew install cbindgen
           brew list llvm >/dev/null 2>&1 || brew install llvm
+          brew list lld >/dev/null 2>&1 || brew install lld
           brew list wasi-libc >/dev/null 2>&1 || brew install wasi-libc
 
           rustup target add aarch64-apple-ios
@@ -55,13 +56,13 @@ jobs:
 
           cat > "$WASI_WRAPPER_DIR/clang" <<'SH'
           #!/usr/bin/env bash
-          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+          export PATH="/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin:$PATH"
           exec /opt/homebrew/opt/llvm/bin/clang "$@"
           SH
 
           cat > "$WASI_WRAPPER_DIR/clang++" <<'SH'
           #!/usr/bin/env bash
-          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+          export PATH="/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin:$PATH"
           exec /opt/homebrew/opt/llvm/bin/clang++ "$@"
           SH
 
@@ -73,7 +74,9 @@ jobs:
 
           /opt/homebrew/bin/cbindgen --version
           /opt/homebrew/opt/llvm/bin/clang --version
-          /opt/homebrew/opt/llvm/bin/wasm-ld --version
+          PATH="/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin:$PATH"
+          command -v wasm-ld
+          wasm-ld --version
           test -d /opt/homebrew/share/wasi-sysroot
           ls -lah /opt/homebrew/share/wasi-sysroot
 
@@ -81,8 +84,7 @@ jobs:
           int main(void) { return 0; }
           C
 
-          PATH="/opt/homebrew/opt/llvm/bin:$PATH" \
-            /opt/homebrew/opt/llvm/bin/clang \
+          /opt/homebrew/opt/llvm/bin/clang \
             --target=wasm32-unknown-wasi \
             --sysroot=/opt/homebrew/share/wasi-sysroot \
             /tmp/wasm-test.c \
