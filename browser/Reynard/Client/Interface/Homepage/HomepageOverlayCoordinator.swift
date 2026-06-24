@@ -19,8 +19,8 @@ protocol HomepageOverlayCoordinatorDelegate: AnyObject {
     func browseHomepageFavorite(_ favorite: BookmarkSnapshot)
     func endHomepageEditing()
     func updateHomepageLayout(animated: Bool, duration: TimeInterval)
-    func browseHomepagePerformanceGuide()
     func openHomepagePerformanceSettings()
+    func browseHomepagePerformanceExternalURL(_ url: URL)
 }
 
 final class HomepageOverlayCoordinator {
@@ -411,18 +411,18 @@ extension HomepageOverlayCoordinator: HomepageViewControllerDelegate {
         dismiss(animated: true)
     }
     
-    func homepageViewControllerDidSelectPerformanceGuide(_ controller: HomepageViewController) {
-        overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
-        delegate?.browseHomepagePerformanceGuide()
-        delegate?.endHomepageEditing()
-        presentationIntent = .inactive
-        dismiss(animated: true)
-    }
-    
     func homepageViewControllerDidSelectPerformanceSettings(_ controller: HomepageViewController) {
         overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
         delegate?.openHomepagePerformanceSettings()
         delegate?.endHomepageEditing()
+    }
+    
+    func homepageViewController(_ controller: HomepageViewController, didSelectPerformanceExternalURL url: URL) {
+        overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
+        delegate?.browseHomepagePerformanceExternalURL(url)
+        delegate?.endHomepageEditing()
+        presentationIntent = .inactive
+        dismiss(animated: true)
     }
     
     func homepageViewControllerDidStartScrolling() {

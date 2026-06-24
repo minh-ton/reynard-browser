@@ -31,6 +31,8 @@ final class BrowserUpdates: NSObject {
             guard let url = URL(string: Self.sourceURL),
                   let data = try? Data(contentsOf: url) else { return }
             
+            self.sourceData = data
+            
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let apps = json["apps"] as? [[String: Any]],
                   let firstApp = apps.first,
@@ -54,7 +56,6 @@ final class BrowserUpdates: NSObject {
             }
             
             DispatchQueue.main.async {
-                self.sourceData = data
                 self.hasUpdate = true
                 self.latestVersion = latestVersionStr
                 NotificationCenter.default.post(name: .appUpdateAvailable, object: nil)

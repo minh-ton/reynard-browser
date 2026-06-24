@@ -8,8 +8,8 @@
 import UIKit
 
 protocol PerformanceRecommendationViewControllerDelegate: AnyObject {
-    func performanceRecommendationViewControllerDidSelectGuide(_ controller: PerformanceRecommendationViewController)
     func performanceRecommendationViewControllerDidSelectSettings(_ controller: PerformanceRecommendationViewController)
+    func performanceRecommendationViewController(_ controller: PerformanceRecommendationViewController, didSelectExternalURL url: URL)
 }
 
 final class PerformanceRecommendationViewController: UIViewController, HomepageRecommendationViewController {
@@ -25,9 +25,96 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         static let titleFontSize: CGFloat = 22
     }
     
+    private enum PerformanceRecommendationLink {
+        static let enableInAppJITGuide = URL(string: "https://github.com/minh-ton/reynard-browser#why-enable-jit")!
+        static let installTrollStoreGuide = URL(string: "https://ios.cfw.guide/installing-trollstore/")!
+        static let downloadTrollStoreBuild = {
+            guard let updateFeedData = BrowserUpdates.shared.sourceData,
+                  let updateFeed = try? JSONSerialization.jsonObject(with: updateFeedData) as? [String: Any],
+                  let appEntries = updateFeed["apps"] as? [[String: Any]],
+                  let appEntry = appEntries.first,
+                  let versions = appEntry["versions"] as? [[String: Any]],
+                  let latestEntry = versions.first,
+                  let packageURLString = latestEntry["downloadURL"] as? String,
+                  let packageURL = URL(string: packageURLString) else {
+                return URL(string: "https://github.com/minh-ton/reynard-browser/releases/latest")!
+            }
+            
+            return URL(string: packageURLString.replacingOccurrences(
+                of: "Reynard.ipa",
+                with: "Reynard-TrollStore.tipa"
+            ))!
+        }
+    }
+    
+    private enum PerformanceRecommendationAction {
+        case settings
+        case openURL(URL)
+    }
+    
+    private enum PerformanceRecommendationContent {
+        case enableInAppJIT
+        case installTrollStore
+        
+        var title: String {
+            switch self {
+            case .enableInAppJIT:
+                return "Performance Recommendation"
+            case .installTrollStore:
+                return "Get Better Performance"
+            }
+        }
+        
+        var message: String {
+            switch self {
+            case .enableInAppJIT:
+                return "Enable JIT to improve website performance and compatibility."
+            case .installTrollStore:
+                return "Your device supports TrollStore. Install the TrollStore version of Reynard to enable JIT automatically for improved website performance and compatibility."
+            }
+        }
+        
+        var primaryButtonTitle: String {
+            switch self {
+            case .enableInAppJIT:
+                return "Learn More"
+            case .installTrollStore:
+                return "Install TrollStore"
+            }
+        }
+        
+        var secondaryButtonTitle: String {
+            switch self {
+            case .enableInAppJIT:
+                return "Open Settings"
+            case .installTrollStore:
+                return "Download Reynard (.tipa)"
+            }
+        }
+        
+        var primaryAction: PerformanceRecommendationAction {
+            switch self {
+            case .enableInAppJIT:
+                return .openURL(PerformanceRecommendationLink.enableInAppJITGuide)
+            case .installTrollStore:
+                return .openURL(PerformanceRecommendationLink.installTrollStoreGuide)
+            }
+        }
+        
+        var secondaryAction: PerformanceRecommendationAction {
+            switch self {
+            case .enableInAppJIT:
+                return .settings
+            case .installTrollStore:
+                return .openURL(PerformanceRecommendationLink.downloadTrollStoreBuild())
+            }
+        }
+    }
+    
     weak var delegate: PerformanceRecommendationViewControllerDelegate?
     
     private var contentMode: HomepageContentMode = .embeddedNarrow
+    private var displayedContent: PerformanceRecommendationContent?
     private var isPrivateBrowsing = false
     
     private let cardView: UIView = {
@@ -90,19 +177,19 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         return view
     }()
     
-    private lazy var guideButton: UIButton = {
+    private lazy var primaryActionButton: UIButton = {
         return makeActionButton(
             title: "Learn More",
             imageName: "reynard.arrow.up.right",
-            action: #selector(viewGuide)
+            action: #selector(performPrimaryAction)
         )
     }()
     
-    private lazy var settingsButton: UIButton = {
+    private lazy var secondaryActionButton: UIButton = {
         return makeActionButton(
             title: "Open Settings",
             imageName: "reynard.gearshape",
-            action: #selector(openSettings)
+            action: #selector(performSecondaryAction)
         )
     }()
     
@@ -112,12 +199,17 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         super.viewDidLoad()
         configureView()
         updateContentInsets()
-        updateVisibility()
+        updateRecommendationState()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        updateVisibility()
+        updateRecommendationState()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateActionButtonLayout()
     }
     
     // MARK: - Public API
@@ -130,7 +222,8 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         self.contentMode = contentMode
         if isViewLoaded {
             updateContentInsets()
-            updateVisibility()
+            updateRecommendationState()
+            updateActionButtonLayout()
         }
     }
     
@@ -141,7 +234,7 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         
         self.isPrivateBrowsing = isPrivateBrowsing
         if isViewLoaded {
-            updateVisibility()
+            updateRecommendationState()
         }
     }
     
@@ -166,8 +259,8 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         textStackView.addArrangedSubview(buttonStackView)
         textStackView.setCustomSpacing(UX.buttonStackTopSpacing, after: messageLabel)
         
-        buttonStackView.addArrangedSubview(guideButton)
-        buttonStackView.addArrangedSubview(settingsButton)
+        buttonStackView.addArrangedSubview(primaryActionButton)
+        buttonStackView.addArrangedSubview(secondaryActionButton)
         buttonStackView.addArrangedSubview(buttonTrailingSpacerView)
     }
     
@@ -204,12 +297,25 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
     
     // MARK: - Actions
     
-    @objc private func viewGuide() {
-        delegate?.performanceRecommendationViewControllerDidSelectGuide(self)
+    @objc private func performPrimaryAction() {
+        perform(displayedContent?.primaryAction)
     }
     
-    @objc private func openSettings() {
-        delegate?.performanceRecommendationViewControllerDidSelectSettings(self)
+    @objc private func performSecondaryAction() {
+        perform(displayedContent?.secondaryAction)
+    }
+    
+    private func perform(_ action: PerformanceRecommendationAction?) {
+        guard let action else {
+            return
+        }
+        
+        switch action {
+        case .settings:
+            delegate?.performanceRecommendationViewControllerDidSelectSettings(self)
+        case let .openURL(url):
+            delegate?.performanceRecommendationViewController(self, didSelectExternalURL: url)
+        }
     }
     
     // MARK: - Layout
@@ -218,11 +324,41 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         cardView.directionalLayoutMargins = contentInsets
     }
     
-    private func updateVisibility() {
-        view.isHidden = isPrivateBrowsing
-        || contentMode.isDetached
-        || Prefs.JITSettings.isJITEnabled
-        || getEntitlementValue("com.apple.private.security.no-sandbox")
+    private func updateRecommendationState() {
+        guard let content = resolvedContent else {
+            view.isHidden = true
+            displayedContent = nil
+            return
+        }
+        
+        displayedContent = content
+        updateDisplayedContent(content)
+        updateActionButtonLayout()
+        view.isHidden = false
+    }
+    
+    private func updateDisplayedContent(_ content: PerformanceRecommendationContent) {
+        titleLabel.text = content.title
+        messageLabel.text = content.message
+        primaryActionButton.setTitle(content.primaryButtonTitle, for: .normal)
+        secondaryActionButton.setTitle(content.secondaryButtonTitle, for: .normal)
+    }
+    
+    private func updateActionButtonLayout() {
+        let availableButtonWidth = cardView.bounds.width - cardView.directionalLayoutMargins.leading - cardView.directionalLayoutMargins.trailing
+        guard availableButtonWidth > 0 else {
+            return
+        }
+        
+        let requiredHorizontalButtonWidth = primaryActionButton.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).width
+        + secondaryActionButton.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).width
+        + UX.buttonSpacing
+        
+        let usesVerticalButtons = requiredHorizontalButtonWidth > availableButtonWidth
+        buttonStackView.axis = usesVerticalButtons ? .vertical : .horizontal
+        buttonStackView.alignment = usesVerticalButtons ? .fill : .center
+        buttonStackView.spacing = usesVerticalButtons ? UX.labelSpacing : UX.buttonSpacing
+        buttonTrailingSpacerView.isHidden = usesVerticalButtons
     }
     
     private var contentInsets: NSDirectionalEdgeInsets {
@@ -234,5 +370,46 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
         case .embeddedExpanded:
             return NSDirectionalEdgeInsets(top: 32, leading: 28, bottom: 32, trailing: 28)
         }
+    }
+    
+    // MARK: - Helpers
+    
+    private var resolvedContent: PerformanceRecommendationContent? {
+        if isPrivateBrowsing || contentMode.isDetached {
+            return nil
+        }
+        
+        if isiOS174OrNewer && !Prefs.JITSettings.isJITEnabled {
+            return .enableInAppJIT
+        }
+        
+        if shouldUseTrollStore {
+            return .installTrollStore
+        }
+        
+        return nil
+    }
+    
+    private var isiOS174OrNewer: Bool {
+        if #available(iOS 17.4, *) {
+            return true
+        }
+        return false
+    }
+    
+    private var shouldUseTrollStore: Bool {
+        if #available(iOS 17.0, *) {
+            if #unavailable(iOS 17.0.1) {
+                return !getEntitlementValue("com.apple.private.security.no-sandbox")
+            }
+        }
+        
+        if #available(iOS 14.0, *) {
+            if #unavailable(iOS 16.7) {
+                return !getEntitlementValue("com.apple.private.security.no-sandbox")
+            }
+        }
+        
+        return false
     }
 }

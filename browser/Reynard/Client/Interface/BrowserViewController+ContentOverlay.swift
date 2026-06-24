@@ -116,8 +116,8 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
         updateBrowserLayout(animated: animated, duration: duration)
     }
     
-    func browseHomepagePerformanceGuide() {
-        tabManager.browse(to: "https://github.com/minh-ton/reynard-browser#why-enable-jit")
+    func browseHomepagePerformanceExternalURL(_ url: URL) {
+        tabManager.browse(to: url.absoluteString)
     }
     
     func openHomepagePerformanceSettings() {
