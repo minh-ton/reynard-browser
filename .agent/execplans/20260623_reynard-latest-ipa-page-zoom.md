@@ -377,6 +377,46 @@ Manual physical-device validation that must not be claimed without evidence:
 - Low-memory or forced relaunch if testable.
 - Verify pages, tabs, zoom, theme/accent, and navigation state remain stable.
 
+## Keyboard Obstruction Regression Fix
+
+Purpose: repair the remaining real-device regression where bottom-fixed page composers and focused page inputs can stay hidden behind the iOS keyboard and Reynard bottom chrome on the latest feature-complete IPA. This is a targeted native-only continuation; Page Zoom, bookmark/history transfer, autocomplete, theme work, and release plumbing should not be reimplemented except where validation requires it.
+
+User evidence to preserve:
+
+- `https://chatgpt.com`: the ChatGPT input composer/page content remains partly hidden behind the iOS keyboard and/or bottom browser chrome when the keyboard opens.
+- `https://gemini.google.com`: the Gemini bottom composer is visible with the keyboard closed, but keyboard open leaves page composer/content obscured instead of repositioned into the visible viewport.
+- This affects bottom-fixed modern web-app composers, not only ordinary scrollable form fields.
+- The prior focused-input relocation batch is incomplete because it depends on Gecko focused-input geometry and resets when that geometry is nil.
+
+Current inspected implementation:
+
+- `BrowserViewController.keyboardFrameWillChange(_:)` computes keyboard overlap and only calls `ContentView.relocateFocusedInput(above:)` for page keyboard events.
+- `ContentView.relocateFocusedInput(above:)` asks Gecko for `focusedInputBottomRatio()` and translates the content with `focusedInputOffset` when a focused editable metric exists.
+- If Gecko returns nil focused-input geometry, `ContentView` resets focused-input relocation, so bottom-fixed SPA composers get no fallback.
+- The normal phone content bottom is anchored to `browserChrome.bottomToolbarTopAnchor`; when the software keyboard covers the bottom of the app, that anchor can still sit underneath the keyboard, leaving the Gecko viewport too tall for bottom-fixed page UI.
+
+Fix design:
+
+- Keep the change native-only so the archive-only workflow can reuse Gecko checkpoint run `28038685786`.
+- Add a real page viewport bottom inset to `ContentView` and drive it from the actual intersection between the root view, current content view frame, and keyboard frame.
+- Treat focused-input metrics as a secondary correction. Values above `1.0` are allowed because Gecko's patch reports a viewport-relative bottom ratio up to `2.0`; values above `1.0` mean the focused editable is below the currently visible viewport.
+- Keep native address bar/search keyboard behavior separate: when the native address bar is focused, reset page keyboard avoidance and keep docking the address bar above the keyboard.
+- Recompute keyboard avoidance on keyboard show/hide/frame changes, layout changes, foreground restore, and Page Zoom preference changes.
+
+Manual test checklist for the fixed IPA:
+
+- Gemini keyboard closed: bottom composer visible.
+- Gemini keyboard open: composer remains above keyboard and bottom chrome.
+- ChatGPT keyboard open: composer remains above keyboard and bottom chrome.
+- Repeat at 75%, 100%, 150%, and 200% page zoom.
+- Rotate device if feasible.
+- Background/foreground after keyboard use.
+- JIT disabled.
+- JIT previously enabled if available.
+- Native address bar editing still works.
+- Autocomplete overlay still works.
+- Page Zoom sheet stays open while pressing plus/minus or moving the slider.
+
 ## Plan of Work
 
 First repair `.github/workflows/build-latest-reynard-ipa.yml` so the dependency step installs `lld`, prepends `/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin` for WASM-only wrapper commands, uses `command -v wasm-ld`, and validates a real WASM link using the Homebrew WASI sysroot. Commit, push, trigger the workflow, and inspect the result.
