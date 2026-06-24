@@ -9,6 +9,8 @@ import UIKit
 
 protocol HomepageViewControllerDelegate: AnyObject {
     func homepageViewControllerDidSelectFavorite(_ favorite: BookmarkSnapshot)
+    func homepageViewControllerDidSelectPerformanceGuide(_ controller: HomepageViewController)
+    func homepageViewControllerDidSelectPerformanceSettings(_ controller: HomepageViewController)
     func homepageViewControllerDidStartScrolling()
 }
 
@@ -159,6 +161,14 @@ extension HomepageViewController: UINavigationControllerDelegate {
 extension HomepageViewController: HomepageRootViewControllerDelegate {
     func homepageRootViewControllerDidSelectFavorite(_ favorite: BookmarkSnapshot) {
         homepageDelegate?.homepageViewControllerDidSelectFavorite(favorite)
+    }
+    
+    func homepageRootViewControllerDidSelectPerformanceGuide(_ controller: HomepageRootViewController) {
+        homepageDelegate?.homepageViewControllerDidSelectPerformanceGuide(self)
+    }
+    
+    func homepageRootViewControllerDidSelectPerformanceSettings(_ controller: HomepageRootViewController) {
+        homepageDelegate?.homepageViewControllerDidSelectPerformanceSettings(self)
     }
     
     func homepageRootViewControllerDidSelectFolder(_ folder: BookmarkFolderSnapshot) {

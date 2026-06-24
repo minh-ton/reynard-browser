@@ -116,6 +116,19 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
         updateBrowserLayout(animated: animated, duration: duration)
     }
     
+    func browseHomepagePerformanceGuide() {
+        tabManager.browse(to: "https://github.com/minh-ton/reynard-browser#why-enable-jit")
+    }
+    
+    func openHomepagePerformanceSettings() {
+        if browserLayout.interfaceIdiom == .pad,
+           browserLayout.chromeMode == .pad {
+            sidebarCoordinator.showSection(.settings)
+            return
+        }
+        presentLibrary(initialSection: .settings)
+    }
+    
     // MARK: - Address Bar Search Delegate
     
     func addressBarDidSubmit(_ searchTerm: String) {

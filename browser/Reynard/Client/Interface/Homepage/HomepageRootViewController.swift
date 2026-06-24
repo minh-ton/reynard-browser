@@ -10,7 +10,14 @@ import UIKit
 protocol HomepageRootViewControllerDelegate: AnyObject {
     func homepageRootViewControllerDidSelectFavorite(_ favorite: BookmarkSnapshot)
     func homepageRootViewControllerDidSelectFolder(_ folder: BookmarkFolderSnapshot)
+    func homepageRootViewControllerDidSelectPerformanceGuide(_ controller: HomepageRootViewController)
+    func homepageRootViewControllerDidSelectPerformanceSettings(_ controller: HomepageRootViewController)
     func homepageRootViewControllerDidStartScrolling()
+}
+
+protocol HomepageRecommendationViewController: UIViewController {
+    func setContentMode(_ contentMode: HomepageContentMode)
+    func setPrivateBrowsing(_ isPrivateBrowsing: Bool)
 }
 
 final class HomepageRootViewController: UIViewController {
@@ -85,6 +92,9 @@ final class HomepageRootViewController: UIViewController {
         }
         
         self.contentMode = contentMode
+        recommendationViewControllers.forEach { viewController in
+            viewController.setContentMode(contentMode)
+        }
         privateBrowsingSectionViewController?.setContentMode(contentMode)
         favoritesSectionViewController?.setContentMode(contentMode)
     }
@@ -95,6 +105,9 @@ final class HomepageRootViewController: UIViewController {
         }
         
         self.isPrivateBrowsing = isPrivateBrowsing
+        recommendationViewControllers.forEach { viewController in
+            viewController.setPrivateBrowsing(isPrivateBrowsing)
+        }
         privateBrowsingSectionViewController?.setPrivateBrowsing(isPrivateBrowsing)
     }
     
@@ -153,6 +166,16 @@ final class HomepageRootViewController: UIViewController {
     
     private func makeSectionViewController(for section: HomepageSection) -> UIViewController {
         switch section {
+        case .recommendation(.performance):
+            let viewController = PerformanceRecommendationViewController()
+            viewController.delegate = self
+            viewController.setContentMode(contentMode)
+            viewController.setPrivateBrowsing(isPrivateBrowsing)
+            return viewController
+            
+        case .recommendation(.donation):
+            return UIViewController()
+            
         case .privateBrowsing:
             let viewController = PrivateBrowsingSectionViewController()
             viewController.setContentMode(contentMode)
@@ -172,6 +195,16 @@ final class HomepageRootViewController: UIViewController {
     }
     
     // MARK: - Helpers
+    
+    private var recommendationViewControllers: [HomepageRecommendationViewController] {
+        return sectionViewControllers.compactMap { section, viewController in
+            guard case .recommendation = section else {
+                return nil
+            }
+            
+            return viewController as? HomepageRecommendationViewController
+        }
+    }
     
     private var privateBrowsingSectionViewController: PrivateBrowsingSectionViewController? {
         return sectionViewControllers[.privateBrowsing] as? PrivateBrowsingSectionViewController
@@ -207,5 +240,15 @@ extension HomepageRootViewController: FavoritesSectionViewControllerDelegate {
     
     func favoritesSectionViewController(_ controller: FavoritesSectionViewController, didSelectFolder folder: BookmarkFolderSnapshot) {
         delegate?.homepageRootViewControllerDidSelectFolder(folder)
+    }
+}
+
+extension HomepageRootViewController: PerformanceRecommendationViewControllerDelegate {
+    func performanceRecommendationViewControllerDidSelectGuide(_ controller: PerformanceRecommendationViewController) {
+        delegate?.homepageRootViewControllerDidSelectPerformanceGuide(self)
+    }
+    
+    func performanceRecommendationViewControllerDidSelectSettings(_ controller: PerformanceRecommendationViewController) {
+        delegate?.homepageRootViewControllerDidSelectPerformanceSettings(self)
     }
 }

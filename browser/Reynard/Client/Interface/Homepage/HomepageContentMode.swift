@@ -23,6 +23,15 @@ enum HomepageContentMode: Equatable {
         }
     }
     
+    var isDetached: Bool {
+        switch self {
+        case .detachedNarrow, .detachedWide:
+            return true
+        case .embeddedNarrow, .embeddedWide, .embeddedExpanded:
+            return false
+        }
+    }
+    
     static func embedded(
         layout: BrowserLayout,
         gridWidth: HomepageGridWidth = .eightColumn
