@@ -53,6 +53,7 @@ final class BrowserPreferences {
             key("AppearanceSettings", "showsLandscapeTabBar"): true,
             key("AppearanceSettings", "themeMode"): BrowserThemeMode.system.rawValue,
             key("AppearanceSettings", "accentColor"): BrowserAccentColor.highContrast.rawValue,
+            key("AppearanceSettings", "customAccentHex"): BrowserAccentColor.defaultCustomHex,
             
             // Bookmarks
             key("BookmarkSettings", "placeFoldersOnTop"): true,
@@ -365,6 +366,26 @@ final class BrowserPreferences {
                 prefs.set(newValue.rawValue, forSetting: "AppearanceSettings", key: "accentColor")
                 NotificationCenter.default.post(name: .appearancePreferencesDidChange, object: nil)
             }
+        }
+
+        static var customAccentHex: String {
+            get {
+                let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "customAccentHex")
+                ?? BrowserAccentColor.defaultCustomHex
+                return BrowserAccentColor.normalizedCustomHex(rawValue) ?? BrowserAccentColor.defaultCustomHex
+            }
+            set {
+                guard let normalizedHex = BrowserAccentColor.normalizedCustomHex(newValue) else {
+                    return
+                }
+
+                prefs.set(normalizedHex, forSetting: "AppearanceSettings", key: "customAccentHex")
+                NotificationCenter.default.post(name: .appearancePreferencesDidChange, object: nil)
+            }
+        }
+
+        static var customAccentColor: UIColor {
+            UIColor(hexString: customAccentHex) ?? UIColor(hexString: BrowserAccentColor.defaultCustomHex) ?? .systemBlue
         }
     }
     

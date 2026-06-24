@@ -446,6 +446,35 @@ Implementation outcome:
 - Upstream PR `https://github.com/minh-ton/reynard-browser/pull/153` remained open, non-draft, and mergeable when inspected after pushing the keyboard fix.
 - Remaining unknown: real iPhone ChatGPT/Gemini keyboard behavior is not claimed fixed until the user installs this IPA and manually verifies the checklist above.
 
+## Custom Accent Color Follow-Up
+
+Purpose: add full user-selectable accent color customization on top of the verified keyboard-fix release without touching Gecko or rebuilding Gecko.
+
+Baseline:
+
+- Keyboard-fix app-code commit: `9a0fd763b7b1a88cabca93e75cd47411798bc6bd`.
+- Release-record head before this work: `9f5a19a85c8da45b306033166ec580eb49f36e4b`.
+- Keyboard-fix prerelease: `reynard-keyboard-avoidance-fix-2026-06-24`.
+- Successful archive-only run: `28077200523`.
+- Parent PR `https://github.com/minh-ton/reynard-browser/pull/153` was open, non-draft, mergeable, and sourced from `lowestprime:main`.
+
+Target behavior:
+
+- Preserve preset accents: High Contrast, Blue, Orange, Green, and Purple.
+- Add a Custom accent row with a visible square preview and current hex value.
+- Support native `UIColorPickerViewController` on iOS 14+ with alpha disabled.
+- Support manual hex entry for `#RRGGBB` and `RRGGBB`.
+- Persist both the selected accent mode and custom hex color.
+- Apply custom accent immediately through existing `BrowserAppearance.accentColor` consumers.
+- Reject invalid, transparent, or low-contrast custom colors with user-visible feedback while keeping High Contrast available as a fallback.
+
+Implementation plan:
+
+- Extend `BrowserAccentColor` with a `custom` case, preset list, normalized custom hex helper, and lightweight contrast validation against light, dark, and OLED Black backgrounds.
+- Add `Prefs.AppearanceSettings.customAccentHex` with default `#007AFF`.
+- Update `AppearancePreferencesViewController` to show preset rows plus a Custom row, present the system color picker where available, present a hex entry alert, and reload immediately after custom changes.
+- Keep this native-only and validate with the archive-only workflow using Gecko checkpoint run `28038685786`.
+
 ## Plan of Work
 
 First repair `.github/workflows/build-latest-reynard-ipa.yml` so the dependency step installs `lld`, prepends `/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin` for WASM-only wrapper commands, uses `command -v wasm-ld`, and validates a real WASM link using the Homebrew WASI sysroot. Commit, push, trigger the workflow, and inspect the result.

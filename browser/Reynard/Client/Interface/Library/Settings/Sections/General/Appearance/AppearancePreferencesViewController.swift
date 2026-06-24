@@ -8,6 +8,13 @@
 import UIKit
 
 final class AppearancePreferencesViewController: SettingsTableViewController {
+    private enum UX {
+        static let swatchSize = CGSize(width: 22, height: 22)
+        static let swatchInset: CGFloat = 2
+        static let swatchCornerRadius: CGFloat = 4
+        static let swatchStrokeWidth: CGFloat = 1
+    }
+
     private enum Section: CaseIterable {
         case theme
         case accent
@@ -21,7 +28,10 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
                     footerTitle: "OLED Black uses true black surfaces when the interface is in dark appearance."
                 )
             case .accent:
-                return SettingsSectionText(headerTitle: "Accent")
+                return SettingsSectionText(
+                    headerTitle: "Accent",
+                    footerTitle: "Custom colors accept #RRGGBB hex values and must stay visible in light, dark, and OLED Black themes."
+                )
             case .tabs:
                 return SettingsSectionText(headerTitle: "Tabs")
             }
@@ -31,6 +41,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     private enum Row {
         case theme(BrowserThemeMode)
         case accent(BrowserAccentColor)
+        case customAccent
         case browserChromePosition
         case landscapeTabBar
     }
@@ -99,8 +110,20 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         case let .accent(accent):
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             cell.textLabel?.text = accent.displayName
-            cell.imageView?.image = swatchImage(color: accent.color)
+            cell.imageView?.image = swatchImage(color: accent.color, shape: .circle)
             cell.accessoryType = accent == Prefs.AppearanceSettings.accentColor ? .checkmark : .none
+            return cell
+        case .customAccent:
+            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+            let hex = Prefs.AppearanceSettings.customAccentHex
+            let isSelected = Prefs.AppearanceSettings.accentColor == .custom
+            cell.textLabel?.text = "Custom"
+            cell.detailTextLabel?.text = hex
+            cell.imageView?.image = swatchImage(color: Prefs.AppearanceSettings.customAccentColor, shape: .square)
+            cell.accessoryType = isSelected ? .checkmark : .none
+            cell.accessibilityLabel = "Custom accent color"
+            cell.accessibilityValue = "\(hex), \(isSelected ? "selected" : "not selected")"
+            cell.accessibilityHint = "Opens custom accent color options."
             return cell
         case .browserChromePosition:
             let cell = BrowserChromePositionPickerCell(style: .default, reuseIdentifier: nil)
@@ -132,6 +155,8 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         case let .accent(accent):
             Prefs.AppearanceSettings.accentColor = accent
             tableView.reloadSections(IndexSet(integer: indexPath.section), with: .automatic)
+        case .customAccent:
+            presentCustomAccentActions(from: tableView.cellForRow(at: indexPath))
         case .browserChromePosition, .landscapeTabBar:
             return
         }
@@ -154,19 +179,167 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
         case .theme:
             return BrowserThemeMode.allCases.map(Row.theme)
         case .accent:
-            return BrowserAccentColor.allCases.map(Row.accent)
+            return BrowserAccentColor.presetCases.map(Row.accent) + [.customAccent]
         case .tabs:
             return [.browserChromePosition, .landscapeTabBar]
         }
     }
 
-    private func swatchImage(color: UIColor) -> UIImage {
-        let size = CGSize(width: 22, height: 22)
+    private enum SwatchShape {
+        case circle
+        case square
+    }
+
+    private func swatchImage(color: UIColor, shape: SwatchShape) -> UIImage {
+        let size = UX.swatchSize
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { _ in
-            let rect = CGRect(origin: .zero, size: size).insetBy(dx: 2, dy: 2)
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: UX.swatchInset, dy: UX.swatchInset)
+            let path: UIBezierPath
+            switch shape {
+            case .circle:
+                path = UIBezierPath(ovalIn: rect)
+            case .square:
+                path = UIBezierPath(roundedRect: rect, cornerRadius: UX.swatchCornerRadius)
+            }
             color.setFill()
-            UIBezierPath(ovalIn: rect).fill()
+            path.fill()
+            UIColor.separator.setStroke()
+            path.lineWidth = UX.swatchStrokeWidth
+            path.stroke()
         }
+    }
+
+    private func presentCustomAccentActions(from sourceView: UIView?) {
+        let hex = Prefs.AppearanceSettings.customAccentHex
+        let alert = UIAlertController(
+            title: "Custom Accent",
+            message: "Current color: \(hex)",
+            preferredStyle: .actionSheet
+        )
+
+        if #available(iOS 14.0, *) {
+            alert.addAction(UIAlertAction(title: "Choose Custom Color", style: .default) { [weak self] _ in
+                self?.presentCustomColorPicker(sourceView: sourceView)
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "Enter Hex Code", style: .default) { [weak self] _ in
+            self?.presentCustomHexEntry()
+        })
+        alert.addAction(UIAlertAction(title: "Use Current Custom Color", style: .default) { [weak self] _ in
+            self?.commitCustomAccent(hex: hex, showsError: true)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let popover = alert.popoverPresentationController,
+           let sourceView {
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+
+        present(alert, animated: true)
+    }
+
+    @available(iOS 14.0, *)
+    private func presentCustomColorPicker(sourceView: UIView?) {
+        let picker = UIColorPickerViewController()
+        picker.title = "Choose Custom Color"
+        picker.selectedColor = Prefs.AppearanceSettings.customAccentColor
+        picker.supportsAlpha = false
+        picker.delegate = self
+        picker.modalPresentationStyle = .popover
+
+        if let popover = picker.popoverPresentationController,
+           let sourceView {
+            popover.sourceView = sourceView
+            popover.sourceRect = sourceView.bounds
+        }
+
+        present(picker, animated: true)
+    }
+
+    private func presentCustomHexEntry() {
+        let alert = UIAlertController(
+            title: "Custom Accent Hex",
+            message: "Enter a 6-digit color value.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { textField in
+            textField.text = Prefs.AppearanceSettings.customAccentHex
+            textField.placeholder = BrowserAccentColor.defaultCustomHex
+            textField.keyboardType = .asciiCapable
+            textField.autocapitalizationType = .allCharacters
+            textField.autocorrectionType = .no
+            textField.clearButtonMode = .whileEditing
+            textField.accessibilityLabel = "Custom accent hex code"
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Apply", style: .default) { [weak self, weak alert] _ in
+            let hex = alert?.textFields?.first?.text ?? ""
+            self?.commitCustomAccent(hex: hex, showsError: true)
+        })
+        present(alert, animated: true)
+    }
+
+    @discardableResult
+    private func commitCustomAccent(hex: String, showsError: Bool) -> Bool {
+        guard let normalizedHex = BrowserAccentColor.normalizedCustomHex(hex) else {
+            showCustomAccentError("Enter a 6-digit hex color such as #007AFF.", showsError: showsError)
+            return false
+        }
+
+        let validationMessage = BrowserAccentColor.validationMessage(forCustomHex: normalizedHex)
+        guard validationMessage == nil else {
+            showCustomAccentError(validationMessage, showsError: showsError)
+            return false
+        }
+
+        Prefs.AppearanceSettings.customAccentHex = normalizedHex
+        Prefs.AppearanceSettings.accentColor = .custom
+        reloadAccentSection()
+        return true
+    }
+
+    @discardableResult
+    private func commitCustomAccent(color: UIColor, showsError: Bool) -> Bool {
+        let validationMessage = BrowserAccentColor.validationMessage(forCustomColor: color)
+        guard validationMessage == nil else {
+            showCustomAccentError(validationMessage, showsError: showsError)
+            return false
+        }
+
+        Prefs.AppearanceSettings.customAccentHex = color.toHexString().uppercased()
+        Prefs.AppearanceSettings.accentColor = .custom
+        reloadAccentSection()
+        return true
+    }
+
+    private func showCustomAccentError(_ message: String?, showsError: Bool) {
+        guard showsError else { return }
+        AlertPresenter.show(
+            title: "Invalid Accent Color",
+            message: message ?? "Choose a different custom accent color."
+        )
+    }
+
+    private func reloadAccentSection() {
+        guard let section = displayedSections.firstIndex(of: .accent) else {
+            tableView.reloadData()
+            return
+        }
+
+        tableView.reloadSections(IndexSet(integer: section), with: .automatic)
+    }
+}
+
+@available(iOS 14.0, *)
+extension AppearancePreferencesViewController: UIColorPickerViewControllerDelegate {
+    func colorPickerViewControllerDidSelectColor(_ viewController: UIColorPickerViewController) {
+        commitCustomAccent(color: viewController.selectedColor, showsError: false)
+    }
+
+    func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
+        commitCustomAccent(color: viewController.selectedColor, showsError: true)
     }
 }
