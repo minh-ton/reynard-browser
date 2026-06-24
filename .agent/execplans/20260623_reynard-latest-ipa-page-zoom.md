@@ -417,6 +417,35 @@ Manual test checklist for the fixed IPA:
 - Autocomplete overlay still works.
 - Page Zoom sheet stays open while pressing plus/minus or moving the slider.
 
+Implementation outcome:
+
+- Keyboard fix commit: `9a0fd763b7b1a88cabca93e75cd47411798bc6bd` (`fix(app): avoid keyboard-obscured page composers`).
+- Native-only code changes:
+  - `browser/Reynard/Client/Interface/BrowserViewController.swift` now computes keyboard avoidance from the root view, safe-area bottom inset, keyboard frame, and a pre-avoidance content reference frame.
+  - `browser/Reynard/Client/Interface/ContentView/ContentView.swift` now applies a real page viewport bottom inset before using Gecko focused-input metrics as a secondary correction.
+- Local validation:
+  - `git diff --check` passed.
+  - `bash -n tools/development/build-gecko.sh` passed.
+  - `bash -n tools/release/build-app.sh` passed.
+  - `bash -n browser/Scripts/AddGecko.sh` passed.
+  - `swift` and `xcodebuild` were unavailable on the Windows host, so Swift compilation was validated by GitHub Actions.
+- Archive-only workflow run: `28077200523`, `https://github.com/lowestprime/reynard-browser/actions/runs/28077200523`.
+- Run result: success in `7m46s`.
+- Reused Gecko checkpoint: `gecko-dist-aarch64-apple-ios` from run `28038685786`; no full Gecko rebuild was triggered.
+- Uploaded artifact: `Reynard-latest-main-ipa`.
+- Local downloaded IPA: `C:\Users\Cooper\Downloads\Reynard-latest-main-28077200523\Reynard.ipa`.
+- Local IPA size: `109647702` bytes.
+- Local IPA SHA-256: `a9e6f147312444cb1c834913f6fe9b71716690d49fc15ef085235c7cdb65c972`.
+- `unzip -tq` passed with no compressed-data errors.
+- ZIP/plist/Mach-O inspection found `3032` entries, `0` duplicate paths, required app/extensions/GeckoView entries, `CFBundleVersion` `9a0fd76` for the main app and extensions, and arm64 Mach-O headers.
+- Marker scan found Page Zoom, OLED Black, search/local suggestions, bookmark import/export, history CSV, and the new `pageViewportBottomInset` symbol marker.
+- New fork prerelease: `https://github.com/lowestprime/reynard-browser/releases/tag/reynard-keyboard-avoidance-fix-2026-06-24`.
+- Release assets:
+  - `Reynard.ipa`, size `109647702`, digest `sha256:a9e6f147312444cb1c834913f6fe9b71716690d49fc15ef085235c7cdb65c972`.
+  - `Reynard.ipa.sha256`, size `77`, digest `sha256:5d76a1c74da7b43a211a746cc59d4d28ababd5eae9f21003b6137ec294083a22`.
+- Upstream PR `https://github.com/minh-ton/reynard-browser/pull/153` remained open, non-draft, and mergeable when inspected after pushing the keyboard fix.
+- Remaining unknown: real iPhone ChatGPT/Gemini keyboard behavior is not claimed fixed until the user installs this IPA and manually verifies the checklist above.
+
 ## Plan of Work
 
 First repair `.github/workflows/build-latest-reynard-ipa.yml` so the dependency step installs `lld`, prepends `/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin` for WASM-only wrapper commands, uses `command -v wasm-ld`, and validates a real WASM link using the Homebrew WASI sysroot. Commit, push, trigger the workflow, and inspect the result.
