@@ -800,9 +800,8 @@ final class BrowserViewController: UIViewController {
         }
 
         BrowserAppearance.apply(to: view.window)
-        if let session = tabManager.selectedTab?.session {
-            sessionManager.activate(session)
-        }
+        let replacedClosedSession = tabManager.recoverSelectedTabForForeground()
+        restoreSelectedContentAfterForeground(allowsSessionRebuild: !replacedClosedSession)
         syncBrowserNavigationChrome(animated: false)
         refreshAddressBar()
         updateNavigationButtons()
@@ -811,6 +810,32 @@ final class BrowserViewController: UIViewController {
         reapplyKeyboardAvoidance(
             animation: KeyboardAnimation(duration: 0, curve: [])
         )
+    }
+
+    private func restoreSelectedContentAfterForeground(allowsSessionRebuild: Bool) {
+        guard let selectedTab = tabManager.selectedTab else {
+            contentView.setSession(nil)
+            return
+        }
+
+        if !contentView.isDisplaying(session: selectedTab.session) {
+            contentView.setSession(selectedTab.session)
+        }
+        contentView.restoreInteraction(for: selectedTab.session)
+        updateBrowserLayout(animated: false)
+        view.layoutIfNeeded()
+
+        guard allowsSessionRebuild,
+              !contentView.hasRenderableContent(for: selectedTab.session),
+              tabManager.rebuildSelectedTabSessionForForeground(),
+              let recoveredTab = tabManager.selectedTab else {
+            return
+        }
+
+        contentView.setSession(recoveredTab.session)
+        contentView.restoreInteraction(for: recoveredTab.session)
+        updateBrowserLayout(animated: false)
+        view.layoutIfNeeded()
     }
 
     @objc private func appearancePreferencesDidChange() {

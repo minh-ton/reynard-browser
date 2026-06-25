@@ -58,6 +58,13 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, didReplaceSelectedSession previousSession: GeckoSession, with replacementSession: GeckoSession) {
+        if contentView.isDisplaying(session: previousSession)
+            || tabManager.selectedTab?.session === replacementSession {
+            contentView.setSession(replacementSession)
+            contentView.restoreInteraction(for: replacementSession)
+            updateBrowserLayout(animated: false)
+            applyPageZoomToSelectedTab()
+        }
         addonCoordinator.handleSelectedTabSessionReplacement(from: previousSession, to: replacementSession)
     }
     

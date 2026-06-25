@@ -348,7 +348,22 @@ final class ContentView: UIView {
     }
 
     func restoreInteraction(for session: GeckoSession) {
+        self.session = session
+        isHidden = false
+        alpha = 1
+        isUserInteractionEnabled = true
         webContentView.restoreInteraction(for: session)
+    }
+
+    func hasRenderableContent(for session: GeckoSession) -> Bool {
+        layoutIfNeeded()
+        return !isHidden
+            && alpha > 0.01
+            && isUserInteractionEnabled
+            && window != nil
+            && bounds.width > 1
+            && bounds.height > 1
+            && webContentView.hasRenderableContent(for: session)
     }
 
     // MARK: - Interaction
@@ -397,4 +412,3 @@ final class ContentView: UIView {
         overlayContentView.removeController(for: page)
     }
 }
-

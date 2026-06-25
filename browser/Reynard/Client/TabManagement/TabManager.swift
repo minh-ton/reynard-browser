@@ -41,6 +41,10 @@ protocol TabManager: AnyObject {
     @discardableResult
     func changeWebsiteModeForSelectedTab() -> Bool
     func flushStateForLifecycleEvent()
+    @discardableResult
+    func recoverSelectedTabForForeground() -> Bool
+    @discardableResult
+    func rebuildSelectedTabSessionForForeground() -> Bool
 }
 
 enum TabManagerUpdateReason {

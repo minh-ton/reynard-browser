@@ -10,6 +10,13 @@ import GeckoView
 import UIKit
 
 final class TabManagerImplementation: NSObject, TabManager {
+    private enum SessionReplacementReason {
+        case foregroundClosedSession
+        case foregroundDetachedContent
+        case crash
+        case kill
+    }
+
     private(set) var regularTabs: [Tab] = []
     private(set) var privateTabs: [Tab] = []
     private(set) var selectedTabMode: TabMode = .regular
@@ -67,13 +74,14 @@ final class TabManagerImplementation: NSObject, TabManager {
         faviconTasks.removeValue(forKey: tabID)?.cancel()
     }
     
-    private func persistState() {
+    private func persistState(waitUntilFinished: Bool = false) {
         store.persistTabs(
             regularTabs: regularTabs,
             privateTabs: privateTabs,
             selectedRegularTabID: regularTabs[safe: selectedRegularTabIndex]?.id,
             selectedPrivateTabID: privateTabs[safe: selectedPrivateTabIndex]?.id,
-            selectedTabMode: selectedTabMode
+            selectedTabMode: selectedTabMode,
+            waitUntilFinished: waitUntilFinished
         )
     }
     
@@ -752,7 +760,116 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
 
     func flushStateForLifecycleEvent() {
+        persistState(waitUntilFinished: true)
+    }
+
+    @discardableResult
+    func recoverSelectedTabForForeground() -> Bool {
+        if selectedTab == nil {
+            selectFallbackTabIfNeeded()
+        }
+
+        if selectedTab == nil {
+            createInitialTab()
+            selectFallbackTabIfNeeded()
+        }
+
+        guard let selectedTab else {
+            return false
+        }
+
+        guard selectedTab.session.isOpen() else {
+            return replaceSession(
+                forTabWithID: selectedTab.id,
+                reason: .foregroundClosedSession
+            )
+        }
+
+        if let url = restoredURL(from: selectedTab.url) {
+            sessionManager.updateSettings(of: selectedTab.session, for: url, tabID: selectedTab.id)
+        }
+        sessionManager.activate(selectedTab.session)
+        return false
+    }
+
+    private func selectFallbackTabIfNeeded() {
+        if !tabs(for: selectedTabMode).isEmpty {
+            let index = min(max(selectedIndex(for: selectedTabMode), 0), tabs(for: selectedTabMode).count - 1)
+            selectTab(at: index, mode: selectedTabMode)
+            return
+        }
+
+        if !regularTabs.isEmpty {
+            selectTab(at: min(max(selectedRegularTabIndex, 0), regularTabs.count - 1), mode: .regular)
+            return
+        }
+
+        if !privateTabs.isEmpty {
+            selectTab(at: min(max(selectedPrivateTabIndex, 0), privateTabs.count - 1), mode: .private)
+        }
+    }
+
+    @discardableResult
+    func rebuildSelectedTabSessionForForeground() -> Bool {
+        guard let selectedTab else {
+            return false
+        }
+
+        return replaceSession(
+            forTabWithID: selectedTab.id,
+            reason: .foregroundDetachedContent
+        )
+    }
+
+    @discardableResult
+    private func replaceSession(
+        forTabWithID tabID: UUID,
+        reason _: SessionReplacementReason
+    ) -> Bool {
+        guard let location = tabLocation(for: tabID) else {
+            return false
+        }
+
+        let tab = tabs(for: location.mode)[location.index]
+        let previousSession = tab.session
+        let replacementSession = createSession(
+            tabID: tab.id,
+            url: tab.url,
+            windowId: nil,
+            isPrivate: tab.isPrivate
+        )
+        tab.session = replacementSession
+        tab.state.restoreState = .none
+        tab.state.sessionNavigationAvailability = .unavailable
+        tab.state.navigationState = sessionManager.useStoredNavigationHistory(for: tab.id)
+        tab.state.isSuppressingInitialBlankPageLoad = false
+
+        if let url = restoredURL(from: tab.url) {
+            tab.state.suppressInitialNavigation = false
+            tab.state.displayState = .pending(url)
+            loadURL(url, in: tab)
+        } else {
+            tab.state.suppressInitialNavigation = true
+            tab.state.displayState = .committed
+            tab.state.loadingState = .idle
+        }
+
+        if selectedTab?.id == tab.id {
+            sessionManager.activate(replacementSession)
+        } else {
+            sessionManager.deactivate(replacementSession)
+        }
+
+        delegate?.tabManagerDidChangeTabs(self)
+        if selectedTab?.id == tab.id {
+            delegate?.tabManager(self, didReplaceSelectedSession: previousSession, with: replacementSession)
+            notifyUpdate(at: location.index, mode: location.mode, reason: .navigationState)
+            notifyUpdate(at: location.index, mode: location.mode, reason: .loading)
+        }
+        scheduleFaviconUpdate(forTabAt: location.index, mode: location.mode)
         persistState()
+        sessionManager.close(previousSession)
+        return true
     }
     
     // MARK: - Session Factory
@@ -836,14 +953,16 @@ extension TabManagerImplementation: ContentDelegate {
         guard let location = tabLocation(for: session) else {
             return
         }
-        removeTab(at: location.index, mode: location.mode)
+        let tabID = tabs(for: location.mode)[location.index].id
+        replaceSession(forTabWithID: tabID, reason: .crash)
     }
     
     func onKill(session: GeckoSession) {
         guard let location = tabLocation(for: session) else {
             return
         }
-        removeTab(at: location.index, mode: location.mode)
+        let tabID = tabs(for: location.mode)[location.index].id
+        replaceSession(forTabWithID: tabID, reason: .kill)
     }
     
     func onFirstComposite(session: GeckoSession) {}

@@ -503,6 +503,39 @@ Implementation outcome:
   - `Reynard.ipa.sha256`, size `77`, digest `sha256:bdb475a409e2dfdbdba2e6feafb7c6594eb57d5d07255f6fc03cb55a20b495f8`.
 - Remaining manual validation: install the IPA on iPhone and check Appearance > Accent presets plus Custom, picker, hex entry, persistence, theme coverage, Page Zoom, and the keyboard fix.
 
+## Background Resume Black Tab Regression Fix
+
+Purpose: fix a high-priority native lifecycle regression where returning to Reynard after using other apps can leave tabs black, non-interactive, or missing. This is a native resume/session-state repair only; Page Zoom remains implemented and must be preserved, and no Gecko rebuild should be triggered unless the archive-only path proves insufficient.
+
+Regression evidence and current state:
+
+- Parent PR `https://github.com/minh-ton/reynard-browser/pull/153` is still open, non-draft, mergeable, and sourced from `lowestprime:main`.
+- Current fork head before this fix is `2aaa124ead814b9dbd9466bedd527127a04f4c06`, which records the custom accent IPA release.
+- Existing lifecycle hooks save tab state on scene/app resign active, background, memory warning, and termination, but the tab store writes normal state asynchronously.
+- `SceneDelegate.sceneDidDisconnect` does not flush browser state.
+- Foreground restore currently reactivates the selected Gecko session and reapplies chrome, Page Zoom, layout, and keyboard avoidance, but it does not distinguish a closed/crashed/detached/non-renderable session from a healthy session.
+- `TabManagerImplementation.onCrash` and `onKill` currently remove the crashed/killed tab, matching the reported "lost tabs" failure mode.
+- JIT can remain volatile across backgrounding; this fix must keep non-JIT browsing usable by replacing or reloading broken tab sessions from persisted URLs instead of leaving black content.
+
+Targeted implementation:
+
+- Make lifecycle tab-state flushes synchronous so the last selected-tab and open-tab snapshot is durable before iOS background suspension.
+- Save on scene disconnect in addition to existing app and scene lifecycle notifications.
+- Preserve tabs on Gecko crash/kill by replacing the tab's Gecko session in place, keeping the tab ID, URL, title, privacy mode, navigation history, Page Zoom/site settings, and UI selection.
+- On foreground, ensure the selected tab exists, has an open Gecko session, is activated, is attached to the visible content view, and has page settings reapplied.
+- If the selected content view is detached, zero-sized, hidden, or non-interactive after foreground layout, reattach it; if it still cannot render, replace the selected session once from the persisted URL as a conservative black-tab recovery path.
+- Reapply theme/accent, Page Zoom, keyboard avoidance, and browser layout after recovery.
+
+Validation plan:
+
+- Run `git diff --check`.
+- Run `bash -n tools/development/build-gecko.sh`.
+- Run `bash -n tools/release/build-app.sh`.
+- Run `bash -n browser/Scripts/AddGecko.sh`.
+- Use the archive-only workflow with the existing valid Gecko checkpoint, download the IPA, run `unzip -tq`, verify app/extensions/GeckoView entries, confirm `CFBundleVersion` equals the short app commit SHA, and calculate SHA-256.
+- Publish a fork prerelease for the background resume fix and update PR #153 with the new release and validation evidence.
+- Manual device validation remains required for long iOS 26.6 background/resume behavior, JIT enabled/disabled behavior, and true black-frame compositor recovery on a physical iPhone.
+
 ## Plan of Work
 
 First repair `.github/workflows/build-latest-reynard-ipa.yml` so the dependency step installs `lld`, prepends `/opt/homebrew/opt/lld/bin:/opt/homebrew/opt/llvm/bin` for WASM-only wrapper commands, uses `command -v wasm-ld`, and validates a real WASM link using the Homebrew WASI sysroot. Commit, push, trigger the workflow, and inspect the result.

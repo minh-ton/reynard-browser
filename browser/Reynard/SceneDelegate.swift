@@ -27,7 +27,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         handleIncomingURLContexts(URLContexts)
     }
     
-    func sceneDidDisconnect(_ scene: UIScene) {}
+    func sceneDidDisconnect(_ scene: UIScene) {
+        browserViewController?.saveBrowserStateForLifecycleEvent("sceneDidDisconnect")
+    }
     
     func sceneDidBecomeActive(_ scene: UIScene) {
         BrowserAppearance.apply(to: window)

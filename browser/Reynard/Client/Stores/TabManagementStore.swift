@@ -11,6 +11,10 @@ import UIKit
 
 final class TabManagementStore {
     static let shared = TabManagementStore()
+
+    private enum Schema {
+        static let currentVersion = 2
+    }
     
     enum LastTabOverview: String, Codable {
         case regular
@@ -44,6 +48,7 @@ final class TabManagementStore {
         let id: UUID
         let title: String
         let url: String?
+        let updatedAt: String
     }
     
     private struct PersistedState {
@@ -82,6 +87,7 @@ final class TabManagementStore {
             openDatabaseLocked()
             configureDatabaseLocked()
             createSchemaLocked()
+            migrateSchemaLocked()
             ensureStateRowLocked()
         }
     }
@@ -135,16 +141,18 @@ final class TabManagementStore {
         privateTabs: [Tab],
         selectedRegularTabID: UUID?,
         selectedPrivateTabID: UUID?,
-        selectedTabMode: TabMode
+        selectedTabMode: TabMode,
+        waitUntilFinished: Bool = false
     ) {
+        let updatedAt = Self.currentTimestamp()
         let persistedRegularTabs = regularTabs.map {
-            PersistedTab(id: $0.id, title: $0.title, url: $0.url)
+            PersistedTab(id: $0.id, title: $0.title, url: $0.url, updatedAt: updatedAt)
         }
         let persistedPrivateTabs = privateTabs.map {
-            PersistedTab(id: $0.id, title: $0.title, url: $0.url)
+            PersistedTab(id: $0.id, title: $0.title, url: $0.url, updatedAt: updatedAt)
         }
         
-        stateQueue.async {
+        let persistWork = {
             let lastTabOverview = self.persistedStateLocked().lastTabOverview
             
             guard self.executeLocked("BEGIN IMMEDIATE TRANSACTION;") else {
@@ -156,7 +164,8 @@ final class TabManagementStore {
                     selectedRegularTabID: selectedRegularTabID,
                     selectedPrivateTabID: selectedPrivateTabID,
                     selectedTabMode: selectedTabMode,
-                    lastTabOverview: lastTabOverview
+                    lastTabOverview: lastTabOverview,
+                    updatedAt: updatedAt
                   ),
                   self.insertTabsLocked(persistedRegularTabs, isPrivate: false),
                   self.insertTabsLocked(persistedPrivateTabs, isPrivate: true) else {
@@ -171,6 +180,12 @@ final class TabManagementStore {
             
             self.pruneThumbCacheLocked(validTabIDs: Set((persistedRegularTabs + persistedPrivateTabs).map(\.id)))
         }
+
+        if waitUntilFinished {
+            stateQueue.sync(execute: persistWork)
+        } else {
+            stateQueue.async(execute: persistWork)
+        }
     }
     
     func persistLastOverview(_ lastTabOverview: LastTabOverview) {
@@ -180,7 +195,8 @@ final class TabManagementStore {
                 selectedRegularTabID: state.selectedRegularTabID,
                 selectedPrivateTabID: state.selectedPrivateTabID,
                 selectedTabMode: state.selectedTabMode,
-                lastTabOverview: lastTabOverview
+                lastTabOverview: lastTabOverview,
+                updatedAt: Self.currentTimestamp()
             )
         }
     }
@@ -254,7 +270,9 @@ final class TabManagementStore {
             selected_regular_tab_id TEXT,
             selected_private_tab_id TEXT,
             selected_tab_mode TEXT NOT NULL,
-            last_tab_overview TEXT NOT NULL
+            last_tab_overview TEXT NOT NULL,
+            schema_version INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL DEFAULT ''
         );
         
         CREATE TABLE IF NOT EXISTS tabs (
@@ -262,13 +280,32 @@ final class TabManagementStore {
             title TEXT NOT NULL,
             url TEXT,
             is_private INTEGER NOT NULL,
-            position INTEGER NOT NULL
+            position INTEGER NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT ''
         );
         
         CREATE INDEX IF NOT EXISTS idx_tabs_private_position ON tabs(is_private, position ASC);
         """
         
         _ = executeLocked(sql)
+    }
+
+    private func migrateSchemaLocked() {
+        ensureColumnLocked(
+            table: "tab_state",
+            column: "schema_version",
+            definition: "INTEGER NOT NULL DEFAULT 1"
+        )
+        ensureColumnLocked(
+            table: "tab_state",
+            column: "updated_at",
+            definition: "TEXT NOT NULL DEFAULT ''"
+        )
+        ensureColumnLocked(
+            table: "tabs",
+            column: "updated_at",
+            definition: "TEXT NOT NULL DEFAULT ''"
+        )
     }
     
     private func ensureStateRowLocked() {
@@ -277,7 +314,8 @@ final class TabManagementStore {
             selectedRegularTabID: state.selectedRegularTabID,
             selectedPrivateTabID: state.selectedPrivateTabID,
             selectedTabMode: state.selectedTabMode,
-            lastTabOverview: state.lastTabOverview
+            lastTabOverview: state.lastTabOverview,
+            updatedAt: Self.currentTimestamp()
         )
     }
     
@@ -322,17 +360,20 @@ final class TabManagementStore {
         selectedRegularTabID: UUID?,
         selectedPrivateTabID: UUID?,
         selectedTabMode: TabMode,
-        lastTabOverview: LastTabOverview
+        lastTabOverview: LastTabOverview,
+        updatedAt: String
     ) -> Bool {
         guard let statement = prepareStatementLocked(
             """
-            INSERT INTO tab_state (id, selected_regular_tab_id, selected_private_tab_id, selected_tab_mode, last_tab_overview)
-            VALUES (1, ?, ?, ?, ?)
+            INSERT INTO tab_state (id, selected_regular_tab_id, selected_private_tab_id, selected_tab_mode, last_tab_overview, schema_version, updated_at)
+            VALUES (1, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 selected_regular_tab_id = excluded.selected_regular_tab_id,
                 selected_private_tab_id = excluded.selected_private_tab_id,
                 selected_tab_mode = excluded.selected_tab_mode,
-                last_tab_overview = excluded.last_tab_overview;
+                last_tab_overview = excluded.last_tab_overview,
+                schema_version = excluded.schema_version,
+                updated_at = excluded.updated_at;
             """
         ) else {
             return false
@@ -346,6 +387,8 @@ final class TabManagementStore {
         bindOptional(selectedPrivateTabID?.uuidString, to: statement, at: 2)
         bind(selectedTabMode.rawValue, to: statement, at: 3)
         bind(lastTabOverview.rawValue, to: statement, at: 4)
+        sqlite3_bind_int64(statement, 5, Int64(Schema.currentVersion))
+        bind(updatedAt, to: statement, at: 6)
         return sqlite3_step(statement) == SQLITE_DONE
     }
     
@@ -424,8 +467,8 @@ final class TabManagementStore {
     private func insertTabsLocked(_ tabs: [PersistedTab], isPrivate: Bool) -> Bool {
         guard let statement = prepareStatementLocked(
             """
-            INSERT INTO tabs (id, title, url, is_private, position)
-            VALUES (?, ?, ?, ?, ?);
+            INSERT INTO tabs (id, title, url, is_private, position, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?);
             """
         ) else {
             return false
@@ -443,6 +486,7 @@ final class TabManagementStore {
             bindOptional(tab.url, to: statement, at: 3)
             sqlite3_bind_int64(statement, 4, isPrivate ? 1 : 0)
             sqlite3_bind_int64(statement, 5, Int64(index))
+            bind(tab.updatedAt, to: statement, at: 6)
             
             guard sqlite3_step(statement) == SQLITE_DONE else {
                 return false
@@ -500,6 +544,30 @@ final class TabManagementStore {
         }
         return result == SQLITE_OK
     }
+
+    private func ensureColumnLocked(table: String, column: String, definition: String) {
+        guard !columnNamesLocked(for: table).contains(column) else {
+            return
+        }
+
+        _ = executeLocked("ALTER TABLE \(table) ADD COLUMN \(column) \(definition);")
+    }
+
+    private func columnNamesLocked(for table: String) -> Set<String> {
+        guard let statement = prepareStatementLocked("PRAGMA table_info(\(table));") else {
+            return []
+        }
+
+        defer {
+            sqlite3_finalize(statement)
+        }
+
+        var names = Set<String>()
+        while sqlite3_step(statement) == SQLITE_ROW {
+            names.insert(string(from: statement, at: 1))
+        }
+        return names
+    }
     
     private func prepareStatementLocked(_ sql: String) -> OpaquePointer? {
         guard let database else {
@@ -544,5 +612,9 @@ final class TabManagementStore {
         }
         
         return string(from: statement, at: index)
+    }
+
+    private static func currentTimestamp() -> String {
+        ISO8601DateFormatter().string(from: Date())
     }
 }
