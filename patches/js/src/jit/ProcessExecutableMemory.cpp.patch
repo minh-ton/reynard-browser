@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/ProcessExecutableMemory.cpp b/js/src/jit/ProcessExecutableMemory.cpp
-index cea7d764ca96..688881c00df1 100644
+index cea7d764ca96..c9ef61b53f7d 100644
 --- a/js/src/jit/ProcessExecutableMemory.cpp
 +++ b/js/src/jit/ProcessExecutableMemory.cpp
 @@ -14,6 +14,12 @@
@@ -23,7 +23,7 @@ index cea7d764ca96..688881c00df1 100644
  
  #ifdef XP_WIN
  #  include "mozilla/StackWalk_windows.h"
-@@ -47,6 +54,88 @@
+@@ -47,6 +54,99 @@
  using namespace js;
  using namespace js::jit;
  
@@ -89,6 +89,17 @@ index cea7d764ca96..688881c00df1 100644
 +
 +static bool SetAliasProtection(void* executableAddress, void* writableAddress,
 +                               size_t bytes, ProtectionSetting protection) {
++  if (!sHasTXMSupport) {
++    if (protection == ProtectionSetting::Writable) {
++      return vm_protect(mach_task_self(),
++                        reinterpret_cast<vm_address_t>(writableAddress), bytes,
++                        false, VM_PROT_READ | VM_PROT_WRITE) == KERN_SUCCESS;
++    }
++    sys_dcache_flush(writableAddress, bytes);
++    sys_icache_invalidate(executableAddress, bytes);
++    return true;
++  }
++
 +  switch (protection) {
 +    case ProtectionSetting::Writable:
 +      if (vm_protect(mach_task_self(),
@@ -112,7 +123,7 @@ index cea7d764ca96..688881c00df1 100644
  #ifdef XP_WIN
  #  if defined(HAVE_64BIT_BUILD)
  #    define NEED_JIT_UNWIND_HANDLING
-@@ -463,6 +552,20 @@ static void* ComputeRandomAllocationAddress() {
+@@ -463,6 +563,20 @@ static void* ComputeRandomAllocationAddress() {
  static void DecommitPages(void* addr, size_t bytes);
  
  static void* ReserveProcessExecutableMemory(size_t bytes) {
@@ -133,7 +144,7 @@ index cea7d764ca96..688881c00df1 100644
    // On most Unix platforms our strategy is as follows:
    //
    // * Reserve:  mmap with PROT_NONE
-@@ -507,21 +610,22 @@ static void* ReserveProcessExecutableMemory(size_t bytes) {
+@@ -507,21 +621,22 @@ static void* ReserveProcessExecutableMemory(size_t bytes) {
    void* randomAddr = ComputeRandomAllocationAddress();
    unsigned protection = PROT_NONE;
    unsigned flags = MAP_NORESERVE | MAP_PRIVATE | MAP_ANON;
@@ -161,7 +172,7 @@ index cea7d764ca96..688881c00df1 100644
  }
  
  static void DeallocateProcessExecutableMemory(void* addr, size_t bytes) {
-@@ -561,8 +665,30 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
+@@ -561,8 +676,30 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
  
  [[nodiscard]] static bool CommitPages(void* addr, size_t bytes,
                                        ProtectionSetting protection) {
@@ -193,7 +204,7 @@ index cea7d764ca96..688881c00df1 100644
    int ret;
    do {
      ret = madvise(addr, bytes, MADV_FREE_REUSE);
-@@ -570,14 +696,14 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
+@@ -570,14 +707,14 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
    if (ret != 0) {
      return false;
    }
@@ -211,7 +222,7 @@ index cea7d764ca96..688881c00df1 100644
    unsigned flags = ProtectionSettingToFlags(protection);
    void* p = MozTaggedAnonymousMmap(addr, bytes, flags,
                                     MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0,
-@@ -587,28 +713,48 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
+@@ -587,28 +724,51 @@ static unsigned ProtectionSettingToFlags(ProtectionSetting protection) {
    }
    MOZ_RELEASE_ASSERT(p == addr);
    return true;
@@ -232,6 +243,9 @@ index cea7d764ca96..688881c00df1 100644
 +        vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(writable),
 +                   bytes, false, VM_PROT_NONE);
 +    MOZ_RELEASE_ASSERT(kret == KERN_SUCCESS);
++    if (!sHasTXMSupport) {
++      return;
++    }
 +  }
 +
 +  int ret = mprotect(addr, bytes, PROT_NONE);
@@ -264,7 +278,7 @@ index cea7d764ca96..688881c00df1 100644
  #  endif
  }
  #endif
-@@ -722,8 +868,42 @@ class ProcessExecutableMemory {
+@@ -722,8 +882,42 @@ class ProcessExecutableMemory {
        return false;
      }
  
@@ -307,7 +321,7 @@ index cea7d764ca96..688881c00df1 100644
      mozilla::Array<uint64_t, 2> seed;
      GenerateXorShift128PlusSeed(seed);
      rng_.emplace(seed[0], seed[1]);
-@@ -743,6 +923,20 @@ class ProcessExecutableMemory {
+@@ -743,6 +937,20 @@ class ProcessExecutableMemory {
      MOZ_ASSERT(initialized());
      MOZ_ASSERT(pages_.empty());
      MOZ_ASSERT(pagesAllocated_ == 0);
@@ -328,7 +342,7 @@ index cea7d764ca96..688881c00df1 100644
      DeallocateProcessExecutableMemory(base_, MaxCodeBytesPerProcess);
      base_ = nullptr;
      rng_.reset();
-@@ -901,6 +1095,17 @@ bool js::jit::InitProcessExecutableMemory() { return execMemory.init(); }
+@@ -901,6 +1109,17 @@ bool js::jit::InitProcessExecutableMemory() { return execMemory.init(); }
  
  void js::jit::ReleaseProcessExecutableMemory() { execMemory.release(); }
  
@@ -346,7 +360,7 @@ index cea7d764ca96..688881c00df1 100644
  size_t js::jit::LikelyAvailableExecutableMemory() {
    // Round down available memory to the closest MB.
    return MaxCodeBytesPerProcess -
-@@ -920,6 +1125,19 @@ bool js::jit::AddressIsInExecutableMemory(const void* p) {
+@@ -920,6 +1139,19 @@ bool js::jit::AddressIsInExecutableMemory(const void* p) {
    return execMemory.containsAddress(p);
  }
  
@@ -366,7 +380,7 @@ index cea7d764ca96..688881c00df1 100644
  bool js::jit::ReprotectRegion(void* start, size_t size,
                                ProtectionSetting protection,
                                MustFlushICache flushICache) {
-@@ -969,7 +1187,30 @@ bool js::jit::ReprotectRegion(void* start, size_t size,
+@@ -969,7 +1201,30 @@ bool js::jit::ReprotectRegion(void* start, size_t size,
      return true;
    }
  
