@@ -34,6 +34,7 @@ final class TabOverviewCard: UICollectionViewCell {
         static let tabTitleMaximumWidthAdjustment: CGFloat = -24
         static let tabTitleFontSize: CGFloat = 14
         static let reorderLiftAnimationDuration: TimeInterval = 0.18
+        static let swipeDismissMaximumFade: CGFloat = 0.35
     }
     
     enum TransitionState {
@@ -177,6 +178,7 @@ final class TabOverviewCard: UICollectionViewCell {
         updateWebpagePreviewShadowColor()
         setTransitionState(.visible)
         setReorderState(.resting, animated: false)
+        setSwipeOffset(0, progress: 0)
     }
     
     // MARK: - Content
@@ -251,6 +253,11 @@ final class TabOverviewCard: UICollectionViewCell {
     func isCloseButton(at point: CGPoint) -> Bool {
         let pointInButton = convert(point, to: closeTabButton)
         return closeTabButton.containsHitTarget(pointInButton)
+    }
+    
+    func setSwipeOffset(_ offset: CGFloat, progress: CGFloat) {
+        transform = CGAffineTransform(translationX: offset, y: 0)
+        contentView.alpha = 1 - (min(max(progress, 0), 1) * UX.swipeDismissMaximumFade)
     }
     
     // MARK: - View Setup
