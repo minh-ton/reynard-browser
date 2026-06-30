@@ -1,8 +1,8 @@
 diff --git a/gfx/wgpu_bindings/Cargo.toml b/gfx/wgpu_bindings/Cargo.toml
-index 238eae91ad86..4bf1cee125ac 100644
+index a2cfa626c429..fc664d2b6fdb 100644
 --- a/gfx/wgpu_bindings/Cargo.toml
 +++ b/gfx/wgpu_bindings/Cargo.toml
-@@ -59,7 +59,7 @@ windows = { version = "0.62", default-features = false, features = [
+@@ -58,7 +58,7 @@ windows = { version = "0.62", default-features = false, features = [
    "Win32_Graphics_Direct3D12",
  ] }
  
