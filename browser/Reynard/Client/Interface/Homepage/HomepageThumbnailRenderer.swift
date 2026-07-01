@@ -40,37 +40,46 @@ final class HomepageThumbnailRenderer {
         }
         
         DispatchQueue.main.async { [weak self] in
-            guard let homepageViewController = self?.homepageViewController else {
-                completion(nil)
-                return
-            }
-            
-            homepageViewController.loadViewIfNeeded()
-            homepageViewController.setPrivateBrowsing(isPrivateBrowsing)
-            homepageViewController.setContentMode(contentMode)
-            homepageViewController.setShowsBackground(true)
-            
-            let view = homepageViewController.view!
-            let originalFrame = view.frame
-            let temporarilyAttachedView = view.superview == nil
-            if temporarilyAttachedView {
-                let captureContainer = UIView(frame: CGRect(origin: .zero, size: size))
-                captureContainer.addSubview(view)
-                view.frame = captureContainer.bounds
-            }
-            
-            view.layoutIfNeeded()
-            
-            let renderer = UIGraphicsImageRenderer(size: size)
-            let thumbnail = renderer.image { _ in
-                view.drawHierarchy(in: view.bounds, afterScreenUpdates: false)
-            }
-            
-            if temporarilyAttachedView {
-                view.removeFromSuperview()
-            }
-            view.frame = originalFrame
-            completion(thumbnail)
+            completion(self?.snapshot(size: size, contentMode: contentMode, isPrivateBrowsing: isPrivateBrowsing))
         }
+    }
+
+    func snapshot(
+        size: CGSize,
+        contentMode: HomepageContentMode,
+        isPrivateBrowsing: Bool
+    ) -> UIImage? {
+        guard size.width > 1,
+              size.height > 1,
+              let homepageViewController else {
+            return nil
+        }
+
+        homepageViewController.loadViewIfNeeded()
+        homepageViewController.setPrivateBrowsing(isPrivateBrowsing)
+        homepageViewController.setContentMode(contentMode)
+        homepageViewController.setShowsBackground(true)
+
+        let view = homepageViewController.view!
+        let originalFrame = view.frame
+        let temporarilyAttachedView = view.superview == nil
+        if temporarilyAttachedView {
+            let captureContainer = UIView(frame: CGRect(origin: .zero, size: size))
+            captureContainer.addSubview(view)
+            view.frame = captureContainer.bounds
+        }
+
+        view.layoutIfNeeded()
+
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { _ in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: false)
+        }
+
+        if temporarilyAttachedView {
+            view.removeFromSuperview()
+        }
+        view.frame = originalFrame
+        return image
     }
 }

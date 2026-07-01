@@ -15,6 +15,7 @@ protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
+    func addressBarShareableURL(_ addressBar: AddressBar) -> URL?
 }
 
 final class AddressBar: UIView {
@@ -440,6 +441,10 @@ final class AddressBar: UIView {
         gestures?.resetHorizontalTransition()
     }
     
+    func performAfterTransition(_ completion: @escaping () -> Void) -> Bool {
+        gestures?.performAfterTransition(completion) ?? false
+    }
+    
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
         gestures?.animateAutomaticNewTabTransition(to: tab, completion: completion)
     }
@@ -550,6 +555,7 @@ final class AddressBar: UIView {
         tapGesture.cancelsTouchesInView = true
         tapGesture.delegate = self
         addGestureRecognizer(tapGesture)
+        addressBarContent.addInteraction(UIContextMenuInteraction(delegate: self))
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
@@ -939,6 +945,28 @@ final class AddressBar: UIView {
         let start = textField.beginningOfDocument
         let end = textField.endOfDocument
         textField.selectedTextRange = textField.textRange(from: start, to: end)
+    }
+}
+
+// MARK: - UIContextMenuInteractionDelegate
+
+extension AddressBar: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configurationForMenuAtLocation location: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard editingState == .inactive,
+              let url = delegate?.addressBarShareableURL(self) else {
+            return nil
+        }
+        
+        return UIContextMenuConfiguration(identifier: url as NSURL, previewProvider: nil) { _ in
+            UIMenu(title: "", children: [
+                UIAction(title: "Copy URL", image: UIImage(named: "reynard.document.on.document")) { _ in
+                    UIPasteboard.general.string = url.absoluteString
+                },
+            ])
+        }
     }
 }
 

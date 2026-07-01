@@ -125,6 +125,19 @@ final class HomepageOverlayCoordinator {
         )
     }
     
+    func previewImage(for tab: Tab, size: CGSize) -> UIImage? {
+        guard let delegate,
+              needsHomepageThumbnail(for: tab) else {
+            return nil
+        }
+
+        return homepageThumbnailRenderer.snapshot(
+            size: size,
+            contentMode: embeddedContentMode(layout: delegate.homepageLayout),
+            isPrivateBrowsing: tab.isPrivate
+        )
+    }
+
     // MARK: - Presentation
     
     private func presentHomepage(_ presentation: HomepagePresentation, animated: Bool) {

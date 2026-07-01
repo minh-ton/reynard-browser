@@ -39,16 +39,10 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         tabCard.isHidden = false
         tabCard.configure(with: tabs(for: tabMode)[indexPath.item])
         tabCard.onClose = { [weak self, weak collectionView, weak tabCard] in
-            guard let self,
-                  let collectionView,
-                  let tabCard,
-                  let currentIndexPath = collectionView.indexPath(for: tabCard),
-                  let currentTabMode = self.tabMode(for: collectionView),
-                  let tabOverview = self.tabOverview else {
+            guard let self, let collectionView, let tabCard else {
                 return
             }
-            tabOverview.delegate?.tabOverviewDidRequestClearPendingTabExpansion(tabOverview)
-            tabOverview.dataSource?.closeTab(at: currentIndexPath.item, mode: currentTabMode.tabMode)
+            self.closeTab(for: tabCard, in: collectionView)
         }
         return tabCard
     }
@@ -78,6 +72,7 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
             to: destinationIndexPath.item,
             mode: tabMode.tabMode
         )
+        refreshTabIdentitySnapshot()
     }
     
     func collectionView(
@@ -99,14 +94,29 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
     }
     
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let longPressGesture = gestureRecognizer as? UILongPressGestureRecognizer,
-              let collectionView = longPressGesture.view as? UICollectionView,
-              let indexPath = collectionView.indexPathForItem(at: longPressGesture.location(in: collectionView)),
-              let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard else {
-            return false
+        if let longPressGesture = gestureRecognizer as? UILongPressGestureRecognizer,
+           let collectionView = longPressGesture.view as? UICollectionView,
+           let indexPath = collectionView.indexPathForItem(at: longPressGesture.location(in: collectionView)),
+           let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard {
+            let locationInCard = collectionView.convert(longPressGesture.location(in: collectionView), to: tabCard)
+            return !tabCard.isCloseButton(at: locationInCard)
         }
-        let locationInCard = collectionView.convert(longPressGesture.location(in: collectionView), to: tabCard)
-        return !tabCard.isCloseButton(at: locationInCard)
+        
+        if let panGesture = gestureRecognizer as? UIPanGestureRecognizer,
+           let collectionView = panGesture.view as? UICollectionView {
+            let velocity = panGesture.velocity(in: collectionView)
+            guard velocity.x < 0,
+                  abs(velocity.x) > abs(velocity.y),
+                  let indexPath = collectionView.indexPathForItem(at: panGesture.location(in: collectionView)),
+                  !isInsertionPlaceholder(in: collectionView, at: indexPath),
+                  let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard else {
+                return false
+            }
+            let locationInCard = collectionView.convert(panGesture.location(in: collectionView), to: tabCard)
+            return !tabCard.isCloseButton(at: locationInCard)
+        }
+        
+        return false
     }
     
     private func insertionPlaceholderCell(

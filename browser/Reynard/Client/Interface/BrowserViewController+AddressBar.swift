@@ -87,6 +87,14 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         presentBookmarkEditor(addToFavorites: favorites)
     }
     
+    func addressBarShareableURL(_ addressBar: AddressBar) -> URL? {
+        guard let selectedTab = tabManager.selectedTab else {
+            return nil
+        }
+        
+        return tabManager.shareableURL(for: selectedTab)
+    }
+    
     // MARK: - AddressBarGestureDelegate
     
     var transitionContainerView: UIView {
@@ -126,25 +134,20 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
     
     func selectTabFromGesture(at index: Int, mode: TabMode) {
-        if mode == tabManager.selectedTabMode,
-           index != tabManager.selectedTabIndex {
-            captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode) { [weak self] _ in
-                self?.tabManager.selectTab(at: index, mode: mode)
-            }
-            return
-        }
-        
         tabManager.selectTab(at: index, mode: mode)
     }
     
     func createTabForSwipe() -> Int {
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
         homepageOverlayCoordinator.prepareHomepageForNewTab(mode: tabManager.selectedTabMode)
-        let index = tabManager.createTab(selecting: true)
+        let index = tabManager.createTab(selecting: false)
         applyNewTabDisplayOption(toTabAt: index)
+        if let tab = tabManager.activeTabs[safe: index] {
+            tab.thumbnail = homepageOverlayCoordinator.previewImage(for: tab, size: contentView.bounds.size)
+        }
         return index
     }
-    
+
     func setPendingTabExpansion(at index: Int?) {
         tabBar.setPendingExpansion(at: index)
     }
@@ -155,6 +158,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     
     func addressBarGestureWillBegin() {
         browserChrome.dismissActionBar(animated: false)
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
     }
     
     // MARK: - Page Zoom

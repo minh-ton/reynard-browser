@@ -33,7 +33,7 @@ struct FrequentlyVisitedSiteActions {
                         shareLink(site.url)
                     },
                 ]),
-                UIAction(title: "Remove Link", image: UIImage(named: "reynard.minus.circle")) { _ in
+                UIAction(title: "Remove Link", image: UIImage(named: "reynard.minus.circle"), attributes: .destructive) { _ in
                     removeLink()
                 },
             ])

@@ -384,6 +384,11 @@ final class BrowserChrome: UIView {
     }
     
     func resetHorizontalTransition() { addressBar.resetHorizontalTransition() }
+
+    func performAfterTransition(_ completion: @escaping () -> Void) -> Bool {
+        addressBar.performAfterTransition(completion)
+    }
+
     func resignAddressBarFirstResponder() { _ = addressBar.resignFirstResponder() }
     
     func performAfterAddressBarMenuDismissal(_ action: @escaping () -> Void) {
