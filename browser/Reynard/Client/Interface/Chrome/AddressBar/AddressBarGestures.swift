@@ -333,10 +333,6 @@ final class AddressBarGestures: NSObject {
             horizontalDirection = direction
         }
         
-        if let barHost = addressBar.superview {
-            ensureHorizontalSourceBar(in: barHost)
-        }
-        
         if horizontalTargetIndex == nil {
             let candidate = delegate.selectedTabIndex + direction
             if delegate.activeTabs.indices.contains(candidate) {
@@ -510,6 +506,7 @@ final class AddressBarGestures: NSObject {
 
         let targetTab = delegate.activeTabs[createdIndex]
         prepareHorizontalTarget(for: targetTab, direction: 1, pageWidth: width, delegate: delegate)
+        applySourceAddressBarTransform(CGAffineTransform(translationX: currentTranslation, y: 0))
 
         finishHorizontalTabSwitch(to: createdIndex, mode: mode, translationX: currentTranslation)
     }
@@ -521,29 +518,21 @@ final class AddressBarGestures: NSObject {
         horizontalTargetContentView = targetContent
 
         if let barHost = addressBar.superview {
-            ensureHorizontalSourceBar(in: barHost)
+            if horizontalSourceBarView == nil,
+               let sourceBar = addressBar.snapshotView(afterScreenUpdates: false) {
+                sourceBar.frame = restingFrame(of: addressBar, in: barHost)
+                sourceBar.isUserInteractionEnabled = false
+                barHost.addSubview(sourceBar)
+                barHost.bringSubviewToFront(sourceBar)
+                horizontalSourceBarView = sourceBar
+                addressBar.isHidden = true
+            }
+            
             let targetBar = createAddressBarPreview(for: tab)
             targetBar.frame = restingFrame(of: addressBar, in: barHost).offsetBy(dx: CGFloat(direction) * pageWidth, dy: 0)
             barHost.addSubview(targetBar)
             horizontalTargetBarView = targetBar
         }
-    }
-
-    private func ensureHorizontalSourceBar(in barHost: UIView) {
-        guard horizontalSourceBarView == nil else {
-            return
-        }
-        
-        guard let sourceBar = addressBar.snapshotView(afterScreenUpdates: false) else {
-            return
-        }
-        
-        sourceBar.frame = restingFrame(of: addressBar, in: barHost)
-        sourceBar.isUserInteractionEnabled = false
-        barHost.addSubview(sourceBar)
-        barHost.bringSubviewToFront(sourceBar)
-        horizontalSourceBarView = sourceBar
-        addressBar.isHidden = true
     }
 
     private func applySourceAddressBarTransform(_ transform: CGAffineTransform) {
