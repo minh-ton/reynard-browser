@@ -14,17 +14,17 @@ final class AppAppearancePickerCell: UITableViewCell {
     private let systemAppearanceOption = AppAppearanceOptionControl(
         appearance: .system,
         symbolName: "reynard.circle.lefthalf.filled",
-        title: "System"
+        title: NSLocalizedString("System", comment: "")
     )
     private let lightAppearanceOption = AppAppearanceOptionControl(
         appearance: .light,
         symbolName: "reynard.sun.max.fill",
-        title: "Day"
+        title: NSLocalizedString("Day", comment: "")
     )
     private let darkAppearanceOption = AppAppearanceOptionControl(
         appearance: .dark,
         symbolName: "reynard.moon.fill",
-        title: "Night"
+        title: NSLocalizedString("Night", comment: "")
     )
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {

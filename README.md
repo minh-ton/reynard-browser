@@ -147,6 +147,23 @@ Build dependencies and the Gecko engine.
 ./tools/development/build-gecko.sh
 ```
 
+```bash
+./mach clobber
+
+LDFLAGS="-L/opt/homebrew/opt/llvm/lib" \
+CPPFLAGS="-I/opt/homebrew/opt/llvm/include" \
+PATH="/opt/homebrew/opt/llvm/bin:$PATH" \
+./tools/development/build-gecko.sh --without-wasm-sandboxed-libraries
+```
+
+Build ipa
+
+```bash
+./tools/release/build-app.sh
+./tools/release/create-ipa.sh
+```
+ipa at `\dist`
+
 To run Reynard, open `Reynard.xcodeproj` in Xcode and build/run it from there.
 
 ## Notes

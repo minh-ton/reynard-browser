@@ -41,33 +41,33 @@ final class HomepageSectionPreferencesViewController: SettingsTableViewControlle
         var title: String {
             switch self {
             case .favorites:
-                return "Favorites"
+                return NSLocalizedString("Favorites", comment: "")
             case .frequentlyVisited:
-                return "Frequently Visited"
+                return NSLocalizedString("Frequently Visited", comment: "")
             case .recentlyClosedTabs:
-                return "Recently Closed Tabs"
+                return NSLocalizedString("Recently Closed Tabs", comment: "")
             }
         }
         
         var switchTitle: String {
             switch self {
             case .favorites:
-                return "Show Favorites"
+                return NSLocalizedString("Show Favorites", comment: "")
             case .frequentlyVisited:
-                return "Show Frequently Visited"
+                return NSLocalizedString("Show Frequently Visited", comment: "")
             case .recentlyClosedTabs:
-                return "Show Recently Closed Tabs"
+                return NSLocalizedString("Show Recently Closed Tabs", comment: "")
             }
         }
         
         var countTitle: String {
             switch self {
             case .favorites:
-                return "Number of Rows"
+                return NSLocalizedString("Number of Rows", comment: "")
             case .frequentlyVisited:
-                return "Number of Sites"
+                return NSLocalizedString("Number of Sites", comment: "")
             case .recentlyClosedTabs:
-                return "Number of Items"
+                return NSLocalizedString("Number of Items", comment: "")
             }
         }
         
@@ -231,7 +231,7 @@ final class HomepageSectionPreferencesViewController: SettingsTableViewControlle
             return cell
         case .showInPrivateBrowsing:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Show in Private Browsing"
+            cell.textLabel?.text = NSLocalizedString("Show in Private Browsing", comment: "")
             cell.selectionStyle = .none
             cell.accessoryView = privateBrowsingSwitch
             return cell

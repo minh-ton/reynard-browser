@@ -12,7 +12,7 @@ final class ClearDownloadsViewController: UITableViewController {
     private var selectedTimeframe: ClearDataTimeframe = .lastHour
     
     private lazy var clearFooterView = ClearDataFooterView(
-        title: "Clear Downloads",
+        title: NSLocalizedString("Clear Downloads", comment: ""),
         target: self,
         action: #selector(confirmClearDownloads)
     )
@@ -20,7 +20,7 @@ final class ClearDownloadsViewController: UITableViewController {
     init(onClear: @escaping (Date?) -> Void) {
         self.onClear = onClear
         super.init(style: .insetGrouped)
-        title = "Clear Downloads"
+        title = NSLocalizedString("Clear Downloads", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -51,11 +51,11 @@ final class ClearDownloadsViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        "Clear Timeframe"
+        NSLocalizedString("Clear Timeframe", comment: "")
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        "Clearing downloads history does not delete files in your Downloads folder."
+        NSLocalizedString("ClearingDownloadsHistoryFooterText", comment: "")
     }
     
     override func tableView(

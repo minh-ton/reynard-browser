@@ -15,6 +15,7 @@ struct AboutSettingsSection {
         case sourceCode
         case supportProject
         case githubProfile
+        case translateZH
     }
     
     var rowCount: Int {
@@ -29,17 +30,19 @@ struct AboutSettingsSection {
         switch Row.allCases[index] {
         case .appVersion:
             let info = Bundle.main.infoDictionary
-            let version = info?["CFBundleShortVersionString"] as? String ?? "Unknown"
-            let build = info?["CFBundleVersion"] as? String ?? "Unknown"
-            return valueCell(title: "Reynard Browser", value: "\(version) (\(build))")
+            let version = info?["CFBundleShortVersionString"] as? String ?? NSLocalizedString("Unknown", comment: "")
+            let build = info?["CFBundleVersion"] as? String ?? NSLocalizedString("Unknown", comment: "")
+            return valueCell(title: NSLocalizedString("Reynard Browser", comment: ""), value: "\(version) (\(build))")
         case .engineVersion:
-            return valueCell(title: "Engine Version", value: GeckoRuntime.version)
+            return valueCell(title: NSLocalizedString("Engine Version", comment: ""), value: GeckoRuntime.version)
         case .sourceCode:
-            return linkCell(title: "View Source Code")
+            return linkCell(title: NSLocalizedString("View Source Code", comment: ""))
         case .supportProject:
-            return linkCell(title: "Support The Project")
+            return linkCell(title: NSLocalizedString("Support The Project", comment: ""))
         case .githubProfile:
             return linkCell(title: "GitHub - @minh-ton")
+        case .translateZH:
+            return linkCell(title: "GitHub - @DevelopLab")
         }
     }
     
@@ -60,6 +63,8 @@ struct AboutSettingsSection {
             return URL(string: "https://buymeacoffee.com/hnimnot")
         case .githubProfile:
             return URL(string: "https://github.com/minh-ton")
+        case .translateZH:
+            return URL(string: "https://github.com/DevelopCubeLab")
         case .appVersion, .engineVersion:
             return nil
         }

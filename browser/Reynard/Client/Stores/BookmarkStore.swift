@@ -860,7 +860,7 @@ final class BookmarkStore {
             dateAdded: Date(timeIntervalSince1970: 0),
             parentGUID: nil,
             parentName: nil,
-            title: Constants.rootFolderTitle,
+            title: Constants.rootFolderTitle == "Bookmarks" ? NSLocalizedString("Bookmarks", comment: "") : Constants.rootFolderTitle, // Solving the problem of Bookmarks not being able to be i18n
             position: 0,
             childCount: 0,
             isProtected: true

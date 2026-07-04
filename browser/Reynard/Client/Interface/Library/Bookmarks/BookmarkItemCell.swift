@@ -112,6 +112,7 @@ final class BookmarkItemCell: UITableViewCell {
         
         if folder.isProtected && folder.title == "Favorites" {
             applyIcon(UIImage(named: "reynard.star"), tintColor: .secondaryLabel)
+            itemTitleLabel.text = NSLocalizedString("Favorites", comment: "")
         } else {
             applyIcon(UIImage(named: "reynard.folder"), tintColor: .secondaryLabel)
         }

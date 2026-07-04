@@ -24,17 +24,17 @@ struct ImagePreviewMenu {
         
         return UIContextMenuConfiguration(identifier: UUID().uuidString as NSString, previewProvider: previewProvider) { _ in
             UIMenu(title: "", children: [
-                UIAction(title: "Share Image", image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
+                UIAction(title: NSLocalizedString("Share Image", comment: ""), image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
                     loadImage(from: url) { image in
                         presentShareSheet(image: image, from: presentingController, sourceView: sourceView)
                     }
                 },
-                UIAction(title: "Save to Photos", image: UIImage(named: "reynard.square.and.arrow.down")) { _ in
+                UIAction(title: NSLocalizedString("Save to Photos", comment: ""), image: UIImage(named: "reynard.square.and.arrow.down")) { _ in
                     loadImage(from: url) { image in
                         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
                     }
                 },
-                UIAction(title: "Copy", image: UIImage(named: "reynard.document.on.document")) { _ in
+                UIAction(title: NSLocalizedString("Copy", comment: ""), image: UIImage(named: "reynard.document.on.document")) { _ in
                     loadImage(from: url) { image in
                         UIPasteboard.general.image = image
                     }

@@ -85,7 +85,7 @@ public struct AddonErrorPresenter {
         if let trimmedAddonName, !trimmedAddonName.isEmpty {
             resolvedAddonName = trimmedAddonName
         } else {
-            resolvedAddonName = "This extension"
+            resolvedAddonName = NSLocalizedString("This extension", comment: "")
         }
         let normalizedCode = normalizeCode(code)
         
@@ -100,49 +100,49 @@ public struct AddonErrorPresenter {
         switch normalizedCode {
         case "ERROR_BLOCKLISTED":
             return AddonErrorPresentation(
-                statusText: "Blocked",
+                statusText: NSLocalizedString("Blocked", comment: ""),
                 alertMessage: "\(resolvedAddonName) violates Mozilla's policies and can't be installed on Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_SOFT_BLOCKED":
             return AddonErrorPresentation(
-                statusText: "Restricted",
+                statusText: NSLocalizedString("Restricted", comment: ""),
                 alertMessage: "\(resolvedAddonName) is restricted and can't be installed on Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_NETWORK_FAILURE":
             return AddonErrorPresentation(
-                statusText: "Network error",
+                statusText: NSLocalizedString("Network error", comment: ""),
                 alertMessage: "This extension could not be downloaded because of a connection failure.",
                 isUserCancelled: false
             )
         case "ERROR_CORRUPT_FILE":
             return AddonErrorPresentation(
-                statusText: "Corrupt file",
+                statusText: NSLocalizedString("Corrupt file", comment: ""),
                 alertMessage: "This extension could not be installed because it appears to be corrupt.",
                 isUserCancelled: false
             )
         case "ERROR_SIGNEDSTATE_REQUIRED":
             return AddonErrorPresentation(
-                statusText: "Not verified",
+                statusText: NSLocalizedString("Not verified", comment: ""),
                 alertMessage: "This extension could not be installed because it has not been verified.",
                 isUserCancelled: false
             )
         case "ERROR_INCOMPATIBLE":
             return AddonErrorPresentation(
-                statusText: "Incompatible",
+                statusText: NSLocalizedString("Incompatible", comment: ""),
                 alertMessage: "\(resolvedAddonName) could not be installed because it is not compatible with this version of Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_ADMIN_INSTALL_ONLY":
             return AddonErrorPresentation(
-                statusText: "Admin-only",
+                statusText: NSLocalizedString("Admin-only", comment: ""),
                 alertMessage: "\(resolvedAddonName) could not be installed because it can only be installed by an organization using enterprise policies, which isn't supported on this platform.",
                 isUserCancelled: false
             )
         default:
             return AddonErrorPresentation(
-                statusText: isInstallation ? "Error" : "Update failed",
+                statusText: isInstallation ? NSLocalizedString("Error", comment: "") : NSLocalizedString("Update failed", comment: ""),
                 alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "Failed to update extension.",
                 isUserCancelled: false
             )

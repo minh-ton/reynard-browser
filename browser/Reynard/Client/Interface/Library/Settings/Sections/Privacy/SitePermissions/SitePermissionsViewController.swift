@@ -39,19 +39,19 @@ final class SitePermissionsViewController: SettingsTableViewController {
         var title: String {
             switch self {
             case .camera:
-                return "Camera"
+                return NSLocalizedString("Camera", comment: "")
             case .microphone:
-                return "Microphone"
+                return NSLocalizedString("Microphone", comment: "")
             case .location:
-                return "Location"
+                return NSLocalizedString("LocationServices", comment: "")
             case .persistentStorage:
-                return "Persistent Storage"
+                return NSLocalizedString("Persistent Storage", comment: "")
             case .crossOriginStorageAccess:
-                return "Cross-site Cookies"
+                return NSLocalizedString("Cross-site Cookies", comment: "")
             case .localDeviceAccess:
-                return "Device Apps and Services"
+                return NSLocalizedString("Device Apps and Services", comment: "")
             case .localNetworkAccess:
-                return "Local Network Devices"
+                return NSLocalizedString("Local Network Devices", comment: "")
             }
         }
         
@@ -99,7 +99,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Site Permissions"
+        title = NSLocalizedString("Site Permissions", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -147,7 +147,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return disabledPermissionMessageCell()
             case .openSettings:
                 let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-                cell.textLabel?.text = "Open Settings"
+                cell.textLabel?.text = NSLocalizedString("Open Settings", comment: "")
                 cell.textLabel?.textColor = view.tintColor
                 cell.accessoryType = .none
                 return cell
@@ -184,7 +184,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             switch WebsiteActionRow.allCases[indexPath.row] {
             case .resetPermissions:
-                cell.textLabel?.text = "Reset Permissions for all Sites"
+                cell.textLabel?.text = NSLocalizedString("Reset Permissions for all Sites", comment: "")
                 cell.textLabel?.textColor = .systemRed
                 cell.detailTextLabel?.text = nil
                 cell.detailTextLabel?.textColor = .secondaryLabel
@@ -261,12 +261,12 @@ final class SitePermissionsViewController: SettingsTableViewController {
     private func confirmResetSitePermissions() {
         AlertPresenter.show(
             title: nil,
-            message: "This action will reset permissions for all sites. It cannot be undone.",
+            message: NSLocalizedString("This action will reset permissions for all sites. It cannot be undone.", comment: ""),
             buttons: [
-                AlertPresenter.Button(title: "OK", style: .destructive) {
+                AlertPresenter.Button(title: NSLocalizedString("OK", comment: ""), style: .destructive) {
                     SiteSettingsUtils.resetStoredSitePermissions()
                 },
-                AlertPresenter.Button(title: "Cancel"),
+                AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: "")),
             ]
         )
     }

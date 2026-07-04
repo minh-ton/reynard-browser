@@ -30,21 +30,21 @@ final class SiteSettingsViewController: UITableViewController {
         var title: String {
             switch self {
             case .camera:
-                return "Camera"
+                return NSLocalizedString("Camera", comment: "")
             case .microphone:
-                return "Microphone"
+                return NSLocalizedString("Microphone", comment: "")
             case .location:
-                return "Location"
+                return NSLocalizedString("LocationServices", comment: "")
             case .persistentStorage:
-                return "Persistent Storage"
+                return NSLocalizedString("Persistent Storage", comment: "")
             case .crossOriginStorageAccess:
-                return "Cross-site Cookies"
+                return NSLocalizedString("Cross-site Cookies", comment: "")
             case .localDeviceAccess:
-                return "Device Apps and Services"
+                return NSLocalizedString("Device Apps and Services", comment: "")
             case .localNetworkAccess:
-                return "Local Network Devices"
+                return NSLocalizedString("Local Network Devices", comment: "")
             case .autoplay:
-                return "Autoplay"
+                return NSLocalizedString("Autoplay", comment: "")
             }
         }
         
@@ -115,7 +115,8 @@ final class SiteSettingsViewController: UITableViewController {
         self.origin = origin
         self.session = session
         super.init(style: .insetGrouped)
-        title = "Settings for \(host)"
+//        title = "Settings for \(host)"
+        title = String.localizedStringWithFormat(NSLocalizedString("SettingsForHost", comment: ""), host)
     }
     
     required init?(coder: NSCoder) {
@@ -158,9 +159,9 @@ final class SiteSettingsViewController: UITableViewController {
         case .availability:
             return nil
         case .media:
-            return "Media"
+            return NSLocalizedString("Media", comment: "")
         case .permissions:
-            return "Permissions"
+            return NSLocalizedString("Permissions", comment: "")
         }
     }
     
@@ -219,7 +220,7 @@ final class SiteSettingsViewController: UITableViewController {
         }
         
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = "Open Settings"
+        cell.textLabel?.text = NSLocalizedString("Open Settings", comment: "")
         cell.textLabel?.textColor = view.tintColor
         cell.accessoryType = .none
         return cell
@@ -265,7 +266,7 @@ final class SiteSettingsViewController: UITableViewController {
     
     private func resetSitePermissionsCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        cell.textLabel?.text = "Reset Permissions for this Site"
+        cell.textLabel?.text = NSLocalizedString("Reset Permissions for this Site", comment: "")
         cell.textLabel?.textColor = .systemRed
         cell.detailTextLabel?.text = nil
         cell.detailTextLabel?.textColor = .secondaryLabel
@@ -419,12 +420,13 @@ final class SiteSettingsViewController: UITableViewController {
     private func confirmResetSitePermissions() {
         AlertPresenter.show(
             title: nil,
-            message: "This action will reset permissions for this site. It cannot be undone.",
+//            message: "This action will reset permissions for this site. It cannot be undone.",
+            message: NSLocalizedString("This action will reset permissions for all sites. It cannot be undone.", comment: ""),
             buttons: [
-                AlertPresenter.Button(title: "OK", style: .destructive) { [weak self] in
+                AlertPresenter.Button(title: NSLocalizedString("OK", comment: ""), style: .destructive) { [weak self] in
                     self?.performResetSitePermissions()
                 },
-                AlertPresenter.Button(title: "Cancel"),
+                AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: "")),
             ]
         )
     }

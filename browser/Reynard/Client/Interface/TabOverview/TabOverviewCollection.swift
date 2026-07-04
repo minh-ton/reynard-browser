@@ -262,13 +262,14 @@ final class TabOverviewCollection: NSObject {
         imageView.contentMode = .scaleAspectFit
         imageView.tintColor = .secondaryLabel
         let titleLabel = UILabel()
-        titleLabel.text = "Private Browsing"
+        titleLabel.text = NSLocalizedString("Private Browsing", comment: "")
         titleLabel.textAlignment = .center
         titleLabel.textColor = .secondaryLabel
         titleLabel.font = .preferredFont(forTextStyle: .title2)
         titleLabel.adjustsFontForContentSizeCategory = true
         let subtitleLabel = UILabel()
-        subtitleLabel.text = "Reynard won't remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved."
+//        subtitleLabel.text = "Reynard won't remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved."
+        subtitleLabel.text = NSLocalizedString("PrivateBrowsingMessage", comment: "")
         subtitleLabel.textAlignment = .center
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)

@@ -20,10 +20,10 @@ struct RecentlyCloseTabItemActions {
             if let url {
                 children.append(
                     UIMenu(title: "", options: .displayInline, children: [
-                        UIAction(title: "Copy Link", image: UIImage(named: "reynard.document.on.document")) { _ in
+                        UIAction(title: NSLocalizedString("Copy Link", comment: ""), image: UIImage(named: "reynard.document.on.document")) { _ in
                             UIPasteboard.general.string = url.absoluteString
                         },
-                        UIAction(title: "Share Link", image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
+                        UIAction(title: NSLocalizedString("Share Link", comment: ""), image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
                             shareLink(url)
                         },
                     ])
@@ -33,7 +33,7 @@ struct RecentlyCloseTabItemActions {
             children.append(
                 UIMenu(title: "", options: .displayInline, children: [
                     UIAction(
-                        title: "Remove Recently Closed Tab",
+                        title: NSLocalizedString("Remove Recently Closed TabRemove Recently Closed Tab", comment: ""),
                         image: UIImage(named: "reynard.minus.circle"),
                         attributes: .destructive
                     ) { _ in

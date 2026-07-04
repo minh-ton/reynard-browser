@@ -16,11 +16,11 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .links:
-                return SettingsSectionText(headerTitle: "Links")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Links", comment: ""))
             case .media:
-                return SettingsSectionText(headerTitle: "Media")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Media", comment: ""))
             case .desktopWebsite:
-                return SettingsSectionText(headerTitle: "Request Desktop Website On")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Request Desktop Website On", comment: ""))
             }
         }
     }
@@ -44,7 +44,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Browsing"
+        title = NSLocalizedString("Browsing", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -101,8 +101,8 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             }
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
             cell.selectionStyle = .none
-            cell.textLabel?.text = "Show Link Previews"
-            cell.detailTextLabel?.text = "When long-pressing links"
+            cell.textLabel?.text = NSLocalizedString("Show Link Previews", comment: "")
+            cell.detailTextLabel?.text = NSLocalizedString("When long-pressing links", comment: "")
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.accessoryView = showLinkPreviewsSwitch
             return cell
@@ -113,7 +113,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             switch MediaRow.allCases[indexPath.row] {
             case .autoplay:
                 let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-                cell.textLabel?.text = "Autoplay"
+                cell.textLabel?.text = NSLocalizedString("Autoplay", comment: "")
                 cell.detailTextLabel?.text = SiteSettingsUtils.actionTitle(
                     for: SiteSettingsUtils.defaultAction(for: .autoplay),
                     permission: .autoplay
@@ -123,8 +123,8 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             case .showImagePreviews:
                 let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
                 cell.selectionStyle = .none
-                cell.textLabel?.text = "Show Image Previews"
-                cell.detailTextLabel?.text = "When long-pressing images"
+                cell.textLabel?.text = NSLocalizedString("Show Image Previews", comment: "")
+                cell.detailTextLabel?.text = NSLocalizedString("When long-pressing images", comment: "")
                 cell.detailTextLabel?.textColor = .secondaryLabel
                 cell.accessoryView = showImagePreviewsSwitch
                 return cell
@@ -135,7 +135,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             }
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             cell.selectionStyle = .none
-            cell.textLabel?.text = "All Website"
+            cell.textLabel?.text = NSLocalizedString("All Website", comment: "")
             cell.accessoryView = requestDesktopWebsiteSwitch
             return cell
         }
@@ -157,7 +157,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             switch MediaRow.allCases[indexPath.row] {
             case .autoplay:
                 navigationController?.pushViewController(
-                    SitePermissionDetailsViewController(permission: .autoplay, title: "Autoplay"),
+                    SitePermissionDetailsViewController(permission: .autoplay, title: NSLocalizedString("Autoplay", comment: "")),
                     animated: true
                 )
             case .showImagePreviews:

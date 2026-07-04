@@ -13,7 +13,7 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
         
         var text: SettingsSectionText {
             return SettingsSectionText(
-                footerTitle: "Navigations to these websites will use the browser's compatibility user agent. Depending on your Request Desktop Website setting, these websites may identify your device as either an Android device or a desktop Linux device."
+                footerTitle: NSLocalizedString("UserAgentOverridesWebsiteFooterText", comment: "")
             )
         }
     }
@@ -31,7 +31,7 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
     
     init() {
         super.init(style: .insetGrouped)
-        title = "User Agent Overrides"
+        title = NSLocalizedString("User Agent Overrides", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -66,7 +66,7 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
             cell.textLabel?.text = domain
             cell.selectionStyle = .default
         case .addWebsite:
-            cell.textLabel?.text = "Add Website..."
+            cell.textLabel?.text = NSLocalizedString("Add Website", comment: "").appending("...")
             cell.textLabel?.textColor = tableView.tintColor
         }
         return cell
@@ -109,19 +109,19 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
     }
     
     private func promptForOverrideDomain() {
-        let alert = UIAlertController(title: "Add Website", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: NSLocalizedString("Add Website", comment: ""), message: nil, preferredStyle: .alert)
         alert.addTextField { field in
-            field.placeholder = "e.g. youtube.com"
+            field.placeholder = NSLocalizedString("AddWebsitePlaceholder", comment: "")
             field.autocorrectionType = .no
             field.autocapitalizationType = .none
             field.keyboardType = .URL
             field.clearButtonMode = .whileEditing
         }
-        let addAction = UIAlertAction(title: "Add", style: .default) { [weak self, weak alert] _ in
+        let addAction = UIAlertAction(title: NSLocalizedString("Add", comment: ""), style: .default) { [weak self, weak alert] _ in
             guard let text = alert?.textFields?.first?.text else { return }
             self?.addOverrideDomain(text)
         }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel))
         alert.addAction(addAction)
         present(alert, animated: true)
     }

@@ -79,7 +79,7 @@ final class DonationRecommendationViewController: UIViewController, HomepageReco
         label.font = UIFontMetrics(forTextStyle: .title2).scaledFont(
             for: .systemFont(ofSize: UX.titleFontSize, weight: .bold)
         )
-        label.text = "Support The Project"
+        label.text = NSLocalizedString("Support The Project", comment: "")
         label.textAlignment = .left
         label.textColor = .label
         label.numberOfLines = 0
@@ -90,7 +90,7 @@ final class DonationRecommendationViewController: UIViewController, HomepageReco
     private let messageLabel: UILabel = {
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .body)
-        label.text = "Hi, I'm Minh, the developer of Reynard. If you find the project useful, sponsoring me helps keep it alive and maintained. Thanks for the support!"
+        label.text = NSLocalizedString("AboutDeveloperMessage", comment: "")
         label.textAlignment = .left
         label.textColor = .secondaryLabel
         label.numberOfLines = 0
@@ -100,7 +100,7 @@ final class DonationRecommendationViewController: UIViewController, HomepageReco
     
     private lazy var donateButton: UIButton = {
         return makeActionButton(
-            title: "Buy Me a Coffee",
+            title: NSLocalizedString("Buy Me a Coffee", comment: ""),
             imageName: "reynard.arrow.up.right",
             action: #selector(openDonationLink)
         )
@@ -108,7 +108,7 @@ final class DonationRecommendationViewController: UIViewController, HomepageReco
     
     private lazy var notNowButton: UIButton = {
         return makeActionButton(
-            title: "Not Now",
+            title: NSLocalizedString("Not Now", comment: ""),
             imageName: "reynard.clock",
             action: #selector(postponeDonationRecommendation)
         )

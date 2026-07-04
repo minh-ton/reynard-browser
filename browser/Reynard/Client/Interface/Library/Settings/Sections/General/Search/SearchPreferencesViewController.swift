@@ -15,9 +15,9 @@ final class SearchPreferencesViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .searchEngine:
-                return SettingsSectionText(headerTitle: "Search Engine")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Search Engine", comment: ""))
             case .searchSuggestions:
-                return SettingsSectionText(headerTitle: "Search Suggestions")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Search Suggestions", comment: ""))
             }
         }
     }
@@ -39,7 +39,7 @@ final class SearchPreferencesViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Search"
+        title = NSLocalizedString("Search", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -94,7 +94,7 @@ final class SearchPreferencesViewController: SettingsTableViewController {
             }
             
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-            cell.textLabel?.text = "Search Engine"
+            cell.textLabel?.text = NSLocalizedString("Search Engine", comment: "")
             cell.detailTextLabel?.text = Prefs.SearchSettings.searchEngine.displayName
             cell.detailTextLabel?.textColor = .secondaryLabel
             cell.accessoryType = .disclosureIndicator
@@ -106,18 +106,18 @@ final class SearchPreferencesViewController: SettingsTableViewController {
             
             switch SearchSuggestionsRow.allCases[indexPath.row] {
             case .showSearchSuggestions:
-                return switchCell(title: "Show Search Suggestions", accessoryView: showSearchSuggestionsSwitch)
+                return switchCell(title: NSLocalizedString("Show Search Suggestions", comment: ""), accessoryView: showSearchSuggestionsSwitch)
             case .showInPrivateBrowsing:
-                return switchCell(title: "Show in Private Browsing", accessoryView: showInPrivateBrowsingSwitch)
+                return switchCell(title: NSLocalizedString("Show in Private Browsing", comment: ""), accessoryView: showInPrivateBrowsingSwitch)
             case .searchBrowsingHistory:
-                return switchCell(title: "Search Browsing History", accessoryView: searchBrowsingHistorySwitch)
+                return switchCell(title: NSLocalizedString("Search Browsing History", comment: ""), accessoryView: searchBrowsingHistorySwitch)
             case .searchBookmarks:
-                return switchCell(title: "Search Bookmarks", accessoryView: searchBookmarksSwitch)
+                return switchCell(title: NSLocalizedString("Search Bookmarks", comment: ""), accessoryView: searchBookmarksSwitch)
             case .searchOpenedTabs:
-                return switchCell(title: "Search Opened Tabs", accessoryView: searchOpenedTabsSwitch)
+                return switchCell(title: NSLocalizedString("Search Opened Tabs", comment: ""), accessoryView: searchOpenedTabsSwitch)
             case .searchSuggestionProvider:
                 let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-                cell.textLabel?.text = "Search Suggestion Provider"
+                cell.textLabel?.text = NSLocalizedString("Search Suggestion Provider", comment: "")
                 cell.detailTextLabel?.text = Prefs.SearchSettings.searchSuggestionProvider.name
                 cell.detailTextLabel?.textColor = .secondaryLabel
                 cell.accessoryType = .disclosureIndicator

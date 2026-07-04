@@ -36,7 +36,7 @@ final class RecentlyClosedTabsSectionViewController: UIViewController {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = RecentlyClosedTabsSectionViewController.titleFont
         label.textColor = .label
-        label.text = "Recently Closed Tabs"
+        label.text = NSLocalizedString("Recently Closed Tabs", comment: "")
         label.adjustsFontForContentSizeCategory = true
         return label
     }()
@@ -46,7 +46,7 @@ final class RecentlyClosedTabsSectionViewController: UIViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .label
         button.titleLabel?.adjustsFontForContentSizeCategory = true
-        button.setTitle("Clear All", for: .normal)
+        button.setTitle(NSLocalizedString("Clear All", comment: ""), for: .normal)
         button.addTarget(self, action: #selector(clearAllButtonTapped), for: .touchUpInside)
         return button
     }()

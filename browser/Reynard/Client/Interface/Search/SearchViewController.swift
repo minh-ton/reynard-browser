@@ -70,7 +70,7 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         return view
     }()
     
-    private lazy var userDataHeaderView = makeSectionHeaderView(title: "Bookmarks, History, and Tabs")
+    private lazy var userDataHeaderView = makeSectionHeaderView(title: NSLocalizedString("Bookmarks, History, and Tabs", comment: ""))
     
     // MARK: - Lifecycle
     
@@ -200,7 +200,8 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
         case .primarySuggestion:
             return results.bestMatch == nil ? nil : bestMatchSpacerView
         case .typedQuery:
-            return hasQuery ? makeSectionHeaderView(title: "\(viewModel.searchSuggestionProvider.name) Suggestions") : nil
+//            return hasQuery ? makeSectionHeaderView(title: "\(viewModel.searchSuggestionProvider.name) Suggestions") : nil
+            return hasQuery ? makeSectionHeaderView(title: String.localizedStringWithFormat(NSLocalizedString("SearchSuggestionProviderName", comment: ""), viewModel.searchSuggestionProvider.name)) : nil
         case .completions:
             return nil
         case .userDataResults:

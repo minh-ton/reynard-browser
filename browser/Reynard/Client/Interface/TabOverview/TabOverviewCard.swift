@@ -182,7 +182,7 @@ final class TabOverviewCard: UICollectionViewCell {
     // MARK: - Content
     
     func configure(with tab: Tab) {
-        tabTitleLabel.text = tab.title.isEmpty ? "Homepage" : tab.title
+        tabTitleLabel.text = tab.title.isEmpty ? NSLocalizedString("Homepage", comment: "") : tab.title
         webpagePreviewImageView.image = tab.thumbnail
         faviconImageView.image = tab.favicon ?? Self.fallbackFaviconImage
     }

@@ -12,9 +12,9 @@ enum HomepageOpeningScreen: String, CaseIterable {
     var title: String {
         switch self {
         case .homepage:
-            return "Homepage"
+            return NSLocalizedString("Homepage", comment: "")
         case .lastTab:
-            return "Last Tab"
+            return NSLocalizedString("Last Tab", comment: "")
         }
     }
 }

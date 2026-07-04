@@ -18,15 +18,15 @@ final class SettingsViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .updates:
-                return SettingsSectionText(headerTitle: "Update Available")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Update Available", comment: ""))
             case .jit:
-                return SettingsSectionText(headerTitle: "JIT")
+                return SettingsSectionText(headerTitle: NSLocalizedString("JIT", comment: ""))
             case .general:
-                return SettingsSectionText(headerTitle: "General")
+                return SettingsSectionText(headerTitle: NSLocalizedString("General", comment: ""))
             case .privacy:
-                return SettingsSectionText(headerTitle: "Privacy")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Privacy", comment: ""))
             case .about:
-                return SettingsSectionText(headerTitle: "About")
+                return SettingsSectionText(headerTitle: NSLocalizedString("About", comment: ""))
             }
         }
     }

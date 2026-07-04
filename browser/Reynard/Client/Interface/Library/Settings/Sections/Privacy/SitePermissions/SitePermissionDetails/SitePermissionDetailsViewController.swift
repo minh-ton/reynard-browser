@@ -27,13 +27,13 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .defaultBehavior:
-                return SettingsSectionText(headerTitle: "Default Behavior")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Default Behavior", comment: ""))
             case .allowedSiteEntries:
-                return SettingsSectionText(headerTitle: "Allowed Sites")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Allowed Sites", comment: ""))
             case .blockedSiteEntries:
-                return SettingsSectionText(headerTitle: "Denied Sites")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Denied Sites", comment: ""))
             case .customSiteActions:
-                return SettingsSectionText(headerTitle: "Changed Sites")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Changed Sites", comment: ""))
             }
         }
     }
@@ -230,7 +230,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
     
     private func emptySiteEntryCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        cell.textLabel?.text = "No Sites Added"
+        cell.textLabel?.text = NSLocalizedString("No Sites Added", comment: "")
         cell.textLabel?.textColor = .secondaryLabel
         cell.selectionStyle = .none
         return cell
@@ -286,7 +286,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
     }
     
     private func clearSiteActionSwipeConfiguration(for host: String) -> UISwipeActionsConfiguration {
-        let clearAction = UIContextualAction(style: .destructive, title: "Clear") { [weak self] _, _, completion in
+        let clearAction = UIContextualAction(style: .destructive, title: NSLocalizedString("Clear", comment: "")) { [weak self] _, _, completion in
             guard let self else {
                 completion(false)
                 return
@@ -308,11 +308,14 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         let timestamp = timestampFormatter.string(from: date)
         switch action {
         case .allowed:
-            return "Allowed on \(timestamp)"
+//            return "Allowed on \(timestamp)"
+            return String.localizedStringWithFormat(NSLocalizedString("AllowedOnTimestamp", comment: ""), timestamp)
         case .blocked:
-            return "Denied on \(timestamp)"
+//            return "Denied on \(timestamp)"
+            return String.localizedStringWithFormat(NSLocalizedString("DeniedOnTimestamp", comment: ""), timestamp)
         case .askToAllow:
-            return "Changed on \(timestamp)"
+//            return "Changed on \(timestamp)"
+            return String.localizedStringWithFormat(NSLocalizedString("ChangedOnTimestamp", comment: ""), timestamp)
         }
     }
     

@@ -16,9 +16,9 @@ final class PageZoomPreferencesViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .default:
-                return SettingsSectionText(headerTitle: "Default")
+                return SettingsSectionText(headerTitle: NSLocalizedString("DefaultSize", comment: ""))
             case .siteSettings:
-                return SettingsSectionText(headerTitle: "Specific Site Settings")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Specific Site Settings", comment: ""))
             case .reset:
                 return SettingsSectionText()
             }
@@ -48,7 +48,7 @@ final class PageZoomPreferencesViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Page Zoom"
+        title = NSLocalizedString("Page Zoom", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -95,7 +95,7 @@ final class PageZoomPreferencesViewController: SettingsTableViewController {
         switch row {
         case .defaultZoom:
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-            cell.textLabel?.text = "Zoom Level"
+            cell.textLabel?.text = NSLocalizedString("Zoom Level", comment: "")
             cell.detailTextLabel?.text = PageZoomLevels.displayText(for: Prefs.AppearanceSettings.defaultPageZoomLevel)
             cell.accessoryType = .disclosureIndicator
             return cell
@@ -107,7 +107,7 @@ final class PageZoomPreferencesViewController: SettingsTableViewController {
             return cell
         case .reset:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Reset Page Zoom Settings"
+            cell.textLabel?.text = NSLocalizedString("Reset Page Zoom Settings", comment: "")
             cell.textLabel?.textColor = .systemRed
             return cell
         }
@@ -147,7 +147,7 @@ final class PageZoomPreferencesViewController: SettingsTableViewController {
             return nil
         }
         
-        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive, title: NSLocalizedString("Delete", comment: "")) { [weak self] _, _, completion in
             _ = SiteSettingsStore.shared.clearPageZoom(forHost: setting.host)
             self?.reloadPageZoomSettings()
             self?.tableView.reloadData()

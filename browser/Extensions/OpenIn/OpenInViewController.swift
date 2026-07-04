@@ -42,12 +42,12 @@ final class OpenInViewController: UIViewController {
             }
             
             guard let sharedURL else {
-                self.finishWithError(message: "No link was provided.")
+                self.finishWithError(message: NSLocalizedString("No link was provided.", comment: ""))
                 return
             }
             
             guard let browserURL = self.browserOpenURL(for: sharedURL) else {
-                self.finishWithError(message: "Unable to open Reynard.")
+                self.finishWithError(message: NSLocalizedString("Unable to open Reynard.", comment: ""))
                 return
             }
             
@@ -106,7 +106,7 @@ final class OpenInViewController: UIViewController {
             responder = r.next
         }
 
-        finishWithError(message: "Unable to open Reynard.")
+        finishWithError(message: NSLocalizedString("Unable to open Reynard.", comment: ""))
     }
     
     private func clearBackgrounds(startingAt view: UIView?) {

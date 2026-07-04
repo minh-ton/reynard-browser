@@ -14,12 +14,12 @@ final class AddressBarPositionPickerCell: UITableViewCell {
     private let bottomPositionOption = AddressBarPositionOptionControl(
         position: .bottom,
         symbolName: "reynard.platter.filled.bottom.iphone",
-        title: "Bottom"
+        title: NSLocalizedString("Bottom", comment: "")
     )
     private let topPositionOption = AddressBarPositionOptionControl(
         position: .top,
         symbolName: "reynard.platter.filled.top.iphone",
-        title: "Top"
+        title: NSLocalizedString("Top", comment: "")
     )
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {

@@ -130,7 +130,7 @@ final class TabBarCell: UICollectionViewCell {
     // MARK: - Configuration
     
     func configure(tab: Tab, isSelected: Bool, layoutMode: LayoutMode, cellWidth: CGFloat) {
-        let displayTitle = tab.title.isEmpty ? "Homepage" : tab.title
+        let displayTitle = tab.title.isEmpty ? NSLocalizedString("Homepage", comment: "") : tab.title
         titleLabel.text = displayTitle
         faviconView.image = tab.favicon ?? Self.fallbackFavicon
         contentView.backgroundColor = isSelected ? .systemGray6 : .systemGray5

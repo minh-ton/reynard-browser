@@ -43,13 +43,13 @@ enum SiteSettingsUtils {
         var permissions: [String] = []
         
         if isCameraPermissionDisabled() {
-            permissions.append("Camera")
+            permissions.append(NSLocalizedString("Camera", comment: ""))
         }
         if isMicrophonePermissionDisabled() {
-            permissions.append("Microphone")
+            permissions.append(NSLocalizedString("Microphone", comment: ""))
         }
         if isLocationPermissionDisabled() {
-            permissions.append("Location")
+            permissions.append(NSLocalizedString("location", comment: ""))
         }
         
         return permissions
@@ -79,20 +79,20 @@ enum SiteSettingsUtils {
         case .autoplay:
             switch action {
             case .allowed:
-                return "Allow Audio and Video"
+                return NSLocalizedString("Allow Audio and Video", comment: "")
             case .askToAllow:
-                return "Block Audio only"
+                return NSLocalizedString("Block Audio only", comment: "")
             case .blocked:
-                return "Block Audio and Video"
+                return NSLocalizedString("Block Audio and Video", comment: "")
             }
         default:
             switch action {
             case .allowed:
-                return "Allow"
+                return NSLocalizedString("Allow", comment: "")
             case .askToAllow:
-                return "Ask"
+                return NSLocalizedString("Ask", comment: "")
             case .blocked:
-                return "Deny"
+                return NSLocalizedString("Deny", comment: "")
             }
         }
     }

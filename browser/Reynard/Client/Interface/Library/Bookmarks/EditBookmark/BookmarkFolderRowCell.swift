@@ -80,13 +80,23 @@ final class BookmarkFolderRowCell: UITableViewCell {
     func configure(folder: BookmarkFolderSnapshot, depth: Int, isSelected: Bool) {
         hierarchyDepth = depth
         folderTitleLabel.text = folder.title
+        // Set a title and resolve the issue of Favorites not being correctly i18n.
+//        if folder.title == "Favorites" {
+//            folderTitleLabel.text = NSLocalizedString("Favorites", comment: "")
+//        } else if folder.title == "Bookmarks" {
+//            folderTitleLabel.text = NSLocalizedString("Bookmarks", comment: "")
+//        } else {
+//            folderTitleLabel.text = folder.title
+//        }
         folderIconLeadingConstraint?.constant = CGFloat(depth) * UX.hierarchyIndentWidth
         folderIconView.tintColor = isSelected ? .systemBlue : .secondaryLabel
         
         if folder.parentGUID == nil {
             folderIconView.image = UIImage(named: "reynard.book")?.withRenderingMode(.alwaysTemplate)
+            folderTitleLabel.text = NSLocalizedString("Bookmarks", comment: "")
         } else if folder.isProtected && folder.title == "Favorites" {
             folderIconView.image = UIImage(named: "reynard.star")?.withRenderingMode(.alwaysTemplate)
+            folderTitleLabel.text = NSLocalizedString("Favorites", comment: "")
         } else {
             folderIconView.image = UIImage(named: "reynard.folder")?.withRenderingMode(.alwaysTemplate)
         }

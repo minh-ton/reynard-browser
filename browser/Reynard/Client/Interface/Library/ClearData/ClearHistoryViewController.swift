@@ -15,7 +15,7 @@ final class ClearHistoryViewController: UITableViewController {
     private let closeAllTabsSwitch = UISwitch()
     
     private lazy var clearFooterView = ClearDataFooterView(
-        title: "Clear History",
+        title: NSLocalizedString("Clear History", comment: ""),
         target: self,
         action: #selector(confirmClearHistory)
     )
@@ -24,7 +24,7 @@ final class ClearHistoryViewController: UITableViewController {
         self.tabCount = tabCount
         self.onClear = onClear
         super.init(style: .insetGrouped)
-        title = "Clear History"
+        title = NSLocalizedString("Clear History", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -55,7 +55,7 @@ final class ClearHistoryViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        section == 0 ? "Clear Timeframe" : "Additional Options"
+        section == 0 ? NSLocalizedString("Clear Timeframe", comment: "") : NSLocalizedString("Additional Options", comment: "")
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
@@ -63,7 +63,8 @@ final class ClearHistoryViewController: UITableViewController {
             return nil
         }
         
-        return "This will close your \(tabCount) \(tabCount == 1 ? "tab" : "tabs")."
+//        return "This will close your \(tabCount) \(tabCount == 1 ? "tab" : "tabs")."
+        return String.localizedStringWithFormat(NSLocalizedString("CloseTabCount", comment: ""), String.localizedStringWithFormat(NSLocalizedString("TabsCount", comment: ""), tabCount))
     }
     
     override func tableView(
@@ -75,7 +76,7 @@ final class ClearHistoryViewController: UITableViewController {
         if indexPath.section == 0 {
             ClearDataTimeframe.configureCell(cell, at: indexPath, selectedTimeframe: selectedTimeframe)
         } else {
-            cell.textLabel?.text = "Close All Tabs"
+            cell.textLabel?.text = NSLocalizedString("Close All Tabs", comment: "")
             cell.accessoryView = closeAllTabsSwitch
             cell.accessoryType = .none
             cell.selectionStyle = .none

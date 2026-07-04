@@ -26,19 +26,19 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
         var title: String {
             switch self {
             case .browsingHistory:
-                return "Browsing History"
+                return NSLocalizedString("Browsing History", comment: "")
             case .cookiesAndSiteData:
-                return "Cookies and Site Data"
+                return NSLocalizedString("Cookies and Site Data", comment: "")
             case .cachedImagesAndFiles:
-                return "Cached Images and Files"
+                return NSLocalizedString("Cached Images and Files", comment: "")
             case .downloadsHistory:
-                return "Downloads History"
+                return NSLocalizedString("Downloads History", comment: "")
             case .downloadedFiles:
-                return "Downloaded Files"
+                return NSLocalizedString("Downloaded Files", comment: "")
             case .sitePermissions:
-                return "Site Permissions"
+                return NSLocalizedString("Site Permissions", comment: "")
             case .openedTabs:
-                return "Opened Tabs"
+                return NSLocalizedString("Opened Tabs", comment: "")
             }
         }
         
@@ -46,11 +46,12 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
             switch self {
             case .browsingHistory:
                 let count = HistoryStore.shared.currentSnapshot().items.count
+//                return "\(count) \(count == 1 ? NSLocalizedString("", comment: "")"address" : NSLocalizedString("", comment: "")"addresses")"
                 return "\(count) \(count == 1 ? "address" : "addresses")"
             case .cookiesAndSiteData:
-                return "You'll be logged out of most sites"
+                return NSLocalizedString("You'll be logged out of most sites", comment: "")
             case .cachedImagesAndFiles:
-                return "Frees up storage space"
+                return NSLocalizedString("Frees up storage space", comment: "")
             case .downloadsHistory:
                 return nil
             case .downloadedFiles:
@@ -109,7 +110,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Clear Browsing Data"
+        title = NSLocalizedString("Clear Browsing Data", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -196,7 +197,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
     
     private func clearActionCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = "Clear Browsing Data"
+        cell.textLabel?.text = NSLocalizedString("Clear Browsing Data", comment: "")
         cell.textLabel?.textColor = .systemRed
         cell.accessoryType = .none
         return cell
@@ -218,12 +219,12 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
     @objc private func confirmClearBrowsingData() {
         AlertPresenter.show(
             title: nil,
-            message: "This action will clear all of your browsing data. It cannot be undone.",
+            message: NSLocalizedString("This action will clear all of your browsing data. It cannot be undone.", comment: ""),
             buttons: [
-                AlertPresenter.Button(title: "OK", style: .destructive) { [weak self] in
+                AlertPresenter.Button(title: NSLocalizedString("OK", comment: ""), style: .destructive) { [weak self] in
                     self?.clearSelectedData()
                 },
-                AlertPresenter.Button(title: "Cancel"),
+                AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: "")),
             ]
         )
     }
@@ -284,7 +285,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
                 try await GeckoStorageController.clearData(flags: GeckoStorageClearFlags.allCaches)
             }
         } catch {
-            AlertPresenter.show(title: "Failed to clear browsing data", message: "\(error)")
+            AlertPresenter.show(title: NSLocalizedString("Failed to clear browsing data", comment: ""), message: "\(error)")
         }
     }
 }

@@ -36,7 +36,7 @@ struct PermissionPromptPresenter: PermissionPromptPresenting {
             alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel) { _ in
                 continuation.resume(returning: false)
             })
-            alert.addAction(UIAlertAction(title: "Allow", style: .default) { _ in
+            alert.addAction(UIAlertAction(title: NSLocalizedString(NSLocalizedString("Allow", comment: ""), comment: ""), style: .default) { _ in
                 continuation.resume(returning: true)
             })
             presenter.present(alert, animated: true)

@@ -19,11 +19,11 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             case .appAppearance:
                 return SettingsSectionText()
             case .addressBar:
-                return SettingsSectionText(headerTitle: "Address Bar")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Address Bar", comment: ""))
             case .tabs:
-                return SettingsSectionText(headerTitle: "Tabs")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Tabs", comment: ""))
             case .pageZoom:
-                return SettingsSectionText(headerTitle: "Page Zoom")
+                return SettingsSectionText(headerTitle: NSLocalizedString("Page Zoom", comment: ""))
             }
         }
         
@@ -66,7 +66,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     
     init() {
         super.init(style: .insetGrouped)
-        title = "Appearance"
+        title = NSLocalizedString("Appearance", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -127,19 +127,19 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             return cell
         case .showFullWebsiteAddress:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Show Full Website Address"
+            cell.textLabel?.text = NSLocalizedString("Show Full Website Address", comment: "")
             cell.selectionStyle = .none
             cell.accessoryView = showFullWebsiteAddressSwitch
             return cell
         case .landscapeTabBar:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Landscape Tab Bar"
+            cell.textLabel?.text = NSLocalizedString("Landscape Tab Bar", comment: "")
             cell.selectionStyle = .none
             cell.accessoryView = landscapeTabBarSwitch
             return cell
         case .pageZoom:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Zoom Settings"
+            cell.textLabel?.text = NSLocalizedString("Zoom Settings", comment: "")
             cell.accessoryType = .disclosureIndicator
             return cell
         }

@@ -20,7 +20,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         searchBar.autocapitalizationType = .none
         searchBar.autocorrectionType = .no
         searchBar.searchBarStyle = .minimal
-        searchBar.placeholder = "Search Downloads"
+        searchBar.placeholder = NSLocalizedString("Search Downloads", comment: "")
         searchBar.delegate = self
         return searchBar
     }()
@@ -70,7 +70,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         return view
     }()
     
-    private let emptyStateView = SidebarEmptyBackgroundView(message: "Files you download appear here")
+    private let emptyStateView = SidebarEmptyBackgroundView(message: NSLocalizedString("DownloadEmptyMessage", comment: ""))
     private var sections: [DownloadSection] = []
     private var storeObserver: NSObjectProtocol?
     private var appActiveObserver: NSObjectProtocol?
@@ -261,10 +261,10 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     
     fileprivate func makeDownloadsMenu() -> UIMenu {
         UIMenu(title: "", children: [
-            UIAction(title: "Open Downloads Folder", image: UIImage(named: "reynard.folder")) { [weak self] _ in
+            UIAction(title: NSLocalizedString("Open Downloads Folder", comment: ""), image: UIImage(named: "reynard.folder")) { [weak self] _ in
                 self?.openDownloadsFolder()
             },
-            UIAction(title: "Clear Downloads History", image: UIImage(named: "reynard.arrow.down.circle.badge.xmark")) { [weak self] _ in
+            UIAction(title: NSLocalizedString("Clear Downloads History", comment: ""), image: UIImage(named: "reynard.arrow.down.circle.badge.xmark")) { [weak self] _ in
                 self?.showClearDownloads()
             },
         ])
@@ -344,7 +344,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     // MARK: - Display State
     
     private func updateEmptyState() {
-        emptyStateView.message = query.isEmpty ? "Files you download appear here" : "No matching downloads"
+        emptyStateView.message = query.isEmpty ? NSLocalizedString("DownloadEmptyMessage", comment: "") : NSLocalizedString("No matching downloads", comment: "")
         tableView.backgroundView = sections.isEmpty ? emptyStateView : nil
         emptyStateView.updateContentInsets(from: tableView)
     }
@@ -446,7 +446,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         
         switch item.state {
         case .downloading:
-            let cancelAction = UIContextualAction(style: .destructive, title: "Cancel") { [weak self] _, _, completion in
+            let cancelAction = UIContextualAction(style: .destructive, title: NSLocalizedString("Cancel", comment: "")) { [weak self] _, _, completion in
                 self?.confirmCancelDownload(for: item, completion: completion)
             }
             let configuration = UISwipeActionsConfiguration(actions: [cancelAction])
@@ -454,7 +454,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             return configuration
             
         case .completed:
-            let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { _, _, completion in
+            let deleteAction = UIContextualAction(style: .destructive, title: NSLocalizedString("Delete", comment: "")) { _, _, completion in
                 DownloadStore.shared.removeDownload(id: item.id)
                 completion(true)
             }
@@ -465,7 +465,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
                 return configuration
             }
             
-            let shareAction = UIContextualAction(style: .normal, title: "Share") { [weak self] _, _, completion in
+            let shareAction = UIContextualAction(style: .normal, title: NSLocalizedString("Share", comment: "")) { [weak self] _, _, completion in
                 guard let self else {
                     completion(false)
                     return
@@ -476,7 +476,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             }
             shareAction.backgroundColor = .systemGreen
             
-            let openAction = UIContextualAction(style: .normal, title: "Open in\nFiles") { [weak self] _, _, completion in
+            let openAction = UIContextualAction(style: .normal, title: NSLocalizedString("OpenInFiles", comment: "")) { [weak self] _, _, completion in
                 guard let self else {
                     completion(false)
                     return
@@ -543,13 +543,14 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         completion: @escaping (Bool) -> Void
     ) {
         AlertPresenter.show(
-            title: "Cancel Download?",
-            message: "Do you want to stop downloading \(item.fileName)?",
+            title: NSLocalizedString("Cancel Download?", comment: ""),
+//            message: "Do you want to stop downloading \(item.fileName)?",
+            message: String.localizedStringWithFormat(NSLocalizedString("StopDownloadingFileMessage", comment: ""), item.fileName),
             buttons: [
-                AlertPresenter.Button(title: "Keep Downloading", style: .cancel) {
+                AlertPresenter.Button(title: NSLocalizedString("Keep Downloading", comment: ""), style: .cancel) {
                     completion(false)
                 },
-                AlertPresenter.Button(title: "Cancel Download", style: .destructive) {
+                AlertPresenter.Button(title: NSLocalizedString("Cancel Download", comment: ""), style: .destructive) {
                     DownloadStore.shared.cancel(id: item.id)
                     completion(true)
                 },
@@ -570,16 +571,35 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         present(sheet, animated: true)
     }
     
+//    private func revealInFiles(_ item: DownloadItemSnapshot) {
+//        guard let fileURL = item.fileURL else {
+//            return
+//        }
+//        
+//        let encodedPath = fileURL.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+//        guard let filesURL = URL(string: "shareddocuments://\(encodedPath)") else {
+//            return
+//        }
+//        
+//        UIApplication.shared.open(filesURL, options: [:], completionHandler: nil)
+//    }
+    
     private func revealInFiles(_ item: DownloadItemSnapshot) {
         guard let fileURL = item.fileURL else {
             return
         }
-        
-        let encodedPath = fileURL.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
-        guard let filesURL = URL(string: "shareddocuments://\(encodedPath)") else {
+
+        var path = fileURL.path
+
+        // fixed /private
+        if path.hasPrefix("/var/") && !path.hasPrefix("/private/var/") {
+            path = "/private" + path
+        }
+
+        guard let url = URL(string: "shareddocuments://\(path)") else {
             return
         }
-        
-        UIApplication.shared.open(filesURL, options: [:], completionHandler: nil)
+
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
 }
