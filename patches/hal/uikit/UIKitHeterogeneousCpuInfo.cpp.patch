@@ -1,0 +1,79 @@
+diff --git a/hal/uikit/UIKitHeterogeneousCpuInfo.cpp b/hal/uikit/UIKitHeterogeneousCpuInfo.cpp
+new file mode 100644
+index 000000000000..f9c4f2249d4c
+--- /dev/null
++++ b/hal/uikit/UIKitHeterogeneousCpuInfo.cpp
+@@ -0,0 +1,73 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#include "Hal.h"
++#include "HalTypes.h"
++#include <cstdio>
++#include <sys/types.h>
++#include <sys/sysctl.h>
++
++namespace mozilla::hal_impl {
++
++static bool ReadSysctlUInt32(const char* aName, uint32_t* aValue) {
++  size_t len = sizeof(*aValue);
++  return sysctlbyname(aName, aValue, &len, nullptr, 0) == 0 &&
++         len == sizeof(*aValue);
++}
++
++mozilla::Maybe<hal::HeterogeneousCpuInfo> CreateHeterogeneousCpuInfo() {
++  uint32_t perfLevels = 0;
++  if (!ReadSysctlUInt32("hw.nperflevels", &perfLevels) || !perfLevels) {
++    return Nothing();
++  }
++
++  hal::HeterogeneousCpuInfo info;
++  uint32_t totalCpus = 0;
++
++  for (uint32_t perfLevel = 0; perfLevel < perfLevels; ++perfLevel) {
++    char sysctlName[64];
++    std::snprintf(sysctlName, sizeof(sysctlName),
++                  "hw.perflevel%u.logicalcpu_max", perfLevel);
++
++    uint32_t levelCpus = 0;
++    if (!ReadSysctlUInt32(sysctlName, &levelCpus)) {
++      return Nothing();
++    }
++
++    if (levelCpus > hal::HeterogeneousCpuInfo::MAX_CPUS - totalCpus) {
++      return Nothing();
++    }
++
++    for (uint32_t i = 0; i < levelCpus; ++i) {
++      const uint32_t cpu = totalCpus + i;
++      if (perfLevel == 0) {
++        info.mBigCpus[cpu] = true;
++      } else if (perfLevel == perfLevels - 1) {
++        info.mLittleCpus[cpu] = true;
++      } else {
++        info.mMediumCpus[cpu] = true;
++      }
++    }
++
++    totalCpus += levelCpus;
++  }
++
++  if (!totalCpus) {
++    return Nothing();
++  }
++
++  info.mTotalNumCpus = totalCpus;
++  return Some(info);
++}
++
++const Maybe<hal::HeterogeneousCpuInfo>& GetHeterogeneousCpuInfo() {
++  static const Maybe<hal::HeterogeneousCpuInfo> cpuInfo =
++      CreateHeterogeneousCpuInfo();
++  return cpuInfo;
++}
++
++}  // namespace mozilla::hal_impl
