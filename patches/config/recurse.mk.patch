@@ -1,0 +1,15 @@
+diff --git a/config/recurse.mk b/config/recurse.mk
+index c1b6203abc18..669f91a77c57 100644
+--- a/config/recurse.mk
++++ b/config/recurse.mk
+@@ -188,8 +188,10 @@ endif
+ # Note some others are hardcoded or "guessed" in recursivemake.py and emitter.py
+ ifdef MOZ_USING_WASM_SANDBOXING
+ dom/media/ogg/target-objects extensions/spellcheck/hunspell/glue/target-objects gfx/thebes/target-objects parser/expat/target-objects parser/htmlparser/target-objects gfx/ots/src/target-objects: security/rlbox/pre-compile
++ifdef MOZ_WASM_SANDBOXING_SOUNDTOUCH
+ dom/media/target-objects dom/media/mediasink/target-objects: media/libsoundtouch/src/pre-compile
+ endif
++endif
+ 
+ # Most things are built during compile (target/host), but some things happen during export
+ # Those need to depend on config/export for system wrappers.
