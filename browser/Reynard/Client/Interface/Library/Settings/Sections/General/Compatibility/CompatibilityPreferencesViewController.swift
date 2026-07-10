@@ -27,6 +27,10 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         return Prefs.CompatibilitySettings.useAndroidUserAgent ? [.useAndroidUserAgent] : Row.allCases
     }
     
+    private var compatibilityUserAgentName: String {
+        return Prefs.BrowsingSettings.requestDesktopWebsite ? "Desktop Firefox" : "Firefox for Android"
+    }
+    
     init() {
         super.init(style: .insetGrouped)
         title = "Compatibility"
@@ -73,7 +77,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         switch row {
         case .useAndroidUserAgent:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Use Android User Agent"
+            cell.textLabel?.text = "Use Compatibility User Agent"
             cell.selectionStyle = .none
             cell.accessoryView = androidUserAgentSwitch
             return cell
@@ -103,15 +107,13 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
         
         let headerTitle = Section.allCases[section].text.headerTitle
         if Prefs.CompatibilitySettings.useAndroidUserAgent {
-            let footerTitle = Prefs.BrowsingSettings.requestDesktopWebsite
-            ? "The browser will use a desktop Firefox user agent for navigating the web."
-            : "To maximize compatibility, the browser will use the Firefox for Android user agent for navigating the web. As a result, websites may identify your device as an Android device."
+            let footerTitle = "Use the \(compatibilityUserAgentName) user agent for all websites to improve compatibility."
             return SettingsSectionText(headerTitle: headerTitle, footerTitle: footerTitle)
         }
         
         return SettingsSectionText(
             headerTitle: headerTitle,
-            footerTitle: "If you encounter issues such as sign-in failures, human verification challenges, or other incorrect site behavior, adding the site's URL to this user agent override list may help resolve the problem."
+            footerTitle: "Add websites with sign-in failures, human verification challenges, or other issues to use the \(compatibilityUserAgentName) user agent."
         )
     }
     

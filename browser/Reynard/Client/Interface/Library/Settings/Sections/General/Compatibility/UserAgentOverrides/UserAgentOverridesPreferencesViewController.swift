@@ -10,12 +10,6 @@ import UIKit
 final class UserAgentOverridesPreferencesViewController: SettingsTableViewController {
     private enum Section: CaseIterable {
         case overrides
-        
-        var text: SettingsSectionText {
-            return SettingsSectionText(
-                footerTitle: "Navigations to these websites will use the browser's compatibility user agent. Depending on your Request Desktop Website setting, these websites may identify your device as either an Android device or a desktop Linux device."
-            )
-        }
     }
     
     private enum Row {
@@ -66,7 +60,7 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
             cell.textLabel?.text = domain
             cell.selectionStyle = .default
         case .addWebsite:
-            cell.textLabel?.text = "Add Website..."
+            cell.textLabel?.text = "Add Website…"
             cell.textLabel?.textColor = tableView.tintColor
         }
         return cell
@@ -99,13 +93,6 @@ final class UserAgentOverridesPreferencesViewController: SettingsTableViewContro
         if case .addWebsite = displayedRows[indexPath.row] {
             promptForOverrideDomain()
         }
-    }
-    
-    override func sectionText(for section: Int) -> SettingsSectionText {
-        guard Section.allCases.indices.contains(section) else {
-            return SettingsSectionText()
-        }
-        return Section.allCases[section].text
     }
     
     private func promptForOverrideDomain() {

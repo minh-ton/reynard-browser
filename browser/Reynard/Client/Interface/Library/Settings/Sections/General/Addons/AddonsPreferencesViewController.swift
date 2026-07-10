@@ -81,7 +81,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     private var addonUpdateActionTitle: String {
         if isCheckingForAddonUpdates {
-            return "Updating Add-ons..."
+            return "Updating Add-ons…"
         }
         if let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self),
            browserViewController.addonCoordinator.updateCoordinator.hasPendingApprovals {
@@ -150,7 +150,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             if installedAddons.isEmpty {
                 let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
                 cell.selectionStyle = .none
-                cell.textLabel?.text = isLoadingAddons ? "Loading Add-ons..." : "No Add-ons Installed"
+                cell.textLabel?.text = isLoadingAddons ? "Loading Add-ons…" : "No Add-ons Installed"
                 cell.textLabel?.textColor = .secondaryLabel
                 return cell
             }
@@ -193,10 +193,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             switch displayedMoreRows[indexPath.row] {
             case .discover:
-                cell.textLabel?.text = "Discover Add-ons..."
+                cell.textLabel?.text = "Discover Add-ons…"
                 cell.textLabel?.textColor = view.tintColor
             case .installFromFile:
-                cell.textLabel?.text = isInstallingAddonFromFile ? "Installing Add-on..." : "Install Add-on From File..."
+                cell.textLabel?.text = isInstallingAddonFromFile ? "Installing Add-on…" : "Install Add-on from File…"
                 cell.textLabel?.textColor = isInstallingAddonFromFile ? .secondaryLabel : view.tintColor
                 if isInstallingAddonFromFile {
                     cell.selectionStyle = .none
@@ -272,7 +272,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             if let lastGlobalCheckAt = Prefs.AddonSettings.lastGlobalCheckAt {
                 return SettingsSectionText(
-                    footerTitle: "Last checked on \(lastCheckedDateFormatter.string(from: lastGlobalCheckAt))."
+                    footerTitle: "Last checked \(lastCheckedDateFormatter.string(from: lastGlobalCheckAt))."
                 )
             }
             return displayedSection.text
@@ -501,7 +501,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return
         }
         
-        pendingApprovalAddonIDs.forEach { addonStatusTextByID[$0] = "Needs permission to update" }
+        pendingApprovalAddonIDs.forEach { addonStatusTextByID[$0] = "Needs Permission to Update" }
         updateFooterMessage = pendingApprovalAddonIDs.count == 1
         ? "1 add-on needs permission to update."
         : "\(pendingApprovalAddonIDs.count) add-ons need permission to update."
@@ -539,7 +539,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 self.isCheckingForAddonUpdates = false
                 
                 let pendingApprovalAddonIDs = Prefs.AddonSettings.pendingApprovalAddonIDs
-                pendingApprovalAddonIDs.forEach { self.addonStatusTextByID[$0] = "Needs permission to update" }
+                pendingApprovalAddonIDs.forEach { self.addonStatusTextByID[$0] = "Needs Permission to Update" }
                 self.updateFooterMessage = self.updateFooterSummary(for: result)
                 self.tableView.reloadData()
             }
@@ -575,7 +575,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         }
         
         if result.failedCount > 0 {
-            parts.append(result.failedCount == 1 ? "1 add-on failed to update." : "\(result.failedCount) add-ons failed to update.")
+            parts.append(result.failedCount == 1 ? "1 add-on couldn’t be updated." : "\(result.failedCount) add-ons couldn’t be updated.")
         }
         
         if parts.isEmpty, result.noUpdateCount > 0 {

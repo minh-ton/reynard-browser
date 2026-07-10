@@ -14,7 +14,7 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
         var text: SettingsSectionText {
             switch self {
             case .showOnNewTab:
-                return SettingsSectionText(headerTitle: "Show on New Tab")
+                return SettingsSectionText(headerTitle: "Open New Tabs To")
             }
         }
     }

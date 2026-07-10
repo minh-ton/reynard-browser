@@ -347,27 +347,30 @@ final class DownloadStore: NSObject {
         }
     }
     
-    func clearCompletedDownloads(since startDate: Date?) {
+    func clearCompletedDownloadFiles(since startDate: Date? = nil) {
         stateQueue.async {
+            let removedDownloads: [PersistedDownloadEntry]
             if let startDate {
+                removedDownloads = self.persistedDownloads.filter { $0.addedAt >= startDate }
                 self.persistedDownloads.removeAll { $0.addedAt >= startDate }
             } else {
+                removedDownloads = self.persistedDownloads
                 self.persistedDownloads.removeAll()
             }
             
-            self.savePersistedDownloadsLocked()
-            self.postDidChange()
-        }
-    }
-    
-    func clearCompletedDownloadFiles() {
-        stateQueue.async {
-            let fileURLs = (try? self.fileManager.contentsOfDirectory(
-                at: self.storage.downloadsDirectoryURL,
-                includingPropertiesForKeys: nil
-            )) ?? []
+            let fileURLs: [URL]
+            if startDate == nil {
+                fileURLs = (try? self.fileManager.contentsOfDirectory(
+                    at: self.storage.downloadsDirectoryURL,
+                    includingPropertiesForKeys: nil
+                )) ?? []
+            } else {
+                fileURLs = removedDownloads.map {
+                    self.storage.downloadsDirectoryURL.appendingPathComponent($0.relativePath, isDirectory: false)
+                }
+            }
             
-            for fileURL in fileURLs {
+            for fileURL in Set(fileURLs) {
                 try? self.fileManager.removeItem(at: fileURL)
             }
             
@@ -379,6 +382,10 @@ final class DownloadStore: NSObject {
             }
             
             for active in self.activeDownloads.values {
+                if let startDate, active.addedAt < startDate {
+                    continue
+                }
+                
                 if self.fileManager.fileExists(atPath: active.destinationURL.path) {
                     try? self.fileManager.removeItem(at: active.destinationURL)
                 }

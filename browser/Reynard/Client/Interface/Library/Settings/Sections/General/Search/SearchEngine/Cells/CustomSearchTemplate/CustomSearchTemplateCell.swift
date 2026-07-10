@@ -10,6 +10,7 @@ import UIKit
 final class CustomSearchTemplateCell: UITableViewCell {
     private enum UX {
         static let verticalInset: CGFloat = 12
+        static let horizontalSpacing: CGFloat = 16
     }
     
     let textField = UITextField()
@@ -35,6 +36,7 @@ final class CustomSearchTemplateCell: UITableViewCell {
         textField.autocorrectionType = .no
         textField.autocapitalizationType = .none
         textField.clearButtonMode = .whileEditing
+        textField.keyboardType = .URL
         textField.returnKeyType = .done
     }
     
@@ -42,7 +44,7 @@ final class CustomSearchTemplateCell: UITableViewCell {
         contentView.addSubview(textField)
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
-            textField.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            textField.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor, constant: -UX.horizontalSpacing),
             textField.topAnchor.constraint(equalTo: contentView.topAnchor, constant: UX.verticalInset),
             textField.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -UX.verticalInset),
         ])

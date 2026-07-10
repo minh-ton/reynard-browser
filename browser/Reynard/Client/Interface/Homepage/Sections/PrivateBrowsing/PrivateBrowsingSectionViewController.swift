@@ -78,7 +78,7 @@ final class PrivateBrowsingSectionViewController: UIViewController {
         label.font = UIFontMetrics(forTextStyle: .body).scaledFont(
             for: .systemFont(ofSize: UX.messageFontSize, weight: .regular)
         )
-        label.text = "After you close a tab, Reynard won't remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved."
+        label.text = "After you close a tab, Reynard won’t remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved."
         label.textAlignment = .center
         label.textColor = UIColor.white.withAlphaComponent(0.72)
         label.numberOfLines = 0

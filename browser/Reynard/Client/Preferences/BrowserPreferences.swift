@@ -104,7 +104,6 @@ final class BrowserPreferences {
             key("ClearBrowsingData", "clearsBrowsingHistory"): true,
             key("ClearBrowsingData", "clearsCookiesAndSiteData"): true,
             key("ClearBrowsingData", "clearsCachedImagesAndFiles"): true,
-            key("ClearBrowsingData", "clearsDownloadsHistory"): false,
             key("ClearBrowsingData", "clearsDownloadedFiles"): false,
             key("ClearBrowsingData", "clearsSitePermissions"): true,
             key("ClearBrowsingData", "clearsOpenedTabs"): true,
@@ -284,15 +283,6 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "ClearBrowsingData", key: "clearsCachedImagesAndFiles")
-            }
-        }
-        
-        static var clearsDownloadsHistory: Bool {
-            get {
-                return prefs.bool(forSetting: "ClearBrowsingData", key: "clearsDownloadsHistory")
-            }
-            set {
-                prefs.set(newValue, forSetting: "ClearBrowsingData", key: "clearsDownloadsHistory")
             }
         }
         

@@ -50,15 +50,7 @@ enum SearchEngine: String, CaseIterable {
         }
         
         let exampleDestination = normalizedTemplate.replacingOccurrences(of: "%s", with: "reynard")
-        guard let components = URLComponents(string: exampleDestination),
-              let scheme = components.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              let host = components.host,
-              !host.isEmpty else {
-            return false
-        }
-        
-        return true
+        return URLUtils.normalizedCustomURL(from: exampleDestination) != nil
     }
     
     private var queryTemplate: String? {
@@ -84,8 +76,14 @@ enum SearchEngine: String, CaseIterable {
     
     private static var selectedQueryTemplate: String {
         switch Prefs.SearchSettings.searchEngine {
-        case .custom where canSearch(using: Prefs.SearchSettings.customSearchTemplate):
-            return Prefs.SearchSettings.customSearchTemplate
+        case .custom:
+            let customQueryTemplate = Prefs.SearchSettings.customSearchTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard canSearch(using: customQueryTemplate) else {
+                return SearchEngine.google.queryTemplate!
+            }
+            
+            let exampleDestination = customQueryTemplate.replacingOccurrences(of: "%s", with: "reynard")
+            return URLUtils.isWebURL(exampleDestination) ? customQueryTemplate : "https://\(customQueryTemplate)"
         case let engine:
             return engine.queryTemplate ?? SearchEngine.google.queryTemplate!
         }

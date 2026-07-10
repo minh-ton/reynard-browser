@@ -94,7 +94,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         rows.append(InformationRow(title: "Version", value: metaData.version, link: nil))
         
         if let updateDate = updateDateText(metaData.updateDate) {
-            rows.append(InformationRow(title: "Last updated", value: updateDate, link: nil))
+            rows.append(InformationRow(title: "Last Updated", value: updateDate, link: nil))
         }
         
         if let ratingText = ratingText(metaData) {
@@ -116,7 +116,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         }
         
         if let listingURL = normalizedURLString(metaData.amoListingURL) {
-            rows.append(InformationRow(title: "More about this extension", value: listingURL, link: listingURL))
+            rows.append(InformationRow(title: "More About This Add-on", value: listingURL, link: listingURL))
         }
         
         return rows
@@ -259,7 +259,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             }
         } catch {
             await MainActor.run {
-                AlertPresenter.show(title: "Failed to reload add-on", message: "\(error)")
+                AlertPresenter.show(title: "Couldn’t Reload Add-on", message: "\(error)")
             }
         }
     }
@@ -292,7 +292,9 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
         let roundedRating = String(format: "%.2f", averageRating)
         if let reviewCount = metaData.reviewCount {
             let reviewText = reviewCountFormatter.string(from: NSNumber(value: reviewCount)) ?? "\(reviewCount)"
-            return "\(roundedRating) out of 5 • Reviews: \(reviewText)"
+            return reviewCount == 1
+            ? "\(roundedRating) out of 5 • \(reviewText) Review"
+            : "\(roundedRating) out of 5 • \(reviewText) Reviews"
         }
         
         return "\(roundedRating) out of 5"

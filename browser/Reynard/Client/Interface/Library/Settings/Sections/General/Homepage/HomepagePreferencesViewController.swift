@@ -15,15 +15,9 @@ final class HomepagePreferencesViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .openingScreen:
-                return SettingsSectionText(
-                    headerTitle: "Opening Screen",
-                    footerTitle: "Choose what to see when you open Reynard."
-                )
+                return SettingsSectionText(headerTitle: "On Startup")
             case .includeOnHomepage:
-                return SettingsSectionText(
-                    headerTitle: "Show on Homepage",
-                    footerTitle: "Choose what to show on the homepage."
-                )
+                return SettingsSectionText(headerTitle: "Homepage Sections")
             }
         }
     }

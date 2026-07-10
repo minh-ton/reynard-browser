@@ -52,7 +52,7 @@ final class JITSettingsSection: NSObject {
             cell.accessoryView = jitSwitch
             return cell
         case .importPairingFile:
-            let cell = SettingsViewUtils.actionCell(title: "Import Pairing File...", tintColor: tintColor)
+            let cell = SettingsViewUtils.actionCell(title: "Import Pairing File…", tintColor: tintColor)
             
             if #available(iOS 16.7, *) {
                 if #unavailable(iOS 17.4) {

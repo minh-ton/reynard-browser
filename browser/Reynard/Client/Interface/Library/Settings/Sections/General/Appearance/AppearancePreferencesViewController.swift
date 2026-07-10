@@ -23,7 +23,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             case .tabs:
                 return SettingsSectionText(headerTitle: "Tabs")
             case .pageZoom:
-                return SettingsSectionText(headerTitle: "Page Zoom")
+                return SettingsSectionText(headerTitle: "Websites")
             }
         }
         
@@ -133,13 +133,13 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             return cell
         case .landscapeTabBar:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Landscape Tab Bar"
+            cell.textLabel?.text = "Show Tab Bar in Landscape"
             cell.selectionStyle = .none
             cell.accessoryView = landscapeTabBarSwitch
             return cell
         case .pageZoom:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Zoom Settings"
+            cell.textLabel?.text = "Page Zoom"
             cell.accessoryType = .disclosureIndicator
             return cell
         }

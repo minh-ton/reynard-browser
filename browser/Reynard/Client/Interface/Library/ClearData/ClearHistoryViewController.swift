@@ -14,12 +14,6 @@ final class ClearHistoryViewController: UITableViewController {
     
     private let closeAllTabsSwitch = UISwitch()
     
-    private lazy var clearFooterView = ClearDataFooterView(
-        title: "Clear History",
-        target: self,
-        action: #selector(confirmClearHistory)
-    )
-    
     init(tabCount: Int, onClear: @escaping (Date?, Bool) -> Void) {
         self.tabCount = tabCount
         self.onClear = onClear
@@ -37,25 +31,22 @@ final class ClearHistoryViewController: UITableViewController {
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = LibraryActionButton.makeSheetCloseButton(target: self, action: #selector(dismissSheet))
-        tableView.tableFooterView = clearFooterView
-    }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        
-        clearFooterView.alignClearButton(to: tableView.rectForRow(at: IndexPath(row: 0, section: 1)), tableViewWidth: tableView.bounds.width)
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        2
+        return 3
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        section == 0 ? ClearDataTimeframe.allCases.count : 1
+        return section == 0 ? ClearDataTimeframe.allCases.count : 1
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        section == 0 ? "Clear Timeframe" : "Additional Options"
+        if section == 0 {
+            return "Clear Timeframe"
+        }
+        
+        return section == 1 ? "Additional Options" : nil
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
@@ -70,12 +61,22 @@ final class ClearHistoryViewController: UITableViewController {
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
+        if indexPath.section == 2 {
+            let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            cell.textLabel?.text = "Clear History"
+            cell.textLabel?.textColor = .systemRed
+            cell.textLabel?.textAlignment = .center
+            cell.accessoryType = .none
+            return cell
+        }
+        
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") ?? UITableViewCell(style: .default, reuseIdentifier: "Cell")
         
         if indexPath.section == 0 {
             ClearDataTimeframe.configureCell(cell, at: indexPath, selectedTimeframe: selectedTimeframe)
         } else {
             cell.textLabel?.text = "Close All Tabs"
+            cell.textLabel?.textColor = .label
             cell.accessoryView = closeAllTabsSwitch
             cell.accessoryType = .none
             cell.selectionStyle = .none
@@ -85,13 +86,19 @@ final class ClearHistoryViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        defer {
+            tableView.deselectRow(at: indexPath, animated: true)
+        }
+        
         guard indexPath.section == 0 else {
+            if indexPath.section == 2 {
+                confirmClearHistory()
+            }
             return
         }
         
         selectedTimeframe = ClearDataTimeframe.allCases[indexPath.row]
         tableView.reloadSections(IndexSet(integer: 0), with: .none)
-        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     @objc private func dismissSheet() {

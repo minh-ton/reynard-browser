@@ -141,7 +141,7 @@ final class AddonUpdateCoordinator {
         
         for addon in addons {
             await MainActor.run {
-                status(addon.id, "Updating...")
+                status(addon.id, "Updating…")
             }
             
             do {
@@ -150,20 +150,20 @@ final class AddonUpdateCoordinator {
                     noUpdateCount += 1
                     clearPendingApproval(addon.id)
                     await MainActor.run {
-                        status(addon.id, "No update available")
+                        status(addon.id, "No Update Available")
                     }
                 } else {
                     updatedCount += 1
                     clearPendingApproval(addon.id)
                     await MainActor.run {
-                        status(addon.id, "Successfully updated")
+                        status(addon.id, "Updated")
                     }
                 }
             } catch {
                 if AddonErrorPresenter.updateRequiresPermissions(error) {
                     markNeedsApproval(addon.id)
                     await MainActor.run {
-                        status(addon.id, "Needs permission to update")
+                        status(addon.id, "Needs Permission to Update")
                     }
                     continue
                 }

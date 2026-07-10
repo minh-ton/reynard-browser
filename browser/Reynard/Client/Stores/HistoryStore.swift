@@ -75,12 +75,6 @@ final class HistoryStore {
     
     // MARK: - History
     
-    func currentSnapshot() -> HistoryStoreSnapshot {
-        stateQueue.sync {
-            HistoryStoreSnapshot(items: fetchSitesLocked())
-        }
-    }
-    
     func currentSnapshot(limit: Int, offset: Int) -> HistoryStoreSnapshot {
         stateQueue.sync {
             HistoryStoreSnapshot(items: fetchSitesLocked(limit: limit, offset: offset))

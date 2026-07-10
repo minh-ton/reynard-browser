@@ -92,14 +92,14 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         let metaData = addon.metaData
         if metaData.isBlocklisted {
             return StatusMessage(
-                text: "This extension is blocked for violating Mozilla's policies and has been disabled.",
+                text: "This add-on was blocked for violating Mozilla’s policies and has been disabled.",
                 color: .systemRed
             )
         }
         
         if metaData.isUnsupported {
             return StatusMessage(
-                text: "This extension isn't supported by this version of Reynard and has been disabled.",
+                text: "This add-on isn’t supported by this version of Reynard and has been disabled.",
                 color: .systemOrange
             )
         }
@@ -107,7 +107,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isUnsigned {
             let addonName = metaData.name ?? addon.id
             return StatusMessage(
-                text: "\(addonName) could not be verified as secure and has been disabled.",
+                text: "\(addonName) couldn’t be verified and has been disabled.",
                 color: .systemRed
             )
         }
@@ -115,7 +115,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isIncompatible {
             let addonName = metaData.name ?? addon.id
             return StatusMessage(
-                text: "\(addonName) is not compatible with this version of Reynard.",
+                text: "\(addonName) isn’t compatible with this version of Reynard.",
                 color: .systemOrange
             )
         }
@@ -123,8 +123,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isSoftBlocked {
             return StatusMessage(
                 text: metaData.enabled
-                ? "This extension is restricted. Using it may be risky."
-                : "This extension is restricted and has been disabled. You can enable it, but this may be risky.",
+                ? "This add-on is restricted. Using it may be risky."
+                : "This add-on is restricted and has been disabled. You can enable it, but this may be risky.",
                 color: .systemOrange
             )
         }
@@ -282,7 +282,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: "Failed to update private browsing access", message: "\(error)")
+                    AlertPresenter.show(title: "Couldn’t Update Private Browsing Access", message: "\(error)")
                 }
             }
         }
@@ -317,7 +317,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: "Failed to \(desiredState ? "enable" : "disable") add-on", message: "\(error)")
+                    AlertPresenter.show(title: desiredState ? "Couldn’t Enable Add-on" : "Couldn’t Disable Add-on", message: "\(error)")
                 }
             }
         }
@@ -347,7 +347,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         } catch {
             await MainActor.run {
-                AlertPresenter.show(title: "Failed to reload add-on", message: "\(error)")
+                AlertPresenter.show(title: "Couldn’t Reload Add-on", message: "\(error)")
             }
         }
     }
@@ -387,7 +387,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         
         switch displayedActionRows[indexPath.row] {
         case .enabled:
-            cell.textLabel?.text = "Enabled"
+            cell.textLabel?.text = "Enable Add-on"
             cell.selectionStyle = .none
             cell.accessoryView = enableSwitch
         case .privateBrowsing:
@@ -398,7 +398,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             cell.selectionStyle = .none
             cell.accessoryView = privateBrowsingSwitch
         case .remove:
-            cell.textLabel?.text = "Remove"
+            cell.textLabel?.text = "Remove Add-on"
             cell.textLabel?.textColor = addon == nil || isUpdatingAddon ? .secondaryLabel : .systemRed
         case .settings, .details, .permissions:
             break
@@ -429,7 +429,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         case .permissions:
             cell.textLabel?.text = "Permissions"
         case .remove:
-            cell.textLabel?.text = "Remove"
+            cell.textLabel?.text = "Remove Add-on"
             cell.textLabel?.textColor = addon == nil || isUpdatingAddon ? .secondaryLabel : .systemRed
             cell.accessoryType = .none
         case .enabled, .privateBrowsing:
@@ -448,7 +448,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     private func confirmRemoval() {
         let addonName = addon?.metaData.name ?? addonID
         AlertPresenter.show(
-            title: "Do you want to remove \(addonName)?",
+            title: "Remove \(addonName)?",
             message: nil,
             buttons: [
                 AlertPresenter.Button(title: "Cancel", style: .cancel),
@@ -479,7 +479,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: "Failed to remove add-on", message: "\(error)")
+                    AlertPresenter.show(title: "Couldn’t Remove Add-on", message: "\(error)")
                 }
             }
         }

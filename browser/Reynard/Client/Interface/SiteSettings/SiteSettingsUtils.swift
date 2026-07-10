@@ -60,10 +60,10 @@ enum SiteSettingsUtils {
         let permissionList = formattedPermissionList(names)
         
         if names.count == 1 {
-            return "\(permissionList) is currently disabled for Reynard. Open the Settings app to enable this permission."
+            return "\(permissionList) is disabled for Reynard. Open Settings to allow access."
         }
         
-        return "\(permissionList) are currently disabled for Reynard. Open the Settings app to enable these permissions."
+        return "\(permissionList) are disabled for Reynard. Open Settings to allow access."
     }
     
     // MARK: - Permission Actions
@@ -81,7 +81,7 @@ enum SiteSettingsUtils {
             case .allowed:
                 return "Allow Audio and Video"
             case .askToAllow:
-                return "Block Audio only"
+                return "Block Audio Only"
             case .blocked:
                 return "Block Audio and Video"
             }

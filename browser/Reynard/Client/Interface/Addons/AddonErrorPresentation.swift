@@ -85,14 +85,14 @@ public struct AddonErrorPresenter {
         if let trimmedAddonName, !trimmedAddonName.isEmpty {
             resolvedAddonName = trimmedAddonName
         } else {
-            resolvedAddonName = "This extension"
+            resolvedAddonName = "This add-on"
         }
         let normalizedCode = normalizeCode(code)
         
         if cancelledByUser || normalizedCode == "ERROR_USER_CANCELED" || normalizedCode == "ERROR_ABORTED" {
             return AddonErrorPresentation(
                 statusText: nil,
-                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "Failed to update extension.",
+                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "This add-on couldn’t be updated.",
                 isUserCancelled: true
             )
         }
@@ -101,49 +101,49 @@ public struct AddonErrorPresenter {
         case "ERROR_BLOCKLISTED":
             return AddonErrorPresentation(
                 statusText: "Blocked",
-                alertMessage: "\(resolvedAddonName) violates Mozilla's policies and can't be installed on Reynard.",
+                alertMessage: "\(resolvedAddonName) violates Mozilla’s policies and can’t be installed on Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_SOFT_BLOCKED":
             return AddonErrorPresentation(
                 statusText: "Restricted",
-                alertMessage: "\(resolvedAddonName) is restricted and can't be installed on Reynard.",
+                alertMessage: "\(resolvedAddonName) is restricted and can’t be installed on Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_NETWORK_FAILURE":
             return AddonErrorPresentation(
-                statusText: "Network error",
-                alertMessage: "This extension could not be downloaded because of a connection failure.",
+                statusText: "Network Error",
+                alertMessage: "This add-on couldn’t be downloaded because of a connection failure.",
                 isUserCancelled: false
             )
         case "ERROR_CORRUPT_FILE":
             return AddonErrorPresentation(
-                statusText: "Corrupt file",
-                alertMessage: "This extension could not be installed because it appears to be corrupt.",
+                statusText: "Corrupt File",
+                alertMessage: "This add-on couldn’t be installed because it appears to be corrupt.",
                 isUserCancelled: false
             )
         case "ERROR_SIGNEDSTATE_REQUIRED":
             return AddonErrorPresentation(
-                statusText: "Not verified",
-                alertMessage: "This extension could not be installed because it has not been verified.",
+                statusText: "Not Verified",
+                alertMessage: "This add-on couldn’t be installed because it hasn’t been verified.",
                 isUserCancelled: false
             )
         case "ERROR_INCOMPATIBLE":
             return AddonErrorPresentation(
                 statusText: "Incompatible",
-                alertMessage: "\(resolvedAddonName) could not be installed because it is not compatible with this version of Reynard.",
+                alertMessage: "\(resolvedAddonName) couldn’t be installed because it isn’t compatible with this version of Reynard.",
                 isUserCancelled: false
             )
         case "ERROR_ADMIN_INSTALL_ONLY":
             return AddonErrorPresentation(
-                statusText: "Admin-only",
-                alertMessage: "\(resolvedAddonName) could not be installed because it can only be installed by an organization using enterprise policies, which isn't supported on this platform.",
+                statusText: "Admin Only",
+                alertMessage: "\(resolvedAddonName) couldn’t be installed because it can only be installed by an organization using enterprise policies, which isn’t supported on this platform.",
                 isUserCancelled: false
             )
         default:
             return AddonErrorPresentation(
-                statusText: isInstallation ? "Error" : "Update failed",
-                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "Failed to update extension.",
+                statusText: isInstallation ? "Error" : "Update Failed",
+                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "This add-on couldn’t be updated.",
                 isUserCancelled: false
             )
         }
@@ -151,9 +151,9 @@ public struct AddonErrorPresenter {
     
     private static func defaultInstallMessage(for addonName: String?) -> String {
         if let addonName, !addonName.isEmpty {
-            return "Failed to install \(addonName)."
+            return "Couldn’t install \(addonName)."
         }
-        return "Failed to install this extension."
+        return "Couldn’t install this add-on."
     }
     
     private static func normalizeCode(_ code: String?) -> String? {

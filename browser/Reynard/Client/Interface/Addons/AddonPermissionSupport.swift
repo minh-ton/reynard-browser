@@ -38,14 +38,14 @@ private enum AddonHostPermissionKind: Equatable {
 }
 
 public enum AddonPermissionSupport {
-    public static let allowForAllSitesTitle = "Allow for all sites"
-    public static let allowForAllSitesSubtitle = "If you trust this extension, you can give it permission on every website."
-    public static let noPermissionsRequiredDescription = "This extension doesn’t require any permissions."
-    public static let noDataCollectionRequiredDescription = "The developer says this extension doesn’t require data collection."
-    public static let userScriptsWarning = "Unverified scripts can pose security and privacy risks. Only run scripts from extensions or sources you trust."
+    public static let allowForAllSitesTitle = "Allow on All Websites"
+    public static let allowForAllSitesSubtitle = "Allow this add-on to access every website."
+    public static let noPermissionsRequiredDescription = "This add-on doesn’t require any permissions."
+    public static let noDataCollectionRequiredDescription = "The developer says this add-on doesn’t collect data."
+    public static let userScriptsWarning = "Unverified scripts can pose security and privacy risks. Only allow scripts from add-ons or sources you trust."
     
     private static let permissionDescriptions = [
-        "<all_urls>": "Access your data for all websites",
+        "<all_urls>": "Access your data on all websites",
         "bookmarks": "Read and modify bookmarks",
         "browserSettings": "Read and modify browser settings",
         "browsingData": "Clear recent browsing history, cookies, and related data",
@@ -54,12 +54,12 @@ public enum AddonPermissionSupport {
         "declarativeNetRequest": "Block content on any page",
         "declarativeNetRequestFeedback": "Read your browsing history",
         "devtools": "Extend developer tools to access your data in open tabs",
-        "downloads": "Download files and read and modify the browser's download history",
+        "downloads": "Download files and read and modify the browser’s download history",
         "downloads.open": "Open files downloaded to your device",
         "find": "Read the text of all open tabs",
         "geolocation": "Access your location",
         "history": "Access browsing history",
-        "management": "Monitor extension usage and manage themes",
+        "management": "Monitor add-on usage and manage themes",
         "nativeMessaging": "Exchange messages with apps other than this one",
         "notifications": "Display notifications to you",
         "pkcs11": "Provide cryptographic authentication services",
@@ -90,18 +90,18 @@ public enum AddonPermissionSupport {
     ]
     
     private static let dataCollectionLongDescriptions = [
-        "authenticationInfo": "Share authentication information with extension developer",
-        "bookmarksInfo": "Share bookmarks information with extension developer",
-        "browsingActivity": "Share browsing activity with extension developer",
-        "financialAndPaymentInfo": "Share financial and payment information with extension developer",
-        "healthInfo": "Share health information with extension developer",
-        "locationInfo": "Share location information with extension developer",
-        "personalCommunications": "Share personal communications with extension developer",
-        "personallyIdentifyingInfo": "Share personally identifying information with extension developer",
-        "searchTerms": "Share search terms with extension developer",
-        "technicalAndInteraction": "Share technical and interaction data with extension developer",
-        "websiteActivity": "Share website activity with extension developer",
-        "websiteContent": "Share website content with extension developer",
+        "authenticationInfo": "Share authentication information with the add-on developer",
+        "bookmarksInfo": "Share bookmarks information with the add-on developer",
+        "browsingActivity": "Share browsing activity with the add-on developer",
+        "financialAndPaymentInfo": "Share financial and payment information with the add-on developer",
+        "healthInfo": "Share health information with the add-on developer",
+        "locationInfo": "Share location information with the add-on developer",
+        "personalCommunications": "Share personal communications with the add-on developer",
+        "personallyIdentifyingInfo": "Share personally identifying information with the add-on developer",
+        "searchTerms": "Share search terms with the add-on developer",
+        "technicalAndInteraction": "Share technical and interaction data with the add-on developer",
+        "websiteActivity": "Share website activity with the add-on developer",
+        "websiteContent": "Share website content with the add-on developer",
     ]
     
     public static func localizePermissions(_ permissions: [String], forUpdate: Bool = false) -> [String] {
@@ -219,7 +219,7 @@ public enum AddonPermissionSupport {
             return nil
         }
         
-        return "The developer says this extension collects: \(formatLocalizedDataCollectionPermissions(localizedPermissions))"
+        return "The developer says this add-on collects: \(formatLocalizedDataCollectionPermissions(localizedPermissions))"
     }
     
     public static func optionalDataCollectionDescription(for permissions: [String]) -> String? {
@@ -228,7 +228,7 @@ public enum AddonPermissionSupport {
             return nil
         }
         
-        return "The developer says the extension wants to collect: \(formatLocalizedDataCollectionPermissions(localizedPermissions))"
+        return "The developer says this add-on wants to collect: \(formatLocalizedDataCollectionPermissions(localizedPermissions))"
     }
     
     public static func updateDataCollectionDescription(for permissions: [String]) -> String? {
@@ -237,7 +237,7 @@ public enum AddonPermissionSupport {
             return nil
         }
         
-        return "New required data collection: The developer says the extension will collect \(formatLocalizedDataCollectionPermissions(localizedPermissions))."
+        return "New required data collection: The developer says this add-on will collect \(formatLocalizedDataCollectionPermissions(localizedPermissions))."
     }
     
     public static func updatePermissionDescription(for permissions: [String]) -> String? {
@@ -292,12 +292,12 @@ public enum AddonPermissionSupport {
     public static func localizeHostPermission(_ permission: String, forUpdate: Bool) -> String? {
         switch hostPermissionKind(for: permission) {
         case .allUrls:
-            return forUpdate ? "Access your data for all websites." : "Access your data for all websites"
+            return forUpdate ? "Access your data on all websites." : "Access your data on all websites"
         case .domain(let host):
-            let description = "Access your data for sites in the \(host) domain"
+            let description = "Access your data on websites in the \(host) domain"
             return forUpdate ? description + "." : description
         case .site(let host):
-            let description = "Access your data for \(host)"
+            let description = "Access your data on \(host)"
             return forUpdate ? description + "." : description
         case nil:
             return nil
@@ -332,7 +332,7 @@ public enum AddonPermissionSupport {
             }
             return false
         }) {
-            return [forUpdate ? "Access your data for all websites." : "Access your data for all websites"]
+            return [forUpdate ? "Access your data on all websites." : "Access your data on all websites"]
         }
         
         return formatURLAccessPermissions(hostPermissions, forUpdate: forUpdate)
@@ -356,14 +356,14 @@ public enum AddonPermissionSupport {
                 guard domainCount <= maxShownPermissionsEntries else {
                     continue
                 }
-                let description = "Access your data for sites in the \(host) domain"
+                let description = "Access your data on websites in the \(host) domain"
                 descriptions.append(forUpdate ? description + "." : description)
             case .site(let host):
                 siteCount += 1
                 guard siteCount <= maxShownPermissionsEntries else {
                     continue
                 }
-                let description = "Access your data for \(host)"
+                let description = "Access your data on \(host)"
                 descriptions.append(forUpdate ? description + "." : description)
             }
         }
@@ -378,9 +378,9 @@ public enum AddonPermissionSupport {
         
         if siteCount > maxShownPermissionsEntries {
             if siteCount - maxShownPermissionsEntries == 1 {
-                descriptions.append(forUpdate ? "Access your data on another site." : "Access your data on another site")
+                descriptions.append(forUpdate ? "Access your data on another website." : "Access your data on another website")
             } else {
-                descriptions.append(forUpdate ? "Access your data on other sites." : "Access your data on other sites")
+                descriptions.append(forUpdate ? "Access your data on other websites." : "Access your data on other websites")
             }
         }
         

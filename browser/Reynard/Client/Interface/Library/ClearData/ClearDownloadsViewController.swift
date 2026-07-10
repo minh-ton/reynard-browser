@@ -11,12 +11,6 @@ final class ClearDownloadsViewController: UITableViewController {
     private let onClear: (Date?) -> Void
     private var selectedTimeframe: ClearDataTimeframe = .lastHour
     
-    private lazy var clearFooterView = ClearDataFooterView(
-        title: "Clear Downloads",
-        target: self,
-        action: #selector(confirmClearDownloads)
-    )
-    
     init(onClear: @escaping (Date?) -> Void) {
         self.onClear = onClear
         super.init(style: .insetGrouped)
@@ -33,45 +27,56 @@ final class ClearDownloadsViewController: UITableViewController {
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = LibraryActionButton.makeSheetCloseButton(target: self, action: #selector(dismissSheet))
-        tableView.tableFooterView = clearFooterView
-    }
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        
-        clearFooterView.alignClearButton(to: tableView.rectForRow(at: IndexPath(row: 0, section: 0)), tableViewWidth: tableView.bounds.width)
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        1
+        return 2
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        ClearDataTimeframe.allCases.count
+        return section == 0 ? ClearDataTimeframe.allCases.count : 1
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        "Clear Timeframe"
-    }
-    
-    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        "Clearing downloads history does not delete files in your Downloads folder."
+        return section == 0 ? "Clear Timeframe" : nil
     }
     
     override func tableView(
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell")
-        ?? UITableViewCell(style: .default, reuseIdentifier: "Cell")
-        ClearDataTimeframe.configureCell(cell, at: indexPath, selectedTimeframe: selectedTimeframe)
+        if indexPath.section == 0 {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "Cell")
+            ?? UITableViewCell(style: .default, reuseIdentifier: "Cell")
+            ClearDataTimeframe.configureCell(
+                cell,
+                at: indexPath,
+                selectedTimeframe: selectedTimeframe,
+                allTimeTitle: "All Downloads"
+            )
+            return cell
+        }
+        
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        cell.textLabel?.text = "Clear Downloads"
+        cell.textLabel?.textColor = .systemRed
+        cell.textLabel?.textAlignment = .center
+        cell.accessoryType = .none
         return cell
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        defer {
+            tableView.deselectRow(at: indexPath, animated: true)
+        }
+        
+        guard indexPath.section == 0 else {
+            confirmClearDownloads()
+            return
+        }
+        
         selectedTimeframe = ClearDataTimeframe.allCases[indexPath.row]
-        tableView.reloadSections(IndexSet(integer: 0), with: .none)
-        tableView.deselectRow(at: indexPath, animated: true)
+        tableView.reloadSections(IndexSet(integer: indexPath.section), with: .none)
     }
     
     @objc private func dismissSheet() {

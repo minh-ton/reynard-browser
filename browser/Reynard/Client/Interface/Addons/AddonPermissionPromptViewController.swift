@@ -182,7 +182,7 @@ final class AddonPermissionPromptViewController: UITableViewController {
                 cell.textLabel?.text = value
             case .showAllSites:
                 cell.textLabel?.font = .preferredFont(forTextStyle: .body)
-                cell.textLabel?.text = "Show All Sites"
+                cell.textLabel?.text = "Show All Websites"
                 cell.textLabel?.textColor = view.tintColor
                 cell.selectionStyle = .default
                 cell.accessoryType = .disclosureIndicator
@@ -296,7 +296,7 @@ final class AddonPermissionPromptViewController: UITableViewController {
             }
             return "\(addonName) requests additional permissions."
         case .update:
-            return "\(addonName) has been updated. You must approve additional permissions before the updated version will install. Dismissing this prompt will maintain your current add-on version."
+            return "\(addonName) has been updated. Approve the additional permissions before the updated version is installed. Dismissing this prompt keeps your current add-on version."
         }
     }
     
@@ -304,7 +304,8 @@ final class AddonPermissionPromptViewController: UITableViewController {
         var rows: [PermissionRow] = []
         
         if !domains.isEmpty {
-            rows.append(.domainHeader("Access your data for sites in \(domains.count) domains"))
+            let domainText = domains.count == 1 ? "1 domain" : "\(domains.count) domains"
+            rows.append(.domainHeader("Access your data on websites in \(domainText)"))
             rows.append(.showAllSites)
         }
         
@@ -365,7 +366,7 @@ private final class AddonPromptSiteListViewController: UITableViewController {
     init(sites: [String]) {
         self.sites = sites
         super.init(style: .insetGrouped)
-        title = "Sites"
+        title = "Websites"
     }
     
     required init?(coder: NSCoder) {
