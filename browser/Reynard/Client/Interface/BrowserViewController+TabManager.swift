@@ -53,6 +53,7 @@ extension BrowserViewController: TabManagerDelegate {
         }
         tabBar.reloadTabs()
         homepageOverlayCoordinator.updatePresentation(animated: false)
+        updateBrowserLayout(animated: false)
         
         if isShowingFullscreenMedia,
            fullscreenSession !== selectedTab.session {
