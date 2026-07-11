@@ -138,13 +138,21 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
     
     func createTabForSwipe() -> Int {
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
-        homepageOverlayCoordinator.prepareHomepageForNewTab(mode: tabManager.selectedTabMode)
+        let mode = tabManager.selectedTabMode
+        captureTabThumbnailIfNeeded()
+        homepageOverlayCoordinator.prepareHomepageForNewTab(mode: mode)
         let index = tabManager.createTab(selecting: false)
-        applyNewTabDisplayOption(toTabAt: index)
-        if let tab = tabManager.activeTabs[safe: index] {
-            tab.thumbnail = homepageOverlayCoordinator.previewImage(for: tab, size: contentView.bounds.size)
+
+        if Prefs.NewTabSettings.newTabDisplayOption == .customURL {
+            applyNewTabDisplayOption(toTabAt: index)
+            return index
         }
+
+        if let tab = tabManager.activeTabs[safe: index],
+           let previewImage = homepageOverlayCoordinator.previewImage(for: tab, size: contentView.bounds.size) {
+            tabManager.updateThumbnail(previewImage, forTabAt: index, mode: mode)
+        }
+
         return index
     }
 
@@ -158,9 +166,27 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     
     func addressBarGestureWillBegin() {
         browserChrome.dismissActionBar(animated: false)
+        captureTabThumbnailIfNeeded()
+    }
+
+    private func captureTabThumbnailIfNeeded() {
+        if let tab = tabManager.activeTabs[safe: tabManager.selectedTabIndex],
+           homepageOverlayCoordinator.needsHomepageThumbnail(for: tab),
+           tab.thumbnail != nil {
+            return
+        }
+
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
     }
     
+    func storedContentPreview(from tab: Tab) -> UIImage? {
+        guard homepageOverlayCoordinator.needsHomepageThumbnail(for: tab) else {
+            return nil
+        }
+
+        return tab.thumbnail
+    }
+
     // MARK: - Page Zoom
     
     func setSelectedPageZoomToPreviousLevel() {
