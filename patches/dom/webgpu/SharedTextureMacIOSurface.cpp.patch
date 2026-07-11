@@ -1,0 +1,26 @@
+diff --git a/dom/webgpu/SharedTextureMacIOSurface.cpp b/dom/webgpu/SharedTextureMacIOSurface.cpp
+index fb90c39c1cb9..8c0c7b5eb4fc 100644
+--- a/dom/webgpu/SharedTextureMacIOSurface.cpp
++++ b/dom/webgpu/SharedTextureMacIOSurface.cpp
+@@ -7,6 +7,7 @@
+ #include "mozilla/gfx/Logging.h"
+ #include "mozilla/gfx/MacIOSurface.h"
+ #include "mozilla/layers/GpuFenceMTLSharedEvent.h"
++#include "mozilla/layers/IOSurfacePort.h"
+ #include "mozilla/webgpu/WebGPUParent.h"
+ 
+ namespace mozilla::webgpu {
+@@ -73,9 +74,10 @@ SharedTextureMacIOSurface::ToSurfaceDescriptor() {
+   }
+ 
+   return Some(layers::SurfaceDescriptorMacIOSurface(
+-      mSurface->GetIOSurfaceID(), !mSurface->HasAlpha(),
+-      mSurface->GetYUVColorSpace(), mSurface->GetTransferFunction(),
+-      std::move(gpuFence)));
++      mSurface->GetIOSurfaceID(),
++      layers::IOSurfacePort::FromSurface(mSurface->GetIOSurfaceRef()),
++      !mSurface->HasAlpha(), mSurface->GetYUVColorSpace(),
++      mSurface->GetTransferFunction(), std::move(gpuFence)));
+ }
+ 
+ void SharedTextureMacIOSurface::GetSnapshot(const ipc::Shmem& aDestShmem,

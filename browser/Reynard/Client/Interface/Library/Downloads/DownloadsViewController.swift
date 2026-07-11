@@ -575,7 +575,13 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
             return
         }
         
-        let encodedPath = fileURL.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+        var filePath = fileURL.path
+
+        if filePath.hasPrefix("/var/") {
+            filePath = "/private" + filePath
+        }
+        
+        let encodedPath = filePath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
         guard let filesURL = URL(string: "shareddocuments://\(encodedPath)") else {
             return
         }

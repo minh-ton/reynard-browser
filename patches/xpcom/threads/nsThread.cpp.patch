@@ -1,0 +1,61 @@
+diff --git a/xpcom/threads/nsThread.cpp b/xpcom/threads/nsThread.cpp
+index 1234476f8f8b..715768b1c0d4 100644
+--- a/xpcom/threads/nsThread.cpp
++++ b/xpcom/threads/nsThread.cpp
+@@ -80,10 +80,15 @@ using GetCurrentThreadStackLimitsFn = void(WINAPI*)(PULONG_PTR LowLimit,
+ #  define HAVE_SCHED_SETAFFINITY
+ #endif
+ 
++#if defined(XP_MACOSX) || defined(XP_IOS)
++#  define MOZ_HAS_DARWIN_THREAD_QOS
++#  include <pthread/qos.h>
++#  include <sys/qos.h>
++#endif
++
+ #ifdef XP_MACOSX
+ #  include <mach/mach.h>
+ #  include <mach/thread_policy.h>
+-#  include <sys/qos.h>
+ 
+ #  include "nsCocoaFeatures.h"
+ #endif
+@@ -978,14 +983,11 @@ NS_IMETHODIMP nsThread::SetThreadQoS(nsIThread::QoSPriority aPriority) {
+   // so we assert if we aren't on the current thread.
+   MOZ_ASSERT(IsOnCurrentThread(), "Can only change the current thread's QoS");
+ 
+-#if defined(XP_MACOSX)
+-  // Only arm64 macs may possess heterogeneous cores. On these, we can tell
+-  // a thread to set its own QoS status. On intel macs things should behave
+-  // normally, and the OS will ignore the QoS state of the thread.
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+   if (aPriority == nsIThread::QOS_PRIORITY_LOW) {
+     pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
+   } else if (NS_IsMainThread()) {
+-    // MacOS documentation specifies that a main thread should be initialized at
++    // Apple documentation specifies that a main thread should be initialized at
+     // the USER_INTERACTIVE priority, so when we restore thread priorities the
+     // main thread should be setting itself to this.
+     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+@@ -1280,6 +1282,22 @@ nsThread::SetPriority(int32_t aPriority) {
+   // If chaos mode is active, retain the randomly chosen priority
+   if (!ChaosMode::isActive(ChaosFeature::ThreadScheduling)) {
+     PR_SetThreadPriority(mThread, pri);
++
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
++    if (IsOnCurrentThread()) {
++      if (mPriority <= PRIORITY_HIGHEST) {
++        pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
++      } else if (mPriority <= PRIORITY_HIGH) {
++        pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
++      } else if (mPriority >= PRIORITY_LOWEST) {
++        pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
++      } else if (mPriority >= PRIORITY_LOW) {
++        pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
++      } else {
++        pthread_set_qos_class_self_np(QOS_CLASS_DEFAULT, 0);
++      }
++    }
++#endif
+   }
+ 
+   return NS_OK;

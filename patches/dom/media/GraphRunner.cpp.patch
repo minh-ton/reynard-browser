@@ -1,0 +1,37 @@
+diff --git a/dom/media/GraphRunner.cpp b/dom/media/GraphRunner.cpp
+index 03f4c9674bcd..57f897929c88 100644
+--- a/dom/media/GraphRunner.cpp
++++ b/dom/media/GraphRunner.cpp
+@@ -12,6 +12,7 @@
+ #include "mozilla/dom/WorkletThread.h"
+ #include "nsISupportsImpl.h"
+ #include "nsISupportsPriority.h"
++#include "nsThreadUtils.h"
+ #include "prthread.h"
+ #ifdef MOZ_WIDGET_ANDROID
+ #  include "AndroidProcess.h"
+@@ -39,13 +40,19 @@ already_AddRefed<GraphRunner> GraphRunner::Create(MediaTrackGraphImpl* aGraph) {
+   nsIThreadManager::ThreadCreationOptions options = {
+       .stackSize = mozilla::dom::WorkletThread::StackSize()};
+   if (NS_WARN_IF(NS_FAILED(NS_NewNamedThread(
+-          "GraphRunner", getter_AddRefs(thread), nullptr, options)))) {
++          "GraphRunner", getter_AddRefs(thread),
++          NS_NewRunnableFunction(
++              "GraphRunner::SetThreadPriority",
++              [] {
++                nsCOMPtr<nsISupportsPriority> supportsPriority =
++                    do_QueryInterface(NS_GetCurrentThread());
++                MOZ_ASSERT(supportsPriority);
++                MOZ_ALWAYS_SUCCEEDS(supportsPriority->SetPriority(
++                    nsISupportsPriority::PRIORITY_HIGHEST));
++              }),
++          options)))) {
+     return nullptr;
+   }
+-  nsCOMPtr<nsISupportsPriority> supportsPriority = do_QueryInterface(thread);
+-  MOZ_ASSERT(supportsPriority);
+-  MOZ_ALWAYS_SUCCEEDS(
+-      supportsPriority->SetPriority(nsISupportsPriority::PRIORITY_HIGHEST));
+ 
+   return do_AddRef(new GraphRunner(aGraph, thread.forget()));
+ }

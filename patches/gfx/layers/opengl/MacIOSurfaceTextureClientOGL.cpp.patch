@@ -1,0 +1,60 @@
+diff --git a/gfx/layers/opengl/MacIOSurfaceTextureClientOGL.cpp b/gfx/layers/opengl/MacIOSurfaceTextureClientOGL.cpp
+index 71e07a59eaa2..d0a8d7264997 100644
+--- a/gfx/layers/opengl/MacIOSurfaceTextureClientOGL.cpp
++++ b/gfx/layers/opengl/MacIOSurfaceTextureClientOGL.cpp
+@@ -6,12 +6,23 @@
+ #include "mozilla/gfx/MacIOSurface.h"
+ #include "MacIOSurfaceHelpers.h"
+ #include "gfxPlatform.h"
++#include "mozilla/layers/IOSurfacePort.h"
+ 
+ namespace mozilla {
+ namespace layers {
+ 
+ using namespace gfx;
+ 
++static SurfaceDescriptorMacIOSurface MacIOSurfaceDescriptor(
++    MacIOSurface* aSurface) {
++  RefPtr<GpuFence> gpuFence;
++  return SurfaceDescriptorMacIOSurface(
++      aSurface->GetIOSurfaceID(),
++      IOSurfacePort::FromSurface(aSurface->GetIOSurfaceRef()),
++      !aSurface->HasAlpha(), aSurface->GetYUVColorSpace(),
++      aSurface->GetTransferFunction(), std::move(gpuFence));
++}
++
+ MacIOSurfaceTextureData::MacIOSurfaceTextureData(MacIOSurface* aSurface,
+                                                  BackendType aBackend)
+     : mSurface(aSurface), mBackend(aBackend) {
+@@ -48,28 +59,19 @@ MacIOSurfaceTextureData* MacIOSurfaceTextureData::Create(const IntSize& aSize,
+ }
+ 
+ bool MacIOSurfaceTextureData::Serialize(SurfaceDescriptor& aOutDescriptor) {
+-  RefPtr<layers::GpuFence> gpuFence;
+-  aOutDescriptor = SurfaceDescriptorMacIOSurface(
+-      mSurface->GetIOSurfaceID(), !mSurface->HasAlpha(),
+-      mSurface->GetYUVColorSpace(), mSurface->GetTransferFunction(),
+-      std::move(gpuFence));
++  aOutDescriptor = MacIOSurfaceDescriptor(mSurface);
+   return true;
+ }
+ 
+ void MacIOSurfaceTextureData::GetSubDescriptor(
+     RemoteDecoderVideoSubDescriptor* const aOutDesc) {
+-  RefPtr<layers::GpuFence> gpuFence;
+-  *aOutDesc = SurfaceDescriptorMacIOSurface(
+-      mSurface->GetIOSurfaceID(), !mSurface->HasAlpha(),
+-      mSurface->GetYUVColorSpace(), mSurface->GetTransferFunction(),
+-      std::move(gpuFence));
++  *aOutDesc = MacIOSurfaceDescriptor(mSurface);
+ }
+ 
+ void MacIOSurfaceTextureData::FillInfo(TextureData::Info& aInfo) const {
+   aInfo.size = gfx::IntSize(mSurface->GetDevicePixelWidth(),
+                             mSurface->GetDevicePixelHeight());
+-  aInfo.format =
+-      mSurface->HasAlpha() ? SurfaceFormat::B8G8R8A8 : SurfaceFormat::B8G8R8X8;
++  aInfo.format = mSurface->GetFormat();
+   aInfo.hasSynchronization = false;
+   aInfo.supportsMoz2D = true;
+   aInfo.canExposeMappedData = false;

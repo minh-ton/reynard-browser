@@ -1,0 +1,30 @@
+diff --git a/gfx/layers/ipc/IOSurfacePort.h b/gfx/layers/ipc/IOSurfacePort.h
+index 6216a14b2b6f..ea952e84c881 100644
+--- a/gfx/layers/ipc/IOSurfacePort.h
++++ b/gfx/layers/ipc/IOSurfacePort.h
+@@ -33,6 +33,13 @@ struct IOSurfacePort {
+ #ifdef XP_DARWIN
+   UniqueMachSendRight mPort;
+ 
++  IOSurfacePort() = default;
++  explicit IOSurfacePort(UniqueMachSendRight&& aPort);
++  IOSurfacePort(const IOSurfacePort& aOther);
++  IOSurfacePort& operator=(const IOSurfacePort& aOther);
++  IOSurfacePort(IOSurfacePort&& aOther) = default;
++  IOSurfacePort& operator=(IOSurfacePort&& aOther) = default;
++
+   CFTypeRefPtr<IOSurfaceRef> GetSurface() const;
+   static IOSurfacePort FromSurface(const CFTypeRefPtr<IOSurfaceRef>& aSurface);
+ 
+@@ -48,9 +55,9 @@ template <>
+ struct ParamTraits<mozilla::layers::IOSurfacePort> {
+   using paramType = mozilla::layers::IOSurfacePort;
+ 
+-  static void Write(MessageWriter* writer, paramType&& param) {
++  static void Write(MessageWriter* writer, const paramType& param) {
+ #ifdef XP_DARWIN
+-    WriteParam(writer, std::move(param.mPort));
++    WriteParam(writer, mozilla::RetainMachSendRight(param.mPort.get()));
+ #endif
+   }
+   static bool Read(MessageReader* reader, paramType* result) {

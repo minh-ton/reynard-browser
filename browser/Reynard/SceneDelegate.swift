@@ -14,6 +14,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         let browserViewController = BrowserViewController()
+        browserViewController.sessionManager.setApplicationForeground(scene.activationState != .background)
+        
         let window = UIWindow(windowScene: windowScene)
         window.overrideUserInterfaceStyle = AppAppearanceController.userInterfaceStyle(for: Prefs.AppearanceSettings.appAppearance)
         window.backgroundColor = .systemBackground
@@ -34,9 +36,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     func sceneWillResignActive(_ scene: UIScene) {}
     
-    func sceneWillEnterForeground(_ scene: UIScene) {}
+    func sceneWillEnterForeground(_ scene: UIScene) {
+        (window?.rootViewController as? BrowserViewController)?
+            .sessionManager.setApplicationForeground(true)
+    }
     
-    func sceneDidEnterBackground(_ scene: UIScene) {}
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        (window?.rootViewController as? BrowserViewController)?
+            .sessionManager.setApplicationForeground(false)
+    }
     
     private func handleIncomingURLContexts(_ urlContexts: Set<UIOpenURLContext>) {
         guard let incomingURL = urlContexts.first?.url else {

@@ -1,0 +1,19 @@
+diff --git a/mobile/shared/components/geckoview/GeckoViewPrompter.sys.mjs b/mobile/shared/components/geckoview/GeckoViewPrompter.sys.mjs
+index 1575183eb4e3..10f6b6e7fdcd 100644
+--- a/mobile/shared/components/geckoview/GeckoViewPrompter.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewPrompter.sys.mjs
+@@ -96,9 +96,11 @@ export class GeckoViewPrompter {
+   }
+ 
+   dismiss() {
+-    this.callback(null);
+-    // Notify the UI that this prompt should be hidden.
+-    this._dismissUi();
++    if (this.callback) {
++      this.callback(null);
++      // Notify the UI that this prompt should be hidden.
++      this._dismissUi();
++    }
+   }
+ 
+   getPromptType() {

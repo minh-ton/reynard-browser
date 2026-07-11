@@ -16,6 +16,7 @@ protocol ContextMenuCoordinatorHost: AnyObject {
     var contextMenuSelectedSession: GeckoSession? { get }
     
     func captureSourceTabThumbnail(completion: @escaping () -> Void)
+    func contextMenuOpenLink(_ url: URL, disposition: TabOpenDisposition)
     func contextMenuShareLink(_ url: URL)
     func contextMenuRestoreInteraction(for session: GeckoSession)
 }
@@ -73,8 +74,21 @@ final class ContextMenuCoordinator: NSObject {
     }
     
     private func openLinkPreview(disposition: TabOpenDisposition) {
-        guard let host,
-              linkPreview != nil else {
+        guard let host else {
+            return
+        }
+        
+        if !Prefs.BrowsingSettings.showLinkPreviews {
+            guard case .link(let url) = pendingContext?.target else {
+                return
+            }
+            
+            isCommitting = true
+            host.contextMenuOpenLink(url, disposition: disposition)
+            return
+        }
+        
+        guard linkPreview != nil else {
             return
         }
         

@@ -37,6 +37,41 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         }
     }
     
+    func contextMenuOpenLink(_ url: URL, disposition: TabOpenDisposition) {
+        let mode: TabMode
+        let target: TabInsertionTarget
+        
+        switch disposition {
+        case .currentTab:
+            tabManager.browse(to: url.absoluteString)
+            return
+        case .newTab:
+            mode = tabManager.selectedTabMode
+            target = .afterSelected
+        case .newPrivateTab:
+            mode = .private
+            target = tabManager.selectedTabMode == .private ? .afterSelected : .end
+        }
+        
+        let tabIndex = tabManager.createTab(selecting: false, target: target, mode: mode)
+        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+        guard let tab = tabs[safe: tabIndex] else {
+            return
+        }
+        
+        tabManager.browse(to: url.absoluteString, in: tab)
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.tabBar.setPendingExpansion(at: tabIndex)
+            self.browserChrome.animateAutomaticNewTabTransition(to: tab) { [weak self] in
+                self?.tabManager.selectTab(at: tabIndex, mode: mode)
+            }
+        }
+    }
+    
     func contextMenuShareLink(_ url: URL) {
         presentShareSheet(url: url.absoluteString)
     }

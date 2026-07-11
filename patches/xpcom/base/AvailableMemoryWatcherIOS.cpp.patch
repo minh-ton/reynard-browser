@@ -1,0 +1,193 @@
+diff --git a/xpcom/base/AvailableMemoryWatcherIOS.cpp b/xpcom/base/AvailableMemoryWatcherIOS.cpp
+new file mode 100644
+index 000000000000..b861cd32bac0
+--- /dev/null
++++ b/xpcom/base/AvailableMemoryWatcherIOS.cpp
+@@ -0,0 +1,187 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#include "AvailableMemoryWatcher.h"
++
++#include "mozilla/Assertions.h"
++#include "mozilla/MemoryPressureLevelIOS.h"
++#include "mozilla/TimeStamp.h"
++#include "nsMemoryPressure.h"
++#include "nsThreadUtils.h"
++
++namespace mozilla {
++
++/*
++ * The iOS AvailableMemoryWatcher translates UIKit memory pressure signals into
++ * Gecko memory-pressure notifications using a mobile-specific severity policy.
++ *
++ * iOS warning pressure is actionable: the first warning sends a full
++ * "low-memory" notification so Gecko can release caches and run low-memory
++ * cleanup before the process reaches a critical state. Critical pressure, which
++ * also includes UIApplication memory warnings, is treated as a stronger signal.
++ * Escalating from warning to critical forces another full "low-memory"
++ * notification even if Gecko is already under pressure.
++ *
++ * Repeated pressure at the same severity is throttled. If it occurs within
++ * kLowMemoryOngoingResetTimeMS of the last full notification, the watcher sends
++ * "low-memory-ongoing" instead, allowing downstream observers to avoid repeated
++ * expensive full GC/CC work. Once the throttle window expires, the next
++ * repeated same-severity pressure sends a full "low-memory" notification again.
++ *
++ * Returning to normal sends MemoryPressureState::NoPressure, which becomes
++ * "memory-pressure-stop" downstream. Unlike the macOS watcher, this iOS watcher
++ * does not gate Gecko memory-pressure notifications on tab unloading.
++ */
++class nsAvailableMemoryWatcher final : public nsAvailableMemoryWatcherBase {
++ public:
++  NS_DECL_ISUPPORTS_INHERITED
++
++  nsAvailableMemoryWatcher();
++  nsresult Init() override;
++
++  void OnMemoryPressureChanged(IOSMemoryPressureLevel aLevel) override;
++
++ private:
++  ~nsAvailableMemoryWatcher() = default;
++
++  MemoryPressureState StateForActionablePressure(
++      IOSMemoryPressureLevel aNewLevel);
++  void HandleActionablePressure(MemoryPressureState aState);
++  void HandleNormalPressure();
++  bool ShouldSendFullMemoryPressure() const;
++
++  static bool IsActionable(IOSMemoryPressureLevel aLevel);
++  static bool IsValidLevel(IOSMemoryPressureLevel aLevel);
++  static bool IsEscalating(IOSMemoryPressureLevel aOldLevel,
++                           IOSMemoryPressureLevel aNewLevel);
++
++  static constexpr uint32_t kLowMemoryOngoingResetTimeMS = 10'000;
++
++  bool mInitialized;
++  IOSMemoryPressureLevel mLevel;
++  TimeStamp mLastFullMemoryPressure;
++};
++
++NS_IMPL_ISUPPORTS_INHERITED0(nsAvailableMemoryWatcher,
++                             nsAvailableMemoryWatcherBase)
++
++nsAvailableMemoryWatcher::nsAvailableMemoryWatcher()
++    : mInitialized(false), mLevel(IOSMemoryPressureLevel::Value::eUnset) {}
++
++nsresult nsAvailableMemoryWatcher::Init() {
++  nsresult rv = nsAvailableMemoryWatcherBase::Init();
++  if (NS_FAILED(rv)) {
++    return rv;
++  }
++
++  MOZ_ASSERT(!mInitialized);
++  if (mInitialized) {
++    return NS_ERROR_ALREADY_INITIALIZED;
++  }
++
++  mInitialized = true;
++  return NS_OK;
++}
++
++already_AddRefed<nsAvailableMemoryWatcherBase> CreateAvailableMemoryWatcher() {
++  RefPtr watcher(new nsAvailableMemoryWatcher());
++  watcher->Init();
++  return watcher.forget();
++}
++
++void nsAvailableMemoryWatcher::OnMemoryPressureChanged(
++    IOSMemoryPressureLevel aNewLevel) {
++  MOZ_ASSERT(NS_IsMainThread());
++  MOZ_ASSERT(mInitialized);
++  MOZ_ASSERT(IsValidLevel(aNewLevel));
++
++  if (!IsValidLevel(aNewLevel)) {
++    return;
++  }
++
++  if (!IsActionable(aNewLevel)) {
++    HandleNormalPressure();
++    mLevel = aNewLevel;
++    return;
++  }
++
++  MemoryPressureState state = StateForActionablePressure(aNewLevel);
++  HandleActionablePressure(state);
++  mLevel = aNewLevel;
++}
++
++MemoryPressureState nsAvailableMemoryWatcher::StateForActionablePressure(
++    IOSMemoryPressureLevel aNewLevel) {
++  if (!IsActionable(mLevel) || IsEscalating(mLevel, aNewLevel)) {
++    return MemoryPressureState::LowMemoryNew;
++  }
++
++  if (mLevel == aNewLevel) {
++    return ShouldSendFullMemoryPressure()
++               ? MemoryPressureState::LowMemoryNew
++               : MemoryPressureState::LowMemoryOngoing;
++  }
++
++  return MemoryPressureState::LowMemoryOngoing;
++}
++
++void nsAvailableMemoryWatcher::HandleActionablePressure(
++    MemoryPressureState aState) {
++  MOZ_ASSERT(aState == MemoryPressureState::LowMemoryNew ||
++             aState == MemoryPressureState::LowMemoryOngoing);
++
++  if (aState == MemoryPressureState::LowMemoryNew) {
++    mLastFullMemoryPressure = TimeStamp::NowLoRes();
++  }
++
++  UpdateLowMemoryTimeStamp();
++  {
++    MutexAutoLock lock(mMutex);
++    ++mNumOfMemoryPressure;
++  }
++  NS_NotifyOfMemoryPressure(aState);
++}
++
++void nsAvailableMemoryWatcher::HandleNormalPressure() {
++  if (!IsActionable(mLevel)) {
++    return;
++  }
++
++  {
++    MutexAutoLock lock(mMutex);
++    RecordTelemetryEventOnHighMemory(lock);
++  }
++  mLastFullMemoryPressure = TimeStamp();
++  NS_NotifyOfMemoryPressure(MemoryPressureState::NoPressure);
++}
++
++bool nsAvailableMemoryWatcher::ShouldSendFullMemoryPressure() const {
++  if (mLastFullMemoryPressure.IsNull()) {
++    return true;
++  }
++
++  return TimeStamp::NowLoRes() - mLastFullMemoryPressure >=
++         TimeDuration::FromMilliseconds(kLowMemoryOngoingResetTimeMS);
++}
++
++bool nsAvailableMemoryWatcher::IsActionable(IOSMemoryPressureLevel aLevel) {
++  return aLevel == IOSMemoryPressureLevel::Value::eWarning ||
++         aLevel == IOSMemoryPressureLevel::Value::eCritical;
++}
++
++bool nsAvailableMemoryWatcher::IsValidLevel(IOSMemoryPressureLevel aLevel) {
++  return aLevel == IOSMemoryPressureLevel::Value::eNormal ||
++         IsActionable(aLevel);
++}
++
++bool nsAvailableMemoryWatcher::IsEscalating(IOSMemoryPressureLevel aOldLevel,
++                                            IOSMemoryPressureLevel aNewLevel) {
++  return aOldLevel == IOSMemoryPressureLevel::Value::eWarning &&
++         aNewLevel == IOSMemoryPressureLevel::Value::eCritical;
++}
++
++}  // namespace mozilla

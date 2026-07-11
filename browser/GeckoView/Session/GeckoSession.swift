@@ -182,6 +182,7 @@ public class GeckoSession {
         progressDelegate = nil
         promptDelegate = nil
         selectionActionDelegate = nil
+        mediaSessionDelegate?.onDeactivated(session: self)
         mediaSessionDelegate = nil
         
         guard let window else {

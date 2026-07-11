@@ -1,0 +1,27 @@
+diff --git a/xpcom/base/MemoryPressureLevelIOS.h b/xpcom/base/MemoryPressureLevelIOS.h
+new file mode 100644
+index 000000000000..bf78116191f0
+--- /dev/null
++++ b/xpcom/base/MemoryPressureLevelIOS.h
+@@ -0,0 +1,21 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#ifndef mozilla_MemoryPressureLevelIOS_h
++#define mozilla_MemoryPressureLevelIOS_h
++
++#include "mozilla/MemoryPressureLevelMac.h"
++
++namespace mozilla {
++
++#if defined(XP_IOS)
++using IOSMemoryPressureLevel = MacMemoryPressureLevel;
++#endif
++
++}  // namespace mozilla
++
++#endif  // mozilla_MemoryPressureLevelIOS_h

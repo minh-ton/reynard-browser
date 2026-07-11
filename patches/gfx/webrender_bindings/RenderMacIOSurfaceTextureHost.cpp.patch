@@ -1,0 +1,67 @@
+diff --git a/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp b/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
+index ed8d9b37ea48..b916233e2b29 100644
+--- a/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
++++ b/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
+@@ -6,8 +6,6 @@
+ 
+ #ifdef XP_MACOSX
+ #  include "GLContextCGL.h"
+-#else
+-#  include "GLContextEAGL.h"
+ #endif
+ 
+ #include "mozilla/gfx/Logging.h"
+@@ -20,16 +18,25 @@
+ namespace mozilla {
+ namespace wr {
+ 
++static GLenum MacIOSurfaceTextureTarget() {
++#ifdef XP_MACOSX
++  return LOCAL_GL_TEXTURE_RECTANGLE_ARB;
++#else
++  return LOCAL_GL_TEXTURE_2D;
++#endif
++}
++
+ static bool CreateTextureForPlane(uint8_t aPlaneID, gl::GLContext* aGL,
+                                   MacIOSurface* aSurface, GLuint* aTexture) {
+   MOZ_ASSERT(aGL && aSurface && aTexture);
+ 
++  GLenum textureTarget = MacIOSurfaceTextureTarget();
+   aGL->fGenTextures(1, aTexture);
+-  ActivateBindAndTexParameteri(aGL, LOCAL_GL_TEXTURE0,
+-                               LOCAL_GL_TEXTURE_RECTANGLE_ARB, *aTexture);
+-  aGL->fTexParameteri(LOCAL_GL_TEXTURE_RECTANGLE_ARB, LOCAL_GL_TEXTURE_WRAP_T,
++  ActivateBindAndTexParameteri(aGL, LOCAL_GL_TEXTURE0, textureTarget,
++                               *aTexture);
++  aGL->fTexParameteri(textureTarget, LOCAL_GL_TEXTURE_WRAP_T,
+                       LOCAL_GL_CLAMP_TO_EDGE);
+-  aGL->fTexParameteri(LOCAL_GL_TEXTURE_RECTANGLE_ARB, LOCAL_GL_TEXTURE_WRAP_S,
++  aGL->fTexParameteri(textureTarget, LOCAL_GL_TEXTURE_WRAP_S,
+                       LOCAL_GL_CLAMP_TO_EDGE);
+ 
+   gfx::SurfaceFormat readFormat = gfx::SurfaceFormat::UNKNOWN;
+@@ -95,15 +102,19 @@ wr::WrExternalImage RenderMacIOSurfaceTextureHost::Lock(uint8_t aChannelIndex,
+   if (!mTextureHandles[0]) {
+ #ifdef XP_MACOSX
+     MOZ_ASSERT(gl::GLContextCGL::Cast(mGL.get())->GetCGLContext());
+-#else
+-    MOZ_ASSERT(gl::GLContextEAGL::Cast(mGL.get())->GetEAGLContext());
+ #endif
+ 
+     // The result of GetPlaneCount() is 0 for single plane format, but it will
+     // be 2 if the format has 2 planar data.
+-    CreateTextureForPlane(0, mGL, mSurface, &(mTextureHandles[0]));
++    if (!CreateTextureForPlane(0, mGL, mSurface, &(mTextureHandles[0]))) {
++      DeleteTextureHandle();
++      return InvalidToWrExternalImage();
++    }
+     for (size_t i = 1; i < mSurface->GetPlaneCount(); ++i) {
+-      CreateTextureForPlane(i, mGL, mSurface, &(mTextureHandles[i]));
++      if (!CreateTextureForPlane(i, mGL, mSurface, &(mTextureHandles[i]))) {
++        DeleteTextureHandle();
++        return InvalidToWrExternalImage();
++      }
+     }
+   }
+ 

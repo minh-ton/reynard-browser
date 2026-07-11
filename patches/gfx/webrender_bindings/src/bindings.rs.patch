@@ -1,0 +1,47 @@
+diff --git a/gfx/webrender_bindings/src/bindings.rs b/gfx/webrender_bindings/src/bindings.rs
+index 2280364f6839..4cc3c3e08c6b 100644
+--- a/gfx/webrender_bindings/src/bindings.rs
++++ b/gfx/webrender_bindings/src/bindings.rs
+@@ -2828,7 +2828,12 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
+ }
+ 
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+-fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
++fn read_font_descriptor(
++    bytes: &mut WrVecU8,
++    index: u32,
++    is_system_font: bool,
++    system_font_traits: u32,
++) -> NativeFontHandle {
+     // On macOS, the descriptor string is a concatenation of the PostScript name
+     // and the font file path (to disambiguate cases where there are multiple
+     // faces with the same psname present). The index is the length of the psname
+@@ -2838,6 +2843,8 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
+     NativeFontHandle {
+         name: String::from_utf8(chars[..index as usize].to_vec()).unwrap_or("".to_string()),
+         path: String::from_utf8(chars[index as usize..].to_vec()).unwrap_or("".to_string()),
++        is_system_font,
++        system_font_traits,
+     }
+ }
+ 
+@@ -2856,8 +2863,18 @@ pub extern "C" fn wr_resource_updates_add_font_descriptor(
+     key: WrFontKey,
+     bytes: &mut WrVecU8,
+     index: u32,
++    is_system_font: bool,
++    system_font_traits: u32,
+ ) {
+-    let native_font_handle = read_font_descriptor(bytes, index);
++    #[cfg(any(target_os = "macos", target_os = "ios"))]
++    let native_font_handle =
++        read_font_descriptor(bytes, index, is_system_font, system_font_traits);
++    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
++    let native_font_handle = {
++        let _ = is_system_font;
++        let _ = system_font_traits;
++        read_font_descriptor(bytes, index)
++    };
+     txn.add_native_font(key, native_font_handle);
+ }
+ 

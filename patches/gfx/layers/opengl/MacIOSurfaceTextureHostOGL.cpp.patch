@@ -1,0 +1,58 @@
+diff --git a/gfx/layers/opengl/MacIOSurfaceTextureHostOGL.cpp b/gfx/layers/opengl/MacIOSurfaceTextureHostOGL.cpp
+index 2d08caa5489b..f7bf679d064f 100644
+--- a/gfx/layers/opengl/MacIOSurfaceTextureHostOGL.cpp
++++ b/gfx/layers/opengl/MacIOSurfaceTextureHostOGL.cpp
+@@ -6,6 +6,7 @@
+ #include "mozilla/gfx/gfxVars.h"
+ #include "mozilla/gfx/MacIOSurface.h"
+ #include "mozilla/layers/GpuFence.h"
++#include "mozilla/layers/IOSurfacePort.h"
+ #include "mozilla/webrender/RenderMacIOSurfaceTextureHost.h"
+ #include "mozilla/webrender/RenderThread.h"
+ #include "mozilla/webrender/WebRenderAPI.h"
+@@ -13,12 +14,26 @@
+ namespace mozilla {
+ namespace layers {
+ 
++static already_AddRefed<MacIOSurface> LookupSurface(
++    const SurfaceDescriptorMacIOSurface& aDescriptor) {
++  CFTypeRefPtr<IOSurfaceRef> surfaceRef =
++      aDescriptor.surfacePort().GetSurface();
++  if (surfaceRef) {
++    RefPtr<MacIOSurface> surface = new MacIOSurface(
++        std::move(surfaceRef), !aDescriptor.isOpaque(),
++        aDescriptor.yUVColorSpace(), aDescriptor.transferFunction());
++    return surface.forget();
++  }
++
++  return MacIOSurface::LookupSurface(
++      aDescriptor.surfaceId(), !aDescriptor.isOpaque(),
++      aDescriptor.yUVColorSpace(), aDescriptor.transferFunction());
++}
++
+ MacIOSurfaceTextureHostOGL::MacIOSurfaceTextureHostOGL(
+     TextureFlags aFlags, const SurfaceDescriptorMacIOSurface& aDescriptor)
+     : TextureHost(TextureHostType::MacIOSurface, aFlags),
+-      mSurface(MacIOSurface::LookupSurface(
+-          aDescriptor.surfaceId(), !aDescriptor.isOpaque(),
+-          aDescriptor.yUVColorSpace(), aDescriptor.transferFunction())),
++      mSurface(LookupSurface(aDescriptor)),
+       mGpuFence(aDescriptor.gpuFence()) {
+   MOZ_COUNT_CTOR(MacIOSurfaceTextureHostOGL);
+   if (!mSurface) {
+@@ -123,8 +138,13 @@ void MacIOSurfaceTextureHostOGL::PushResourceUpdates(
+   auto method = aOp == TextureHost::ADD_IMAGE
+                     ? &wr::TransactionBuilder::AddExternalImage
+                     : &wr::TransactionBuilder::UpdateExternalImage;
+-  auto imageType =
+-      wr::ExternalImageType::TextureHandle(wr::ImageBufferKind::TextureRect);
++  auto imageType = wr::ExternalImageType::TextureHandle(
++#ifdef XP_MACOSX
++      wr::ImageBufferKind::TextureRect
++#else
++      wr::ImageBufferKind::Texture2D
++#endif
++  );
+ 
+   switch (GetFormat()) {
+     case gfx::SurfaceFormat::B8G8R8A8:

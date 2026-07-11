@@ -1,8 +1,27 @@
 diff --git a/gfx/2d/UnscaledFontMac.h b/gfx/2d/UnscaledFontMac.h
-index ea3a8902d28f..c1749d9192db 100644
+index ea3a8902d28f..bd4c24ccc97c 100644
 --- a/gfx/2d/UnscaledFontMac.h
 +++ b/gfx/2d/UnscaledFontMac.h
-@@ -50,6 +50,10 @@ class UnscaledFontMac final : public UnscaledFont {
+@@ -24,9 +24,15 @@ class UnscaledFontMac final : public UnscaledFont {
+       : mFont(aFont), mIsDataFont(aIsDataFont) {
+     CFRetain(mFont);
+   }
+-  explicit UnscaledFontMac(CTFontDescriptorRef aFontDesc, CGFontRef aFont,
+-                           bool aIsDataFont = false)
+-      : mFontDesc(aFontDesc), mFont(aFont), mIsDataFont(aIsDataFont) {
++  explicit UnscaledFontMac(
++      CTFontDescriptorRef aFontDesc, CGFontRef aFont, bool aIsDataFont = false,
++      DescriptorProvenance aProvenance = DescriptorProvenance::NativeFace,
++      uint32_t aSystemFontTraits = 0)
++      : mFontDesc(aFontDesc),
++        mFont(aFont),
++        mIsDataFont(aIsDataFont),
++        mProvenance(aProvenance),
++        mSystemFontTraits(aSystemFontTraits) {
+     CFRetain(mFontDesc);
+     CFRetain(mFont);
+   }
+@@ -50,6 +56,10 @@ class UnscaledFontMac final : public UnscaledFont {
  
    CGFontRef GetFont() const { return mFont; }
  
@@ -13,3 +32,25 @@ index ea3a8902d28f..c1749d9192db 100644
    bool GetFontFileData(FontFileDataOutput aDataCallback, void* aBaton) override;
  
    bool IsDataFont() const { return mIsDataFont; }
+@@ -76,6 +86,12 @@ class UnscaledFontMac final : public UnscaledFont {
+   // part of the string (= starting offset of the path).
+   bool GetFontDescriptor(FontDescriptorOutput aCb, void* aBaton) override;
+ 
++  DescriptorProvenance GetDescriptorProvenance() const override {
++    return mProvenance;
++  }
++
++  uint32_t GetSystemFontTraits() const override { return mSystemFontTraits; }
++
+   CFArrayRef& CGAxesCache() { return mCGAxesCache; }
+   CFArrayRef& CTAxesCache() { return mCTAxesCache; }
+ 
+@@ -88,6 +104,8 @@ class UnscaledFontMac final : public UnscaledFont {
+   CFArrayRef mCGAxesCache = nullptr;  // Cached arrays of variation axis details
+   CFArrayRef mCTAxesCache = nullptr;
+   bool mIsDataFont;
++  DescriptorProvenance mProvenance = DescriptorProvenance::NativeFace;
++  uint32_t mSystemFontTraits = 0;
+ };
+ 
+ }  // namespace gfx

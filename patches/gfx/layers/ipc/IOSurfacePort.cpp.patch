@@ -1,0 +1,34 @@
+diff --git a/gfx/layers/ipc/IOSurfacePort.cpp b/gfx/layers/ipc/IOSurfacePort.cpp
+index af9552f63b9f..94b7a7f1faf7 100644
+--- a/gfx/layers/ipc/IOSurfacePort.cpp
++++ b/gfx/layers/ipc/IOSurfacePort.cpp
+@@ -12,6 +12,19 @@
+ namespace mozilla::layers {
+ 
+ #ifdef XP_DARWIN
++IOSurfacePort::IOSurfacePort(UniqueMachSendRight&& aPort)
++    : mPort(std::move(aPort)) {}
++
++IOSurfacePort::IOSurfacePort(const IOSurfacePort& aOther)
++    : mPort(RetainMachSendRight(aOther.mPort.get())) {}
++
++IOSurfacePort& IOSurfacePort::operator=(const IOSurfacePort& aOther) {
++  if (this != &aOther) {
++    mPort = RetainMachSendRight(aOther.mPort.get());
++  }
++  return *this;
++}
++
+ CFTypeRefPtr<IOSurfaceRef> IOSurfacePort::GetSurface() const {
+   // Note that IOSurfaceLookupFromMachPort does *not* consume the port.
+   if (IOSurfaceRef s = IOSurfaceLookupFromMachPort(mPort.get())) {
+@@ -22,7 +35,8 @@ CFTypeRefPtr<IOSurfaceRef> IOSurfacePort::GetSurface() const {
+ 
+ IOSurfacePort IOSurfacePort::FromSurface(
+     const CFTypeRefPtr<IOSurfaceRef>& aSurface) {
+-  return {UniqueMachSendRight(IOSurfaceCreateMachPort(aSurface.get()))};
++  return IOSurfacePort(
++      UniqueMachSendRight(IOSurfaceCreateMachPort(aSurface.get())));
+ }
+ 
+ bool IOSurfacePort::operator==(const IOSurfacePort& aOther) const {

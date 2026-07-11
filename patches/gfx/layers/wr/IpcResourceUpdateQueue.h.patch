@@ -1,0 +1,14 @@
+diff --git a/gfx/layers/wr/IpcResourceUpdateQueue.h b/gfx/layers/wr/IpcResourceUpdateQueue.h
+index 0321c85e59f7..09a0fd595a3f 100644
+--- a/gfx/layers/wr/IpcResourceUpdateQueue.h
++++ b/gfx/layers/wr/IpcResourceUpdateQueue.h
+@@ -161,7 +161,8 @@ class IpcResourceUpdateQueue {
+   bool AddRawFont(wr::FontKey aKey, Range<uint8_t> aBytes, uint32_t aIndex);
+ 
+   bool AddFontDescriptor(wr::FontKey aKey, Range<uint8_t> aBytes,
+-                         uint32_t aIndex);
++                         uint32_t aIndex, bool aIsSystemFont,
++                         uint32_t aSystemFontTraits);
+ 
+   void DeleteFont(wr::FontKey aKey);
+ 

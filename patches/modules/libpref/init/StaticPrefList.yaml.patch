@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index b96e9d02beda..064a26b677ee 100644
+index b96e9d02beda..f162626aead1 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -5763,7 +5763,7 @@
@@ -92,7 +92,16 @@ index b96e9d02beda..064a26b677ee 100644
    value: false
  #else
    value: true
-@@ -7591,7 +7595,13 @@
+@@ -7346,6 +7350,8 @@
+     type: RelaxedAtomicBool
+ #if defined(MOZ_AARCH64) && defined(XP_MACOSX)
+     value: true
++#elif defined(XP_IOS)
++    value: true
+ #else
+     value: false
+ #endif
+@@ -7591,7 +7597,13 @@
    # backend.
  -   name: gfx.font_rendering.coretext.enabled
      type: RelaxedAtomicBool
@@ -106,7 +115,7 @@ index b96e9d02beda..064a26b677ee 100644
      mirror: always
  #endif
  
-@@ -9849,7 +9859,7 @@
+@@ -9849,7 +9861,7 @@
  # or executable but never both at the same time. OpenBSD defaults to W^X.
  - name: javascript.options.content_process_write_protect_code
    type: bool
@@ -115,7 +124,7 @@ index b96e9d02beda..064a26b677ee 100644
    value: true
  #else
    value: false
-@@ -10024,7 +10034,9 @@
+@@ -10024,7 +10036,9 @@
  
  - name: layers.gpu-process.enabled
    type: bool
@@ -126,7 +135,7 @@ index b96e9d02beda..064a26b677ee 100644
    value: true
  #elif defined(MOZ_X11)
    value: false  # we'd like this to be @IS_NIGHTLY_BUILD@, see Bug 1927058
-@@ -10247,7 +10259,7 @@
+@@ -10247,7 +10261,7 @@
  
  - name: layout.accessiblecaret.margin-left
    type: float
@@ -135,7 +144,7 @@ index b96e9d02beda..064a26b677ee 100644
    mirror: always
  
  - name: layout.accessiblecaret.transition-duration
-@@ -11758,7 +11770,7 @@
+@@ -11758,7 +11772,7 @@
  - name: media.cubeb.sandbox
    type: bool
    mirror: always
@@ -144,7 +153,7 @@ index b96e9d02beda..064a26b677ee 100644
    value: true
  #else
    value: false
-@@ -12163,6 +12175,8 @@
+@@ -12163,6 +12177,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -153,7 +162,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12207,6 +12221,8 @@
+@@ -12207,6 +12223,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -162,7 +171,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12240,6 +12256,8 @@
+@@ -12240,6 +12258,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -171,7 +180,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12259,6 +12277,8 @@
+@@ -12259,6 +12279,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -180,7 +189,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12278,6 +12298,8 @@
+@@ -12278,6 +12300,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -189,7 +198,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12297,6 +12319,8 @@
+@@ -12297,6 +12321,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -198,7 +207,7 @@ index b96e9d02beda..064a26b677ee 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12323,7 +12347,7 @@
+@@ -12323,7 +12349,7 @@
    type: RelaxedAtomicBool
  #if defined(XP_WIN)
    value: true
@@ -207,7 +216,7 @@ index b96e9d02beda..064a26b677ee 100644
    value: true
  #elif defined(XP_LINUX) || defined(ANDROID)
    value: true
-@@ -12388,7 +12412,7 @@
+@@ -12388,7 +12414,7 @@
  #ifdef MOZ_FFMPEG
  -   name: media.ffmpeg.enabled
      type: RelaxedAtomicBool
@@ -216,7 +225,7 @@ index b96e9d02beda..064a26b677ee 100644
      value: false
    #else
      value: true
-@@ -14875,7 +14899,10 @@
+@@ -14875,7 +14901,10 @@
  - name: network.process.enabled
    type: RelaxedAtomicBool
    mirror: always
@@ -228,7 +237,7 @@ index b96e9d02beda..064a26b677ee 100644
    value: false # see bug 1641427
  #else
    value: true
-@@ -14924,7 +14951,13 @@
+@@ -14924,7 +14953,13 @@
  - name: network.http.network_access_on_socket_process.enabled
    type: RelaxedAtomicBool
    mirror: always
@@ -242,7 +251,29 @@ index b96e9d02beda..064a26b677ee 100644
  
  # Telemetry of traffic categories. Whether or not to enable HttpTrafficAnalyzer.
  - name: network.traffic_analyzer.enabled
-@@ -19676,7 +19709,7 @@
+@@ -18864,7 +18899,7 @@
+ # If the service is available, set threads to low-power mode when in the background.
+ - name: threads.use_low_power.enabled
+   type: RelaxedAtomicBool
+-#ifdef XP_MACOSX
++#if defined(XP_MACOSX) || defined(XP_IOS)
+   value: true
+ #else
+   value: @IS_NIGHTLY_BUILD@
+@@ -18873,10 +18908,10 @@
+ 
+ 
+ # If the process priority is set to background, put the main thread in the background.
+-# Currently off by default.
++# Enabled by default where low-power thread QoS is supported.
+ - name: threads.lower_mainthread_priority_in_background.enabled
+   type: bool
+-#ifdef XP_MACOSX
++#if defined(XP_MACOSX) || defined(XP_IOS)
+   value: true
+ #else
+   value: @IS_NIGHTLY_BUILD@
+@@ -19676,7 +19711,7 @@
  # on a platform that supports the GPU process, else true.
  - name: webgl.allow-in-parent
    type: bool

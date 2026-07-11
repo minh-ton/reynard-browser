@@ -1,0 +1,22 @@
+diff --git a/gfx/layers/wr/IpcResourceUpdateQueue.cpp b/gfx/layers/wr/IpcResourceUpdateQueue.cpp
+index d03de26e5ce0..718eae2274a4 100644
+--- a/gfx/layers/wr/IpcResourceUpdateQueue.cpp
++++ b/gfx/layers/wr/IpcResourceUpdateQueue.cpp
+@@ -415,12 +415,15 @@ bool IpcResourceUpdateQueue::AddRawFont(wr::FontKey aKey, Range<uint8_t> aBytes,
+ 
+ bool IpcResourceUpdateQueue::AddFontDescriptor(wr::FontKey aKey,
+                                                Range<uint8_t> aBytes,
+-                                               uint32_t aIndex) {
++                                               uint32_t aIndex,
++                                               bool aIsSystemFont,
++                                               uint32_t aSystemFontTraits) {
+   auto bytes = mWriter.Write(aBytes);
+   if (!bytes.length()) {
+     return false;
+   }
+-  mUpdates.AppendElement(layers::OpAddFontDescriptor(bytes, aIndex, aKey));
++  mUpdates.AppendElement(layers::OpAddFontDescriptor(
++      bytes, aIndex, aIsSystemFont, aSystemFontTraits, aKey));
+   return true;
+ }
+ 

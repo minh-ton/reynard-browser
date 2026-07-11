@@ -1,0 +1,164 @@
+diff --git a/hal/uikit/UIKitBattery.mm b/hal/uikit/UIKitBattery.mm
+new file mode 100644
+index 000000000000..5fb80232c9ab
+--- /dev/null
++++ b/hal/uikit/UIKitBattery.mm
+@@ -0,0 +1,158 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#include "mozilla/Hal.h"
++#include "mozilla/dom/battery/Constants.h"
++
++#import <UIKit/UIKit.h>
++
++using namespace mozilla::dom::battery;
++
++namespace mozilla::hal_impl {
++static void BatteryDidChange();
++}
++
++@interface UIKitBatteryObserver : NSObject
++- (void)batteryDidChange:(NSNotification*)aNotification;
++@end
++
++@implementation UIKitBatteryObserver
++- (void)batteryDidChange:(NSNotification*)aNotification {
++  mozilla::hal_impl::BatteryDidChange();
++}
++@end
++
++namespace mozilla::hal_impl {
++
++static UIKitBatteryObserver* sBatteryObserver = nil;
++static bool sListening = false;
++static bool sHadBatteryMonitoringEnabled = false;
++static bool sMonitoringEnabledByPolling = false;
++static bool sHasLastBatteryInfo = false;
++static hal::BatteryInformation sLastBatteryInfo;
++
++static bool BatteryInformationEquals(const hal::BatteryInformation& aLeft,
++                                     const hal::BatteryInformation& aRight) {
++  return aLeft.level() == aRight.level() &&
++         aLeft.charging() == aRight.charging() &&
++         aLeft.remainingTime() == aRight.remainingTime();
++}
++
++static void EnableBatteryMonitoringForRead(bool aFromPolling) {
++  UIDevice* device = [UIDevice currentDevice];
++  if (device.batteryMonitoringEnabled) {
++    return;
++  }
++
++  device.batteryMonitoringEnabled = YES;
++  if (aFromPolling && !sListening) {
++    sMonitoringEnabledByPolling = true;
++  }
++}
++
++static hal::BatteryInformation ReadBatteryInformation() {
++  UIDevice* device = [UIDevice currentDevice];
++  UIDeviceBatteryState state = device.batteryState;
++  float rawLevel = device.batteryLevel;
++
++  if (state == UIDeviceBatteryStateUnknown || rawLevel < 0.0f) {
++    return hal::BatteryInformation(kDefaultLevel, kDefaultCharging,
++                                   kDefaultRemainingTime);
++  }
++
++  double level = rawLevel;
++  if (level > 1.0) {
++    level = 1.0;
++  }
++
++  bool charging = state != UIDeviceBatteryStateUnplugged;
++  double remainingTime =
++      charging && level == 1.0 ? kDefaultRemainingTime : kUnknownRemainingTime;
++
++  return hal::BatteryInformation(level, charging, remainingTime);
++}
++
++static void PublishBatteryInformation(const hal::BatteryInformation& aInfo) {
++  sLastBatteryInfo = aInfo;
++  sHasLastBatteryInfo = true;
++  hal::NotifyBatteryChange(aInfo);
++}
++
++static void BatteryDidChange() {
++  MOZ_ASSERT(NS_IsMainThread());
++
++  if (!sListening) {
++    return;
++  }
++
++  EnableBatteryMonitoringForRead(/* aFromPolling */ false);
++  hal::BatteryInformation info = ReadBatteryInformation();
++  if (sHasLastBatteryInfo && BatteryInformationEquals(sLastBatteryInfo, info)) {
++    return;
++  }
++
++  PublishBatteryInformation(info);
++}
++
++void EnableBatteryNotifications() {
++  MOZ_ASSERT(NS_IsMainThread());
++
++  if (sListening) {
++    return;
++  }
++
++  UIDevice* device = [UIDevice currentDevice];
++  sHadBatteryMonitoringEnabled = device.batteryMonitoringEnabled;
++  EnableBatteryMonitoringForRead(/* aFromPolling */ false);
++
++  sBatteryObserver = [[UIKitBatteryObserver alloc] init];
++  NSNotificationCenter* notificationCenter =
++      [NSNotificationCenter defaultCenter];
++  [notificationCenter addObserver:sBatteryObserver
++                         selector:@selector(batteryDidChange:)
++                             name:UIDeviceBatteryStateDidChangeNotification
++                           object:device];
++  [notificationCenter addObserver:sBatteryObserver
++                         selector:@selector(batteryDidChange:)
++                             name:UIDeviceBatteryLevelDidChangeNotification
++                           object:device];
++
++  sListening = true;
++  PublishBatteryInformation(ReadBatteryInformation());
++}
++
++void DisableBatteryNotifications() {
++  MOZ_ASSERT(NS_IsMainThread());
++
++  if (!sListening) {
++    return;
++  }
++
++  NSNotificationCenter* notificationCenter =
++      [NSNotificationCenter defaultCenter];
++  [notificationCenter removeObserver:sBatteryObserver];
++  [sBatteryObserver release];
++  sBatteryObserver = nil;
++
++  UIDevice* device = [UIDevice currentDevice];
++  if (!sMonitoringEnabledByPolling) {
++    device.batteryMonitoringEnabled = sHadBatteryMonitoringEnabled;
++  }
++
++  sListening = false;
++  sHadBatteryMonitoringEnabled = false;
++  sHasLastBatteryInfo = false;
++}
++
++void GetCurrentBatteryInformation(hal::BatteryInformation* aBatteryInfo) {
++  MOZ_ASSERT(NS_IsMainThread());
++
++  EnableBatteryMonitoringForRead(/* aFromPolling */ true);
++  *aBatteryInfo = ReadBatteryInformation();
++}
++
++}  // namespace mozilla::hal_impl

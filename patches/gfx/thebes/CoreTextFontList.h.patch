@@ -1,16 +1,15 @@
 diff --git a/gfx/thebes/CoreTextFontList.h b/gfx/thebes/CoreTextFontList.h
-index b3b84199a87c..bc7156c3eca0 100644
+index b3b84199a87c..1b85c4eac8a2 100644
 --- a/gfx/thebes/CoreTextFontList.h
 +++ b/gfx/thebes/CoreTextFontList.h
-@@ -32,12 +32,26 @@ class CTFontEntry final : public gfxFontEntry {
+@@ -32,12 +32,27 @@ class CTFontEntry final : public gfxFontEntry {
    CTFontEntry(const nsACString& aPostscriptName, WeightRange aWeight,
                bool aIsStandardFace = false, double aSizeHint = 0.0);
  
-+  // REYNARD: Allow system font entries to retain the original CTFont-backed
-+  // descriptor
 +  CTFontEntry(const nsACString& aPostscriptName, CTFontRef aFont,
-+              WeightRange aWeight, bool aIsStandardFace = false,
-+              double aSizeHint = 0.0);
++              WeightRange aWeight,
++              mozilla::gfx::UnscaledFont::DescriptorProvenance aProvenance,
++              bool aIsStandardFace = false, double aSizeHint = 0.0);
 +
    // for use with data fonts
    CTFontEntry(const nsACString& aPostscriptName, CGFontRef aFontRef,
@@ -18,8 +17,10 @@ index b3b84199a87c..bc7156c3eca0 100644
                SlantStyleRange aStyle, bool aIsDataUserFont, bool aIsLocal);
  
 -  virtual ~CTFontEntry() { ::CGFontRelease(mFontRef); }
-+  // REYNARD: Release the CoreText descriptor & cached CGFont
 +  virtual ~CTFontEntry() {
++    if (mCharacterSet) {
++      ::CFRelease(mCharacterSet);
++    }
 +    if (mFontDesc) {
 +      ::CFRelease(mFontDesc);
 +    }
@@ -30,13 +31,54 @@ index b3b84199a87c..bc7156c3eca0 100644
  
    gfxFontEntry* Clone() const override;
  
-@@ -92,6 +106,9 @@ class CTFontEntry final : public gfxFontEntry {
+@@ -85,6 +100,8 @@ class CTFontEntry final : public gfxFontEntry {
+  protected:
+   gfxFont* CreateFontInstance(const gfxFontStyle* aFontStyle) override;
+ 
++  bool TestCharacterMap(uint32_t aCh) override;
++
+   bool HasFontTable(uint32_t aTableTag) override;
+ 
+   static void DestroyBlobFunc(void* aUserData);
+@@ -92,6 +109,11 @@ class CTFontEntry final : public gfxFontEntry {
    FontTableCache* GetFontTableCache(bool aCreate) override { return nullptr; }
  
    CGFontRef mFontRef MOZ_GUARDED_BY(mLock);  // owning reference
-+  // REYNARD: Keep the original CoreText descriptor for Apple system fonts so
-+  // later CTFont creation can stay descriptor-based.
 +  CTFontDescriptorRef mFontDesc = nullptr;
++  CFCharacterSetRef mCharacterSet = nullptr;
++  mozilla::gfx::UnscaledFont::DescriptorProvenance mDescriptorProvenance =
++      mozilla::gfx::UnscaledFont::DescriptorProvenance::NativeFace;
++  uint32_t mSystemFontTraits = 0;
  
    const double mSizeHint;
  
+@@ -127,13 +149,15 @@ class CTFontFamily : public gfxFontFamily {
+   CTFontFamily(const nsACString& aName, FontVisibility aVisibility)
+       : gfxFontFamily(aName, aVisibility) {}
+ 
+-  CTFontFamily(const nsACString& aName, CTFontRef aSystemFont)
++  CTFontFamily(const nsACString& aName, CTFontRef aFont,
++               mozilla::gfx::UnscaledFont::DescriptorProvenance aProvenance)
+       : gfxFontFamily(aName, FontVisibility::Unknown),
+-        mForSystemFont(aSystemFont) {
++        mSeedFont(aFont),
++        mDescriptorProvenance(aProvenance) {
+     // I don't think the system font instance is at much risk of being deleted,
+     // but to be on the safe side let's retain a reference until we're finished
+     // using it for lazy initialization.
+-    CFRetain(mForSystemFont);
++    CFRetain(mSeedFont);
+   }
+ 
+   virtual ~CTFontFamily() = default;
+@@ -149,7 +173,9 @@ class CTFontFamily : public gfxFontFamily {
+   // If non-null, this is a family representing the system UI font, and should
+   // use the given CTFontRef as the basis for initialization as the normal
+   // font-manager APIs based on family name won't handle it.
+-  CTFontRef mForSystemFont = nullptr;
++  CTFontRef mSeedFont = nullptr;
++  mozilla::gfx::UnscaledFont::DescriptorProvenance mDescriptorProvenance =
++      mozilla::gfx::UnscaledFont::DescriptorProvenance::NativeFace;
+ };
+ 
+ class gfxMacFontFamily final : public CTFontFamily {

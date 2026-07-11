@@ -1,0 +1,17 @@
+diff --git a/gfx/webrender_bindings/WebRenderAPI.cpp b/gfx/webrender_bindings/WebRenderAPI.cpp
+index 1ffce6399075..12155ab42519 100644
+--- a/gfx/webrender_bindings/WebRenderAPI.cpp
++++ b/gfx/webrender_bindings/WebRenderAPI.cpp
+@@ -1113,8 +1113,10 @@ void TransactionBuilder::AddRawFont(wr::FontKey aKey, wr::Vec<uint8_t>& aBytes,
+ 
+ void TransactionBuilder::AddFontDescriptor(wr::FontKey aKey,
+                                            wr::Vec<uint8_t>& aBytes,
+-                                           uint32_t aIndex) {
+-  wr_resource_updates_add_font_descriptor(mTxn, aKey, &aBytes.inner, aIndex);
++                                           uint32_t aIndex, bool aIsSystemFont,
++                                           uint32_t aSystemFontTraits) {
++  wr_resource_updates_add_font_descriptor(mTxn, aKey, &aBytes.inner, aIndex,
++                                          aIsSystemFont, aSystemFontTraits);
+ }
+ 
+ void TransactionBuilder::DeleteFont(wr::FontKey aKey) {

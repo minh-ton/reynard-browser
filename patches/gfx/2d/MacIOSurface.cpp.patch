@@ -1,0 +1,81 @@
+diff --git a/gfx/2d/MacIOSurface.cpp b/gfx/2d/MacIOSurface.cpp
+index 80602d1b2e0f..78fb9761ea2a 100644
+--- a/gfx/2d/MacIOSurface.cpp
++++ b/gfx/2d/MacIOSurface.cpp
+@@ -11,8 +11,6 @@
+ #include "GLConsts.h"
+ #ifdef XP_MACOSX
+ #  include "GLContextCGL.h"
+-#else
+-#  include "GLContextEAGL.h"
+ #endif
+ #include "gfxMacUtils.h"
+ #include "nsPrintfCString.h"
+@@ -23,6 +21,14 @@
+ 
+ using namespace mozilla;
+ 
++#ifndef XP_MACOSX
++bool MacIOSurfaceBindTexImageIOSurface(gl::GLContext* aGL,
++                                       IOSurfaceRef aSurface, GLenum aTarget,
++                                       GLenum aInternalFormat, uint32_t aWidth,
++                                       uint32_t aHeight, GLenum aFormat,
++                                       GLenum aType, uint32_t aPlane);
++#endif
++
+ MacIOSurface::MacIOSurface(CFTypeRefPtr<IOSurfaceRef> aIOSurfaceRef,
+                            bool aHasAlpha, gfx::YUVColorSpace aColorSpace,
+                            gfx::TransferFunction aTransferFunction)
+@@ -715,7 +721,51 @@ bool MacIOSurface::BindTexImage(mozilla::gl::GLContext* aGL, size_t aPlane,
+   }
+   return !err;
+ #else
+-  MOZ_CRASH("unimplemented");
++  OSType pixelFormat = GetPixelFormat();
++
++  GLenum internalFormat;
++  GLenum format;
++  GLenum type;
++  if (pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||
++      pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ||
++      pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange ||
++      pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange) {
++    MOZ_ASSERT(GetPlaneCount() == 2);
++    MOZ_ASSERT(aPlane < 2);
++    bool is10Bit =
++        pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange ||
++        pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange;
++    if (aPlane == 0) {
++      internalFormat = format = LOCAL_GL_LUMINANCE;
++    } else {
++      internalFormat = is10Bit ? LOCAL_GL_RG16 : LOCAL_GL_RG8;
++      format = LOCAL_GL_RG;
++    }
++    type = is10Bit ? LOCAL_GL_UNSIGNED_SHORT : LOCAL_GL_UNSIGNED_BYTE;
++    if (aOutReadFormat) {
++      *aOutReadFormat = is10Bit ? mozilla::gfx::SurfaceFormat::P010
++                                : mozilla::gfx::SurfaceFormat::NV12;
++    }
++  } else if (pixelFormat == kCVPixelFormatType_32BGRA) {
++    MOZ_ASSERT(aPlane == 0);
++    internalFormat = HasAlpha() ? LOCAL_GL_RGBA : LOCAL_GL_RGB;
++    format = LOCAL_GL_BGRA;
++    type = LOCAL_GL_UNSIGNED_INT_8_8_8_8_REV;
++    if (aOutReadFormat) {
++      *aOutReadFormat = HasAlpha() ? mozilla::gfx::SurfaceFormat::R8G8B8A8
++                                   : mozilla::gfx::SurfaceFormat::R8G8B8X8;
++    }
++  } else {
++    gfxCriticalNoteOnce << "Unsupported iOS IOSurface pixel format "
++                        << gfx::hexa(pixelFormat);
++    return false;
++  }
++
++  size_t width = GetDevicePixelWidth(aPlane);
++  size_t height = GetDevicePixelHeight(aPlane);
++  return MacIOSurfaceBindTexImageIOSurface(
++      aGL, mIOSurfaceRef.get(), LOCAL_GL_TEXTURE_2D, internalFormat,
++      uint32_t(width), uint32_t(height), format, type, uint32_t(aPlane));
+ #endif
+ }
+ 

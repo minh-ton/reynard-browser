@@ -137,7 +137,8 @@ enum LibrarySharedUtils {
             return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
         }
         
-        if let browserViewController = viewController.navigationController?.presentingViewController as? BrowserViewController {
+        if let presentingViewController = viewController.navigationController?.presentingViewController,
+           let browserViewController = resolvedBrowserViewController(in: presentingViewController) {
             return browserViewController
         }
         
@@ -145,8 +146,12 @@ enum LibrarySharedUtils {
     }
     
     static func resolvedBrowserViewController(in controller: UIViewController) -> BrowserViewController? {
+        if let sidebarViewController = controller as? SidebarViewController {
+            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
+        }
+        
         if let browserViewController = controller as? BrowserViewController {
-            return browserViewController
+            return resolvedHostedBrowserViewController(from: browserViewController)
         }
         
         if let navigationController = controller as? UINavigationController {
@@ -158,16 +163,21 @@ enum LibrarySharedUtils {
             return viewControllers.compactMap { resolvedBrowserViewController(in: $0) }.first
         }
         
-        if let sidebarViewController = controller as? SidebarViewController {
-            return sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController
-        }
-        
         if let presentedViewController = controller.presentedViewController,
            let browserViewController = resolvedBrowserViewController(in: presentedViewController) {
             return browserViewController
         }
         
         return controller.children.compactMap { resolvedBrowserViewController(in: $0) }.first
+    }
+    
+    private static func resolvedHostedBrowserViewController(from browserViewController: BrowserViewController) -> BrowserViewController {
+        guard let sidebarViewController = browserViewController.children.compactMap({ $0 as? SidebarViewController }).first,
+              let contentBrowserViewController = sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController else {
+            return browserViewController
+        }
+        
+        return contentBrowserViewController
     }
 }
 

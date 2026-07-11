@@ -1,0 +1,20 @@
+diff --git a/gfx/layers/ipc/LayersSurfaces.ipdlh b/gfx/layers/ipc/LayersSurfaces.ipdlh
+index 897b97d1c824..eeb1f6002a85 100644
+--- a/gfx/layers/ipc/LayersSurfaces.ipdlh
++++ b/gfx/layers/ipc/LayersSurfaces.ipdlh
+@@ -31,6 +31,7 @@ using mozilla::layers::RemoteTextureOwnerId from "mozilla/layers/LayersTypes.h";
+ [RefCounted] using mozilla::layers::GpuFence from "mozilla/layers/GpuFence.h";
+ using mozilla::layers::GpuProcessTextureId from "mozilla/layers/LayersTypes.h";
+ using mozilla::layers::CompositeProcessFencesHolderId from "mozilla/layers/LayersTypes.h";
++using mozilla::layers::IOSurfacePort from "mozilla/layers/IOSurfacePort.h";
+ using mozilla::wr::ExternalImageSource from "mozilla/webrender/WebRenderTypes.h";
+ using mozilla::wr::ExternalImageId from "mozilla/webrender/WebRenderTypes.h";
+ using mozilla::layers::SurfaceDescriptorRemoteDecoderId from "mozilla/layers/LayersTypes.h";
+@@ -70,6 +71,7 @@ namespace layers {
+ 
+ [Comparable] struct SurfaceDescriptorMacIOSurface {
+   uint32_t surfaceId;
++  IOSurfacePort surfacePort;
+   bool isOpaque;
+   YUVColorSpace yUVColorSpace;
+   TransferFunction transferFunction;

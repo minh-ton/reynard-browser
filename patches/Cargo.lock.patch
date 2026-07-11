@@ -1,16 +1,8 @@
 diff --git a/Cargo.lock b/Cargo.lock
-index 3d6899ee8e89..be12ab14100f 100644
+index f7469493a0ac..8421b503e731 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -8914,6 +8914,7 @@ dependencies = [
-  "app_units",
-  "bitflags 2.10.0",
-  "byteorder",
-+ "core-text",
-  "crossbeam-channel",
-  "euclid",
-  "malloc_size_of_derive",
-@@ -8933,6 +8934,7 @@ dependencies = [
+@@ -8933,6 +8933,7 @@ dependencies = [
   "bincode",
   "core-foundation 0.9.999",
   "core-graphics",

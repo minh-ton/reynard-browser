@@ -1,54 +1,111 @@
 diff --git a/mobile/ios/app/mobile.js b/mobile/ios/app/mobile.js
-index e835b1c33d86..4a2bf184f651 100644
+index e835b1c33d86..baafad54b83d 100644
 --- a/mobile/ios/app/mobile.js
 +++ b/mobile/ios/app/mobile.js
-@@ -5,6 +5,36 @@
+@@ -3,7 +3,99 @@
+ // License, v. 2.0. If a copy of the MPL was not distributed with this
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/.
  
- pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml");
- 
-+// Firefox add-on support, copied from Android's.
+-pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml");
++// Enable capture attribute for file input (bug 1553603)
++pref("dom.capture.enabled", true);
++
++// Block popups by default (bug 436057)
++pref("dom.disable_open_during_load", true);
++
++// Enable prelaunching of content processes.
++pref("dom.ipc.processPrelaunch.enabled", true);
++
++pref("dom.ipc.processCount.webIsolated", 1);
++
++// Enable WebShare support (bug 1402369)
++pref("dom.webshare.enabled", true);
++
 +pref("extensions.isembedded", true);
++
++// Disable add-ons that are not installed by the user in all scopes by default
 +pref("extensions.autoDisableScopes", 15);
++
 +pref("extensions.enabledScopes", 5);
++
++// If true, unprivileged extensions may use experimental APIs
 +pref("extensions.experiments.enabled", false);
++
 +pref("extensions.getAddons.browseAddons", "https://addons.mozilla.org/%LOCALE%/android/collections/4757633/mob/?page=1&collection_sort=-popularity");
 +pref("extensions.getAddons.cache.enabled", true);
 +pref("extensions.getAddons.get.url", "https://services.addons.mozilla.org/api/v4/addons/search/?guid=%IDS%&lang=%LOCALE%");
 +pref("extensions.getAddons.langpacks.url", "https://services.addons.mozilla.org/api/v4/addons/language-tools/?app=android&type=language&appversion=%VERSION%");
 +pref("extensions.getAddons.search.browseURL", "https://addons.mozilla.org/%LOCALE%/android/search?q=%TERMS%&platform=%OS%&appver=%VERSION%");
++
++// Don't let XPIProvider install distribution add-ons; we do our own thing on mobile
 +pref("extensions.installDistroAddons", false);
++
++// Require language packs to be signed (bug 1454141)
 +pref("extensions.langpacks.signatures.required", true);
++
++// Enables some extra Extension System Logging (can reduce performance)
 +pref("extensions.logging.enabled", false);
++
++// Whether MV3 restrictions for actions popup urls should be extended to MV2 extensions
++// (only allowing same extension urls to be used as action popup urls)
 +pref("extensions.manifestV2.actionsPopupURLRestricted", true);
++
++// Disables strict compatibility, making addons compatible-by-default
 +pref("extensions.strictCompatibility", false);
++
++// Allow system add-on updates (bug 1260213)
 +pref("extensions.systemAddon.update.enabled", true);
 +pref("extensions.systemAddon.update.url", "https://aus5.mozilla.org/update/3/SystemAddons/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/%DISTRIBUTION%/%DISTRIBUTION_VERSION%/update.xml");
++
++// Enable the EnvironmentAddonBuilder collecting the Glean
++// activeAddons/theme/GMPlugins metrics.
 +pref("extensions.telemetry.EnvironmentAddonBuilder", true);
++
 +pref("extensions.update.background.url", "https://versioncheck-bg.addons.mozilla.org/update/VersionCheck.php?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%&compatMode=%COMPATIBILITY_MODE%");
 +pref("extensions.update.enabled", true);
 +pref("extensions.update.interval", 86400);
 +pref("extensions.update.url", "https://versioncheck.addons.mozilla.org/update/VersionCheck.php?reqVersion=%REQ_VERSION%&id=%ITEM_ID%&version=%ITEM_VERSION%&maxAppVersion=%ITEM_MAXAPPVERSION%&status=%ITEM_STATUS%&appID=%APP_ID%&appVersion=%APP_VERSION%&appOS=%APP_OS%&appABI=%APP_ABI%&locale=%APP_LOCALE%&currentAppVersion=%CURRENT_APP_VERSION%&updateType=%UPDATE_TYPE%&compatMode=%COMPATIBILITY_MODE%");
-+pref("extensions.webextOptionalPermissionPrompts", true);
-+pref("extensions.webextensions.early_background_wakeup_on_request", true);
-+pref("extensions.dataCollectionPermissions.enabled", true);
-+pref("webextensions.storage.sync.kinto", true);
-+pref("xpinstall.signatures.required", true);
-+pref("xpinstall.whitelist.add", "https://addons.mozilla.org");
-+pref("xpinstall.whitelist.fileRequest", false);
 +
- // Use software webrender on simulator due to missing APIs.
- #if TARGET_OS_SIMULATOR
-   pref("gfx.webrender.software", true);
-@@ -13,6 +43,12 @@ pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml");
- // Enable the restricted sandbox for content processes.
- pref("security.sandbox.content.level", 1);
- 
++// Enable prompts for browser.permissions.request() (bug 1392176)
++pref("extensions.webextOptionalPermissionPrompts", true);
++
++// Start (proxy) extensions as soon as a network request is observed, instead
++// of waiting until the first browser window has opened. This is needed because
++// GeckoView can trigger requests without opening geckoview.xhtml.
++pref("extensions.webextensions.early_background_wakeup_on_request", true);
++
++// Enable data collection permissions.
++pref("extensions.dataCollectionPermissions.enabled", true);
++
++pref("layout.spellcheckDefault", 0);
++
 +// Allow autoplay configuration
 +pref("media.geckoview.autoplay.request", true);
 +
-+// Enable prelaunching of content processes.
-+pref("dom.ipc.processPrelaunch.enabled", true);
++// Ask for permission when enumerating WebRTC devices (bug 1369108)
++pref("media.navigator.permission.device", true);
 +
- // Complete the page load progress bar at different places according to this pref.
- // See the possible values below:
- // 0 no change
++// On mobile we throttle the download once the readahead_limit is hit
++// if we're using a cellular connection, even if the download is slow,
++// this is to preserve battery and data (bug 1540573)
++pref("media.throttle-cellular-regardless-of-download-rate", true);
++
++// Disable the new sync storage
++pref("webextensions.storage.sync.kinto", true);
++
++pref("widget.non-native-theme.use-theme-accent", false);
++
++// Require extensions to be signed (bug 1244329)
++pref("xpinstall.signatures.required", true);
++
++pref("xpinstall.whitelist.add", "https://addons.mozilla.org");
++pref("xpinstall.whitelist.fileRequest", false);
+ 
+ // Use software webrender on simulator due to missing APIs.
+ #if TARGET_OS_SIMULATOR
+@@ -19,3 +111,5 @@ pref("security.sandbox.content.level", 1);
+ // 1 complete progressbar at DOMContentLoaded
+ // 2 complete progressbar at first MozAfterPaint after DOMContentLoaded
+ pref("page_load.progressbar_completion", 2);
++
++pref("toolkit.defaultChromeURI", "chrome://geckoview/content/geckoview.xhtml");

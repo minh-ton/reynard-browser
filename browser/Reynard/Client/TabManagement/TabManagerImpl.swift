@@ -33,6 +33,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     private let permissionCoordinator = PermissionCoordinator(
         promptPresenter: PermissionPromptPresenter()
     )
+    private let systemMediaSession = SystemMediaSession()
     
     private weak var delegate: TabManagerDelegate?
     private let store: TabManagementStore
@@ -182,7 +183,7 @@ final class TabManagerImplementation: NSObject, TabManager {
             progress: self,
             prompt: promptCoordinator,
             selectionAction: selectionActionCoordinator,
-            mediaSession: SystemMediaSession()
+            mediaSession: systemMediaSession
         )
     }
     
@@ -576,6 +577,7 @@ final class TabManagerImplementation: NSObject, TabManager {
             sessionManager.deactivate(previousSession)
         }
         sessionManager.activate(selectedTab.session)
+        systemMediaSession.select(session: selectedTab.session)
         applyNavigationState(to: selectedTab)
         
         delegate?.tabManager(self, didSelectTabAt: index, previousIndex: previousIndex)

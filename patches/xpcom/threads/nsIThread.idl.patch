@@ -1,0 +1,13 @@
+diff --git a/xpcom/threads/nsIThread.idl b/xpcom/threads/nsIThread.idl
+index 442b025029cb..67f04988a02d 100644
+--- a/xpcom/threads/nsIThread.idl
++++ b/xpcom/threads/nsIThread.idl
+@@ -49,7 +49,7 @@ interface nsIThread : nsISerialEventTarget
+   [noscript] attribute boolean CanInvokeJS;
+ 
+   /**
+-   * Thread QoS priorities. Currently only supported on MacOS.
++   * Thread QoS priorities. Currently supported on Darwin platforms.
+    */
+ 
+   cenum QoSPriority : 32 {

@@ -1,0 +1,45 @@
+diff --git a/dom/media/platforms/apple/AppleVTDecoder.cpp b/dom/media/platforms/apple/AppleVTDecoder.cpp
+index 6cab0b0495cd..0b00311b5cde 100644
+--- a/dom/media/platforms/apple/AppleVTDecoder.cpp
++++ b/dom/media/platforms/apple/AppleVTDecoder.cpp
+@@ -6,6 +6,9 @@
+ 
+ #include <CoreVideo/CVPixelBufferIOSurface.h>
+ #include <IOSurface/IOSurfaceRef.h>
++#ifdef MOZ_WIDGET_UIKIT
++#  include <TargetConditionals.h>
++#endif
+ 
+ #include <limits>
+ 
+@@ -64,7 +67,13 @@ AppleVTDecoder::AppleVTDecoder(const VideoInfo& aConfig,
+       mKnowsCompositor(aKnowsCompositor)
+ #ifdef MOZ_WIDGET_UIKIT
+       ,
++#  if TARGET_OS_SIMULATOR
+       mUseSoftwareImages(true)
++#  else
++      mUseSoftwareImages(!aKnowsCompositor ||
++                         aKnowsCompositor->GetWebRenderCompositorType() ==
++                             layers::WebRenderCompositor::SOFTWARE)
++#  endif
+ #else
+       ,
+       mUseSoftwareImages(aKnowsCompositor &&
+@@ -788,9 +797,15 @@ CFDictionaryRef AppleVTDecoder::CreateOutputConfiguration() {
+       std::size(IOSurfaceKeys), &kCFTypeDictionaryKeyCallBacks,
+       &kCFTypeDictionaryValueCallBacks));
+ 
++  const void* compatibilityKey =
++#ifdef MOZ_WIDGET_UIKIT
++      kCVPixelBufferOpenGLESCompatibilityKey;
++#else
++      kCVPixelBufferOpenGLCompatibilityKey;
++#endif
+   const void* outputKeys[] = {kCVPixelBufferIOSurfacePropertiesKey,
+                               kCVPixelBufferPixelFormatTypeKey,
+-                              kCVPixelBufferOpenGLCompatibilityKey};
++                              compatibilityKey};
+   const void* outputValues[] = {IOSurfaceProperties, PixelFormatTypeNumber,
+                                 kCFBooleanTrue};
+   static_assert(std::size(outputKeys) == std::size(outputValues),

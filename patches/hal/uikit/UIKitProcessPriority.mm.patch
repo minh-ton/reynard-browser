@@ -1,0 +1,35 @@
+diff --git a/hal/uikit/UIKitProcessPriority.mm b/hal/uikit/UIKitProcessPriority.mm
+new file mode 100644
+index 000000000000..f18c315e89a8
+--- /dev/null
++++ b/hal/uikit/UIKitProcessPriority.mm
+@@ -0,0 +1,29 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#include "Hal.h"
++#include "HalLog.h"
++
++using namespace mozilla::hal;
++
++namespace mozilla::hal_impl {
++
++void SetProcessPriority(int aPid, ProcessPriority aPriority) {
++  if (aPriority == PROCESS_PRIORITY_PARENT_PROCESS) {
++    return;
++  }
++
++  const int32_t intPriority = static_cast<int32_t>(aPriority);
++  if (intPriority < 0 || intPriority >= NUM_PROCESS_PRIORITY) {
++    return;
++  }
++
++  HAL_LOG("UIKitProcessPriority - SetProcessPriority(%d, %s)\n", aPid,
++          ProcessPriorityToString(aPriority));
++}
++
++}  // namespace mozilla::hal_impl

@@ -1,0 +1,76 @@
+diff --git a/xpcom/threads/nsMemoryPressure.cpp b/xpcom/threads/nsMemoryPressure.cpp
+index fb34becb4888..28a73e3c9f70 100644
+--- a/xpcom/threads/nsMemoryPressure.cpp
++++ b/xpcom/threads/nsMemoryPressure.cpp
+@@ -32,8 +32,12 @@ void NS_NotifyOfEventualMemoryPressure(MemoryPressureState aState) {
+   switch (aState) {
+     case MemoryPressureState::None:
+     case MemoryPressureState::LowMemory:
++    case MemoryPressureState::LowMemoryNew:
+       sMemoryPressurePending = aState;
+       break;
++    case MemoryPressureState::LowMemoryOngoing:
++      sMemoryPressurePending.compareExchange(MemoryPressureState::None, aState);
++      break;
+     case MemoryPressureState::NoPressure:
+       sMemoryPressurePending.compareExchange(MemoryPressureState::None, aState);
+       break;
+@@ -82,6 +86,47 @@ void NS_DispatchMemoryPressure() {
+           os->NotifyObservers(nullptr, kTopicMemoryPressure,
+                               kSubTopicLowMemoryOngoing);
+           break;
++        case MemoryPressureState::LowMemoryNew:
++        case MemoryPressureState::LowMemoryOngoing:
++          MOZ_ASSERT_UNREACHABLE("Unexpected internal memory pressure status.");
++          break;
++      }
++      break;
++    case MemoryPressureState::LowMemoryNew:
++      switch (sMemoryPressureStatus) {
++        case MemoryPressureState::None:
++          MOZ_ASSERT_UNREACHABLE("The internal status should never be None.");
++          break;
++        case MemoryPressureState::NoPressure:
++        case MemoryPressureState::LowMemory:
++          sMemoryPressureStatus = MemoryPressureState::LowMemory;
++          os->NotifyObservers(nullptr, kTopicMemoryPressure,
++                              kSubTopicLowMemoryNew);
++          break;
++        case MemoryPressureState::LowMemoryNew:
++        case MemoryPressureState::LowMemoryOngoing:
++          MOZ_ASSERT_UNREACHABLE("Unexpected internal memory pressure status.");
++          break;
++      }
++      break;
++    case MemoryPressureState::LowMemoryOngoing:
++      switch (sMemoryPressureStatus) {
++        case MemoryPressureState::None:
++          MOZ_ASSERT_UNREACHABLE("The internal status should never be None.");
++          break;
++        case MemoryPressureState::NoPressure:
++          sMemoryPressureStatus = MemoryPressureState::LowMemory;
++          os->NotifyObservers(nullptr, kTopicMemoryPressure,
++                              kSubTopicLowMemoryNew);
++          break;
++        case MemoryPressureState::LowMemory:
++          os->NotifyObservers(nullptr, kTopicMemoryPressure,
++                              kSubTopicLowMemoryOngoing);
++          break;
++        case MemoryPressureState::LowMemoryNew:
++        case MemoryPressureState::LowMemoryOngoing:
++          MOZ_ASSERT_UNREACHABLE("Unexpected internal memory pressure status.");
++          break;
+       }
+       break;
+     case MemoryPressureState::NoPressure:
+@@ -96,6 +141,10 @@ void NS_DispatchMemoryPressure() {
+           sMemoryPressureStatus = MemoryPressureState::NoPressure;
+           os->NotifyObservers(nullptr, kTopicMemoryPressureStop, nullptr);
+           break;
++        case MemoryPressureState::LowMemoryNew:
++        case MemoryPressureState::LowMemoryOngoing:
++          MOZ_ASSERT_UNREACHABLE("Unexpected internal memory pressure status.");
++          break;
+       }
+       break;
+   }

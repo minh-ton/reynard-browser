@@ -1,0 +1,88 @@
+diff --git a/dom/ipc/ProcessHangMonitor.cpp b/dom/ipc/ProcessHangMonitor.cpp
+index ff1b92365a31..57ba869ddb7e 100644
+--- a/dom/ipc/ProcessHangMonitor.cpp
++++ b/dom/ipc/ProcessHangMonitor.cpp
+@@ -45,8 +45,10 @@
+ #  include <windows.h>
+ #endif
+ 
+-#ifdef XP_MACOSX
++#if defined(XP_MACOSX) || defined(XP_IOS)
++#  define MOZ_HAS_DARWIN_THREAD_QOS
+ // for qos controls
++#  include <pthread/qos.h>
+ #  include <sys/qos.h>
+ #endif
+ 
+@@ -167,8 +169,8 @@ class HangMonitorChild : public PProcessHangMonitorChild,
+ 
+   const RefPtr<ProcessHangMonitor> mHangMonitor;
+ 
+-#ifdef XP_MACOSX
+-  // On macOS, the pthread_t is required to start a QoS class override. As we
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
++  // On Darwin, the pthread_t is required to start a QoS class override. As we
+   // can't recover this from a PRThread*, we need to record it when the
+   // HangMonitorChild is initially created on the main thread.
+   const pthread_t mMainPThread;
+@@ -309,7 +311,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
+       TabId aTabId, nsIRemoteTab::NavigationType aNavigationType,
+       int32_t aNavigationIndex, nsIURI* aNavigationURI, int32_t aEpoch);
+ 
+-#ifdef XP_MACOSX
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+   void SetMainThreadQoSPriorityOnThread(nsIThread::QoSPriority aQoSPriority);
+ #endif
+ 
+@@ -337,7 +339,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
+ 
+ HangMonitorChild::HangMonitorChild(ProcessHangMonitor* aMonitor)
+     : mHangMonitor(aMonitor),
+-#ifdef XP_MACOSX
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+       mMainPThread(pthread_self()),
+ #endif
+       mMonitor("HangMonitorChild lock"),
+@@ -667,11 +669,11 @@ mozilla::ipc::IPCResult HangMonitorChild::RecvSetMainThreadQoSPriority(
+           ("Priority change %s recieved by content process.",
+            DefineQoS(aQoSPriority)));
+ 
+-#ifdef XP_MACOSX
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+   // If the new priority is the background (low) priority, we can tell the OS to
+   // put the main thread on low-power cores. Alternately, if we are changing
+   // from the background to a higher priority, we change the main thread back to
+-  // the |user-interactive| state, defined in MacOS's QoS documentation as
++  // the |user-interactive| state, defined in Apple's QoS documentation as
+   // reserved for main threads.
+   qos_class_t qosClass = aQoSPriority == nsIThread::QOS_PRIORITY_LOW
+                              ? QOS_CLASS_BACKGROUND
+@@ -925,7 +927,7 @@ void HangMonitorParent::CancelContentJSExecutionIfRunningOnThread(
+ void HangMonitorParent::SetMainThreadQoSPriority(
+     nsIThread::QoSPriority aQoSPriority) {
+   MOZ_RELEASE_ASSERT(NS_IsMainThread());
+-#ifdef XP_MACOSX  // Should not be using outside of MacOS.
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+ 
+   Dispatch(NewNonOwningRunnableMethod<nsIThread::QoSPriority>(
+       "HangMonitorParent::SetMainThreadQoSPriorityOnThread", this,
+@@ -933,7 +935,7 @@ void HangMonitorParent::SetMainThreadQoSPriority(
+ #endif
+ }
+ 
+-#ifdef XP_MACOSX
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
+ void HangMonitorParent::SetMainThreadQoSPriorityOnThread(
+     nsIThread::QoSPriority aQoSPriority) {
+   MOZ_RELEASE_ASSERT(IsOnThread());
+@@ -1209,8 +1211,8 @@ ProcessHangMonitor::ProcessHangMonitor() : mCPOWTimeout(false) {
+   if (NS_FAILED(NS_NewNamedThread("ProcessHangMon", getter_AddRefs(mThread)))) {
+     mThread = nullptr;
+   }
+-#ifdef XP_MACOSX
+-  // On MacOS, ensure the priority is high enough to handle dispatches at
++#ifdef MOZ_HAS_DARWIN_THREAD_QOS
++  // On Darwin, ensure the priority is high enough to handle dispatches at
+   // high cpu load. USER_INITIATED class threads are prioritized just below
+   // the main thread.
+   mThread->Dispatch(NS_NewRunnableFunction(

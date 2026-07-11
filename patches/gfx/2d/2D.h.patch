@@ -1,0 +1,29 @@
+diff --git a/gfx/2d/2D.h b/gfx/2d/2D.h
+index 787bf60e1490..0629f48d7d65 100644
+--- a/gfx/2d/2D.h
++++ b/gfx/2d/2D.h
+@@ -1263,6 +1263,11 @@ class SharedFTFace : public external::AtomicRefCounted<SharedFTFace> {
+ 
+ class UnscaledFont : public SupportsThreadSafeWeakPtr<UnscaledFont> {
+  public:
++  enum class DescriptorProvenance : uint8_t {
++    NativeFace,
++    SystemUI,
++  };
++
+   MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(UnscaledFont)
+ 
+   virtual ~UnscaledFont();
+@@ -1286,6 +1291,12 @@ class UnscaledFont : public SupportsThreadSafeWeakPtr<UnscaledFont> {
+ 
+   virtual bool GetFontDescriptor(FontDescriptorOutput, void*) { return false; }
+ 
++  virtual DescriptorProvenance GetDescriptorProvenance() const {
++    return DescriptorProvenance::NativeFace;
++  }
++
++  virtual uint32_t GetSystemFontTraits() const { return 0; }
++
+   virtual already_AddRefed<ScaledFont> CreateScaledFont(
+       Float aGlyphSize, const uint8_t* aInstanceData,
+       uint32_t aInstanceDataLength, const FontVariation* aVariations,

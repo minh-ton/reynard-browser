@@ -1,9 +1,9 @@
 diff --git a/gfx/thebes/gfxUIKitVsyncSource.mm b/gfx/thebes/gfxUIKitVsyncSource.mm
 new file mode 100644
-index 000000000000..43940f26a1e2
+index 000000000000..6494ff02528f
 --- /dev/null
 +++ b/gfx/thebes/gfxUIKitVsyncSource.mm
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,334 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -15,15 +15,20 @@ index 000000000000..43940f26a1e2
 +
 +#include "VsyncSource.h"
 +#include "gfxPlatform.h"
++#include "mozilla/DataMutex.h"
++#include "mozilla/Monitor.h"
 +#include "mozilla/TimeStamp.h"
 +#include "nsDebug.h"
 +#include "nsObjCExceptions.h"
 +#include "nsThreadUtils.h"
 +
 +#import <Foundation/NSInvocation.h>
++#import <QuartzCore/CAFrameRateRange.h>
 +#import <QuartzCore/CADisplayLink.h>
 +#import <UIKit/UIScreen.h>
 +
++#include <algorithm>
++#include <cmath>
 +#include <mach/mach_time.h>
 +
 +using mozilla::TimeDuration;
@@ -39,15 +44,20 @@ index 000000000000..43940f26a1e2
 +}
 +- (id)initWithVsyncSource:(mozilla::gfx::UIKitVsyncSource*)aVsyncSource;
 +- (void)displayLinkFired:(CADisplayLink*)aDisplayLink;
++- (void)runDisplayLinkThread:(CADisplayLink*)aDisplayLink;
++- (void)stopDisplayLinkThread:(CADisplayLink*)aDisplayLink;
 +@end
 +
 +namespace mozilla::gfx {
 +
-+struct FrameRateRange {
-+  float minimum;
-+  float maximum;
-+  float preferred;
-+};
++static constexpr NSInteger kMinFPS = 60;
++static constexpr double kMinObservedFPS = 10.0;
++static constexpr double kFPSMargin = 0.5;
++
++static NSInteger MaxFPS(UIScreen* aScreen) {
++  return std::max(static_cast<NSInteger>([aScreen maximumFramesPerSecond]),
++                  kMinFPS);
++}
 +
 +static TimeStamp TimeStampFromCASeconds(CFTimeInterval aSeconds) {
 +  static const mach_timebase_info_data_t timebaseInfo = [] {
@@ -64,7 +74,10 @@ index 000000000000..43940f26a1e2
 +
 +class UIKitVsyncSource final : public VsyncSource {
 + public:
-+  UIKitVsyncSource() = default;
++  UIKitVsyncSource()
++      : mThreadMonitor("UIKitVsyncSource::mThreadMonitor"),
++        mVsyncRate(TimeDuration::FromMilliseconds(1000.0 / 60.0),
++                   "UIKitVsyncSource::mVsyncRate") {}
 +
 +  ~UIKitVsyncSource() override {
 +    MOZ_ASSERT(NS_IsMainThread());
@@ -90,8 +103,23 @@ index 000000000000..43940f26a1e2
 +
 +    mDisplayLink = [displayLink retain];
 +    ConfigureFrameRate();
-+    [mDisplayLink addToRunLoop:[NSRunLoop mainRunLoop]
-+                       forMode:NSRunLoopCommonModes];
++
++    {
++      MonitorAutoLock lock(mThreadMonitor);
++      mThreadReady = false;
++      mThreadFinished = false;
++    }
++
++    mThread = [[NSThread alloc] initWithTarget:mTarget
++                                      selector:@selector(runDisplayLinkThread:)
++                                        object:mDisplayLink];
++    [mThread setName:@"UIKitVsyncThread"];
++    [mThread start];
++
++    MonitorAutoLock lock(mThreadMonitor);
++    while (!mThreadReady && !mThreadFinished) {
++      lock.Wait();
++    }
 +
 +    NS_OBJC_END_TRY_IGNORE_BLOCK;
 +  }
@@ -104,9 +132,24 @@ index 000000000000..43940f26a1e2
 +
 +    NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
 +
-+    [mDisplayLink invalidate];
++    if (mThread && ![mThread isFinished]) {
++      [mTarget performSelector:@selector(stopDisplayLinkThread:)
++                      onThread:mThread
++                    withObject:mDisplayLink
++                 waitUntilDone:YES];
++
++      MonitorAutoLock lock(mThreadMonitor);
++      while (!mThreadFinished) {
++        lock.Wait();
++      }
++    } else {
++      [mDisplayLink invalidate];
++    }
++
 +    [mDisplayLink release];
 +    mDisplayLink = nil;
++    [mThread release];
++    mThread = nil;
 +
 +    NS_OBJC_END_TRY_IGNORE_BLOCK;
 +  }
@@ -116,7 +159,10 @@ index 000000000000..43940f26a1e2
 +    return mDisplayLink != nil;
 +  }
 +
-+  TimeDuration GetVsyncRate() override { return mVsyncRate; }
++  TimeDuration GetVsyncRate() override {
++    auto rate = mVsyncRate.Lock();
++    return *rate;
++  }
 +
 +  void Shutdown() override {
 +    MOZ_ASSERT(NS_IsMainThread());
@@ -131,7 +177,7 @@ index 000000000000..43940f26a1e2
 +    NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 +
 +    mTarget = [[UIKitVsyncTarget alloc] initWithVsyncSource:this];
-+    UpdateVsyncRate([UIScreen mainScreen]);
++    SetVsyncRateForScreen([UIScreen mainScreen]);
 +    return mTarget != nil;
 +
 +    NS_OBJC_END_TRY_BLOCK_RETURN(false);
@@ -143,6 +189,8 @@ index 000000000000..43940f26a1e2
 +        TimeStampFromCASeconds([aDisplayLink targetTimestamp]);
 +    TimeStamp now = TimeStamp::Now();
 +
++    UpdateVsyncRateFromDisplayLink(aDisplayLink);
++
 +    if (vsyncTime > now) {
 +      vsyncTime = now;
 +    }
@@ -153,22 +201,50 @@ index 000000000000..43940f26a1e2
 +    VsyncSource::NotifyVsync(vsyncTime, outputTime);
 +  }
 +
++  void RunDisplayLinkThread(CADisplayLink* aDisplayLink) {
++    @autoreleasepool {
++      NSRunLoop* runLoop = [NSRunLoop currentRunLoop];
++      [aDisplayLink addToRunLoop:runLoop forMode:NSDefaultRunLoopMode];
++
++      {
++        MonitorAutoLock lock(mThreadMonitor);
++        mThreadReady = true;
++        lock.NotifyAll();
++      }
++
++      while (![[NSThread currentThread] isCancelled]) {
++        @autoreleasepool {
++          [runLoop runMode:NSDefaultRunLoopMode
++                beforeDate:[NSDate distantFuture]];
++        }
++      }
++
++      MonitorAutoLock lock(mThreadMonitor);
++      mThreadFinished = true;
++      lock.NotifyAll();
++    }
++  }
++
++  void StopDisplayLinkThread(CADisplayLink* aDisplayLink) {
++    [aDisplayLink invalidate];
++    [[NSThread currentThread] cancel];
++    CFRunLoopStop(CFRunLoopGetCurrent());
++  }
++
 + private:
 +  void ConfigureFrameRate() {
 +    UIScreen* screen = [UIScreen mainScreen];
-+    UpdateVsyncRate(screen);
++    SetVsyncRateForScreen(screen);
 +
-+    NSInteger maximumFramesPerSecond = [screen maximumFramesPerSecond];
-+    if (maximumFramesPerSecond <= 0) {
-+      maximumFramesPerSecond = 60;
-+    }
++    mMaxFPS = MaxFPS(screen);
 +
 +    if ([mDisplayLink
 +            respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
-+      FrameRateRange frameRateRange = {
-+          static_cast<float>(maximumFramesPerSecond),
-+          static_cast<float>(maximumFramesPerSecond),
-+          static_cast<float>(maximumFramesPerSecond)};
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability-new"
++      CAFrameRateRange frameRateRange =
++          CAFrameRateRangeMake(kMinFPS, mMaxFPS, mMaxFPS);
++#pragma clang diagnostic pop
 +      NSInvocation* invocation = [NSInvocation
 +          invocationWithMethodSignature:
 +              [mDisplayLink
@@ -179,22 +255,51 @@ index 000000000000..43940f26a1e2
 +      [invocation setArgument:&frameRateRange atIndex:2];
 +      [invocation invoke];
 +    } else {
-+      mDisplayLink.preferredFramesPerSecond = maximumFramesPerSecond;
++      mDisplayLink.preferredFramesPerSecond = mMaxFPS;
 +    }
 +  }
 +
-+  void UpdateVsyncRate(UIScreen* aScreen) {
-+    NSInteger maximumFramesPerSecond = [aScreen maximumFramesPerSecond];
-+    if (maximumFramesPerSecond <= 0) {
-+      maximumFramesPerSecond = 60;
++  void SetVsyncRateForScreen(UIScreen* aScreen) {
++    SetVsyncRate(TimeDuration::FromMilliseconds(1000.0 / MaxFPS(aScreen)));
++  }
++
++  void UpdateVsyncRateFromDisplayLink(CADisplayLink* aDisplayLink) {
++    CFTimeInterval frameInterval =
++        [aDisplayLink targetTimestamp] - [aDisplayLink timestamp];
++
++    if (!IsValidFrameInterval(frameInterval)) {
++      frameInterval = [aDisplayLink duration];
 +    }
-+    mVsyncRate =
-+        TimeDuration::FromMilliseconds(1000.0 / maximumFramesPerSecond);
++    if (!IsValidFrameInterval(frameInterval)) {
++      return;
++    }
++
++    SetVsyncRate(TimeDuration::FromMilliseconds(frameInterval * 1000.0));
++  }
++
++  bool IsValidFrameInterval(CFTimeInterval aFrameInterval) {
++    if (!std::isfinite(aFrameInterval) || aFrameInterval <= 0) {
++      return false;
++    }
++
++    double framesPerSecond = 1.0 / aFrameInterval;
++    return framesPerSecond >= kMinObservedFPS - kFPSMargin &&
++           framesPerSecond <= mMaxFPS + kFPSMargin;
++  }
++
++  void SetVsyncRate(const TimeDuration& aVsyncRate) {
++    auto rate = mVsyncRate.Lock();
++    *rate = aVsyncRate;
 +  }
 +
 +  UIKitVsyncTarget* mTarget = nil;
 +  CADisplayLink* mDisplayLink = nil;
-+  TimeDuration mVsyncRate = TimeDuration::FromMilliseconds(1000.0 / 60.0);
++  NSThread* mThread = nil;
++  Monitor mThreadMonitor;
++  bool mThreadReady = false;
++  bool mThreadFinished = true;
++  NSInteger mMaxFPS = kMinFPS;
++  DataMutex<TimeDuration> mVsyncRate;
 +};
 +
 +already_AddRefed<VsyncSource> CreateUIKitVsyncSource() {
@@ -222,6 +327,14 @@ index 000000000000..43940f26a1e2
 +
 +- (void)displayLinkFired:(CADisplayLink*)aDisplayLink {
 +  mVsyncSource->OnDisplayLinkFired(aDisplayLink);
++}
++
++- (void)runDisplayLinkThread:(CADisplayLink*)aDisplayLink {
++  mVsyncSource->RunDisplayLinkThread(aDisplayLink);
++}
++
++- (void)stopDisplayLinkThread:(CADisplayLink*)aDisplayLink {
++  mVsyncSource->StopDisplayLinkThread(aDisplayLink);
 +}
 +
 +@end

@@ -1,0 +1,22 @@
+diff --git a/xpcom/threads/nsThreadPool.cpp b/xpcom/threads/nsThreadPool.cpp
+index 2c2673a553b1..64b228b41da3 100644
+--- a/xpcom/threads/nsThreadPool.cpp
++++ b/xpcom/threads/nsThreadPool.cpp
+@@ -313,7 +313,7 @@ nsThreadPool::Run() {
+     // Go ahead and check for thread priority. If priority is normal, do nothing
+     // because threads are created with default priority.
+     if (threadPriority != mQoSPriority) {
+-      current->SetThreadQoS(threadPriority);
++      current->SetThreadQoS(mQoSPriority);
+       threadPriority = mQoSPriority;
+     }
+   }
+@@ -338,7 +338,7 @@ nsThreadPool::Run() {
+ 
+       // Before getting the next event, we can adjust priority as needed.
+       if (threadPriority != mQoSPriority) {
+-        current->SetThreadQoS(threadPriority);
++        current->SetThreadQoS(mQoSPriority);
+         threadPriority = mQoSPriority;
+       }
+ 

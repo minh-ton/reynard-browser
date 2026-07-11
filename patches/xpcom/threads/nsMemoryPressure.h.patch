@@ -1,0 +1,13 @@
+diff --git a/xpcom/threads/nsMemoryPressure.h b/xpcom/threads/nsMemoryPressure.h
+index c9d18400b3a2..d5f415121fa2 100644
+--- a/xpcom/threads/nsMemoryPressure.h
++++ b/xpcom/threads/nsMemoryPressure.h
+@@ -47,6 +47,8 @@ extern const char16_t* const kSubTopicLowMemoryOngoing;
+ enum class MemoryPressureState : uint32_t {
+   None,  // For internal use.  Don't use this value.
+   LowMemory,
++  LowMemoryNew,
++  LowMemoryOngoing,
+   NoPressure,
+ };
+ 

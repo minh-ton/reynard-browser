@@ -13,6 +13,9 @@ final class SessionManager {
     private let history: NavigationHistory
     private let permissionStore: SitePermissionStore
     
+    private var sessionsRequestedActive: [ObjectIdentifier: GeckoSession] = [:]
+    private var isApplicationForeground = true
+    
     init(
         sessionSettings: SessionSettingsManager = SessionSettingsManager(),
         history: NavigationHistory = NavigationHistory(),
@@ -78,16 +81,28 @@ final class SessionManager {
         guard session.isOpen() else {
             return
         }
-        session.setActive(true)
+        sessionsRequestedActive[ObjectIdentifier(session)] = session
+        session.setActive(isApplicationForeground)
         session.setFocused(true)
     }
     
     func deactivate(_ session: GeckoSession) {
+        sessionsRequestedActive.removeValue(forKey: ObjectIdentifier(session))
         guard session.isOpen() else {
             return
         }
         session.setFocused(false)
         session.setActive(false)
+    }
+    
+    func setApplicationForeground(_ isForeground: Bool) {
+        guard isApplicationForeground != isForeground else {
+            return
+        }
+        isApplicationForeground = isForeground
+        for session in sessionsRequestedActive.values {
+            session.setActive(isForeground)
+        }
     }
     
     func close(_ session: GeckoSession) {

@@ -1,5 +1,5 @@
 diff --git a/hal/moz.build b/hal/moz.build
-index bb486ec1e411..dfb2184e32b0 100644
+index bb486ec1e411..d5d951aa54b0 100644
 --- a/hal/moz.build
 +++ b/hal/moz.build
 @@ -85,6 +85,15 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
@@ -8,11 +8,11 @@ index bb486ec1e411..dfb2184e32b0 100644
      ]
 +elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
 +    UNIFIED_SOURCES += [
-+        "fallback/FallbackBattery.cpp",
-+        "fallback/FallbackHeterogeneousCpuInfo.cpp",
-+        "fallback/FallbackProcessPriority.cpp",
 +        "fallback/FallbackScreenConfiguration.cpp",
 +        "fallback/FallbackVibration.cpp",
++        "uikit/UIKitBattery.mm",
++        "uikit/UIKitHeterogeneousCpuInfo.cpp",
++        "uikit/UIKitProcessPriority.mm",
 +        "uikit/UIKitSensor.mm",
 +    ]
  elif CONFIG["OS_TARGET"] in ("OpenBSD", "NetBSD", "FreeBSD", "DragonFly"):

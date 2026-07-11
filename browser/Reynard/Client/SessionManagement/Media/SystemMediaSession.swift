@@ -10,10 +10,30 @@ import GeckoView
 import MediaPlayer
 
 final class SystemMediaSession: MediaSessionDelegate {
+    private enum PlaybackState {
+        case none
+        case paused
+        case playing
+    }
+    
+    private final class SessionState {
+        weak var session: GeckoSession?
+        var nowPlayingInfo: [String: Any] = [:]
+        var features: MediaSessionFeatures = [.seekForward, .seekBackward, .seekTo]
+        var artworkTask: URLSessionDataTask?
+        var playbackState = PlaybackState.none
+        
+        init(session: GeckoSession) {
+            self.session = session
+        }
+    }
+    
     private weak var activeSession: GeckoSession?
+    private weak var selectedSession: GeckoSession?
     private let nowPlayingCenter = MPNowPlayingInfoCenter.default()
     private let commandCenter = MPRemoteCommandCenter.shared()
-    private var artworkTask: URLSessionDataTask?
+    private var sessionStates: [ObjectIdentifier: SessionState] = [:]
+    private var playbackHistory: [ObjectIdentifier] = []
     private var commandTargets: [Any] = []
     
     init() {
@@ -21,83 +41,173 @@ final class SystemMediaSession: MediaSessionDelegate {
     }
     
     deinit {
+        if activeSession != nil {
+            nowPlayingCenter.nowPlayingInfo = nil
+        }
+        sessionStates.values.forEach { $0.artworkTask?.cancel() }
         unregisterRemoteCommands()
     }
     
     func onActivated(session: GeckoSession) {
-        activeSession = session
+        _ = state(for: session)
     }
     
     func onDeactivated(session: GeckoSession) {
-        guard activeSession === session else { return }
-        activeSession = nil
-        nowPlayingCenter.nowPlayingInfo = nil
-        artworkTask?.cancel()
-        artworkTask = nil
+        let identifier = ObjectIdentifier(session)
+        let wasActive = activeSession === session
+        if selectedSession === session {
+            selectedSession = nil
+        }
+        sessionStates.removeValue(forKey: identifier)?.artworkTask?.cancel()
+        playbackHistory.removeAll { $0 == identifier }
+        
+        if wasActive {
+            activateMostRecentPlayingSession()
+        }
     }
     
     func onMetadata(session: GeckoSession, metadata: MediaSessionMetadata) {
-        guard activeSession === session else { return }
-        var info = nowPlayingCenter.nowPlayingInfo ?? [:]
-        info[MPMediaItemPropertyTitle]  = metadata.title  ?? ""
-        info[MPMediaItemPropertyArtist] = metadata.artist ?? ""
-        info[MPMediaItemPropertyAlbumTitle] = metadata.album ?? ""
-        nowPlayingCenter.nowPlayingInfo = info
+        let state = state(for: session)
+        state.nowPlayingInfo[MPMediaItemPropertyTitle] = metadata.title ?? ""
+        state.nowPlayingInfo[MPMediaItemPropertyArtist] = metadata.artist ?? ""
+        state.nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = metadata.album ?? ""
         
-        artworkTask?.cancel()
-        artworkTask = nil
+        if activeSession === session {
+            nowPlayingCenter.nowPlayingInfo = state.nowPlayingInfo
+        }
+        
+        state.artworkTask?.cancel()
+        state.artworkTask = nil
         
         if let artworkURLString = metadata.artworkUrl,
            let artworkURL = URL(string: artworkURLString) {
-            let task = URLSession.shared.dataTask(with: artworkURL) { [weak self] data, _, _ in
-                guard let self, let data, let image = UIImage(data: data) else { return }
+            let task = URLSession.shared.dataTask(with: artworkURL) { [weak self, weak state] data, _, _ in
+                guard let data, let image = UIImage(data: data) else { return }
                 let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
                 DispatchQueue.main.async {
-                    guard self.activeSession === session else { return }
-                    var updated = self.nowPlayingCenter.nowPlayingInfo ?? [:]
-                    updated[MPMediaItemPropertyArtwork] = artwork
-                    self.nowPlayingCenter.nowPlayingInfo = updated
+                    guard let self, let state else { return }
+                    state.artworkTask = nil
+                    state.nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+                    if self.activeSession === state.session {
+                        self.nowPlayingCenter.nowPlayingInfo = state.nowPlayingInfo
+                    }
                 }
             }
             task.resume()
-            artworkTask = task
+            state.artworkTask = task
         }
     }
     
     func onPlaybackPlaying(session: GeckoSession) {
-        guard activeSession === session else { return }
-        var info = nowPlayingCenter.nowPlayingInfo ?? [:]
-        info[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-        nowPlayingCenter.nowPlayingInfo = info
+        let identifier = ObjectIdentifier(session)
+        let state = state(for: session)
+        state.playbackState = .playing
+        state.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+        playbackHistory.removeAll { $0 == identifier }
+        playbackHistory.append(identifier)
+        
+        if let selectedSession,
+           selectedSession !== session,
+           let selectedState = sessionStates[ObjectIdentifier(selectedSession)],
+           selectedState.playbackState != .none {
+            return
+        }
+        activate(session, state: state)
     }
     
     func onPlaybackPaused(session: GeckoSession) {
-        guard activeSession === session else { return }
-        var info = nowPlayingCenter.nowPlayingInfo ?? [:]
-        info[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
-        nowPlayingCenter.nowPlayingInfo = info
+        let identifier = ObjectIdentifier(session)
+        let state = state(for: session)
+        state.playbackState = .paused
+        state.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+        playbackHistory.removeAll { $0 == identifier }
+        
+        if activeSession === session {
+            nowPlayingCenter.nowPlayingInfo = state.nowPlayingInfo
+        }
     }
     
     func onPlaybackNone(session: GeckoSession) {
-        guard activeSession === session else { return }
-        nowPlayingCenter.nowPlayingInfo = nil
+        let identifier = ObjectIdentifier(session)
+        let state = state(for: session)
+        state.playbackState = .none
+        playbackHistory.removeAll { $0 == identifier }
+        
+        if activeSession === session {
+            activateMostRecentPlayingSession()
+        }
+    }
+    
+    func select(session: GeckoSession) {
+        selectedSession = session
+        guard let state = sessionStates[ObjectIdentifier(session)],
+              state.playbackState != .none else {
+            return
+        }
+        
+        activate(session, state: state)
     }
     
     func onPositionState(session: GeckoSession, state: MediaSessionPositionState) {
-        guard activeSession === session else { return }
-        var info = nowPlayingCenter.nowPlayingInfo ?? [:]
-        info[MPMediaItemPropertyPlaybackDuration] = state.duration
-        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = state.position
-        info[MPNowPlayingInfoPropertyPlaybackRate] = state.playbackRate
-        nowPlayingCenter.nowPlayingInfo = info
+        let sessionState = self.state(for: session)
+        sessionState.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = state.duration
+        sessionState.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = state.position
+        sessionState.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = state.playbackRate
+        
+        if activeSession === session {
+            nowPlayingCenter.nowPlayingInfo = sessionState.nowPlayingInfo
+        }
     }
     
     func onFeatures(session: GeckoSession, features: MediaSessionFeatures) {
-        guard activeSession === session else { return }
-        commandCenter.nextTrackCommand.isEnabled     = features.contains(.nextTrack)
+        let state = state(for: session)
+        state.features = features
+        
+        if activeSession === session {
+            apply(features)
+        }
+    }
+    
+    private func state(for session: GeckoSession) -> SessionState {
+        let identifier = ObjectIdentifier(session)
+        if let state = sessionStates[identifier] {
+            return state
+        }
+        
+        let state = SessionState(session: session)
+        sessionStates[identifier] = state
+        return state
+    }
+    
+    private func activate(_ session: GeckoSession, state: SessionState) {
+        activeSession = session
+        nowPlayingCenter.nowPlayingInfo = state.nowPlayingInfo
+        apply(state.features)
+    }
+    
+    private func activateMostRecentPlayingSession() {
+        while let identifier = playbackHistory.last {
+            guard let state = sessionStates[identifier],
+                  state.playbackState == .playing,
+                  let session = state.session else {
+                playbackHistory.removeLast()
+                continue
+            }
+            
+            activate(session, state: state)
+            return
+        }
+        
+        activeSession = nil
+        nowPlayingCenter.nowPlayingInfo = nil
+        apply(MediaSessionFeatures())
+    }
+    
+    private func apply(_ features: MediaSessionFeatures) {
+        commandCenter.nextTrackCommand.isEnabled = features.contains(.nextTrack)
         commandCenter.previousTrackCommand.isEnabled = features.contains(.prevTrack)
-        commandCenter.skipForwardCommand.isEnabled   = features.contains(.seekForward)
-        commandCenter.skipBackwardCommand.isEnabled  = features.contains(.seekBackward)
+        commandCenter.skipForwardCommand.isEnabled = features.contains(.seekForward)
+        commandCenter.skipBackwardCommand.isEnabled = features.contains(.seekBackward)
         commandCenter.changePlaybackPositionCommand.isEnabled = features.contains(.seekTo)
     }
     

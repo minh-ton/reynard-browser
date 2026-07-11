@@ -1,0 +1,43 @@
+diff --git a/gfx/2d/MacIOSurfaceIOS.mm b/gfx/2d/MacIOSurfaceIOS.mm
+new file mode 100644
+index 000000000000..e485bc59777b
+--- /dev/null
++++ b/gfx/2d/MacIOSurfaceIOS.mm
+@@ -0,0 +1,37 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#include "GLContextEAGL.h"
++#include "GLTypes.h"
++
++#include <IOSurface/IOSurfaceRef.h>
++#include <OpenGLES/EAGLIOSurface.h>
++#include <TargetConditionals.h>
++
++bool MacIOSurfaceBindTexImageIOSurface(mozilla::gl::GLContext* aGL,
++                                       IOSurfaceRef aSurface, GLenum aTarget,
++                                       GLenum aInternalFormat, uint32_t aWidth,
++                                       uint32_t aHeight, GLenum aFormat,
++                                       GLenum aType, uint32_t aPlane) {
++#if TARGET_OS_SIMULATOR
++  return false;
++#else
++  mozilla::gl::GLContextEAGL* eagl = mozilla::gl::GLContextEAGL::Cast(aGL);
++  if (!eagl || !eagl->GetEAGLContext()) {
++    return false;
++  }
++
++  return [eagl->GetEAGLContext() texImageIOSurface:aSurface
++                                            target:aTarget
++                                    internalFormat:aInternalFormat
++                                             width:aWidth
++                                            height:aHeight
++                                            format:aFormat
++                                              type:aType
++                                             plane:aPlane];
++#endif
++}

@@ -26,7 +26,12 @@ struct ImagePreviewMenu {
             UIMenu(title: "", children: [
                 UIAction(title: "Share Image", image: UIImage(named: "reynard.square.and.arrow.up")) { _ in
                     loadImage(from: url) { image in
-                        presentShareSheet(image: image, from: presentingController, sourceView: sourceView)
+                        presentShareSheet(
+                            image: image,
+                            from: presentingController,
+                            sourceView: sourceView,
+                            sourcePoint: context.point
+                        )
                     }
                 },
                 UIAction(title: "Save to Photos", image: UIImage(named: "reynard.square.and.arrow.down")) { _ in
@@ -54,11 +59,16 @@ struct ImagePreviewMenu {
         }
     }
     
-    private static func presentShareSheet(image: UIImage, from controller: UIViewController, sourceView: UIView) {
+    private static func presentShareSheet(
+        image: UIImage,
+        from controller: UIViewController,
+        sourceView: UIView,
+        sourcePoint: CGPoint
+    ) {
         let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         if let popover = sheet.popoverPresentationController {
             popover.sourceView = sourceView
-            popover.sourceRect = sourceView.bounds
+            popover.sourceRect = CGRect(origin: sourcePoint, size: .zero)
         }
         controller.present(sheet, animated: true)
     }
