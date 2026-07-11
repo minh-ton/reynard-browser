@@ -113,6 +113,32 @@ final class HistoryStore {
         }
     }
     
+    func recordVisitImmediately(url: URL, title: String, visitedAt: Date = Date()) async -> Bool {
+        await withCheckedContinuation { continuation in
+            stateQueue.async {
+                guard URLUtils.isWebURL(url) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                let didRecord = self.recordVisitLocked(url: url, title: title, visitedAt: visitedAt)
+                if didRecord {
+                    self.postDidChange()
+                }
+                continuation.resume(returning: didRecord)
+            }
+        }
+    }
+    
+    func visitedStatuses(for urls: [String]) async -> [Bool] {
+        await withCheckedContinuation { continuation in
+            stateQueue.async {
+                let statuses = urls.map { self.isVisitedLocked(urlString: $0) }
+                continuation.resume(returning: statuses)
+            }
+        }
+    }
+    
     func updatePageTitle(for pageURL: URL, title: String) {
         let normalizedTitle = pageTitle(title, fallbackURL: pageURL)
         guard !normalizedTitle.isEmpty else {
@@ -700,6 +726,23 @@ final class HistoryStore {
         }
         
         return sqlite3_column_int64(statement, 0)
+    }
+    
+    private func isVisitedLocked(urlString: String) -> Bool {
+        guard let url = URL(string: urlString),
+              URLUtils.isWebURL(url),
+              let statement = prepareStatementLocked(
+                "SELECT 1 FROM history WHERE url = ? AND visit_count > 0 LIMIT 1;"
+              ) else {
+            return false
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bind(url.absoluteString, to: statement, at: 1)
+        return sqlite3_step(statement) == SQLITE_ROW
     }
     
     private func insertVisitLocked(siteID: Int64, timestamp: TimeInterval) -> Bool {

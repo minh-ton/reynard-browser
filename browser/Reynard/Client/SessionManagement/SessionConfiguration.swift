@@ -16,6 +16,7 @@ enum SessionOpening {
 struct SessionDelegates {
     var content: ContentDelegate?
     var navigation: NavigationDelegate?
+    var history: HistoryDelegate?
     var permission: PermissionEmbedderDelegate?
     var progress: ProgressDelegate?
     var prompt: PromptDelegate?
@@ -25,6 +26,7 @@ struct SessionDelegates {
     init(
         content: ContentDelegate? = nil,
         navigation: NavigationDelegate? = nil,
+        history: HistoryDelegate? = nil,
         permission: PermissionEmbedderDelegate? = nil,
         progress: ProgressDelegate? = nil,
         prompt: PromptDelegate? = nil,
@@ -33,6 +35,7 @@ struct SessionDelegates {
     ) {
         self.content = content
         self.navigation = navigation
+        self.history = history
         self.permission = permission
         self.progress = progress
         self.prompt = prompt

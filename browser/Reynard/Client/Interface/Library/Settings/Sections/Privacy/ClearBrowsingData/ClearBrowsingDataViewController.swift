@@ -239,6 +239,10 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
     
     private func clearSelectedEngineData(for selectedCategories: Set<BrowsingDataCategory>) async {
         do {
+            if selectedCategories.contains(.browsingHistory) {
+                try await GeckoStorageController.clearHistory(since: nil)
+            }
+            
             if selectedCategories.contains(.cookiesAndSiteData) {
                 try await GeckoStorageController.clearData(
                     flags: GeckoStorageClearFlags.cookies | GeckoStorageClearFlags.authSessions

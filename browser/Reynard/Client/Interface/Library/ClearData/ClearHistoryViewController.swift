@@ -5,6 +5,7 @@
 //  Created by Minh Ton on 22/5/26.
 //
 
+import GeckoView
 import UIKit
 
 final class ClearHistoryViewController: UITableViewController {
@@ -106,7 +107,15 @@ final class ClearHistoryViewController: UITableViewController {
     }
     
     @objc private func confirmClearHistory() {
-        onClear(selectedTimeframe.cutoffDate(), closeAllTabsSwitch.isOn)
+        let startDate = selectedTimeframe.cutoffDate()
+        onClear(startDate, closeAllTabsSwitch.isOn)
+        Task {
+            do {
+                try await GeckoStorageController.clearHistory(since: startDate)
+            } catch {
+                AlertPresenter.show(title: "Couldn’t Clear History", message: "\(error)")
+            }
+        }
         dismiss(animated: true)
     }
 }

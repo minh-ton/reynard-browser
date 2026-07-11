@@ -179,6 +179,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         return SessionDelegates(
             content: self,
             navigation: self,
+            history: self,
             permission: permissionCoordinator,
             progress: self,
             prompt: promptCoordinator,
@@ -987,12 +988,6 @@ extension TabManagerImplementation: NavigationDelegate {
         scheduleFaviconUpdate(forTabAt: location.index, mode: location.mode)
         persistState()
         
-        guard !tab.isPrivate,
-              let url = remoteURL(from: tab.url) else {
-            return
-        }
-        
-        historyStore.recordVisit(url: url, title: tab.title)
     }
     
     func onCanGoBack(session: GeckoSession, canGoBack: Bool) {
@@ -1085,6 +1080,26 @@ extension TabManagerImplementation: NavigationDelegate {
             self?.selectTab(at: index, mode: mode)
         }
         return newSession
+    }
+}
+
+extension TabManagerImplementation: HistoryDelegate {
+    func onVisited(session: GeckoSession, url: String, lastVisitedURL: String?, flags: Int) async -> Bool {
+        guard !session.isPrivateMode,
+              let pageURL = remoteURL(from: url) else {
+            return false
+        }
+        
+        let title = tabLocation(for: session).map { tabs(for: $0.mode)[$0.index].title } ?? ""
+        return await historyStore.recordVisitImmediately(url: pageURL, title: title)
+    }
+    
+    func getVisited(session: GeckoSession, urls: [String]) async -> [Bool]? {
+        guard !session.isPrivateMode else {
+            return Array(repeating: false, count: urls.count)
+        }
+        
+        return await historyStore.visitedStatuses(for: urls)
     }
 }
 

@@ -53,6 +53,7 @@ final class SessionManager {
     func bindDelegates(to session: GeckoSession, delegates: SessionDelegates) {
         session.contentDelegate = delegates.content
         session.navigationDelegate = delegates.navigation
+        session.historyDelegate = delegates.history
         session.permissionDelegate = delegates.permission
         session.progressDelegate = delegates.progress
         session.promptDelegate = delegates.prompt

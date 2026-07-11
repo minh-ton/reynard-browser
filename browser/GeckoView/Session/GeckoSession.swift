@@ -62,6 +62,12 @@ public class GeckoSession {
         set { navigationHandler.setDelegate(newValue) }
     }
     
+    lazy var historyHandler = newHistoryHandler(self)
+    public var historyDelegate: HistoryDelegate? {
+        get { historyHandler.delegate(as: HistoryDelegate.self) }
+        set { historyHandler.setDelegate(newValue) }
+    }
+    
     lazy var permissionHandler = newPermissionHandler(self)
     public var permissionDelegate: PermissionEmbedderDelegate? {
         get { permissionHandler.delegate(as: PermissionEmbedderDelegate.self) }
@@ -102,6 +108,7 @@ public class GeckoSession {
         contentHandler,
         processHangHandler,
         navigationHandler,
+        historyHandler,
         permissionHandler,
         progressHandler,
         promptHandler,
@@ -178,6 +185,7 @@ public class GeckoSession {
     public func close() {
         contentDelegate = nil
         navigationDelegate = nil
+        historyDelegate = nil
         permissionDelegate = nil
         progressDelegate = nil
         promptDelegate = nil
