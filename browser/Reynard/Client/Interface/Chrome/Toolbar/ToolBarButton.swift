@@ -10,7 +10,6 @@ import UIKit
 final class ToolbarButton: UIButton {
     private enum UX {
         static let toolbarButtonCornerRadius: CGFloat = 10
-        static let downloadButtonSideLength: CGFloat = 44
         static let downloadIconSize: CGFloat = 24
         static let downloadIconVerticalOffset: CGFloat = -1
         static let downloadProgressTrackWidth: CGFloat = 18
@@ -28,9 +27,15 @@ final class ToolbarButton: UIButton {
         case forward
         case share
         case library
+        case bookmarks
+        case history
+        case settings
         case tabOverview
         case download
         case newTab
+        case closeTab
+        case reload
+        case pageZoom
         case sidebar
     }
     
@@ -83,10 +88,7 @@ final class ToolbarButton: UIButton {
     }
     
     override var intrinsicContentSize: CGSize {
-        let sideLength = toolbarButtonType == .download
-        ? UX.downloadButtonSideLength
-        : UX.standardButtonSideLength
-        return CGSize(width: sideLength, height: sideLength)
+        return CGSize(width: UX.standardButtonSideLength, height: UX.standardButtonSideLength)
     }
     
     // MARK: - Updates
@@ -122,6 +124,7 @@ final class ToolbarButton: UIButton {
         tintColor = .label
         layer.cornerRadius = UX.toolbarButtonCornerRadius
         layer.cornerCurve = .continuous
+        accessibilityLabel = buttonTitle
     }
     
     private func configureImage() {
@@ -139,7 +142,15 @@ final class ToolbarButton: UIButton {
     }
     
     private func configureTarget(_ target: AnyObject, action: Selector) {
+        addTarget(self, action: #selector(playTapHaptic), for: .touchUpInside)
         addTarget(target, action: action, for: .touchUpInside)
+    }
+
+    @objc private func playTapHaptic() {
+        guard Prefs.AppearanceSettings.toolbarButtonHapticsEnabled else {
+            return
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
     
     private func configureDownloadViewsIfNeeded() {
@@ -151,8 +162,8 @@ final class ToolbarButton: UIButton {
         clipsToBounds = false
         contentHorizontalAlignment = .center
         contentVerticalAlignment = .center
-        setContentHuggingPriority(.required, for: .horizontal)
-        setContentCompressionResistancePriority(.required, for: .horizontal)
+        let configuration = UIImage.SymbolConfiguration(pointSize: UX.downloadSymbolPointSize, weight: .regular)
+        downloadIconView.image = UIImage(named: "reynard.arrow.down.circle", in: .main, with: configuration)
         downloadIconView.isHidden = false
         addSubview(downloadIconView)
         addSubview(downloadProgressTrackView)
@@ -184,10 +195,35 @@ final class ToolbarButton: UIButton {
         case .forward: return "reynard.chevron.forward"
         case .share: return "reynard.square.and.arrow.up"
         case .library: return "reynard.ellipsis.circle"
+        case .bookmarks: return "reynard.book"
+        case .history: return "reynard.clock"
+        case .settings: return "reynard.gearshape"
         case .tabOverview: return "reynard.square.on.square"
         case .download: return "reynard.arrow.down.circle"
         case .newTab: return "reynard.plus"
+        case .closeTab: return "reynard.xmark"
+        case .reload: return "reynard.arrow.clockwise"
+        case .pageZoom: return "reynard.textformat.size"
         case .sidebar: return "reynard.sidebar.left"
+        }
+    }
+
+    private var buttonTitle: String {
+        switch toolbarButtonType {
+        case .back: return "Back"
+        case .forward: return "Forward"
+        case .share: return "Share"
+        case .library: return "Library"
+        case .bookmarks: return "Bookmarks"
+        case .history: return "History"
+        case .settings: return "Settings"
+        case .tabOverview: return "Tabs"
+        case .download: return "Downloads"
+        case .newTab: return "New Tab"
+        case .closeTab: return "Close Tab"
+        case .reload: return "Reload"
+        case .pageZoom: return "Page Zoom"
+        case .sidebar: return "Sidebar"
         }
     }
     

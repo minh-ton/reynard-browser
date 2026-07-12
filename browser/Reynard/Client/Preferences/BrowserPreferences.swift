@@ -82,6 +82,10 @@ final class BrowserPreferences {
             key("AppearanceSettings", "showsFullWebsiteAddress"): false,
             key("AppearanceSettings", "showsLandscapeTabBar"): true,
             key("AppearanceSettings", "defaultPageZoomLevel"): PageZoomLevels.defaultLevel,
+            key("AppearanceSettings", "bottomToolbarActions"): BottomToolbarAction.defaultActions.map(\.rawValue),
+            key("AppearanceSettings", "toolbarButtonHapticsEnabled"): true,
+            key("AppearanceSettings", "closeTabLongPressOpensNewTab"): true,
+            key("AppearanceSettings", "newTabLongPressClosesTab"): false,
             
             // Languages
             key("LanguageSettings", "websiteLanguages"): (try? JSONEncoder().encode(WebsiteLanguageCatalog.defaultLanguageCodes())) ?? Data(),
@@ -91,6 +95,7 @@ final class BrowserPreferences {
             key("BookmarkSettings", "sortOrders"): BookmarkSortOrder.none.rawValue,
             
             // Add-ons
+            key("AddonSettings", "showsAddressBarButton"): true,
             key("AddonSettings", "lastGlobalCheckAt"): "",
             key("AddonSettings", "pendingApprovalAddonIDs"): Data(),
             
@@ -125,6 +130,10 @@ final class BrowserPreferences {
     func data(forSetting setting: String, key name: String) -> Data? {
         UserDefaults.standard.data(forKey: key(setting, name))
     }
+
+    func stringArray(forSetting setting: String, key name: String) -> [String]? {
+        UserDefaults.standard.stringArray(forKey: key(setting, name))
+    }
     
     func double(forSetting setting: String, key name: String) -> Double {
         UserDefaults.standard.double(forKey: key(setting, name))
@@ -143,6 +152,10 @@ final class BrowserPreferences {
     }
     
     func set(_ value: Data?, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+
+    func set(_ value: [String], forSetting setting: String, key name: String) {
         UserDefaults.standard.set(value, forKey: key(setting, name))
     }
     
@@ -657,6 +670,61 @@ final class BrowserPreferences {
                 prefs.set(newValue, forSetting: "AppearanceSettings", key: "defaultPageZoomLevel")
             }
         }
+
+        static var bottomToolbarActions: [BottomToolbarAction] {
+            get {
+                let rawValues = prefs.stringArray(
+                    forSetting: "AppearanceSettings",
+                    key: "bottomToolbarActions"
+                ) ?? BottomToolbarAction.defaultActions.map(\.rawValue)
+                var seen = Set<BottomToolbarAction>()
+                let actions = rawValues.compactMap { rawValue in
+                    rawValue == "library" ? BottomToolbarAction.bookmarks : BottomToolbarAction(rawValue: rawValue)
+                }.filter {
+                    seen.insert($0).inserted
+                }
+                return Array(actions.prefix(BottomToolbarAction.maximumVisibleActions))
+            }
+            set {
+                var seen = Set<BottomToolbarAction>()
+                let actions = newValue.filter { seen.insert($0).inserted }
+                prefs.set(
+                    Array(actions.prefix(BottomToolbarAction.maximumVisibleActions)).map(\.rawValue),
+                    forSetting: "AppearanceSettings",
+                    key: "bottomToolbarActions"
+                )
+                NotificationCenter.default.post(name: .bottomToolbarActionsDidChange, object: nil)
+            }
+        }
+
+        static var toolbarButtonHapticsEnabled: Bool {
+            get {
+                prefs.bool(forSetting: "AppearanceSettings", key: "toolbarButtonHapticsEnabled")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AppearanceSettings", key: "toolbarButtonHapticsEnabled")
+            }
+        }
+
+        static var closeTabLongPressOpensNewTab: Bool {
+            get {
+                prefs.bool(forSetting: "AppearanceSettings", key: "closeTabLongPressOpensNewTab")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AppearanceSettings", key: "closeTabLongPressOpensNewTab")
+                NotificationCenter.default.post(name: .bottomToolbarShortcutsDidChange, object: nil)
+            }
+        }
+
+        static var newTabLongPressClosesTab: Bool {
+            get {
+                prefs.bool(forSetting: "AppearanceSettings", key: "newTabLongPressClosesTab")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AppearanceSettings", key: "newTabLongPressClosesTab")
+                NotificationCenter.default.post(name: .bottomToolbarShortcutsDidChange, object: nil)
+            }
+        }
     }
     
     // MARK: - JIT
@@ -721,6 +789,16 @@ final class BrowserPreferences {
     
     // MARK: - Add-ons
     struct AddonSettings {
+        static var showsAddressBarButton: Bool {
+            get {
+                prefs.bool(forSetting: "AddonSettings", key: "showsAddressBarButton")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AddonSettings", key: "showsAddressBarButton")
+                NotificationCenter.default.post(name: .addonAddressBarButtonDidChange, object: nil)
+            }
+        }
+
         static var lastGlobalCheckAt: Date? {
             get {
                 guard let value = prefs.string(forSetting: "AddonSettings", key: "lastGlobalCheckAt"),

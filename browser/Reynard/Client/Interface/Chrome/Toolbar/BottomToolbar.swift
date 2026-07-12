@@ -7,6 +7,60 @@
 
 import UIKit
 
+enum BottomToolbarAction: String, CaseIterable {
+    case back
+    case forward
+    case reload
+    case share
+    case pageZoom
+    case bookmarks
+    case history
+    case downloads
+    case settings
+    case newTab
+    case closeTab
+    case tabOverview
+
+    static let maximumVisibleActions = 10
+    static let defaultActions: [BottomToolbarAction] = [
+        .back, .forward, .share, .bookmarks, .downloads, .tabOverview,
+    ]
+
+    var title: String {
+        switch self {
+        case .back: return "Back"
+        case .forward: return "Forward"
+        case .reload: return "Reload"
+        case .share: return "Share"
+        case .pageZoom: return "Page Zoom"
+        case .bookmarks: return "Bookmarks"
+        case .history: return "History"
+        case .downloads: return "Downloads"
+        case .settings: return "Settings"
+        case .newTab: return "New Tab"
+        case .closeTab: return "Close Tab"
+        case .tabOverview: return "Tabs"
+        }
+    }
+
+    var imageName: String {
+        switch self {
+        case .back: return "reynard.chevron.backward"
+        case .forward: return "reynard.chevron.forward"
+        case .reload: return "reynard.arrow.clockwise"
+        case .share: return "reynard.square.and.arrow.up"
+        case .pageZoom: return "reynard.textformat.size"
+        case .bookmarks: return "reynard.book"
+        case .history: return "reynard.clock"
+        case .downloads: return "reynard.arrow.down.circle"
+        case .settings: return "reynard.gearshape"
+        case .newTab: return "reynard.plus"
+        case .closeTab: return "reynard.xmark"
+        case .tabOverview: return "reynard.square.on.square"
+        }
+    }
+}
+
 final class BottomToolbar: UIView {
     private enum UX {
         static let bottomToolbarStandardContentHeight: CGFloat = 94
@@ -17,7 +71,7 @@ final class BottomToolbar: UIView {
         static let addressBarTopInset: CGFloat = 8
         static let bottomToolbarButtonStackHorizontalInset: CGFloat = 24
         static let bottomToolbarButtonStackTopSpacing: CGFloat = 7
-        static let bottomToolbarButtonSpacing: CGFloat = 8
+        static let bottomToolbarButtonSpacing: CGFloat = 4
     }
     
     enum LayoutState {
@@ -31,9 +85,15 @@ final class BottomToolbar: UIView {
     var onBack: (() -> Void)?
     var onForward: (() -> Void)?
     var onShare: (() -> Void)?
-    var onLibrary: (() -> Void)?
+    var onBookmarks: (() -> Void)?
+    var onHistory: (() -> Void)?
     var onDownloads: (() -> Void)?
+    var onSettings: (() -> Void)?
     var onTabOverview: (() -> Void)?
+    var onReload: (() -> Void)?
+    var onPageZoom: (() -> Void)?
+    var onNewTab: (() -> Void)?
+    var onCloseTab: (() -> Void)?
     
     private let contentView: UIView = {
         let view = UIView()
@@ -45,12 +105,45 @@ final class BottomToolbar: UIView {
     private lazy var backButton = ToolbarButton(buttonType: .back, target: self, action: #selector(backTapped))
     private lazy var forwardButton = ToolbarButton(buttonType: .forward, target: self, action: #selector(forwardTapped))
     private lazy var shareButton = ToolbarButton(buttonType: .share, target: self, action: #selector(shareTapped))
-    private lazy var libraryButton = ToolbarButton(buttonType: .library, target: self, action: #selector(libraryTapped))
+    private lazy var bookmarksButton = ToolbarButton(buttonType: .bookmarks, target: self, action: #selector(bookmarksTapped))
+    private lazy var historyButton = ToolbarButton(buttonType: .history, target: self, action: #selector(historyTapped))
     private lazy var downloadButton = ToolbarButton(buttonType: .download, target: self, action: #selector(downloadsTapped))
+    private lazy var settingsButton = ToolbarButton(buttonType: .settings, target: self, action: #selector(settingsTapped))
     private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: self, action: #selector(tabOverviewTapped))
+    private lazy var reloadButton = ToolbarButton(buttonType: .reload, target: self, action: #selector(reloadTapped))
+    private lazy var pageZoomButton = ToolbarButton(buttonType: .pageZoom, target: self, action: #selector(pageZoomTapped))
+    private lazy var newTabButton: ToolbarButton = {
+        let button = ToolbarButton(buttonType: .newTab, target: self, action: #selector(newTabTapped))
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(newTabLongPressed(_:)))
+        longPress.minimumPressDuration = 0.5
+        button.addGestureRecognizer(longPress)
+        return button
+    }()
+    private lazy var closeTabButton: ToolbarButton = {
+        let button = ToolbarButton(buttonType: .closeTab, target: self, action: #selector(closeTabTapped))
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(closeTabLongPressed(_:)))
+        longPress.minimumPressDuration = 0.5
+        button.addGestureRecognizer(longPress)
+        return button
+    }()
+
+    private lazy var actionButtons: [BottomToolbarAction: ToolbarButton] = [
+        .back: backButton,
+        .forward: forwardButton,
+        .reload: reloadButton,
+        .share: shareButton,
+        .pageZoom: pageZoomButton,
+        .bookmarks: bookmarksButton,
+        .history: historyButton,
+        .downloads: downloadButton,
+        .settings: settingsButton,
+        .newTab: newTabButton,
+        .closeTab: closeTabButton,
+        .tabOverview: tabOverviewButton,
+    ]
     
     private lazy var buttons: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, libraryButton, downloadButton, tabOverviewButton])
+        let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -76,6 +169,18 @@ final class BottomToolbar: UIView {
         configureHierarchy()
         configureConstraints()
         configureInitialState()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(bottomToolbarActionsDidChange),
+            name: .bottomToolbarActionsDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(bottomToolbarShortcutsDidChange),
+            name: .bottomToolbarShortcutsDidChange,
+            object: nil
+        )
     }
     
     required init?(coder: NSCoder) {
@@ -160,14 +265,10 @@ final class BottomToolbar: UIView {
     
     func updateDownload(_ summary: DownloadStoreSummary) {
         downloadButton.applyDownloadSummary(summary)
-        downloadButton.isHidden = !downloadButton.isShowingDownloads
     }
     
     func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
-        libraryButton.setImage(
-            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
-            for: .normal
-        )
+        _ = hasUpdate
     }
     
     // MARK: - Action Wiring
@@ -175,9 +276,45 @@ final class BottomToolbar: UIView {
     @objc private func backTapped() { onBack?() }
     @objc private func forwardTapped() { onForward?() }
     @objc private func shareTapped() { onShare?() }
-    @objc private func libraryTapped() { onLibrary?() }
+    @objc private func bookmarksTapped() { onBookmarks?() }
+    @objc private func historyTapped() { onHistory?() }
     @objc private func downloadsTapped() { onDownloads?() }
+    @objc private func settingsTapped() { onSettings?() }
     @objc private func tabOverviewTapped() { onTabOverview?() }
+    @objc private func reloadTapped() { onReload?() }
+    @objc private func pageZoomTapped() { onPageZoom?() }
+    @objc private func newTabTapped() { onNewTab?() }
+    @objc private func closeTabTapped() { onCloseTab?() }
+
+    @objc private func closeTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began,
+              Prefs.AppearanceSettings.closeTabLongPressOpensNewTab else {
+            return
+        }
+        if Prefs.AppearanceSettings.toolbarButtonHapticsEnabled {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+        onNewTab?()
+    }
+
+    @objc private func newTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began,
+              Prefs.AppearanceSettings.newTabLongPressClosesTab else {
+            return
+        }
+        if Prefs.AppearanceSettings.toolbarButtonHapticsEnabled {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+        onCloseTab?()
+    }
+
+    @objc private func bottomToolbarActionsDidChange() {
+        applyConfiguredActions()
+    }
+
+    @objc private func bottomToolbarShortcutsDidChange() {
+        updateShortcutAccessibility()
+    }
     
     // MARK: - View Setup
     
@@ -189,6 +326,7 @@ final class BottomToolbar: UIView {
     private func configureHierarchy() {
         addSubview(contentView)
         contentView.addSubview(buttons)
+        applyConfiguredActions()
     }
     
     private func configureConstraints() {
@@ -210,6 +348,28 @@ final class BottomToolbar: UIView {
     
     private func configureInitialState() {
         shareButton.isEnabled = false
-        downloadButton.isHidden = true
+        updateShortcutAccessibility()
+    }
+
+    private func applyConfiguredActions() {
+        for button in buttons.arrangedSubviews {
+            buttons.removeArrangedSubview(button)
+            button.removeFromSuperview()
+        }
+        for action in Prefs.AppearanceSettings.bottomToolbarActions {
+            if let button = actionButtons[action] {
+                button.isHidden = false
+                buttons.addArrangedSubview(button)
+            }
+        }
+    }
+
+    private func updateShortcutAccessibility() {
+        closeTabButton.accessibilityHint = Prefs.AppearanceSettings.closeTabLongPressOpensNewTab
+            ? "Touch and hold to open a new tab"
+            : nil
+        newTabButton.accessibilityHint = Prefs.AppearanceSettings.newTabLongPressClosesTab
+            ? "Touch and hold to close the current tab"
+            : nil
     }
 }

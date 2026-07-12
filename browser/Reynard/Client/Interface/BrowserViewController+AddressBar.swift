@@ -57,18 +57,66 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             )
         }
     }
-    
-    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
-        addonCoordinator.activateMenuItem(item)
-    }
-    
-    func addressBarDidRequestPageZoom(_ addressBar: AddressBar) {
-        guard let selectedTab = tabManager.selectedTab else {
-            return
+
+    func addressBarDidRequestAddonList(_ addressBar: AddressBar) {
+        browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
+            guard let self else { return }
+            let controller = AddonQuickListViewController(
+                itemProvider: { [weak self] in
+                    guard let self else { return [] }
+                    return self.addressBarAddonItems(addressBar)
+                },
+                onSelect: { [weak self] item, listController in
+                    listController.dismiss(animated: true) {
+                        self?.addonCoordinator.activateMenuItem(item)
+                    }
+                },
+                onUninstall: { [weak self] addon in
+                    self?.confirmAddonUninstall(addon)
+                },
+                onDiscover: { [weak self] listController in
+                    LibrarySharedUtils.openLinkInBrowser(
+                        "https://addons.mozilla.org/android/",
+                        from: listController
+                    )
+                    self?.refreshAddressBar()
+                },
+                onInstallFromFile: { packageURL in
+                    let stagedURL = try AddonsPreferencesViewController.stageAddonPackage(from: packageURL)
+                    _ = try await AddonRuntime.shared.install(url: stagedURL.absoluteString)
+                    _ = try await AddonRuntime.shared.list()
+                },
+                onUpdateAll: { [weak self] in
+                    guard let self else {
+                        return AddonUpdateBatchResult(updatedCount: 0, noUpdateCount: 0, pendingApprovalCount: 0, failedCount: 0)
+                    }
+                    let coordinator = self.addonCoordinator.updateCoordinator
+                    if coordinator.hasPendingApprovals {
+                        return await coordinator.completePendingUpdates { _, _ in }
+                    }
+                    return await coordinator.updateAllAddons { _, _ in }
+                }
+            )
+            let navigationController = UINavigationController(rootViewController: controller)
+            navigationController.modalPresentationStyle = .pageSheet
+            if #available(iOS 15.0, *) {
+                navigationController.sheetPresentationController?.detents = [.medium(), .large()]
+                navigationController.sheetPresentationController?.prefersGrabberVisible = true
+            }
+            self.present(navigationController, animated: true)
         }
-        
-        browserChrome.setPageZoomLevel(selectedTab.session.settings.pageZoom.level)
-        browserChrome.showActionBar(.pageZoom, animated: true)
+    }
+
+    func addressBarDidRequestPageZoom(_ addressBar: AddressBar) {
+        browserChrome.showPageZoomDropdownFromAddressBarMenu()
+    }
+
+    func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int? {
+        return tabManager.selectedTab?.session.settings.pageZoom.level
+    }
+
+    func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int) {
+        setSelectedPageZoomLevel(level)
     }
     
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
@@ -81,6 +129,12 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
         presentWebsiteSettings()
+    }
+
+    func addressBarDidRequestSettings(_ addressBar: AddressBar) {
+        browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
+            self?.presentLibrary(initialSection: .settings)
+        }
     }
     
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool) {
@@ -209,6 +263,40 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
     
     // MARK: - Website Actions
+
+    private func confirmAddonUninstall(_ addon: Addon) {
+        let addonName = addon.metaData.name ?? addon.id
+        AlertPresenter.show(
+            title: "Uninstall \(addonName)?",
+            message: nil,
+            buttons: [
+                AlertPresenter.Button(title: "Cancel", style: .cancel),
+                AlertPresenter.Button(title: "Uninstall", style: .destructive) { [weak self] in
+                    Task { [weak self] in
+                        do {
+                            try await AddonRuntime.shared.uninstall(addon)
+                            let installedAddons = try await AddonRuntime.shared.list()
+                            guard !installedAddons.contains(where: { $0.id == addon.id }) else {
+                                throw NSError(
+                                    domain: "com.minh-ton.Reynard.AddonUninstall",
+                                    code: 1,
+                                    userInfo: [NSLocalizedDescriptionKey: "Gecko still reports this add-on as installed."]
+                                )
+                            }
+                            await MainActor.run {
+                                self?.refreshAddressBar()
+                                self?.browserChrome.invalidateAddressBarMenuPresentation()
+                            }
+                        } catch {
+                            await MainActor.run {
+                                AlertPresenter.show(title: "Failed to uninstall add-on", message: "\(error)")
+                            }
+                        }
+                    }
+                },
+            ]
+        )
+    }
     
     private func presentWebsiteSettings() {
         guard let selectedTab = tabManager.selectedTab,

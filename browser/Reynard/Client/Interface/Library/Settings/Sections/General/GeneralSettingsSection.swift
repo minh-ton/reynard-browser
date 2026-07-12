@@ -16,6 +16,7 @@ struct GeneralSettingsSection {
         case homepage
         case languages
         case appearance
+        case toolbar
         case compatibility
     }
     
@@ -43,6 +44,8 @@ struct GeneralSettingsSection {
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Languages", comment: ""))
         case .appearance:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Appearance", comment: ""))
+        case .toolbar:
+            return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Toolbar", comment: ""))
         case .compatibility:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Compatibility", comment: ""))
         }
@@ -69,6 +72,8 @@ struct GeneralSettingsSection {
             destination = LanguagesPreferencesViewController()
         case .appearance:
             destination = AppearancePreferencesViewController()
+        case .toolbar:
+            destination = BottomToolbarPreferencesViewController()
         case .compatibility:
             destination = CompatibilityPreferencesViewController()
         }
