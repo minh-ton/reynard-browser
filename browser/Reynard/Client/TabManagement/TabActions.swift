@@ -131,4 +131,30 @@ extension TabManagerImplementation {
         }
         return true
     }
+
+    @discardableResult
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, forSelectedTabWithID tabID: UUID) -> Bool {
+        guard let tab = selectedTab,
+              tab.id == tabID,
+              let url = tab.url,
+              let navigationAction = sessionManager.setPersistentWebsiteMode(
+                mode,
+                for: url,
+                tabID: tab.id
+              ) else {
+            return false
+        }
+
+        switch navigationAction {
+        case .reload:
+            sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
+            tab.session.reload()
+        case let .load(overrideURL):
+            tab.state.displayState = .pending(overrideURL)
+            tab.state.suppressInitialNavigation = false
+            sessionManager.updateSettings(of: tab.session, for: overrideURL, tabID: tab.id)
+            tab.session.load(overrideURL, flags: GeckoSessionLoadFlags.replaceHistory)
+        }
+        return true
+    }
 }

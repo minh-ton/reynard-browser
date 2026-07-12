@@ -45,6 +45,8 @@ protocol TabManager: AnyObject {
     func invalidateNavigationThumbnails()
     @discardableResult
     func changeWebsiteModeForSelectedTab() -> Bool
+    @discardableResult
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, forSelectedTabWithID tabID: UUID) -> Bool
 }
 
 enum TabManagerUpdateReason {

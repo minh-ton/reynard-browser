@@ -215,7 +215,16 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: urlString),
-              let settingsController = SiteSettingsViewController(url: url, session: selectedTab.session) else {
+              let settingsController = SiteSettingsViewController(
+                url: url,
+                session: selectedTab.session,
+                onWebsiteModeChanged: { [weak self] mode in
+                    guard let self else { return }
+                    if self.tabManager.setPersistentWebsiteMode(mode, forSelectedTabWithID: selectedTab.id) {
+                        self.refreshAddressBar()
+                    }
+                }
+              ) else {
             return
         }
         

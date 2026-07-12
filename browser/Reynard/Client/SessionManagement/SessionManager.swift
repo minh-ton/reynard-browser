@@ -150,6 +150,10 @@ final class SessionManager {
     func toggleWebsiteMode(for url: String, tabID: UUID) -> WebsiteModeAction? {
         return sessionSettings.websiteMode.toggleWebsiteMode(for: url, tabID: tabID)
     }
+
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, for url: String, tabID: UUID) -> WebsiteModeAction? {
+        return sessionSettings.websiteMode.setPersistentWebsiteMode(mode, for: url, tabID: tabID)
+    }
     
     func needsSettingsUpdate(
         to session: GeckoSession,

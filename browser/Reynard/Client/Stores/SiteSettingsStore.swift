@@ -139,6 +139,14 @@ final class SiteSettingsStore {
         guard let host = URLUtils.normalizedHost(url.host) else {
             return false
         }
+
+        return setWebsiteMode(mode, forHost: host)
+    }
+
+    func setWebsiteMode(_ mode: SiteWebsiteMode, forHost host: String) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
+        }
         
         return stateQueue.sync {
             setTextSettingLocked(mode.rawValue, column: .websiteMode, for: host)
@@ -186,6 +194,14 @@ final class SiteSettingsStore {
     
     func clearWebsiteMode(for url: URL) -> Bool {
         guard let host = URLUtils.normalizedHost(url.host) else {
+            return false
+        }
+
+        return clearWebsiteMode(forHost: host)
+    }
+
+    func clearWebsiteMode(forHost host: String) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
             return false
         }
         

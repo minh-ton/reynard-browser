@@ -47,6 +47,10 @@ final class WebsiteModeSettingManager {
     func toggleWebsiteMode(for url: String, tabID: UUID) -> WebsiteModeAction? {
         return websiteMode.toggle(for: url, tabID: tabID)
     }
+
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, for url: String, tabID: UUID) -> WebsiteModeAction? {
+        return websiteMode.setPersistentMode(mode, for: url, tabID: tabID)
+    }
     
     func clearWebsiteOverrides(for tabID: UUID) {
         websiteMode.clearOverrides(for: tabID)
