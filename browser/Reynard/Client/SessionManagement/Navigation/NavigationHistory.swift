@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import UIKit
 
 final class NavigationHistory {
     private let store: NavigationHistoryStore
@@ -105,7 +104,7 @@ final class NavigationHistory {
         return availability(for: tabID, sessionState: .unavailable)
     }
     
-    func updateCurrentHistoryThumbnail(_ image: UIImage?, for tabID: UUID, matching url: String) {
+    func updateCurrentHistoryThumbnail(_ image: NavigationPreviewImage?, for tabID: UUID, matching url: String) {
         store.updateCurrentHistoryThumbnail(image, for: tabID, matching: url)
     }
     

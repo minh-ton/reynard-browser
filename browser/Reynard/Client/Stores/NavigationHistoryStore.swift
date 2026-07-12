@@ -6,16 +6,18 @@
 //
 
 import Foundation
-import UIKit
 
 final class NavigationHistoryStore {
     static let shared = NavigationHistoryStore()
     
     struct Snapshot {
+        let currentURL: String?
+        let backHistory: [String]
+        let forwardHistory: [String]
         let canGoBack: Bool
         let canGoForward: Bool
-        let backPreviewImage: UIImage?
-        let forwardPreviewImage: UIImage?
+        let backPreviewImage: NavigationPreviewImage?
+        let forwardPreviewImage: NavigationPreviewImage?
         let usesStoredHistory: Bool
     }
     
@@ -58,18 +60,29 @@ final class NavigationHistoryStore {
     private let thumbnailJPEGQuality = 0.8
     private let fileManager: FileManager
     private let storageURL: URL
+    private let maximumEntryCount: Int
     private let queue = DispatchQueue(label: "com.minh-ton.Reynard.NavigationHistoryStore.Queue", qos: .userInitiated)
+    private let persistenceQueue = DispatchQueue(label: "com.minh-ton.Reynard.NavigationHistoryStore.Persistence", qos: .utility)
+    private var historyCache: [UUID: StoredHistory] = [:]
     
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        storageURL: URL? = nil,
+        maximumEntryCount: Int = 200
+    ) {
         self.fileManager = fileManager
+        self.maximumEntryCount = max(1, maximumEntryCount)
         
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
+        if let storageURL {
+            self.storageURL = storageURL
+        } else {
+            guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                fatalError("Application Support directory is unavailable")
+            }
+            self.storageURL = applicationSupportDirectoryURL
+                .appendingPathComponent("AppData", isDirectory: true)
+                .appendingPathComponent("TabSessions", isDirectory: true)
         }
-        
-        self.storageURL = applicationSupportDirectoryURL
-            .appendingPathComponent("AppData", isDirectory: true)
-            .appendingPathComponent("TabSessions", isDirectory: true)
         
         queue.sync {
             createStorageDirectory()
@@ -96,6 +109,7 @@ final class NavigationHistoryStore {
                     url: currentURL,
                     thumbnailData: history.currentThumbnailData
                 ))
+                trimOldestEntries(in: &history.backHistory)
             }
             
             history.currentURL = url
@@ -128,6 +142,7 @@ final class NavigationHistoryStore {
                     url: currentURL,
                     thumbnailData: history.currentThumbnailData
                 ), at: 0)
+                trimNewestEntries(in: &history.forwardHistory)
             }
             
             history.currentURL = target.url
@@ -151,6 +166,7 @@ final class NavigationHistoryStore {
                     url: currentURL,
                     thumbnailData: history.currentThumbnailData
                 ))
+                trimOldestEntries(in: &history.backHistory)
             }
             
             history.currentURL = target.url
@@ -160,7 +176,7 @@ final class NavigationHistoryStore {
         }
     }
     
-    func updateCurrentHistoryThumbnail(_ image: UIImage?, for tabID: UUID, matching url: String) {
+    func updateCurrentHistoryThumbnail(_ image: NavigationPreviewImage?, for tabID: UUID, matching url: String) {
         queue.async {
             var history = self.loadHistory(for: tabID)
             guard history.currentURL == url else {
@@ -200,13 +216,15 @@ final class NavigationHistoryStore {
     }
     
     func removeNavigationHistory(for tabID: UUID) {
-        queue.async {
+        queue.sync {
+            self.historyCache.removeValue(forKey: tabID)
             let fileURL = self.historyURL(for: tabID)
-            guard self.fileManager.fileExists(atPath: fileURL.path) else {
-                return
+            self.persistenceQueue.async {
+                guard self.fileManager.fileExists(atPath: fileURL.path) else {
+                    return
+                }
+                try? self.fileManager.removeItem(at: fileURL)
             }
-            
-            try? self.fileManager.removeItem(at: fileURL)
         }
     }
     
@@ -215,34 +233,65 @@ final class NavigationHistoryStore {
     }
     
     private func loadHistory(for tabID: UUID) -> StoredHistory {
+        if let history = historyCache[tabID] {
+            return history
+        }
+        let history: StoredHistory
         guard let data = try? Data(contentsOf: historyURL(for: tabID)),
               let decoded = try? JSONDecoder().decode(StoredHistory.self, from: data) else {
-            return StoredHistory(
+            history = StoredHistory(
                 currentURL: nil,
                 currentThumbnailData: nil,
                 backHistory: [],
                 forwardHistory: [],
                 usesStoredHistory: nil
             )
+            historyCache[tabID] = history
+            return history
         }
-        
-        return decoded
+        history = decoded
+        historyCache[tabID] = history
+        return history
     }
     
     private func saveHistory(_ history: StoredHistory, for tabID: UUID) {
+        historyCache[tabID] = history
         guard let data = try? JSONEncoder().encode(history) else {
             return
         }
-        
-        try? data.write(to: historyURL(for: tabID), options: .atomic)
+        let fileURL = historyURL(for: tabID)
+        persistenceQueue.async {
+            try? data.write(to: fileURL, options: .atomic)
+        }
+    }
+
+    private func trimOldestEntries(in entries: inout [NavigationEntry]) {
+        let overflow = entries.count - maximumEntryCount
+        if overflow > 0 {
+            entries.removeFirst(overflow)
+        }
+    }
+
+    private func trimNewestEntries(in entries: inout [NavigationEntry]) {
+        let overflow = entries.count - maximumEntryCount
+        if overflow > 0 {
+            entries.removeLast(overflow)
+        }
+    }
+
+    func flushPendingWritesForTesting() {
+        persistenceQueue.sync {}
     }
     
     private func snapshot(from history: StoredHistory) -> Snapshot {
         Snapshot(
+            currentURL: history.currentURL,
+            backHistory: history.backHistory.map(\.url),
+            forwardHistory: history.forwardHistory.map(\.url),
             canGoBack: !history.backHistory.isEmpty,
             canGoForward: !history.forwardHistory.isEmpty,
-            backPreviewImage: history.backHistory.last?.thumbnailData.flatMap(UIImage.init(data:)),
-            forwardPreviewImage: history.forwardHistory.first?.thumbnailData.flatMap(UIImage.init(data:)),
+            backPreviewImage: history.backHistory.last?.thumbnailData.flatMap(NavigationPreviewImage.init(data:)),
+            forwardPreviewImage: history.forwardHistory.first?.thumbnailData.flatMap(NavigationPreviewImage.init(data:)),
             usesStoredHistory: history.usesStoredHistory ?? false
         )
     }

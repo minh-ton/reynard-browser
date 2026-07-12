@@ -5,7 +5,20 @@
 //  Created by Minh Ton on 18/6/26.
 //
 
+import Foundation
+
+#if canImport(UIKit)
 import UIKit
+typealias NavigationPreviewImage = UIImage
+#else
+final class NavigationPreviewImage {
+    init?(data: Data) {}
+
+    func jpegData(compressionQuality: Double) -> Data? {
+        return nil
+    }
+}
+#endif
 
 struct NavigationAvailability: Equatable {
     let canGoBack: Bool
@@ -13,8 +26,8 @@ struct NavigationAvailability: Equatable {
 }
 
 struct NavigationPreviewImages {
-    let backImage: UIImage?
-    let forwardImage: UIImage?
+    let backImage: NavigationPreviewImage?
+    let forwardImage: NavigationPreviewImage?
 }
 
 enum SessionNavigationAvailability: Equatable {
