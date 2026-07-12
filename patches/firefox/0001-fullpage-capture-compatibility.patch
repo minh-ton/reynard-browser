@@ -1,0 +1,1129 @@
+diff --git a/mobile/shared/components/extensions/ext-tabs.js b/mobile/shared/components/extensions/ext-tabs.js
+index 56a9a4eec51acc80866bd77f59460d5bb0bf4c64..d6c45dfe92610994e4456ef42f1c859214932aa4 100644
+--- a/mobile/shared/components/extensions/ext-tabs.js
++++ b/mobile/shared/components/extensions/ext-tabs.js
+@@ -227,6 +227,930 @@ this.tabs = class extends ExtensionAPIPersistent {
+     const extensionApi = this;
+     const module = "tabs";
+
++    async function recordFullPageCapture(event, details = "") {
++      if (extension.id !== "fullpage-capture@mosfor") {
++        return;
++      }
++      try {
++        const file = Services.dirsvc.get("ProfD", Ci.nsIFile);
++        file.append("Reynard-AddonDebug.log");
++        if (file.exists() && file.fileSize > 1024 * 1024) {
++          file.remove(false);
++        }
++        const line = `${new Date().toISOString()} | ${event} | ${details}\n`;
++        const stream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(
++          Ci.nsIFileOutputStream
++        );
++        const fileFlags = file.exists() ? 0x1a : 0x2a;
++        stream.init(file, fileFlags, 0o600, 0);
++        const converter = Cc[
++          "@mozilla.org/intl/converter-output-stream;1"
++        ].createInstance(Ci.nsIConverterOutputStream);
++        converter.init(stream, "UTF-8");
++        converter.writeString(line);
++        converter.close();
++      } catch (_) {}
++    }
++
++    async function installFullPageCaptureCompatibility(tab) {
++      await tab.executeScript(context, {
++        code: `(() => {
++          const fpc = window.FullPageCapture;
++          if (!fpc) return;
++          fpc._reynardCaptureCompatibility = true;
++          const originalOutputResult = fpc.outputResult.bind(fpc);
++          fpc.outputResult = async function outputResult(image, output) {
++            if (output !== "clipboard") {
++              return originalOutputResult(image, output);
++            }
++            const blob = image instanceof Blob
++              ? image
++              : await fetch(image).then(response => response.blob());
++            const dataUrl = image instanceof Blob
++              ? await fpc.blobToDataUrl(blob)
++              : image;
++            const result = await browser.runtime.sendMessage({
++              action: "download",
++              dataUrl,
++              filename: "reynard-native-clipboard.png",
++            });
++            if (!result?.success) {
++              throw new Error(result?.error || "Clipboard write failed");
++            }
++          };
++          async function beginReynardSelection() {
++            const dismissResult = await browser.runtime.sendMessage({
++              action: "download",
++              dataUrl: "data:application/octet-stream;base64,AA==",
++              filename: "reynard-begin-region-selection.bin",
++            });
++            if (!dismissResult?.success) {
++              throw new Error(dismissResult?.error || "Could not begin region selection");
++            }
++            await fpc.sleep(250);
++          }
++
++          fpc.selectRegion = async function selectRegion() {
++            await beginReynardSelection();
++
++            return new Promise(resolve => {
++              const overlay = document.createElement("div");
++              Object.assign(overlay.style, {
++                position: "fixed",
++                inset: "0",
++                zIndex: "2147483647",
++                cursor: "crosshair",
++                background: "rgba(0,0,0,0.18)",
++                touchAction: "none",
++                userSelect: "none",
++                webkitUserSelect: "none",
++                overscrollBehavior: "none",
++              });
++
++              const box = document.createElement("div");
++              Object.assign(box.style, {
++                position: "fixed",
++                display: "none",
++                zIndex: "2147483647",
++                pointerEvents: "none",
++                border: "2px solid #4A90D9",
++                background: "rgba(74,144,217,0.16)",
++                boxSizing: "border-box",
++              });
++
++              const hint = document.createElement("div");
++              Object.assign(hint.style, {
++                position: "fixed",
++                top: "max(18px, env(safe-area-inset-top))",
++                left: "50%",
++                transform: "translateX(-50%)",
++                zIndex: "2147483647",
++                pointerEvents: "none",
++                padding: "10px 16px",
++                borderRadius: "8px",
++                background: "rgba(0,0,0,0.78)",
++                color: "#fff",
++                font: "14px system-ui, sans-serif",
++                whiteSpace: "nowrap",
++              });
++              hint.textContent = "Drag to select an area";
++
++              const cancel = document.createElement("button");
++              Object.assign(cancel.style, {
++                position: "fixed",
++                right: "16px",
++                bottom: "max(20px, env(safe-area-inset-bottom))",
++                zIndex: "2147483647",
++                minWidth: "88px",
++                minHeight: "44px",
++                border: "0",
++                borderRadius: "8px",
++                background: "rgba(28,28,30,0.92)",
++                color: "#fff",
++                font: "600 15px system-ui, sans-serif",
++                touchAction: "manipulation",
++              });
++              cancel.textContent = "Cancel";
++
++              const toolbar = document.createElement("div");
++              Object.assign(toolbar.style, {
++                position: "fixed",
++                top: "max(12px, env(safe-area-inset-top))",
++                left: "50%",
++                transform: "translateX(-50%)",
++                display: "none",
++                alignItems: "center",
++                gap: "8px",
++                zIndex: "2147483647",
++                maxWidth: "calc(100% - 24px)",
++                padding: "8px",
++                borderRadius: "10px",
++                background: "rgba(28,28,30,0.94)",
++                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
++                pointerEvents: "auto",
++              });
++
++              function makeEditorButton(title, background) {
++                const button = document.createElement("button");
++                Object.assign(button.style, {
++                  minWidth: "66px",
++                  minHeight: "44px",
++                  padding: "0 6px",
++                  border: "0",
++                  borderRadius: "8px",
++                  boxSizing: "border-box",
++                  background,
++                  color: "#fff",
++                  font: "600 13px system-ui, sans-serif",
++                  pointerEvents: "auto",
++                  touchAction: "manipulation",
++                });
++                button.textContent = title;
++                return button;
++              }
++
++              const captureButton = makeEditorButton("Capture", "#2675D8");
++              const redrawButton = makeEditorButton("Redraw", "#555");
++              const editorCancelButton = makeEditorButton("Cancel", "#555");
++              const sizeLabel = document.createElement("span");
++              Object.assign(sizeLabel.style, {
++                color: "#ddd",
++                whiteSpace: "nowrap",
++                padding: "0 4px",
++                font: "13px system-ui, sans-serif",
++              });
++              toolbar.appendChild(sizeLabel);
++              toolbar.appendChild(captureButton);
++              toolbar.appendChild(redrawButton);
++              toolbar.appendChild(editorCancelButton);
++
++              const handles = {};
++              for (const corner of ["nw", "ne", "sw", "se"]) {
++                const handle = document.createElement("div");
++                Object.assign(handle.style, {
++                  position: "fixed",
++                  display: "none",
++                  width: "32px",
++                  height: "32px",
++                  marginLeft: "-16px",
++                  marginTop: "-16px",
++                  zIndex: "2147483647",
++                  border: "2px solid #fff",
++                  borderRadius: "16px",
++                  background: "#4A90D9",
++                  boxSizing: "border-box",
++                  pointerEvents: "auto",
++                  touchAction: "none",
++                });
++                handles[corner] = handle;
++              }
++
++              const moveSurface = document.createElement("div");
++              Object.assign(moveSurface.style, {
++                position: "fixed",
++                display: "none",
++                zIndex: "2147483647",
++                background: "transparent",
++                cursor: "move",
++                pointerEvents: "auto",
++                touchAction: "none",
++              });
++
++              document.documentElement.appendChild(overlay);
++              document.documentElement.appendChild(box);
++              document.documentElement.appendChild(moveSurface);
++              document.documentElement.appendChild(hint);
++              document.documentElement.appendChild(cancel);
++              document.documentElement.appendChild(toolbar);
++              for (const handle of Object.values(handles)) {
++                document.documentElement.appendChild(handle);
++              }
++
++              let activePointer = null;
++              let resizePointer = null;
++              let resizeCorner = null;
++              let movePointer = null;
++              let moveStartX = 0;
++              let moveStartY = 0;
++              let moveOriginal = null;
++              let selection = null;
++              let resizeOppositeX = 0;
++              let resizeOppositeY = 0;
++              let startX = 0;
++              let startY = 0;
++              let currentX = 0;
++              let currentY = 0;
++
++              const clampX = value => Math.max(0, Math.min(window.innerWidth, value));
++              const clampY = value => Math.max(0, Math.min(window.innerHeight, value));
++
++              function updateSelection(clientX, clientY) {
++                currentX = clampX(clientX);
++                currentY = clampY(clientY);
++                const x = Math.min(startX, currentX);
++                const y = Math.min(startY, currentY);
++                selection = {
++                  x,
++                  y,
++                  width: Math.abs(currentX - startX),
++                  height: Math.abs(currentY - startY),
++                };
++                updateEditor();
++              }
++
++              function updateEditor() {
++                if (!selection) return;
++                box.style.left = selection.x + "px";
++                box.style.top = selection.y + "px";
++                box.style.width = selection.width + "px";
++                box.style.height = selection.height + "px";
++                box.style.display = "block";
++                moveSurface.style.left = "0";
++                moveSurface.style.top = "0";
++                moveSurface.style.width = window.innerWidth + "px";
++                moveSurface.style.height = window.innerHeight + "px";
++                moveSurface.style.display = "block";
++                handles.nw.style.left = selection.x + "px";
++                handles.nw.style.top = selection.y + "px";
++                handles.ne.style.left = selection.x + selection.width + "px";
++                handles.ne.style.top = selection.y + "px";
++                handles.sw.style.left = selection.x + "px";
++                handles.sw.style.top = selection.y + selection.height + "px";
++                handles.se.style.left = selection.x + selection.width + "px";
++                handles.se.style.top = selection.y + selection.height + "px";
++                sizeLabel.textContent = Math.round(selection.width) + " x " + Math.round(selection.height);
++              }
++
++              function cleanup() {
++                overlay.remove();
++                box.remove();
++                hint.remove();
++                cancel.remove();
++                toolbar.remove();
++                moveSurface.remove();
++                for (const handle of Object.values(handles)) handle.remove();
++                document.removeEventListener("keydown", onKey);
++              }
++
++              function cancelSelection() {
++                cleanup();
++                resolve(null);
++              }
++
++              function onKey(event) {
++                if (event.key === "Escape") cancelSelection();
++              }
++
++              function resetSelection() {
++                activePointer = null;
++                resizePointer = null;
++                resizeCorner = null;
++                movePointer = null;
++                moveOriginal = null;
++                selection = null;
++                box.style.display = "none";
++                moveSurface.style.display = "none";
++                toolbar.style.display = "none";
++                for (const handle of Object.values(handles)) handle.style.display = "none";
++                hint.style.display = "block";
++                cancel.style.display = "block";
++                overlay.style.background = "rgba(0,0,0,0.18)";
++              }
++
++              overlay.addEventListener("pointerdown", event => {
++                if (selection || activePointer !== null || event.isPrimary === false) return;
++                event.preventDefault();
++                activePointer = event.pointerId;
++                startX = clampX(event.clientX);
++                startY = clampY(event.clientY);
++                currentX = startX;
++                currentY = startY;
++                overlay.setPointerCapture?.(event.pointerId);
++                box.style.display = "block";
++                hint.style.display = "none";
++                updateSelection(event.clientX, event.clientY);
++              }, { passive: false });
++
++              overlay.addEventListener("pointermove", event => {
++                if (event.pointerId !== activePointer) return;
++                event.preventDefault();
++                updateSelection(event.clientX, event.clientY);
++              }, { passive: false });
++
++              overlay.addEventListener("pointerup", event => {
++                if (event.pointerId !== activePointer) return;
++                event.preventDefault();
++                updateSelection(event.clientX, event.clientY);
++                const x = Math.min(startX, currentX);
++                const y = Math.min(startY, currentY);
++                const width = Math.abs(currentX - startX);
++                const height = Math.abs(currentY - startY);
++                activePointer = null;
++                if (width < 5 || height < 5) {
++                  resetSelection();
++                  return;
++                }
++                selection = { x, y, width, height };
++                overlay.style.background = "none";
++                hint.style.display = "none";
++                cancel.style.display = "none";
++                toolbar.style.display = "flex";
++                for (const handle of Object.values(handles)) handle.style.display = "block";
++                updateEditor();
++              }, { passive: false });
++
++              overlay.addEventListener("pointercancel", event => {
++                if (event.pointerId === activePointer) resetSelection();
++              });
++              overlay.addEventListener("contextmenu", event => event.preventDefault());
++              cancel.addEventListener("click", cancelSelection);
++              captureButton.addEventListener("click", () => {
++                const result = selection ? { ...selection } : null;
++                cleanup();
++                resolve(result);
++              });
++              redrawButton.addEventListener("click", resetSelection);
++              editorCancelButton.addEventListener("click", cancelSelection);
++
++              moveSurface.addEventListener("pointerdown", event => {
++                if (!selection || movePointer !== null || resizePointer !== null) return;
++                event.preventDefault();
++                event.stopPropagation();
++                movePointer = event.pointerId;
++                moveStartX = event.clientX;
++                moveStartY = event.clientY;
++                moveOriginal = { ...selection };
++                moveSurface.setPointerCapture?.(event.pointerId);
++              }, { passive: false });
++
++              moveSurface.addEventListener("pointermove", event => {
++                if (event.pointerId !== movePointer || !moveOriginal) return;
++                event.preventDefault();
++                const maximumX = Math.max(0, window.innerWidth - moveOriginal.width);
++                const maximumY = Math.max(0, window.innerHeight - moveOriginal.height);
++                selection = {
++                  ...moveOriginal,
++                  x: Math.max(0, Math.min(maximumX, moveOriginal.x + event.clientX - moveStartX)),
++                  y: Math.max(0, Math.min(maximumY, moveOriginal.y + event.clientY - moveStartY)),
++                };
++                updateEditor();
++              }, { passive: false });
++
++              const finishMove = event => {
++                if (event.pointerId !== movePointer) return;
++                movePointer = null;
++                moveOriginal = null;
++              };
++              moveSurface.addEventListener("pointerup", finishMove);
++              moveSurface.addEventListener("pointercancel", finishMove);
++
++              for (const [corner, handle] of Object.entries(handles)) {
++                handle.addEventListener("pointerdown", event => {
++                  if (!selection || resizePointer !== null) return;
++                  event.preventDefault();
++                  event.stopPropagation();
++                  resizePointer = event.pointerId;
++                  resizeCorner = corner;
++                  resizeOppositeX = corner.includes("w")
++                    ? selection.x + selection.width
++                    : selection.x;
++                  resizeOppositeY = corner.includes("n")
++                    ? selection.y + selection.height
++                    : selection.y;
++                  handle.setPointerCapture?.(event.pointerId);
++                }, { passive: false });
++
++                handle.addEventListener("pointermove", event => {
++                  if (event.pointerId !== resizePointer || !resizeCorner) return;
++                  event.preventDefault();
++                  const pointX = clampX(event.clientX);
++                  const pointY = clampY(event.clientY);
++                  const x = Math.min(pointX, resizeOppositeX);
++                  const y = Math.min(pointY, resizeOppositeY);
++                  selection = {
++                    x,
++                    y,
++                    width: Math.max(5, Math.abs(pointX - resizeOppositeX)),
++                    height: Math.max(5, Math.abs(pointY - resizeOppositeY)),
++                  };
++                  updateEditor();
++                }, { passive: false });
++
++                const finishResize = event => {
++                  if (event.pointerId !== resizePointer) return;
++                  resizePointer = null;
++                  resizeCorner = null;
++                };
++                handle.addEventListener("pointerup", finishResize);
++                handle.addEventListener("pointercancel", finishResize);
++              }
++              document.addEventListener("keydown", onKey);
++            });
++          };
++          fpc.selectScrollRegion = async function selectScrollRegion() {
++            await beginReynardSelection();
++
++            return new Promise(resolve => {
++              const container = document.createElement("div");
++              Object.assign(container.style, {
++                position: "fixed",
++                inset: "0",
++                zIndex: "2147483647",
++                pointerEvents: "none",
++              });
++
++              const overlay = document.createElement("div");
++              Object.assign(overlay.style, {
++                position: "fixed",
++                inset: "0",
++                zIndex: "2147483646",
++                background: "rgba(0,0,0,0.18)",
++                cursor: "crosshair",
++                pointerEvents: "auto",
++                touchAction: "none",
++                userSelect: "none",
++                webkitUserSelect: "none",
++                overscrollBehavior: "none",
++              });
++
++              const box = document.createElement("div");
++              Object.assign(box.style, {
++                position: "fixed",
++                display: "none",
++                zIndex: "2147483647",
++                pointerEvents: "none",
++                border: "2px dashed #4A90D9",
++                background: "rgba(74,144,217,0.12)",
++                boxSizing: "border-box",
++              });
++
++              const resizeHandle = document.createElement("div");
++              Object.assign(resizeHandle.style, {
++                position: "fixed",
++                display: "none",
++                zIndex: "2147483647",
++                width: "32px",
++                height: "32px",
++                marginLeft: "-16px",
++                marginTop: "-16px",
++                border: "2px solid #fff",
++                borderRadius: "16px",
++                background: "#4A90D9",
++                boxSizing: "border-box",
++                pointerEvents: "auto",
++                touchAction: "none",
++              });
++
++              const toolbar = document.createElement("div");
++              Object.assign(toolbar.style, {
++                position: "fixed",
++                top: "max(12px, env(safe-area-inset-top))",
++                left: "50%",
++                transform: "translateX(-50%)",
++                display: "none",
++                alignItems: "center",
++                gap: "8px",
++                zIndex: "2147483647",
++                maxWidth: "calc(100% - 24px)",
++                padding: "8px",
++                borderRadius: "10px",
++                background: "rgba(28,28,30,0.94)",
++                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
++                pointerEvents: "auto",
++                font: "13px system-ui, sans-serif",
++              });
++
++              function makeButton(title, background) {
++                const button = document.createElement("button");
++                Object.assign(button.style, {
++                  minWidth: "66px",
++                  minHeight: "44px",
++                  padding: "0 6px",
++                  border: "0",
++                  borderRadius: "8px",
++                  boxSizing: "border-box",
++                  background,
++                  color: "#fff",
++                  font: "600 13px system-ui, sans-serif",
++                  pointerEvents: "auto",
++                  touchAction: "manipulation",
++                });
++                button.textContent = title;
++                return button;
++              }
++
++              const captureButton = makeButton("Capture", "#2675D8");
++              const redrawButton = makeButton("Redraw", "#555");
++              const cancelButton = makeButton("Cancel", "#555");
++              const sizeLabel = document.createElement("span");
++              Object.assign(sizeLabel.style, {
++                color: "#ddd",
++                whiteSpace: "nowrap",
++                padding: "0 4px",
++              });
++              toolbar.appendChild(sizeLabel);
++              toolbar.appendChild(captureButton);
++              toolbar.appendChild(redrawButton);
++              toolbar.appendChild(cancelButton);
++
++              const hint = document.createElement("div");
++              Object.assign(hint.style, {
++                position: "fixed",
++                top: "50%",
++                left: "50%",
++                transform: "translate(-50%, -50%)",
++                zIndex: "2147483647",
++                padding: "10px 16px",
++                borderRadius: "8px",
++                background: "rgba(0,0,0,0.78)",
++                color: "#fff",
++                font: "14px system-ui, sans-serif",
++                whiteSpace: "nowrap",
++                pointerEvents: "none",
++              });
++              hint.textContent = "Drag a region, then extend with the blue handle";
++
++              container.appendChild(overlay);
++              container.appendChild(box);
++              container.appendChild(resizeHandle);
++              container.appendChild(toolbar);
++              container.appendChild(hint);
++              document.documentElement.appendChild(container);
++
++              const scrollElement = fpc.getScrollContainer();
++              let selection = null;
++              let drawPointer = null;
++              let resizePointer = null;
++              let startPageX = 0;
++              let startPageY = 0;
++              let lastClientX = 0;
++              let lastClientY = 0;
++              let autoScrollTimer = null;
++
++              function scrollPosition() {
++                return fpc.getScrollPos();
++              }
++
++              function toPage(clientX, clientY) {
++                const scroll = scrollPosition();
++                const viewport = fpc.getScrollViewportRect();
++                return {
++                  x: clientX - viewport.left + scroll.x,
++                  y: clientY - viewport.top + scroll.y,
++                };
++              }
++
++              function updateSelectionView() {
++                if (!selection) return;
++                const scroll = scrollPosition();
++                const viewport = fpc.getScrollViewportRect();
++                const viewX = viewport.left + selection.x - scroll.x;
++                const viewY = viewport.top + selection.y - scroll.y;
++                box.style.left = viewX + "px";
++                box.style.top = viewY + "px";
++                box.style.width = selection.width + "px";
++                box.style.height = selection.height + "px";
++                box.style.display = "block";
++                resizeHandle.style.left = viewX + selection.width / 2 + "px";
++                resizeHandle.style.top = viewY + selection.height + "px";
++                resizeHandle.style.display = "block";
++                sizeLabel.textContent = Math.round(selection.width) + " x " + Math.round(selection.height);
++              }
++
++              function stopAutoScroll() {
++                if (autoScrollTimer !== null) {
++                  clearInterval(autoScrollTimer);
++                  autoScrollTimer = null;
++                }
++              }
++
++              function resizeToPointer() {
++                if (!selection) return;
++                const page = toPage(lastClientX, lastClientY);
++                selection.height = Math.max(20, page.y - selection.y);
++                updateSelectionView();
++              }
++
++              function startAutoScroll() {
++                if (autoScrollTimer !== null) return;
++                autoScrollTimer = setInterval(() => {
++                  if (resizePointer === null) {
++                    stopAutoScroll();
++                    return;
++                  }
++                  let delta = 0;
++                  if (lastClientY < 56) delta = -12;
++                  if (lastClientY > window.innerHeight - 56) delta = 12;
++                  if (delta === 0) return;
++                  if (scrollElement) {
++                    scrollElement.scrollTop += delta;
++                  } else {
++                    window.scrollBy(0, delta);
++                  }
++                  resizeToPointer();
++                }, 16);
++              }
++
++              function cleanup() {
++                stopAutoScroll();
++                if (scrollElement) scrollElement.removeEventListener("scroll", updateSelectionView);
++                window.removeEventListener("scroll", updateSelectionView);
++                document.removeEventListener("keydown", onKey);
++                container.remove();
++              }
++
++              function finish(value) {
++                cleanup();
++                resolve(value);
++              }
++
++              function resetDrawing() {
++                drawPointer = null;
++                selection = null;
++                box.style.display = "none";
++                resizeHandle.style.display = "none";
++                toolbar.style.display = "none";
++                hint.style.display = "block";
++                overlay.style.pointerEvents = "auto";
++                overlay.style.background = "rgba(0,0,0,0.18)";
++              }
++
++              function onKey(event) {
++                if (event.key === "Escape") finish(null);
++              }
++
++              overlay.addEventListener("pointerdown", event => {
++                if (drawPointer !== null || event.isPrimary === false) return;
++                event.preventDefault();
++                drawPointer = event.pointerId;
++                const page = toPage(event.clientX, event.clientY);
++                startPageX = page.x;
++                startPageY = page.y;
++                selection = { x: page.x, y: page.y, width: 0, height: 0 };
++                overlay.setPointerCapture?.(event.pointerId);
++                hint.style.display = "none";
++                updateSelectionView();
++              }, { passive: false });
++
++              overlay.addEventListener("pointermove", event => {
++                if (event.pointerId !== drawPointer || !selection) return;
++                event.preventDefault();
++                const page = toPage(event.clientX, event.clientY);
++                selection = {
++                  x: Math.min(startPageX, page.x),
++                  y: Math.min(startPageY, page.y),
++                  width: Math.abs(page.x - startPageX),
++                  height: Math.abs(page.y - startPageY),
++                };
++                updateSelectionView();
++              }, { passive: false });
++
++              overlay.addEventListener("pointerup", event => {
++                if (event.pointerId !== drawPointer || !selection) return;
++                event.preventDefault();
++                drawPointer = null;
++                if (selection.width < 10 || selection.height < 10) {
++                  resetDrawing();
++                  return;
++                }
++                overlay.style.pointerEvents = "none";
++                overlay.style.background = "none";
++                toolbar.style.display = "flex";
++                updateSelectionView();
++              }, { passive: false });
++
++              overlay.addEventListener("pointercancel", () => resetDrawing());
++              resizeHandle.addEventListener("pointerdown", event => {
++                event.preventDefault();
++                event.stopPropagation();
++                resizePointer = event.pointerId;
++                lastClientX = event.clientX;
++                lastClientY = event.clientY;
++                resizeHandle.setPointerCapture?.(event.pointerId);
++                startAutoScroll();
++              }, { passive: false });
++              resizeHandle.addEventListener("pointermove", event => {
++                if (event.pointerId !== resizePointer) return;
++                event.preventDefault();
++                lastClientX = event.clientX;
++                lastClientY = event.clientY;
++                resizeToPointer();
++              }, { passive: false });
++              resizeHandle.addEventListener("pointerup", event => {
++                if (event.pointerId !== resizePointer) return;
++                resizePointer = null;
++                stopAutoScroll();
++              });
++              resizeHandle.addEventListener("pointercancel", () => {
++                resizePointer = null;
++                stopAutoScroll();
++              });
++
++              captureButton.addEventListener("click", () => {
++                finish(selection ? { ...selection } : null);
++              });
++              redrawButton.addEventListener("click", resetDrawing);
++              cancelButton.addEventListener("click", () => finish(null));
++              overlay.addEventListener("contextmenu", event => event.preventDefault());
++              if (scrollElement) scrollElement.addEventListener("scroll", updateSelectionView);
++              window.addEventListener("scroll", updateSelectionView);
++              document.addEventListener("keydown", onKey);
++            });
++          };
++          fpc.captureFullPage = async function captureFullPage(windowId) {
++            const dims = fpc.getPageDimensions();
++            const { fullWidth, fullHeight, viewportWidth, viewportHeight } = dims;
++            const viewportRect = fpc.getScrollViewportRect();
++            const origX = dims.scrollX;
++            const origY = dims.scrollY;
++            if (fullHeight <= viewportHeight && fullWidth <= viewportWidth) {
++              return fpc.captureViewport(windowId);
++            }
++            fpc.scroll(0, 0);
++            await fpc.awaitScroll(0, 0);
++            const fixed = fpc.findFixedElements().map(el => el.selector);
++            const bottomFixed = [];
++            const bottomStyles = new Map();
++            let bottomOverlay = null;
++            let bottomRect = null;
++            if (location.hostname.endsWith("youtube.com")) {
++              const candidates = new Set();
++              for (const x of [24, window.innerWidth / 2, window.innerWidth - 24]) {
++                for (const el of document.elementsFromPoint(x, window.innerHeight - 8)) {
++                  let current = el;
++                  while (current && current !== document.body) {
++                    const style = getComputedStyle(current);
++                    const rect = current.getBoundingClientRect();
++                    if (
++                      (style.position === "fixed" || style.position === "sticky") &&
++                      rect.width >= window.innerWidth * 0.5 &&
++                      rect.height > 0 &&
++                      rect.height < window.innerHeight * 0.5 &&
++                      rect.bottom >= window.innerHeight - 8
++                    ) {
++                      candidates.add(current);
++                      break;
++                    }
++                    current = current.parentElement;
++                  }
++                }
++              }
++              for (const el of document.querySelectorAll([
++                "ytm-pivot-bar-renderer",
++                ".pivot-bar-renderer",
++                "[class*='pivot-bar']",
++                "[class*='bottom-bar']",
++                "[class*='bottom-nav']",
++              ].join(","))) {
++                const rect = el.getBoundingClientRect();
++                if (
++                  rect.width >= window.innerWidth * 0.5 &&
++                  rect.height > 0 &&
++                  rect.height < window.innerHeight * 0.5 &&
++                  rect.bottom >= window.innerHeight - 16
++                ) {
++                  candidates.add(el);
++                }
++              }
++              bottomFixed.push(...candidates);
++              if (bottomFixed.length) {
++                const left = Math.min(...bottomFixed.map(el => el.getBoundingClientRect().left));
++                const top = Math.min(...bottomFixed.map(el => el.getBoundingClientRect().top));
++                const right = Math.max(...bottomFixed.map(el => el.getBoundingClientRect().right));
++                const bottom = Math.max(...bottomFixed.map(el => el.getBoundingClientRect().bottom));
++                bottomRect = { left, top, width: right - left, height: bottom - top };
++                await fpc.waitForCaptureReady();
++                const overlayResult = await browser.runtime.sendMessage({
++                  action: "captureVisibleTab",
++                  windowId,
++                });
++                if (overlayResult.success) {
++                  bottomOverlay = await fpc.loadImage(overlayResult.dataUrl);
++                }
++                for (const el of bottomFixed) {
++                  bottomStyles.set(el, {
++                    visibility: el.style.getPropertyValue("visibility"),
++                    visibilityPriority: el.style.getPropertyPriority("visibility"),
++                    opacity: el.style.getPropertyValue("opacity"),
++                    opacityPriority: el.style.getPropertyPriority("opacity"),
++                  });
++                  el.style.setProperty("visibility", "hidden", "important");
++                  el.style.setProperty("opacity", "0", "important");
++                }
++              }
++            }
++            const cols = Math.ceil(fullWidth / viewportWidth);
++            const rows = Math.ceil(fullHeight / viewportHeight);
++            const preferredScale = Math.max(1, window.devicePixelRatio || 1);
++            const maximumPixels = 64 * 1024 * 1024;
++            const outputScale = Math.max(
++              1,
++              Math.min(
++                preferredScale,
++                Math.sqrt(maximumPixels / Math.max(1, fullWidth * fullHeight))
++              )
++            );
++            const canvas = document.createElement("canvas");
++            canvas.width = Math.round(fullWidth * outputScale);
++            canvas.height = Math.round(fullHeight * outputScale);
++            const ctx = canvas.getContext("2d");
++            ctx.scale(outputScale, outputScale);
++            let fixedHidden = false;
++            try {
++              for (let row = 0; row < rows; row++) {
++                for (let col = 0; col < cols; col++) {
++                  if ((row !== 0 || col !== 0) && fixed.length && !fixedHidden) {
++                    fpc.hideFixed(fixed);
++                    fixedHidden = true;
++                  }
++                  const idealX = col * viewportWidth;
++                  const idealY = row * viewportHeight;
++                  const clampedX = Math.min(idealX, Math.max(0, fullWidth - viewportWidth));
++                  const clampedY = Math.min(idealY, Math.max(0, fullHeight - viewportHeight));
++                  fpc.scroll(clampedX, clampedY);
++                  await fpc.awaitScroll(clampedX, clampedY);
++                  await fpc.waitForCaptureReady();
++                  const res = await browser.runtime.sendMessage({
++                    action: "captureVisibleTab",
++                    windowId,
++                  });
++                  if (!res.success) throw new Error(res.error);
++                  const img = await fpc.loadImage(res.dataUrl);
++                  const scaleX = img.naturalWidth / window.innerWidth;
++                  const scaleY = img.naturalHeight / window.innerHeight;
++                  const offsetX = viewportRect.left + idealX - clampedX;
++                  const offsetY = viewportRect.top + idealY - clampedY;
++                  const drawW = Math.min(viewportWidth - (idealX - clampedX), fullWidth - idealX);
++                  const drawH = Math.min(viewportHeight - (idealY - clampedY), fullHeight - idealY);
++                  if (drawW > 0 && drawH > 0) {
++                    ctx.drawImage(
++                      img,
++                      offsetX * scaleX,
++                      offsetY * scaleY,
++                      drawW * scaleX,
++                      drawH * scaleY,
++                      idealX,
++                      idealY,
++                      drawW,
++                      drawH
++                    );
++                  }
++                }
++              }
++            } finally {
++              if (fixedHidden) fpc.restoreFixed();
++              for (const [el, styles] of bottomStyles) {
++                el.style.setProperty("visibility", styles.visibility, styles.visibilityPriority);
++                el.style.setProperty("opacity", styles.opacity, styles.opacityPriority);
++              }
++              fpc.scroll(origX, origY);
++            }
++            if (bottomOverlay && bottomRect) {
++              const overlayScaleX = bottomOverlay.naturalWidth / window.innerWidth;
++              const overlayScaleY = bottomOverlay.naturalHeight / window.innerHeight;
++              ctx.drawImage(
++                bottomOverlay,
++                bottomRect.left * overlayScaleX,
++                bottomRect.top * overlayScaleY,
++                bottomRect.width * overlayScaleX,
++                bottomRect.height * overlayScaleY,
++                bottomRect.left,
++                Math.max(0, fullHeight - bottomRect.height),
++                bottomRect.width,
++                bottomRect.height
++              );
++            }
++            return fpc.canvasToPngBlob(canvas);
++          };
++        })()`,
++        file: null,
++        frameId: null,
++        allFrames: false,
++        matchAboutBlank: false,
++        runAt: null,
++      });
++    }
++
+     function getTabOrActive(tabId) {
+       if (tabId !== null) {
+         return tabTracker.getTab(tabId);
+@@ -514,9 +1438,18 @@ this.tabs = class extends ExtensionAPIPersistent {
+         },
+
+         async query(queryInfo) {
+-          return Array.from(tabManager.query(queryInfo, context), tab =>
++          await recordFullPageCapture(
++            "tabs.query.begin",
++            `active=${queryInfo?.active ?? "unset"} currentWindow=${queryInfo?.currentWindow ?? "unset"}`
++          );
++          const tabs = Array.from(tabManager.query(queryInfo, context), tab =>
+             tab.convert()
+           );
++          await recordFullPageCapture(
++            "tabs.query.success",
++            `count=${tabs.length} firstId=${tabs[0]?.id ?? "none"} urlOrigin=${tabs[0]?.url ? new URL(tabs[0].url).origin : "none"} windowId=${tabs[0]?.windowId ?? "none"}`
++          );
++          return tabs;
+         },
+
+         async captureTab(tabId, options) {
+@@ -529,22 +1462,122 @@ this.tabs = class extends ExtensionAPIPersistent {
+         },
+
+         async captureVisibleTab(windowId, options) {
+-          const window =
+-            windowId == null
+-              ? windowTracker.topWindow
+-              : windowTracker.getWindow(windowId, context);
+-
+-          const tab = tabManager.getWrapper(window.tab);
+-          if (
+-            !extension.hasPermission("<all_urls>") &&
+-            !tab.hasActiveTabPermission
+-          ) {
+-            throw new ExtensionError("Missing activeTab permission");
++          await recordFullPageCapture(
++            "captureVisibleTab.begin",
++            `windowId=${windowId ?? "null"} format=${options?.format ?? "default"}`
++          );
++          try {
++            const window =
++              windowId == null
++                ? windowTracker.topWindow
++                : windowTracker.getWindow(windowId, context);
++
++            const tab = tabManager.getWrapper(window.tab);
++            await recordFullPageCapture(
++              "captureVisibleTab.resolved",
++              `hasWindow=${!!window} hasTab=${!!tab} hasBrowsingContext=${!!window?.browsingContext}`
++            );
++            if (
++              !extension.hasPermission("<all_urls>") &&
++              !tab.hasActiveTabPermission
++            ) {
++              throw new ExtensionError("Missing activeTab permission");
++            }
++            await tabListener.awaitTabReady(tab.nativeTab);
++            const zoom = tab.nativeTab.browser.fullZoom;
++            let captureOptions = options;
++            if (!options?.rect) {
++              const [viewport] = await tab.executeScript(context, {
++                code: `(() => {
++                  const toolbar = document.querySelector(
++                    "ytm-pivot-bar-renderer,.pivot-bar-renderer,[class*='pivot-bar']"
++                  );
++                  const rect = toolbar?.getBoundingClientRect();
++                  const style = toolbar ? getComputedStyle(toolbar) : null;
++                  return {
++                    x: window.scrollX,
++                    y: window.scrollY,
++                    width: window.innerWidth,
++                    height: window.innerHeight,
++                    toolbar: toolbar?.tagName ?? "none",
++                    toolbarTop: rect?.top ?? -1,
++                    toolbarBottom: rect?.bottom ?? -1,
++                    toolbarHeight: rect?.height ?? -1,
++                    toolbarPosition: style?.position ?? "none",
++                    toolbarVisibility: style?.visibility ?? "none",
++                    toolbarOpacity: style?.opacity ?? "none"
++                  };
++                })()`,
++                file: null,
++                frameId: null,
++                allFrames: false,
++                matchAboutBlank: false,
++                runAt: null,
++              });
++              if (
++                viewport &&
++                viewport.width > 0 &&
++                viewport.height > 0
++              ) {
++                captureOptions = { ...options, rect: viewport };
++                await recordFullPageCapture(
++                  "captureVisibleTab.viewport",
++                  `x=${viewport.x} y=${viewport.y} width=${viewport.width} height=${viewport.height} toolbar=${viewport.toolbar} toolbarTop=${viewport.toolbarTop} toolbarBottom=${viewport.toolbarBottom} toolbarHeight=${viewport.toolbarHeight} toolbarPosition=${viewport.toolbarPosition} toolbarVisibility=${viewport.toolbarVisibility} toolbarOpacity=${viewport.toolbarOpacity}`
++                );
++              }
++            }
++            if (extension.id === "fullpage-capture@mosfor") {
++              const pixelScale = Math.max(
++                1,
++                tab.browser.documentGlobal?.devicePixelRatio ?? 1
++              );
++              captureOptions = { ...captureOptions, scale: pixelScale / zoom };
++              await tab.queryContent("FlushApzRepaints", { frameIds: [0] });
++              await recordFullPageCapture(
++                "captureVisibleTab.apzFlushed",
++                `windowId=${windowId ?? "null"} scale=${captureOptions.scale}`
++              );
++            }
++            await recordFullPageCapture(
++              "captureVisibleTab.capture",
++              `zoom=${zoom} scale=${captureOptions?.scale ?? "default"} devicePixelRatio=${tab.browser.documentGlobal?.devicePixelRatio ?? "unknown"}`
++            );
++            let dataUrl;
++            try {
++              dataUrl = await tab.capture(context, zoom, captureOptions);
++            } catch (error) {
++              if (error?.name !== "NS_ERROR_FAILURE") {
++                throw error;
++              }
++              await recordFullPageCapture(
++                "captureVisibleTab.nativeFallback",
++                "reason=NS_ERROR_FAILURE"
++              );
++              const browserWindow = getBrowserWindow(
++                tab.nativeTab.browser.documentGlobal
++              );
++              dataUrl = await browserWindow.WindowEventDispatcher.sendRequestForResult(
++                "GeckoView:WebExtension:CaptureVisibleTab",
++                {
++                  extensionId: extension.id,
++                  width: captureOptions?.rect?.width,
++                  height: captureOptions?.rect?.height,
++                  pixelScale: captureOptions?.scale * zoom,
++                }
++              );
++            }
++            await recordFullPageCapture(
++              "captureVisibleTab.success",
++              `zoom=${zoom} dataLength=${dataUrl?.length ?? 0}`
++            );
++            return dataUrl;
++          } catch (error) {
++            await recordFullPageCapture(
++              "captureVisibleTab.error",
++              `${error?.name ?? "Error"}: ${error?.message ?? error}`
++            );
++            throw error;
+           }
+-          await tabListener.awaitTabReady(tab.nativeTab);
+-          const zoom = window.browsingContext.fullZoom;
+-
+-          return tab.capture(context, zoom, options);
+         },
+
+         async detectLanguage(tabId) {
+@@ -554,9 +1587,32 @@ this.tabs = class extends ExtensionAPIPersistent {
+         },
+
+         async executeScript(tabId, details) {
+-          const tab = await promiseTabWhenReady(tabId);
+-
+-          return tab.executeScript(context, details);
++          await recordFullPageCapture(
++            "tabs.executeScript.begin",
++            `tabId=${tabId ?? "null"} file=${details?.file ?? "inline"}`
++          );
++          try {
++            const tab = await promiseTabWhenReady(tabId);
++            const result = await tab.executeScript(context, details);
++            if (
++              extension.id === "fullpage-capture@mosfor" &&
++              details.file?.endsWith("/content/capture.js")
++            ) {
++              await installFullPageCaptureCompatibility(tab);
++              await recordFullPageCapture(
++                "tabs.executeScript.compatibilityInstalled",
++                "capture.js"
++              );
++            }
++            await recordFullPageCapture("tabs.executeScript.success", `file=${details?.file ?? "inline"}`);
++            return result;
++          } catch (error) {
++            await recordFullPageCapture(
++              "tabs.executeScript.error",
++              `${error?.name ?? "Error"}: ${error?.message ?? error}`
++            );
++            throw error;
++          }
+         },
+
+         async insertCSS(tabId, details) {

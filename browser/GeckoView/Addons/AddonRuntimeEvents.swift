@@ -6,6 +6,83 @@
 //
 
 import Foundation
+import UIKit
+
+private enum AddonFileDiagnostics {
+    private static let maximumSize = 1024 * 1024
+    private static let queue = DispatchQueue(
+        label: "com.minh-ton.Reynard.AddonFileDiagnostics",
+        qos: .utility
+    )
+
+    static func record(fileName: String, event: String, details: String) {
+        guard let line = "\(Date().timeIntervalSince1970) | \(event) | \(details)\n".data(using: .utf8) else {
+            return
+        }
+        queue.async {
+            guard let cachesURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+                return
+            }
+            let fileURL = cachesURL.appendingPathComponent(fileName)
+            if let size = try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? NSNumber,
+               size.intValue >= maximumSize {
+                try? Data().write(to: fileURL, options: .atomic)
+            }
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+            }
+            guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
+            handle.seekToEndOfFile()
+            handle.write(line)
+            handle.closeFile()
+        }
+    }
+}
+
+private enum AddonStagedFile {
+    static let prefix = "reynard-webextension"
+    static let clipboardFileName = "reynard-native-clipboard.png"
+    static let clipboardMimeType = "image/png"
+    static let maximumClipboardImageSize = 128 * 1024 * 1024
+
+    static func validatedURL(path: String) throws -> URL {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let fileURL = URL(fileURLWithPath: path)
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let temporaryPrefix = temporaryDirectory.path.hasSuffix("/")
+            ? temporaryDirectory.path
+            : temporaryDirectory.path + "/"
+        guard fileURL.path.hasPrefix(temporaryPrefix),
+              fileURL.lastPathComponent.hasPrefix(prefix),
+              FileManager.default.fileExists(atPath: fileURL.path) else {
+            throw GeckoHandlerError("The staged add-on file path is invalid")
+        }
+        return fileURL
+    }
+}
+
+private enum AddonClipboardDiagnostics {
+    static func record(_ event: String, _ details: String = "") {
+        AddonFileDiagnostics.record(
+            fileName: "Reynard-ClipboardDebug.log",
+            event: event,
+            details: details
+        )
+    }
+}
+
+private enum AddonSelectionDiagnostics {
+    static func record(_ event: String, _ details: String = "") {
+        AddonFileDiagnostics.record(
+            fileName: "Reynard-AddonSelectionDebug.log",
+            event: event,
+            details: details
+        )
+    }
+}
 
 extension AddonRuntime {
     @MainActor
@@ -49,6 +126,37 @@ extension AddonRuntime {
                 return nil
             }
             throw GeckoHandlerError("tabs.remove is not supported")
+        case "GeckoView:WebExtension:CaptureVisibleTab":
+            guard let view = session.window?.view(), !view.bounds.isEmpty else {
+                throw GeckoHandlerError("The web content view is unavailable")
+            }
+            // Content scripts scroll immediately before capture. Give the Gecko
+            // compositor one frame to present the new position.
+            try await Task.sleep(nanoseconds: 100_000_000)
+            let requestedWidth = CGFloat(PayloadValue.double(message?["width"] ?? nil) ?? 0)
+            let requestedHeight = CGFloat(PayloadValue.double(message?["height"] ?? nil) ?? 0)
+            let requestedPixelScale = CGFloat(
+                PayloadValue.double(message?["pixelScale"] ?? nil) ?? 1
+            )
+            let captureBounds = view.bounds
+            let format = UIGraphicsImageRendererFormat.default()
+            format.opaque = true
+            // WebExtension captureVisibleTab consumers stitch in CSS pixels.
+            // Returning Retina pixels makes source coordinates select only the
+            // top-left portion of each frame on high-density iOS displays.
+            let widthScale = requestedWidth > 0 ? requestedWidth / view.bounds.width : 1
+            let heightScale = requestedHeight > 0 ? requestedHeight / view.bounds.height : widthScale
+            format.scale = max(
+                0.1,
+                min(widthScale, heightScale) * max(1, requestedPixelScale)
+            )
+            let image = UIGraphicsImageRenderer(bounds: captureBounds, format: format).image { _ in
+                view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
+            }
+            guard let data = image.pngData() else {
+                throw GeckoHandlerError("Could not encode the web content image")
+            }
+            return "data:image/png;base64,\(data.base64EncodedString())"
         default:
             throw GeckoHandlerError("Unhandled WebExtension session event \(type)")
         }
@@ -78,6 +186,12 @@ extension AddonRuntime {
             return nil
         case .newTab:
             return try await handleNewTab(message: message)
+        case .download:
+            return try handleDownload(message: message)
+        case .clipboardImage:
+            return try handleClipboardImage(message: message)
+        case .beginRegionSelection:
+            return try handleBeginRegionSelection(message: message)
         case .installPrompt:
             return try await installPromptResponse(message: message)
         case .optionalPrompt:
@@ -105,6 +219,114 @@ extension AddonRuntime {
             }
             return nil
         }
+    }
+
+    private func handleDownload(message: [String: Any?]?) throws -> [String: Any] {
+        guard let options = message?["options"] as? [String: Any?],
+              let localFilePath = options["localFilePath"] as? String,
+              !localFilePath.isEmpty else {
+            throw GeckoHandlerError("downloads.download requires a staged file URL")
+        }
+        let fileURL = try AddonStagedFile.validatedURL(path: localFilePath)
+        defer {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        let mimeType = (options["mimeType"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let request = AddonDownloadRequest(
+            sourceURL: fileURL,
+            suggestedFileName: options["filename"] as? String,
+            mimeType: mimeType
+        )
+        guard let result = delegate?.addonController(self, download: request) else {
+            throw GeckoHandlerError("downloads.download could not import the staged file")
+        }
+        return [
+            "id": result.id,
+            "filename": result.fileName,
+            "referrer": "",
+            "mime": result.mimeType ?? "application/octet-stream",
+            "startTime": ISO8601DateFormatter().string(from: Date()),
+            "state": 2,
+            "paused": false,
+            "canResume": false,
+            "bytesReceived": result.fileSize,
+            "totalBytes": result.fileSize,
+            "fileSize": result.fileSize,
+            "exists": true,
+        ]
+    }
+
+    private func handleClipboardImage(message: [String: Any?]?) throws -> [String: Any] {
+        let extensionID = message?["extensionId"] as? String
+        guard extensionID == "fullpage-capture@mosfor" else {
+            AddonClipboardDiagnostics.record("reject", "extension=\(extensionID ?? "none")")
+            throw GeckoHandlerError("Clipboard image writes are not supported for this extension")
+        }
+        guard let options = message?["options"] as? [String: Any?],
+              let localFilePath = options["localFilePath"] as? String,
+              !localFilePath.isEmpty,
+              options["filename"] as? String == AddonStagedFile.clipboardFileName,
+              options["mimeType"] as? String == AddonStagedFile.clipboardMimeType else {
+            AddonClipboardDiagnostics.record("reject", "reason=missing-file")
+            throw GeckoHandlerError("Clipboard image write requires the expected staged PNG file")
+        }
+
+        let fileURL = try AddonStagedFile.validatedURL(path: localFilePath)
+        AddonClipboardDiagnostics.record("begin", "path=\(fileURL.lastPathComponent)")
+        defer {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+
+        let data: Data
+        do {
+            data = try Data(contentsOf: fileURL, options: .mappedIfSafe)
+        } catch {
+            AddonClipboardDiagnostics.record("read.error", "\(error)")
+            throw GeckoHandlerError("Could not read the staged clipboard image")
+        }
+        guard data.count <= AddonStagedFile.maximumClipboardImageSize else {
+            AddonClipboardDiagnostics.record("reject", "reason=file-too-large bytes=\(data.count)")
+            throw GeckoHandlerError("The staged clipboard image is too large")
+        }
+        guard !data.isEmpty, UIImage(data: data) != nil else {
+            AddonClipboardDiagnostics.record("decode.error", "bytes=\(data.count)")
+            throw GeckoHandlerError("The staged clipboard image is not a valid PNG")
+        }
+
+        let pasteboard = UIPasteboard.general
+        let beforeChangeCount = pasteboard.changeCount
+        pasteboard.setItems([["public.png": data]])
+        let copiedData = pasteboard.data(forPasteboardType: "public.png")
+        let verified = pasteboard.hasImages && copiedData?.count == data.count
+        AddonClipboardDiagnostics.record(
+            "verify",
+            "bytes=\(data.count) copiedBytes=\(copiedData?.count ?? 0) hasImages=\(pasteboard.hasImages) before=\(beforeChangeCount) after=\(pasteboard.changeCount)"
+        )
+        guard verified else {
+            throw GeckoHandlerError("iOS did not retain the PNG on the pasteboard")
+        }
+
+        AddonClipboardDiagnostics.record("success", "bytes=\(data.count)")
+        return [
+            "success": true,
+            "bytes": data.count,
+            "changeCount": pasteboard.changeCount,
+        ]
+    }
+
+    private func handleBeginRegionSelection(message: [String: Any?]?) throws -> [String: Bool] {
+        let extensionID = message?["extensionId"] as? String
+        guard extensionID == "fullpage-capture@mosfor" else {
+            throw GeckoHandlerError("Region selection is not supported for this extension")
+        }
+        AddonSelectionDiagnostics.record("dismiss.request", "extension=\(extensionID ?? "none")")
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: Notification.Name("GeckoView.WebExtension.BeginRegionSelection"),
+                object: nil
+            )
+        }
+        return ["success": true]
     }
     
     private func handleOpenOptionsPage(message: [String: Any?]?) async throws {
