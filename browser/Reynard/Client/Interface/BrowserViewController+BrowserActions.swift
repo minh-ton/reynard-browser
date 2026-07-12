@@ -64,6 +64,62 @@ extension BrowserViewController {
             applyNewTabDisplayOption(toTabAt: createdIndex)
             tabBar.setPendingExpansion(at: createdIndex)
             setTabOverviewVisible(false, animated: true)
+            scheduleAutomaticKeyboardFocusForNewTab(
+                tabManager.activeTabs[safe: createdIndex]
+            )
         }
+    }
+
+    func scheduleAutomaticKeyboardFocusForNewTab(_ tab: Tab?) {
+        guard Prefs.NewTabSettings.automaticallyOpensKeyboard,
+              Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
+              let tab else {
+            return
+        }
+
+        focusAddressBarWhenNewTabIsReady(
+            tabID: tab.id,
+            retriesRemaining: 24,
+            stablePassesRemaining: 2
+        )
+    }
+
+    private func focusAddressBarWhenNewTabIsReady(
+        tabID: UUID,
+        retriesRemaining: Int,
+        stablePassesRemaining: Int
+    ) {
+        guard Prefs.NewTabSettings.automaticallyOpensKeyboard,
+              Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
+              tabManager.selectedTab?.id == tabID else {
+            return
+        }
+
+        guard viewIfLoaded?.window != nil,
+              !tabOverview.isPresented,
+              !tabOverview.isTransitionRunning else {
+            guard retriesRemaining > 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.focusAddressBarWhenNewTabIsReady(
+                    tabID: tabID,
+                    retriesRemaining: retriesRemaining - 1,
+                    stablePassesRemaining: 2
+                )
+            }
+            return
+        }
+
+        if stablePassesRemaining > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.focusAddressBarWhenNewTabIsReady(
+                    tabID: tabID,
+                    retriesRemaining: retriesRemaining,
+                    stablePassesRemaining: stablePassesRemaining - 1
+                )
+            }
+            return
+        }
+
+        browserChrome.focusAddressBar()
     }
 }

@@ -10,11 +10,14 @@ import UIKit
 final class NewTabPreferencesViewController: SettingsTableViewController, UITextFieldDelegate {
     private enum Section: CaseIterable {
         case showOnNewTab
+        case behavior
         
         var text: SettingsSectionText {
             switch self {
             case .showOnNewTab:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Open New Tabs To", comment: ""))
+            case .behavior:
+                return SettingsSectionText(headerTitle: NSLocalizedString("Behavior", comment: ""))
             }
         }
     }
@@ -46,6 +49,14 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
             }
         }
     }
+
+    private lazy var automaticallyOpensKeyboardSwitch: UISwitch = {
+        let toggle = UISwitch()
+        toggle.isOn = Prefs.NewTabSettings.automaticallyOpensKeyboard
+        toggle.accessibilityLabel = NSLocalizedString("Open Keyboard", comment: "")
+        toggle.addTarget(self, action: #selector(automaticallyOpensKeyboardChanged), for: .valueChanged)
+        return toggle
+    }()
     
     init() {
         super.init(style: .insetGrouped)
@@ -63,6 +74,13 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        automaticallyOpensKeyboardSwitch.setOn(
+            Prefs.NewTabSettings.automaticallyOpensKeyboard,
+            animated: false
+        )
+        automaticallyOpensKeyboardSwitch.accessibilityValue = automaticallyOpensKeyboardSwitch.isOn
+            ? NSLocalizedString("On", comment: "")
+            : NSLocalizedString("Off", comment: "")
         tableView.reloadData()
     }
     
@@ -78,6 +96,8 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
         switch Section.allCases[section] {
         case .showOnNewTab:
             return Row.allCases.count
+        case .behavior:
+            return 1
         }
     }
     
@@ -90,33 +110,52 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard Section.allCases.indices.contains(indexPath.section),
-              Row.allCases.indices.contains(indexPath.row) else {
+        guard Section.allCases.indices.contains(indexPath.section) else {
             return UITableViewCell()
         }
-        
-        switch Row.allCases[indexPath.row] {
-        case .homepage, .blankPage:
-            return checkmarkCell(for: Row.allCases[indexPath.row])
-        case .customURL:
-            return customURLCell(for: indexPath)
+
+        switch Section.allCases[indexPath.section] {
+        case .showOnNewTab:
+            guard Row.allCases.indices.contains(indexPath.row) else {
+                return UITableViewCell()
+            }
+            switch Row.allCases[indexPath.row] {
+            case .homepage, .blankPage:
+                return checkmarkCell(for: Row.allCases[indexPath.row])
+            case .customURL:
+                return customURLCell(for: indexPath)
+            }
+        case .behavior:
+            let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            cell.textLabel?.text = NSLocalizedString("Open Keyboard", comment: "")
+            cell.accessoryView = automaticallyOpensKeyboardSwitch
+            return cell
         }
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
-        guard Section.allCases.indices.contains(indexPath.section),
-              Row.allCases.indices.contains(indexPath.row) else {
+        guard Section.allCases.indices.contains(indexPath.section) else {
             return
         }
-        
-        switch Row.allCases[indexPath.row] {
-        case .homepage:
-            selectNewTabDisplayOption(.homepage)
-        case .blankPage:
-            selectNewTabDisplayOption(.blankPage)
-        case .customURL:
-            focusCustomURLField()
+
+        switch Section.allCases[indexPath.section] {
+        case .showOnNewTab:
+            guard Row.allCases.indices.contains(indexPath.row) else { return }
+            switch Row.allCases[indexPath.row] {
+            case .homepage:
+                selectNewTabDisplayOption(.homepage)
+            case .blankPage:
+                selectNewTabDisplayOption(.blankPage)
+            case .customURL:
+                focusCustomURLField()
+            }
+        case .behavior:
+            automaticallyOpensKeyboardSwitch.setOn(
+                !automaticallyOpensKeyboardSwitch.isOn,
+                animated: true
+            )
+            automaticallyOpensKeyboardChanged()
         }
     }
     
@@ -157,6 +196,13 @@ final class NewTabPreferencesViewController: SettingsTableViewController, UIText
     private func selectNewTabDisplayOption(_ option: NewTabDisplayOption) {
         Prefs.NewTabSettings.newTabDisplayOption = option
         tableView.reloadSections(IndexSet(integer: 0), with: .none)
+    }
+
+    @objc private func automaticallyOpensKeyboardChanged() {
+        Prefs.NewTabSettings.automaticallyOpensKeyboard = automaticallyOpensKeyboardSwitch.isOn
+        automaticallyOpensKeyboardSwitch.accessibilityValue = automaticallyOpensKeyboardSwitch.isOn
+            ? NSLocalizedString("On", comment: "")
+            : NSLocalizedString("Off", comment: "")
     }
     
     private func clearCustomURL(_ textField: UITextField) {

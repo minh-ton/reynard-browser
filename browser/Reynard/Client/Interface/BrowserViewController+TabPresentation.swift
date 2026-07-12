@@ -194,10 +194,10 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             target: .end,
             mode: mode
         )
+        let createdTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
         
         switch Prefs.NewTabSettings.newTabDisplayOption {
         case .homepage, .blankPage:
-            let createdTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
             let createdTabID = createdTabs[createdIndex].id
             
             captureThumbnail(forTabAt: createdIndex, mode: mode) { [weak self] previewImage in
@@ -210,6 +210,9 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
                 self.scrollTabOverviewToTab(at: createdIndex)
                 self.tabBar.setPendingExpansion(at: createdIndex)
                 self.setTabOverviewVisible(false, animated: true)
+                self.scheduleAutomaticKeyboardFocusForNewTab(
+                    (mode == .private ? self.tabManager.privateTabs : self.tabManager.regularTabs)[safe: createdIndex]
+                )
             }
         case .customURL:
             applyNewTabDisplayOption(toTabAt: createdIndex)

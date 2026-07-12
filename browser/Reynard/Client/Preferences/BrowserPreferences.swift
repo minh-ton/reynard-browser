@@ -62,6 +62,7 @@ final class BrowserPreferences {
             // New Tab
             key("NewTabSettings", "newTabDisplayOption"): NewTabDisplayOption.homepage.rawValue,
             key("NewTabSettings", "customNewTabURL"): "",
+            key("NewTabSettings", "automaticallyOpensKeyboard"): false,
             
             // Homepage
             key("HomepageSettings", "openingScreen"): HomepageOpeningScreen.homepage.rawValue,
@@ -336,6 +337,15 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forSetting: "NewTabSettings", key: "customNewTabURL")
+            }
+        }
+
+        static var automaticallyOpensKeyboard: Bool {
+            get {
+                return prefs.bool(forSetting: "NewTabSettings", key: "automaticallyOpensKeyboard")
+            }
+            set {
+                prefs.set(newValue, forSetting: "NewTabSettings", key: "automaticallyOpensKeyboard")
             }
         }
     }

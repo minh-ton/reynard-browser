@@ -152,7 +152,6 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
            let previewImage = homepageOverlayCoordinator.previewImage(for: tab, size: contentView.bounds.size) {
             tabManager.updateThumbnail(previewImage, forTabAt: index, mode: mode)
         }
-
         return index
     }
 
