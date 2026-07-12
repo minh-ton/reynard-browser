@@ -7,6 +7,17 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
 TARGET="aarch64-apple-ios"
+LLVM_PREFIX="${LLVM_PREFIX:-/opt/homebrew/opt/llvm}"
+WASM_CC="${WASM_CC:-$LLVM_PREFIX/bin/clang}"
+WASM_CXX="${WASM_CXX:-$LLVM_PREFIX/bin/clang++}"
+
+if [ ! -x "$WASM_CC" ] || [ ! -x "$WASM_CXX" ]; then
+	echo "Missing WebAssembly compiler under $LLVM_PREFIX."
+	echo "Install Homebrew LLVM or set WASM_CC and WASM_CXX explicitly."
+	exit 1
+fi
+
+export WASM_CC WASM_CXX
 
 cd "$ROOT_DIR"
 

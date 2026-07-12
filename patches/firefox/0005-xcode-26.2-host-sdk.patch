@@ -1,0 +1,15 @@
+diff --git a/build/moz.configure/toolchain.configure b/build/moz.configure/toolchain.configure
+index 2f97afdb36..3bb364be7d 100644
+--- a/build/moz.configure/toolchain.configure
++++ b/build/moz.configure/toolchain.configure
+@@ -252,7 +252,9 @@ with only_when(host_is_osx | target_is_osx):
+     )
+
+     def mac_sdk_min_version():
+-        return "26.4"
++        # Reynard's reproducible iOS toolchain is pinned to Xcode 26.2. The
++        # host tools used by the iOS build do not require newer macOS APIs.
++        return "26.2"
+
+     @depends(
+         "--with-macos-sdk",

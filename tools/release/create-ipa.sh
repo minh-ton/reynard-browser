@@ -2,6 +2,11 @@
 
 set -eu
 
+if [ "${1:-}" != "--jailbroken-only" ] || [ "$#" -ne 1 ]; then
+	echo "Usage: $0 --jailbroken-only" >&2
+	exit 2
+fi
+
 CLANG_PATH="$(xcrun --sdk iphoneos --find clang)"
 SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
@@ -9,8 +14,20 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 ARCHIVE_DIR="$ROOT_DIR/dist/Reynard.xcarchive"
 APP_DIR="$ARCHIVE_DIR/Products/Applications"
 WORK_DIR="$ROOT_DIR/dist/Reynard"
+BUILD_MODE_FILE="$ROOT_DIR/dist/build-mode"
 
 cd "$ROOT_DIR"
+
+if [ ! -f "$BUILD_MODE_FILE" ] || [ "$(cat "$BUILD_MODE_FILE")" != "jailbroken" ]; then
+	echo "The archive was not produced in jailbroken mode." >&2
+	echo "Run tools/release/build-app.sh --jailbroken first." >&2
+	exit 1
+fi
+
+if ! command -v ldid >/dev/null 2>&1; then
+	echo "Missing required tool: ldid" >&2
+	exit 1
+fi
 
 if [ ! -d "$APP_DIR" ]; then
 	echo "Missing archive output at $APP_DIR"
@@ -24,19 +41,28 @@ if [ -z "$APP_PATH" ]; then
 	exit 1
 fi
 
-# I absolutely hate Apple for this
-# Why is my bundle identifier just become unavailable for no reason?
+# Normalize identifiers before jailbreak signing because unsigned archives may
+# not retain the distribution identifiers from the project configuration.
 plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard" "$APP_PATH/Info.plist"
 plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.Helper" "$APP_PATH/PlugIns/Reynard Helper.appex/Info.plist"
 plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.OpenIn" "$APP_PATH/PlugIns/OpenIn.appex/Info.plist"
 
-rm -rf "$WORK_DIR" "$ROOT_DIR/dist/Reynard.ipa" "$ROOT_DIR/dist/Reynard-TrollStore.ipa"
+if [ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Info.plist")" != "com.minh-ton.Reynard" ] ||
+	[ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/PlugIns/Reynard Helper.appex/Info.plist")" != "com.minh-ton.Reynard.Helper" ] ||
+	[ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/PlugIns/OpenIn.appex/Info.plist")" != "com.minh-ton.Reynard.OpenIn" ]; then
+	echo "Bundle identifier preflight failed." >&2
+	exit 1
+fi
+
+rm -rf \
+	"$WORK_DIR" \
+	"$ROOT_DIR/dist/Reynard.ipa" \
+	"$ROOT_DIR/dist/Reynard-TrollStore.tipa" \
+	"$ROOT_DIR/dist/Reynard-Jailbroken.ipa"
 mkdir -p "$WORK_DIR/Payload"
 cp -R "$APP_PATH" "$WORK_DIR/Payload/"
 
 cd "$WORK_DIR"
-zip -r ../Reynard.ipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX" # normal ipa
-
 PTRACE_JIT_SRC="$ROOT_DIR/browser/Reynard/JIT/Unsandboxed/ptrace_jit.c"
 PTRACE_JIT_OUT="Payload/Reynard.app/ptrace_jit"
 
@@ -52,5 +78,4 @@ chmod 0755 "$PTRACE_JIT_OUT"
 ldid -S"$ROOT_DIR/browser/Reynard/JIT/Unsandboxed/ptrace_jit.entitlements" "$PTRACE_JIT_OUT"
 ldid -S"$ROOT_DIR/browser/Reynard/Entitlements/Reynard.private.entitlements" "Payload/Reynard.app/Reynard"
 ldid -S"$ROOT_DIR/browser/Helper/Entitlements/Reynard-Helper.private.entitlements" "Payload/Reynard.app/PlugIns/Reynard Helper.appex/Reynard Helper"
-zip -r ../Reynard-TrollStore.tipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX" # trollstore ipa
-cp ../Reynard-TrollStore.tipa ../Reynard-Jailbroken.ipa # for jailbroken users
+zip -r ../Reynard-Jailbroken.ipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX"
