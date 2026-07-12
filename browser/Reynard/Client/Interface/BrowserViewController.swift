@@ -52,7 +52,7 @@ final class BrowserViewController: UIViewController {
         loadingView.layer.shadowOpacity = 0.18
         loadingView.layer.shadowRadius = 10
         loadingView.layer.shadowOffset = CGSize(width: 0, height: 4)
-        loadingView.accessibilityLabel = "Loading add-on"
+        loadingView.accessibilityLabel = NSLocalizedString("Loading Add-on", comment: "")
 
         addonPopupLoadingIndicator.translatesAutoresizingMaskIntoConstraints = false
         loadingView.addSubview(addonPopupLoadingIndicator)

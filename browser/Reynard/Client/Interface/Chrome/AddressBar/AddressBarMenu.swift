@@ -37,7 +37,9 @@ enum AddressBarMenu {
         let url = selectedURL.flatMap(URL.init(string:))
         var items: [Item] = []
         if let url, url.host != nil {
-            let title = BookmarkStore.shared.bookmark(savedFor: url) == nil ? "Add Bookmark" : "Edit Bookmark"
+            let title = BookmarkStore.shared.bookmark(savedFor: url) == nil
+                ? NSLocalizedString("Add Bookmark", comment: "")
+                : NSLocalizedString("Edit Bookmark", comment: "")
             items.append(Item(title: title, image: UIImage(named: "reynard.book"), startsSection: false) {
                 onBookmark(false)
             })
@@ -55,7 +57,9 @@ enum AddressBarMenu {
         ))
         if let isDesktop = usesDesktopWebsite {
             items.append(Item(
-                title: isDesktop ? "Request Mobile Website" : "Request Desktop Website",
+                title: isDesktop
+                    ? NSLocalizedString("Request Mobile Website", comment: "")
+                    : NSLocalizedString("Request Desktop Website", comment: ""),
                 image: UIImage(named: isDesktop ? "reynard.smartphone" : "reynard.desktopcomputer"),
                 startsSection: false,
                 action: onChangeWebsiteMode
@@ -314,17 +318,17 @@ private final class AddressBarMenuZoomControl: UIView {
         let decrease = UIButton(type: .system)
         decrease.setTitle("A", for: .normal)
         decrease.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
-        decrease.accessibilityLabel = "Decrease Page Zoom"
+        decrease.accessibilityLabel = NSLocalizedString("Zoom Out", comment: "")
         decrease.addTarget(self, action: #selector(decreaseTapped), for: .touchUpInside)
 
         percentageButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
-        percentageButton.accessibilityLabel = "Reset Page Zoom"
+        percentageButton.accessibilityLabel = NSLocalizedString("Reset Page Zoom", comment: "")
         percentageButton.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
 
         let increase = UIButton(type: .system)
         increase.setTitle("A", for: .normal)
         increase.titleLabel?.font = .systemFont(ofSize: 21, weight: .medium)
-        increase.accessibilityLabel = "Increase Page Zoom"
+        increase.accessibilityLabel = NSLocalizedString("Zoom In", comment: "")
         increase.addTarget(self, action: #selector(increaseTapped), for: .touchUpInside)
 
         let stack = UIStackView(arrangedSubviews: [decrease, percentageButton, increase])

@@ -171,7 +171,7 @@ final class AddressBar: UIView {
         button.setImage(image, for: .normal)
         button.alpha = 1
         button.adjustsImageWhenHighlighted = false
-        button.accessibilityLabel = "Add-ons"
+        button.accessibilityLabel = NSLocalizedString("Add-ons", comment: "")
         button.accessibilityHint = "Shows installed add-ons"
         button.isHidden = true
         return button
@@ -191,7 +191,7 @@ final class AddressBar: UIView {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .label
         button.setImage(UIImage(named: "reynard.textformat.size"), for: .normal)
-        button.accessibilityLabel = "Page Zoom"
+        button.accessibilityLabel = NSLocalizedString("Page Zoom", comment: "")
         button.accessibilityHint = "Shows page zoom controls"
         button.isHidden = true
         button.isUserInteractionEnabled = false

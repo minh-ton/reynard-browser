@@ -163,7 +163,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         button.tintColor = .label
         button.backgroundColor = .secondarySystemBackground
         button.layer.cornerRadius = UX.closeButtonSize / 2
-        button.accessibilityLabel = "Close"
+        button.accessibilityLabel = NSLocalizedString("Close", comment: "")
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         return button

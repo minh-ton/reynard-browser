@@ -206,7 +206,7 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
 
     init() {
         super.init(style: .insetGrouped)
-        title = "Customize Toolbar"
+        title = NSLocalizedString("Customize Toolbar", comment: "")
     }
 
     required init?(coder: NSCoder) {
@@ -262,13 +262,13 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
         case .reset:
             return nil
         case .included:
-            return "Enabled Items"
+            return NSLocalizedString("Enabled Items", comment: "")
         case .available:
-            return "Available Items"
+            return NSLocalizedString("Available Items", comment: "")
         case .feedback:
-            return "Feedback"
+            return NSLocalizedString("Feedback", comment: "")
         case .shortcuts:
-            return "Button Shortcuts"
+            return NSLocalizedString("Button Shortcuts", comment: "")
         case nil:
             return nil
         }
@@ -282,7 +282,7 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
         switch section {
         case .reset:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Reset to Original"
+            cell.textLabel?.text = NSLocalizedString("Reset to Original", comment: "")
             cell.textLabel?.textColor = view.tintColor
             cell.textLabel?.textAlignment = .center
             return cell
@@ -309,11 +309,11 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
             return cell
         case .feedback:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Toolbar Button Haptics"
+            cell.textLabel?.text = NSLocalizedString("Toolbar Button Haptics", comment: "")
             cell.selectionStyle = .none
             cell.accessoryView = toolbarHapticsSwitch
             cell.editingAccessoryView = toolbarHapticsSwitch
-            toolbarHapticsSwitch.accessibilityLabel = "Toolbar Button Haptics"
+            toolbarHapticsSwitch.accessibilityLabel = NSLocalizedString("Toolbar Button Haptics", comment: "")
             return cell
         case .shortcuts:
             return makeShortcutCell(row: indexPath.row)
@@ -324,13 +324,13 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.detailTextLabel?.textColor = .secondaryLabel
         if row == 0 {
-            cell.textLabel?.text = "Close Tab"
-            cell.detailTextLabel?.text = "Hold to open a new tab"
+            cell.textLabel?.text = NSLocalizedString("Close Tab", comment: "")
+            cell.detailTextLabel?.text = NSLocalizedString("Hold to open a new tab", comment: "")
             cell.accessoryView = closeTabShortcutSwitch
             cell.editingAccessoryView = closeTabShortcutSwitch
         } else {
-            cell.textLabel?.text = "New Tab"
-            cell.detailTextLabel?.text = "Hold to close the current tab"
+            cell.textLabel?.text = NSLocalizedString("New Tab", comment: "")
+            cell.detailTextLabel?.text = NSLocalizedString("Hold to close the current tab", comment: "")
             cell.accessoryView = newTabShortcutSwitch
             cell.editingAccessoryView = newTabShortcutSwitch
         }
@@ -467,11 +467,15 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
             return
         }
         if row == 0 {
-            cell.detailTextLabel?.text = "Hold to open a new tab"
-            closeTabShortcutSwitch.accessibilityValue = closeTabShortcutSwitch.isOn ? "On" : "Off"
+            cell.detailTextLabel?.text = NSLocalizedString("Hold to open a new tab", comment: "")
+            closeTabShortcutSwitch.accessibilityValue = closeTabShortcutSwitch.isOn
+                ? NSLocalizedString("On", comment: "")
+                : NSLocalizedString("Off", comment: "")
         } else {
-            cell.detailTextLabel?.text = "Hold to close the current tab"
-            newTabShortcutSwitch.accessibilityValue = newTabShortcutSwitch.isOn ? "On" : "Off"
+            cell.detailTextLabel?.text = NSLocalizedString("Hold to close the current tab", comment: "")
+            newTabShortcutSwitch.accessibilityValue = newTabShortcutSwitch.isOn
+                ? NSLocalizedString("On", comment: "")
+                : NSLocalizedString("Off", comment: "")
         }
     }
 

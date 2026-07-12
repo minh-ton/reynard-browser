@@ -90,7 +90,7 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
         view.addSubview(loadingIndicator)
 
         errorLabel.translatesAutoresizingMaskIntoConstraints = false
-        errorLabel.text = "Unable to display this image."
+        errorLabel.text = NSLocalizedString("Unable to display this image.", comment: "")
         errorLabel.textColor = .secondaryLabel
         errorLabel.font = .preferredFont(forTextStyle: .body)
         errorLabel.textAlignment = .center
@@ -103,7 +103,7 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
         shareButton.tintColor = .white
         shareButton.backgroundColor = UIColor(white: 0.12, alpha: 0.82)
         shareButton.layer.cornerRadius = 22
-        shareButton.accessibilityLabel = "Share"
+        shareButton.accessibilityLabel = NSLocalizedString("Share", comment: "")
         shareButton.addTarget(self, action: #selector(shareImage), for: .touchUpInside)
         shareButton.isEnabled = false
         shareButton.alpha = 0.45

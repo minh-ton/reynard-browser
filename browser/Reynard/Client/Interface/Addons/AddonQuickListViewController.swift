@@ -47,7 +47,7 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         self.onInstallFromFile = onInstallFromFile
         self.onUpdateAll = onUpdateAll
         super.init(style: .insetGrouped)
-        title = "Add-ons"
+        title = NSLocalizedString("Add-ons", comment: "")
     }
 
     required init?(coder: NSCoder) {
@@ -91,7 +91,7 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
             return
         }
         let label = UILabel()
-        label.text = "No add-ons are available for this page."
+        label.text = NSLocalizedString("No add-ons are available for this page.", comment: "")
         label.textColor = .secondaryLabel
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -153,7 +153,7 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         selectionFeedback.impactOccurred()
         selectionFeedback.prepare()
         let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.accessibilityLabel = "Loading add-on"
+        spinner.accessibilityLabel = NSLocalizedString("Loading Add-on", comment: "")
         spinner.startAnimating()
         tableView.cellForRow(at: indexPath)?.accessoryView = spinner
         tableView.isUserInteractionEnabled = false
@@ -189,14 +189,18 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         cell.accessibilityHint = nil
         switch action {
         case .discover:
-            cell.textLabel?.text = "Discover Add-ons"
+            cell.textLabel?.text = NSLocalizedString("Discover Add-ons…", comment: "")
             cell.imageView?.image = UIImage(systemName: "safari")
         case .installFromFile:
-            cell.textLabel?.text = isInstalling ? "Installing Add-on..." : "Install Add-on From File"
+            cell.textLabel?.text = isInstalling
+                ? NSLocalizedString("Installing Add-on…", comment: "")
+                : NSLocalizedString("Install Add-on from File…", comment: "")
             cell.imageView?.image = UIImage(systemName: "folder")
             cell.selectionStyle = isInstalling ? .none : .default
         case .updateAll:
-            cell.textLabel?.text = isUpdating ? "Checking for Updates..." : "Update All Add-ons"
+            cell.textLabel?.text = isUpdating
+                ? NSLocalizedString("Checking for Updates…", comment: "")
+                : NSLocalizedString("Update All Add-ons", comment: "")
             cell.imageView?.image = UIImage(systemName: "arrow.triangle.2.circlepath")
             cell.selectionStyle = isUpdating ? .none : .default
         }

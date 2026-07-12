@@ -164,11 +164,11 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         switch displayedSections[indexPath.section] {
         case .addressBar:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = "Show Add-ons Button"
+            cell.textLabel?.text = NSLocalizedString("Show Add-ons Button", comment: "")
             cell.selectionStyle = .none
             let toggle = UISwitch()
             toggle.isOn = Prefs.AddonSettings.showsAddressBarButton
-            toggle.accessibilityLabel = "Show Add-ons Button"
+            toggle.accessibilityLabel = NSLocalizedString("Show Add-ons Button", comment: "")
             toggle.addTarget(self, action: #selector(showAddressBarButtonChanged(_:)), for: .valueChanged)
             cell.accessoryView = toggle
             return cell

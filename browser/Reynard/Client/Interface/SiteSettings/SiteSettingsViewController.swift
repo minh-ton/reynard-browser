@@ -170,7 +170,7 @@ final class SiteSettingsViewController: UITableViewController {
         case .availability:
             return nil
         case .website:
-            return "Website"
+            return NSLocalizedString("Website", comment: "")
         case .media:
             return NSLocalizedString("Media", comment: "")
         case .permissions:
@@ -244,7 +244,7 @@ final class SiteSettingsViewController: UITableViewController {
 
     private func websiteModeCell() -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = "Request Desktop Website"
+        cell.textLabel?.text = NSLocalizedString("Request Desktop Website", comment: "")
         cell.selectionStyle = .none
 
         let websiteMode = SiteSettingsStore.shared.settings(for: url)?.websiteMode
