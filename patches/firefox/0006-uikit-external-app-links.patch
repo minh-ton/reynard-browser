@@ -1,0 +1,331 @@
+diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+index 8a22300f29..609cc88e5e 100644
+--- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+@@ -12,6 +12,51 @@ ChromeUtils.defineESModuleGetters(lazy, {
+
+ // Implements nsILoadURIDelegate.
+ export class LoadURIDelegateChild extends GeckoViewActorChild {
++  handleEvent(aEvent) {
++    if (
++      aEvent.type !== "click" ||
++      !aEvent.isTrusted ||
++      aEvent.defaultPrevented ||
++      aEvent.button !== 0 ||
++      aEvent.altKey ||
++      aEvent.ctrlKey ||
++      aEvent.metaKey ||
++      aEvent.shiftKey
++    ) {
++      return;
++    }
++
++    const link = aEvent
++      .composedPath()
++      .find(node => node?.localName === "a" && typeof node.href === "string");
++    if (!link) {
++      return;
++    }
++    if (
++      link.hasAttribute("download") ||
++      (link.target && link.target.toLowerCase() !== "_self")
++    ) {
++      return;
++    }
++
++    let uri;
++    try {
++      uri = Services.io.newURI(link.href);
++    } catch (e) {
++      return;
++    }
++    if (uri.scheme !== "http" && uri.scheme !== "https") {
++      return;
++    }
++
++    this.sendAsyncMessage("Reynard:OnTrustedLinkClick", {
++      requestId: Services.uuid.generateUUID().toString(),
++      uri: uri.displaySpec,
++      triggerUri:
++        this.contentWindow.document.documentURIObject?.displaySpec ?? null,
++    });
++  }
++
+   // nsILoadURIDelegate.
+   handleLoadError(aUri, aError, aErrorModule) {
+     debug`handleLoadError: uri=${aUri && aUri.spec}
+diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+index 2039c79e1d..ea167f7eed 100644
+--- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+@@ -13,6 +13,25 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
+           data
+         );
+       }
++      case "Reynard:OnTrustedLinkClick": {
++        try {
++          await this.eventDispatcher.sendRequestForResult(
++            "Reynard:OnExternalAppLinkRequest",
++            {
++              requestId: data.requestId,
++              uri: data.uri,
++              triggerUri: data.triggerUri,
++              where: 1,
++              flags: 0,
++              isTopLevel: true,
++              hasUserGesture: true,
++            }
++          );
++        } catch (e) {
++          // The page click remains untouched when the app delegate is absent.
++        }
++        return undefined;
++      }
+       default: {
+         return super.receiveMessage({ name, data });
+       }
+diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+index 2c65a07020..def9fd0450 100644
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
+     },
+     child: {
+       esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
++      events: {
++        click: { capture: true, mozSystemGroup: true },
++      },
+     },
+     messageManagerGroups: ["browsers"],
+   },
+diff --git a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
+index de5223c2c3..7cb137387b 100644
+--- a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
++++ b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
+@@ -4,11 +4,38 @@
+
+ #include "nsMIMEInfoUIKit.h"
+
++#import <UIKit/UIKit.h>
++
++extern bool ReynardOpenLinksInAppsEnabled();
++extern bool ReynardSupportsExternalScheme(const char* aScheme);
++
+ NS_IMETHODIMP
+ nsMIMEInfoUIKit::LaunchWithFile(nsIFile* aFile) {
+   return NS_ERROR_NOT_IMPLEMENTED;
+ }
+
+ nsresult nsMIMEInfoUIKit::LoadUriInternal(nsIURI* aURI) {
+-  return NS_ERROR_NOT_IMPLEMENTED;
++  NS_ENSURE_ARG_POINTER(aURI);
++
++  nsAutoCString spec;
++  nsresult rv = aURI->GetSpec(spec);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  NSString* value = [NSString stringWithUTF8String:spec.get()];
++  NSURL* url = value ? [NSURL URLWithString:value] : nil;
++  const bool enabled = ReynardOpenLinksInAppsEnabled();
++  nsAutoCString scheme;
++  rv = aURI->GetScheme(scheme);
++  NS_ENSURE_SUCCESS(rv, rv);
++  if (!enabled || !url || !ReynardSupportsExternalScheme(scheme.get())) {
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++
++  dispatch_async(dispatch_get_main_queue(), ^{
++    [[UIApplication sharedApplication]
++                  openURL:url
++                  options:@{}
++        completionHandler:nil];
++  });
++  return NS_OK;
+ }
+diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.h b/uriloader/exthandler/uikit/nsOSHelperAppService.h
+index ffefed3b8d..6eb45b4073 100644
+--- a/uriloader/exthandler/uikit/nsOSHelperAppService.h
++++ b/uriloader/exthandler/uikit/nsOSHelperAppService.h
+@@ -35,6 +35,14 @@ class nsOSHelperAppService final : public nsExternalHelperAppService {
+   NS_IMETHOD GetProtocolHandlerInfoFromOS(const nsACString& aScheme,
+                                           bool* found,
+                                           nsIHandlerInfo** _retval) override;
++  NS_IMETHOD SetProtocolHandlerDefaults(nsIHandlerInfo* aHandlerInfo,
++                                        bool aOSHandlerExists) override;
++  NS_IMETHOD LoadURI(nsIURI* aURI, nsIPrincipal* aTriggeringPrincipal,
++                     nsIPrincipal* aRedirectPrincipal,
++                     mozilla::dom::BrowsingContext* aBrowsingContext,
++                     bool aWasTriggeredExternally,
++                     bool aHasValidUserGestureActivation,
++                     bool aNewWindowTarget) override;
+
+   // GetFileTokenForPath must be implemented by each platform.
+   // platformAppPath --> a platform specific path to an application that we got
+diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.mm b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
+index 552dd81e84..85132e0242 100644
+--- a/uriloader/exthandler/uikit/nsOSHelperAppService.mm
++++ b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
+@@ -3,6 +3,27 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+ #include "nsOSHelperAppService.h"
++#include "nsMIMEInfoUIKit.h"
++#include "nsIPrincipal.h"
++#include "nsIURI.h"
++
++#import <UIKit/UIKit.h>
++
++bool ReynardOpenLinksInAppsEnabled() {
++  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
++  NSString* key = @"default.BrowsingSettings.openLinksInApps";
++  id storedValue = [defaults objectForKey:key];
++  return storedValue ? [defaults boolForKey:key] : true;
++}
++
++bool ReynardSupportsExternalScheme(const char* aScheme) {
++  if (!aScheme || !*aScheme) {
++    return false;
++  }
++  NSString* scheme = [[NSString stringWithUTF8String:aScheme] lowercaseString];
++  return [scheme isEqualToString:@"market"] ||
++         [scheme isEqualToString:@"reddit"];
++}
+
+ nsOSHelperAppService::nsOSHelperAppService() : nsExternalHelperAppService() {}
+
+@@ -10,7 +31,8 @@ nsOSHelperAppService::~nsOSHelperAppService() {}
+
+ nsresult nsOSHelperAppService::OSProtocolHandlerExists(
+     const char* aProtocolScheme, bool* aHandlerExists) {
+-  *aHandlerExists = false;
++  const bool enabled = ReynardOpenLinksInAppsEnabled();
++  *aHandlerExists = enabled && ReynardSupportsExternalScheme(aProtocolScheme);
+   return NS_OK;
+ }
+
+@@ -51,7 +73,107 @@ NS_IMETHODIMP
+ nsOSHelperAppService::GetProtocolHandlerInfoFromOS(const nsACString& aScheme,
+                                                    bool* found,
+                                                    nsIHandlerInfo** _retval) {
+-  // We don't want to get protocol handlers from the OS in GV; the app
+-  // should take care of that in NavigationDelegate.onLoadRequest().
+-  return NS_ERROR_NOT_IMPLEMENTED;
++  NS_ENSURE_ARG_POINTER(found);
++  NS_ENSURE_ARG_POINTER(_retval);
++
++  nsresult rv = OSProtocolHandlerExists(PromiseFlatCString(aScheme).get(), found);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  nsMIMEInfoUIKit* handler =
++      new nsMIMEInfoUIKit(aScheme, nsMIMEInfoBase::eProtocolInfo);
++  NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
++  handler->SetPreferredAction(nsIHandlerInfo::useSystemDefault);
++  handler->SetAlwaysAskBeforeHandling(false);
++  NS_ADDREF(*_retval = handler);
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsOSHelperAppService::SetProtocolHandlerDefaults(nsIHandlerInfo* aHandlerInfo,
++                                                 bool aOSHandlerExists) {
++  NS_ENSURE_ARG_POINTER(aHandlerInfo);
++  aHandlerInfo->SetPreferredAction(
++      aOSHandlerExists ? nsIHandlerInfo::useSystemDefault
++                       : nsIHandlerInfo::alwaysAsk);
++  aHandlerInfo->SetAlwaysAskBeforeHandling(false);
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsOSHelperAppService::LoadURI(
++    nsIURI* aURI, nsIPrincipal* aTriggeringPrincipal,
++    nsIPrincipal* aRedirectPrincipal,
++    mozilla::dom::BrowsingContext* aBrowsingContext,
++    bool aWasTriggeredExternally, bool aHasValidUserGestureActivation,
++    bool aNewWindowTarget) {
++  NS_ENSURE_ARG_POINTER(aURI);
++
++  if (ExternalProtocolIsBlockedBySandbox(aBrowsingContext,
++                                         aHasValidUserGestureActivation)) {
++    return NS_OK;
++  }
++  if (!aWasTriggeredExternally && !aHasValidUserGestureActivation) {
++    return NS_OK;
++  }
++  if (!ReynardOpenLinksInAppsEnabled()) {
++    return NS_OK;
++  }
++
++  nsCOMPtr<nsIURI> escapedURI;
++  nsresult rv = EscapeURI(aURI, getter_AddRefs(escapedURI));
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  nsAutoCString spec;
++  escapedURI->GetSpec(spec);
++  NSString* requestedValue = [NSString stringWithUTF8String:spec.get()];
++  NSString* launchValue = requestedValue;
++  BOOL universalLinkOnly = NO;
++
++  nsAutoCString scheme;
++  escapedURI->GetScheme(scheme);
++  if (!ReynardSupportsExternalScheme(scheme.get())) {
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++  const BOOL isRedditMarketFallback =
++      scheme.EqualsLiteral("market") &&
++      spec.Find("com.reddit.frontpage") != kNotFound;
++  if (isRedditMarketFallback) {
++    nsCOMPtr<nsIURI> sourceURI;
++    if (aTriggeringPrincipal) {
++      aTriggeringPrincipal->GetURI(getter_AddRefs(sourceURI));
++    }
++    if (sourceURI) {
++      nsAutoCString sourceSpec;
++      sourceURI->GetSpec(sourceSpec);
++      launchValue = [NSString stringWithUTF8String:sourceSpec.get()];
++      universalLinkOnly = YES;
++    } else {
++      launchValue = @"reddit://";
++    }
++  }
++
++  NSURL* launchURL = launchValue ? [NSURL URLWithString:launchValue] : nil;
++  if (!launchURL) {
++    return NS_ERROR_MALFORMED_URI;
++  }
++
++  dispatch_async(dispatch_get_main_queue(), ^{
++    NSDictionary<UIApplicationOpenExternalURLOptionsKey, id>* options =
++        universalLinkOnly
++            ? @{UIApplicationOpenURLOptionUniversalLinksOnly : @YES}
++            : @{};
++    [[UIApplication sharedApplication]
++                  openURL:launchURL
++                  options:options
++        completionHandler:^(BOOL opened) {
++          if (!opened && isRedditMarketFallback) {
++            NSURL* fallbackURL = [NSURL URLWithString:@"reddit://"];
++            [[UIApplication sharedApplication]
++                          openURL:fallbackURL
++                          options:@{}
++                completionHandler:nil];
++          }
++        }];
++  });
++  return NS_OK;
+ }
+diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
+index 62fd7646da..5309e19e84 100644
+--- a/widget/uikit/nsAppShell.mm
++++ b/widget/uikit/nsAppShell.mm
+@@ -434,7 +434,9 @@ NS_IMETHODIMP nsAppShell::Observe(nsISupports* aSubject, const char* aTopic,
+     MOZ_ASSERT(doc);
+     if (const RefPtr<nsWindow> window = nsWindow::From(doc->GetWindow())) {
+       RefPtr<EventDispatcher> dispatcher = window->GetEventDispatcher();
+-      dispatcher->Activate();
++      if (dispatcher) {
++        dispatcher->Activate();
++      }
+     }
+   } else {
+     return nsBaseAppShell::Observe(aSubject, aTopic, aData);

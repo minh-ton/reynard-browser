@@ -33,6 +33,7 @@ final class TabManagerImplementation: NSObject, TabManager {
     private let permissionCoordinator = PermissionCoordinator(
         promptPresenter: PermissionPromptPresenter()
     )
+    private let externalAppLinkCoordinator = ExternalAppLinkCoordinator()
     private let systemMediaSession = SystemMediaSession()
     
     private weak var delegate: TabManagerDelegate?
@@ -982,7 +983,12 @@ extension TabManagerImplementation: ContentDelegate {
 }
 
 extension TabManagerImplementation: NavigationDelegate {
-    func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission]) {
+    func onLocationChange(
+        session: GeckoSession,
+        url: String?,
+        permissions: [ContentPermission],
+        hasUserGesture: Bool
+    ) {
         guard let location = tabLocation(for: session) else {
             return
         }
@@ -1025,11 +1031,13 @@ extension TabManagerImplementation: NavigationDelegate {
         }
         tab.state.displayState = .committed
         tab.favicon = nil
+
         notifyUpdate(at: location.index, mode: location.mode, reason: .location)
         scheduleFaviconUpdate(forTabAt: location.index, mode: location.mode)
         persistState()
         
     }
+
     
     func onCanGoBack(session: GeckoSession, canGoBack: Bool) {
         guard let location = tabLocation(for: session) else {
@@ -1060,11 +1068,44 @@ extension TabManagerImplementation: NavigationDelegate {
     }
     
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
-        return .allow
+        guard Prefs.BrowsingSettings.openLinksInApps else {
+            return .allow
+        }
+        guard let route = ExternalAppLinkPolicy.route(
+            uri: request.uri,
+            triggerUri: request.triggerUri,
+            hasUserGesture: request.hasUserGesture,
+            isRedirect: request.isRedirect
+        ) else {
+            return .allow
+        }
+        let opened = await externalAppLinkCoordinator.open(route, for: session) { [weak self] route in
+            guard let self else {
+                return false
+            }
+            return await self.openExternalApplication(route)
+        }
+        return opened ? .deny : .allow
     }
     
     func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
         return .allow
+    }
+
+    private func openExternalApplication(_ route: ExternalAppLinkRoute) async -> Bool {
+        let options: [UIApplication.OpenExternalURLOptionsKey: Any]
+        switch route.kind {
+        case .universalLink:
+            options = [.universalLinksOnly: true]
+        case .externalScheme:
+            options = [:]
+        }
+
+        return await withCheckedContinuation { continuation in
+            UIApplication.shared.open(route.url, options: options) { opened in
+                continuation.resume(returning: opened)
+            }
+        }
     }
     
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? {

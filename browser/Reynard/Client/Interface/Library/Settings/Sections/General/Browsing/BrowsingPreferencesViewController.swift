@@ -26,6 +26,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     }
     
     private enum LinksRow: CaseIterable {
+        case openLinksInApps
         case showLinkPreviews
     }
     
@@ -39,6 +40,7 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     }
     
     private let showLinkPreviewsSwitch = UISwitch()
+    private let openLinksInAppsSwitch = UISwitch()
     private let showImagePreviewsSwitch = UISwitch()
     private let requestDesktopWebsiteSwitch = UISwitch()
     
@@ -99,12 +101,24 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
             guard LinksRow.allCases.indices.contains(indexPath.row) else {
                 return UITableViewCell()
             }
-            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-            cell.selectionStyle = .none
-            cell.textLabel?.text = NSLocalizedString("Show Link Previews", comment: "")
-            cell.detailTextLabel?.textColor = .secondaryLabel
-            cell.accessoryView = showLinkPreviewsSwitch
-            return cell
+            switch LinksRow.allCases[indexPath.row] {
+            case .openLinksInApps:
+                let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+                cell.selectionStyle = .none
+                cell.textLabel?.text = NSLocalizedString("Open Links in Apps", comment: "")
+                cell.detailTextLabel?.text = NSLocalizedString("When an installed app supports the link", comment: "")
+                cell.detailTextLabel?.textColor = .secondaryLabel
+                cell.accessoryView = openLinksInAppsSwitch
+                return cell
+            case .showLinkPreviews:
+                let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+                cell.selectionStyle = .none
+                cell.textLabel?.text = NSLocalizedString("Show Link Previews", comment: "")
+                cell.detailTextLabel?.text = NSLocalizedString("When long-pressing links", comment: "")
+                cell.detailTextLabel?.textColor = .secondaryLabel
+                cell.accessoryView = showLinkPreviewsSwitch
+                return cell
+            }
         case .media:
             guard MediaRow.allCases.indices.contains(indexPath.row) else {
                 return UITableViewCell()
@@ -167,12 +181,14 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     }
     
     private func configureSwitch() {
+        openLinksInAppsSwitch.addTarget(self, action: #selector(openLinksInAppsSwitchDidChange(_:)), for: .valueChanged)
         showLinkPreviewsSwitch.addTarget(self, action: #selector(showLinkPreviewsSwitchDidChange(_:)), for: .valueChanged)
         showImagePreviewsSwitch.addTarget(self, action: #selector(showImagePreviewsSwitchDidChange(_:)), for: .valueChanged)
         requestDesktopWebsiteSwitch.addTarget(self, action: #selector(requestDesktopWebsiteSwitchDidChange(_:)), for: .valueChanged)
     }
     
     private func refreshDisplayedState() {
+        openLinksInAppsSwitch.isOn = Prefs.BrowsingSettings.openLinksInApps
         showLinkPreviewsSwitch.isOn = Prefs.BrowsingSettings.showLinkPreviews
         showImagePreviewsSwitch.isOn = Prefs.BrowsingSettings.showImagePreviews
         requestDesktopWebsiteSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsite
@@ -180,6 +196,10 @@ final class BrowsingPreferencesViewController: SettingsTableViewController {
     
     @objc private func showLinkPreviewsSwitchDidChange(_ sender: UISwitch) {
         Prefs.BrowsingSettings.showLinkPreviews = sender.isOn
+    }
+
+    @objc private func openLinksInAppsSwitchDidChange(_ sender: UISwitch) {
+        Prefs.BrowsingSettings.openLinksInApps = sender.isOn
     }
     
     @objc private func showImagePreviewsSwitchDidChange(_ sender: UISwitch) {

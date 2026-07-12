@@ -58,6 +58,7 @@ final class BrowserPreferences {
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
             key("BrowsingSettings", "showLinkPreviews"): true,
             key("BrowsingSettings", "showImagePreviews"): true,
+            key("BrowsingSettings", "openLinksInApps"): true,
             
             // New Tab
             key("NewTabSettings", "newTabDisplayOption"): NewTabDisplayOption.homepage.rawValue,
@@ -270,6 +271,15 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "showImagePreviews")
+            }
+        }
+
+        static var openLinksInApps: Bool {
+            get {
+                return prefs.bool(forSetting: "BrowsingSettings", key: "openLinksInApps")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "openLinksInApps")
             }
         }
     }
