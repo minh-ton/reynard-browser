@@ -8,7 +8,11 @@ FRAMEWORKS_DIR="${APP_BUNDLE}/Frameworks"
 GECKOVIEW_FW="${FRAMEWORKS_DIR}/GeckoView.framework"
 GECKOVIEW_FW_FRAMEWORKS="${GECKOVIEW_FW}/Frameworks"
 
-SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"
+if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
+	SIGN_IDENTITY="-"
+else
+	SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"
+fi
 DEFAULT_THEME_SRC="${SRCROOT}/../engine/firefox/toolkit/mozapps/extensions/default-theme"
 
 mkdir -p "${FRAMEWORKS_DIR}"

@@ -53,7 +53,13 @@ if [[ -n "$(git -C "$SUBMODULE_PATH" status --porcelain)" ]]; then
 fi
 
 setopt null_glob
-patch_files=("$PATCH_DIR"/**/*.patch)
+patch_files=()
+for patch_file in "$PATCH_DIR"/**/*.patch; do
+	if [[ "$patch_file" == "$PATCH_DIR/firefox/"* ]]; then
+		continue
+	fi
+	patch_files+=("$patch_file")
+done
 
 if (( ${#patch_files[@]} == 0 )); then
 	echo "No patch files found in $PATCH_DIR."
