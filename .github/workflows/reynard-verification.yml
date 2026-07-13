@@ -19,9 +19,6 @@ jobs:
       - name: Install verification tools
         run: command -v rg >/dev/null || brew install ripgrep
 
-      - name: Prepare Firefox source
-        run: ./tools/firefox/prepare-firefox.sh
-
       - name: Run focused regression verification
         env:
           REYNARD_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.sha }}

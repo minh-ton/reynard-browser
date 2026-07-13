@@ -13,7 +13,7 @@ if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
 else
 	SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"
 fi
-DEFAULT_THEME_SRC="${SRCROOT}/../engine/firefox/toolkit/mozapps/extensions/default-theme"
+DEFAULT_THEME_SRC="${FIREFOX_SOURCE}/toolkit/mozapps/extensions/default-theme"
 
 mkdir -p "${FRAMEWORKS_DIR}"
 mkdir -p "${GECKOVIEW_FW_FRAMEWORKS}"

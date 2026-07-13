@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
-FIREFOX_DIR="$ROOT_DIR/engine/firefox"
+FIREFOX_DIR="$ROOT_DIR/.build/firefox"
 
 . "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
@@ -22,12 +22,6 @@ fi
 export WASM_CC WASM_CXX
 
 cd "$ROOT_DIR"
-
-if [ ! -d "$FIREFOX_DIR" ]; then
-	echo "Missing firefox source at $FIREFOX_DIR"
-	echo "Add the submodule, then run tools/development/update-gecko.sh."
-	exit 1
-fi
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
 

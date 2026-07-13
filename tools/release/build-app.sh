@@ -17,13 +17,13 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 PROJECT_PATH="$ROOT_DIR/browser/Reynard.xcodeproj"
 XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
-GECKO_DIST="$ROOT_DIR/engine/firefox/obj-aarch64-apple-ios/dist"
+GECKO_DIST="$ROOT_DIR/.build/firefox/obj-aarch64-apple-ios/dist"
 IDEVICE_DIR="$ROOT_DIR/support/idevice"
 IDEVICE_LIBRARY="$ROOT_DIR/browser/Reynard/JIT/RPPairing/libidevice_ffi.a"
 
 . "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
-"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check-prepared
 "$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" check "$GECKO_DIST"
 "$ROOT_DIR/tools/development/build-idevice.sh"
 

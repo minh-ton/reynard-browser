@@ -1,6 +1,7 @@
 [submodule "engine/firefox"]
 	path = engine/firefox
 	url = https://github.com/mozilla-firefox/firefox
+	ignore = dirty
 [submodule "support/idevice"]
 	path = support/idevice
 	url = https://github.com/jkcoxson/idevice

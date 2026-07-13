@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 
 const moduleURL = new URL(
-  "../../engine/firefox/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs",
+  "../../.build/firefox/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs",
   import.meta.url
 );
 const { FullPageCaptureCompat } = await import(moduleURL);
