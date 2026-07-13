@@ -2238,6 +2238,16 @@
         }
       }
     },
+    "Library" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library"
+          }
+        }
+      }
+    },
     "Links" : {
       "localizations" : {
         "en" : {
