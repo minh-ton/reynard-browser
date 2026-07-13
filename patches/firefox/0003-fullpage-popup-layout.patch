@@ -1,135 +1,21 @@
 diff --git a/toolkit/components/extensions/child/ext-storage.js b/toolkit/components/extensions/child/ext-storage.js
-index 5a9fb629576df27f40befee1038068060ecbcaa1..be51b309bd80afce94bf20adfac7312607b1e4b3 100644
+index 5a9fb62957..1c5df2834b 100644
 --- a/toolkit/components/extensions/child/ext-storage.js
 +++ b/toolkit/components/extensions/child/ext-storage.js
-@@ -24,6 +24,122 @@ async function measureOp(telemetryMetric, extension, fn) {
-   }
- }
+@@ -8,6 +8,8 @@ ChromeUtils.defineESModuleGetters(this, {
+   ExtensionStorage: "resource://gre/modules/ExtensionStorage.sys.mjs",
+   ExtensionStorageIDB: "resource://gre/modules/ExtensionStorageIDB.sys.mjs",
+   ExtensionTelemetry: "resource://gre/modules/ExtensionTelemetry.sys.mjs",
++  FullPageCaptureCompat:
++    "resource://gre/modules/FullPageCaptureCompat.sys.mjs",
+ });
 
-+function applyReynardFullPagePopupLayout(context) {
-+  if (context.extension.id !== "fullpage-capture@mosfor") {
-+    return;
-+  }
-+
-+  const window = context.contentWindow;
-+  const document = window?.document;
-+  if (!document?.body || document.body.dataset.reynardMobileLayout === "true") {
-+    return;
-+  }
-+
-+  const grid = document.getElementById("grid");
-+  const buttons = [
-+    document.getElementById("fullPageBtn"),
-+    document.getElementById("viewportBtn"),
-+    document.getElementById("regionBtn"),
-+    document.getElementById("scrollRegionBtn"),
-+  ];
-+  if (!grid || buttons.some(button => !button)) {
-+    return;
-+  }
-+
-+  const setStyles = (element, styles) => {
-+    for (const [property, value] of Object.entries(styles)) {
-+      element.style.setProperty(property, value, "important");
-+    }
-+  };
-+
-+  document.body.dataset.reynardMobileLayout = "true";
-+  if (!document.querySelector('meta[name="viewport"]')) {
-+    const viewport = document.createElement("meta");
-+    viewport.name = "viewport";
-+    viewport.content = "width=device-width, initial-scale=1, viewport-fit=cover";
-+    document.head?.appendChild(viewport);
-+  }
-+
-+  setStyles(document.documentElement, {
-+    width: "100%",
-+    height: "100%",
-+    "min-width": "0",
-+    "max-width": "none",
-+  });
-+  setStyles(document.body, {
-+    display: "flex",
-+    "flex-direction": "column",
-+    width: "100%",
-+    height: "100%",
-+    "min-width": "0",
-+    "max-width": "none",
-+    "min-height": "100%",
-+    padding: "20px",
-+    overflow: "hidden",
-+  });
-+
-+  const header = document.querySelector(".header");
-+  if (header) {
-+    setStyles(header, {
-+      flex: "none",
-+      width: "100%",
-+      "margin-bottom": "16px",
-+      "padding-right": "42px",
-+    });
-+  }
-+
-+  const outputToggle = document.getElementById("outputToggle");
-+  if (outputToggle) {
-+    setStyles(outputToggle, {
-+      display: "flex",
-+      width: "168px",
-+    });
-+    for (const segment of outputToggle.querySelectorAll("button")) {
-+      setStyles(segment, {
-+        flex: "1 1 0",
-+        width: "0",
-+        "min-width": "0",
-+        "text-align": "center",
-+      });
-+    }
-+  }
-+
-+  setStyles(grid, {
-+    display: "grid",
-+    flex: "1 1 auto",
-+    width: "100%",
-+    "min-height": "0",
-+    "grid-template-columns": "repeat(2, minmax(0, 1fr))",
-+    "grid-template-rows": "repeat(2, minmax(0, 1fr))",
-+    gap: "12px",
-+  });
-+
-+  for (const button of buttons) {
-+    setStyles(button, {
-+      width: "100%",
-+      height: "100%",
-+      "min-width": "0",
-+      "min-height": "0",
-+      "justify-content": "center",
-+      padding: "12px 8px",
-+    });
-+    button.querySelector(".shortcut")?.style.setProperty(
-+      "display",
-+      "none",
-+      "important"
-+    );
-+  }
-+
-+  const status = document.getElementById("status");
-+  if (status) {
-+    setStyles(status, {
-+      flex: "none",
-+      "margin-top": "8px",
-+      "min-height": "16px",
-+    });
-+  }
-+}
-+
- this.storage = class extends ExtensionAPI {
-   getLocalFileBackend(context, { deserialize, serialize }) {
-     return {
-@@ -151,6 +267,7 @@ this.storage = class extends ExtensionAPI {
+ // Wrap a storage operation in a TelemetryStopWatch.
+@@ -151,6 +153,7 @@ this.storage = class extends ExtensionAPI {
 
    getAPI(context) {
      const { extension } = context;
-+    applyReynardFullPagePopupLayout(context);
++    FullPageCaptureCompat.applyPopupLayout(context);
      const serialize = ExtensionStorage.serializeForContext.bind(null, context);
      const deserialize = ExtensionStorage.deserializeForContext.bind(
        null,
