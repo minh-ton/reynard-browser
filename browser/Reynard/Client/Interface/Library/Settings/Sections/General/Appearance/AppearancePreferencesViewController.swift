@@ -585,13 +585,10 @@ private final class BottomToolbarPreviewView: UIView {
             button.removeFromSuperview()
         }
 
-        let slots = BottomToolbarLayoutPolicy.availableSlotCount(width: bounds.width)
-        let directCount = BottomToolbarLayoutPolicy.directActionCount(
-            configuredCount: actions.count,
-            availableSlots: slots
+        let visibleCount = BottomToolbarLayoutPolicy.visibleActionCount(
+            configuredCount: actions.count
         )
-        let visibleActions = Array(actions.prefix(directCount))
-        let hasOverflow = actions.count > directCount
+        let visibleActions = Array(actions.prefix(visibleCount))
         let configuration = UIImage.SymbolConfiguration(
             pointSize: UX.symbolPointSize,
             weight: .regular
@@ -602,24 +599,6 @@ private final class BottomToolbarPreviewView: UIView {
             button.tintColor = .label
             button.setImage(UIImage(named: action.imageName, in: .main, with: configuration), for: .normal)
             button.accessibilityLabel = action.title
-            buttonStack.addArrangedSubview(button)
-        }
-        if hasOverflow {
-            let button = UIButton(type: .system)
-            button.isUserInteractionEnabled = false
-            button.tintColor = .label
-            button.setImage(
-                UIImage(
-                    named: "reynard.ellipsis.circle",
-                    in: .main,
-                    with: configuration
-                ),
-                for: .normal
-            )
-            button.accessibilityLabel = NSLocalizedString(
-                "More",
-                comment: "Toolbar overflow"
-            )
             buttonStack.addArrangedSubview(button)
         }
     }

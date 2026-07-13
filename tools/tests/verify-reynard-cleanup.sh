@@ -89,13 +89,11 @@ if rg -q 'AddressBarZoomDropdown|showsZoomButton|addressBarDidRequestPageZoom|sh
 	exit 1
 fi
 
-if ! rg -q 'BottomToolbarLayoutPolicy\.availableSlotCount' \
+if ! rg -q 'BottomToolbarLayoutPolicy\.visibleActionCount' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift" ||
-	! rg -q 'displayedOverflowActions' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift" ||
-	! rg -q 'UIAlertController' \
+	rg -q 'displayedOverflowActions|overflowButton|overflowTapped' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift"; then
-	echo "The non-scrolling responsive toolbar fallback is incomplete." >&2
+	echo "The static 10-action toolbar implementation is incomplete." >&2
 	exit 1
 fi
 

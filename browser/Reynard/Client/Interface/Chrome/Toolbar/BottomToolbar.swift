@@ -142,19 +142,6 @@ final class BottomToolbar: UIView {
         .tabOverview: tabOverviewButton,
     ]
 
-    private lazy var overflowButton: ToolbarButton = {
-        let button = ToolbarButton(
-            buttonType: .library,
-            target: self,
-            action: #selector(overflowTapped)
-        )
-        button.accessibilityLabel = NSLocalizedString("More", comment: "Toolbar overflow")
-        if #available(iOS 14.0, *) {
-            button.showsMenuAsPrimaryAction = true
-        }
-        return button
-    }()
-    
     private lazy var buttons: UIStackView = {
         let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -174,7 +161,6 @@ final class BottomToolbar: UIView {
     
     private var verticalOffset: CGFloat = 0
     private var displayedActions: [BottomToolbarAction] = []
-    private var displayedOverflowActions: [BottomToolbarAction] = []
     
     // MARK: - Lifecycle
     
@@ -276,7 +262,6 @@ final class BottomToolbar: UIView {
         backButton.isEnabled = canGoBack
         forwardButton.isEnabled = canGoForward
         shareButton.isEnabled = canShare
-        configureOverflowMenu(actions: displayedOverflowActions)
     }
     
     func setVerticalOffset(_ offset: CGFloat) {
@@ -312,31 +297,6 @@ final class BottomToolbar: UIView {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
         onNewTab?()
-    }
-
-    @objc private func overflowTapped() {
-        if #available(iOS 14.0, *) {
-            return
-        }
-        guard !displayedOverflowActions.isEmpty,
-              let presenter = nearestViewController else {
-            return
-        }
-        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        for action in displayedOverflowActions {
-            let alertAction = UIAlertAction(title: action.title, style: .default) { [weak self] _ in
-                self?.perform(action)
-            }
-            alertAction.isEnabled = isActionEnabled(action)
-            alert.addAction(alertAction)
-        }
-        alert.addAction(UIAlertAction(
-            title: NSLocalizedString("Cancel", comment: ""),
-            style: .cancel
-        ))
-        alert.popoverPresentationController?.sourceView = overflowButton
-        alert.popoverPresentationController?.sourceRect = overflowButton.bounds
-        presenter.present(alert, animated: true)
     }
 
     @objc private func newTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
@@ -395,7 +355,6 @@ final class BottomToolbar: UIView {
 
     private func applyConfiguredActions() {
         displayedActions = []
-        displayedOverflowActions = []
         setNeedsLayout()
         applyConfiguredActionsIfNeeded()
     }
@@ -405,15 +364,11 @@ final class BottomToolbar: UIView {
             return
         }
         let configuredActions = Prefs.AppearanceSettings.bottomToolbarActions
-        let slots = BottomToolbarLayoutPolicy.availableSlotCount(width: bounds.width)
-        let directCount = BottomToolbarLayoutPolicy.directActionCount(
-            configuredCount: configuredActions.count,
-            availableSlots: slots
+        let visibleCount = BottomToolbarLayoutPolicy.visibleActionCount(
+            configuredCount: configuredActions.count
         )
-        let directActions = Array(configuredActions.prefix(directCount))
-        let overflowActions = Array(configuredActions.dropFirst(directCount))
-        guard displayedActions != directActions ||
-                displayedOverflowActions != overflowActions else {
+        let visibleActions = Array(configuredActions.prefix(visibleCount))
+        guard displayedActions != visibleActions else {
             return
         }
 
@@ -421,57 +376,13 @@ final class BottomToolbar: UIView {
             buttons.removeArrangedSubview(button)
             button.removeFromSuperview()
         }
-        for action in directActions {
+        for action in visibleActions {
             if let button = actionButtons[action] {
                 button.isHidden = false
                 buttons.addArrangedSubview(button)
             }
         }
-        if !overflowActions.isEmpty {
-            configureOverflowMenu(actions: overflowActions)
-            buttons.addArrangedSubview(overflowButton)
-        }
-        displayedActions = directActions
-        displayedOverflowActions = overflowActions
-    }
-
-    private func configureOverflowMenu(actions: [BottomToolbarAction]) {
-        guard #available(iOS 14.0, *) else {
-            return
-        }
-        overflowButton.menu = UIMenu(children: actions.map { action in
-            UIAction(
-                title: action.title,
-                image: UIImage(named: action.imageName),
-                attributes: isActionEnabled(action) ? [] : .disabled
-            ) { [weak self] _ in
-                self?.perform(action)
-            }
-        })
-    }
-
-    private func perform(_ action: BottomToolbarAction) {
-        guard isActionEnabled(action) else {
-            return
-        }
-        switch action {
-        case .back: backTapped()
-        case .forward: forwardTapped()
-        case .reload: reloadTapped()
-        case .share: shareTapped()
-        case .pageZoom: pageZoomTapped()
-        case .bookmarks: bookmarksTapped()
-        case .history: historyTapped()
-        case .downloads: downloadsTapped()
-        case .settings: settingsTapped()
-        case .newTab: newTabTapped()
-        case .closeTab: closeTabTapped()
-        case .tabOverview: tabOverviewTapped()
-        }
-    }
-
-    private func isActionEnabled(_ action: BottomToolbarAction) -> Bool {
-        return actionButtons[action]?.isEnabled ?? true
+        displayedActions = visibleActions
     }
 
     private func updateShortcutAccessibility() {
