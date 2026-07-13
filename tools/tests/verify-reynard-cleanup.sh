@@ -10,13 +10,19 @@ NEW_TAB_TEST_BINARY="${TMPDIR:-/tmp}/reynard-new-tab-keyboard-policy-tests"
 EXTERNAL_APP_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-policy-tests"
 EXTERNAL_APP_COORDINATOR_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-coordinator-tests"
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
+TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
+IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
+ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
+
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh"
 
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
 node "$SCRIPT_DIR/FullPageCaptureCompatTests.mjs"
+node "$SCRIPT_DIR/verify-localizations.mjs"
 
 sh -n \
 	"$ROOT_DIR/tools/development/apply-patches.sh" \
@@ -53,6 +59,50 @@ if ! rg -q 'QLPreviewControllerDataSource' \
 	! rg -q 'QLPreviewController\.canPreview' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadsViewController.swift"; then
 	echo "The native downloaded-image preview route is incomplete." >&2
+	exit 1
+fi
+
+if rg -q 'UIImage\(contentsOfFile:' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageViewController.swift" ||
+	! rg -q 'CGImageSourceCreateThumbnailAtIndex' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageViewController.swift" ||
+	! rg -q 'maximumPixelCount' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageDecodePolicy.swift"; then
+	echo "Downloaded images are not decoded with bounded ImageIO memory use." >&2
+	exit 1
+fi
+
+if ! rg -q 'AddonPackageStaging\.remove\(stagedURL\)' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+AddressBar.swift" ||
+	! rg -q 'AddonPackageStaging\.remove\(stagedPackageURL\)' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Addons/AddonsPreferencesViewController.swift" ||
+	! rg -q 'AddonPackageStaging\.removeStaleFiles\(\)' \
+	"$ROOT_DIR/browser/Reynard/AppDelegate.swift"; then
+	echo "Temporary add-on packages are not cleaned up on every path." >&2
+	exit 1
+fi
+
+if rg -q 'AddressBarZoomDropdown|showsZoomButton|addressBarDidRequestPageZoom|showPageZoomDropdown' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface"; then
+	echo "Obsolete address-bar zoom controls remain." >&2
+	exit 1
+fi
+
+if ! rg -q 'BottomToolbarLayoutPolicy\.availableSlotCount' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift" ||
+	! rg -q 'displayedOverflowActions' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift" ||
+	! rg -q 'UIAlertController' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift"; then
+	echo "The non-scrolling responsive toolbar fallback is incomplete." >&2
+	exit 1
+fi
+
+if ! rg -q 'addressBar\.setPageMenuIndicatesUpdate\(hasUpdate\)' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/BrowserChrome.swift" ||
+	! rg -q 'pageMenuUpdateBadge' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/AddressBar/AddressBar.swift"; then
+	echo "The browser update indicator is not wired to the page menu." >&2
 	exit 1
 fi
 
@@ -136,6 +186,30 @@ swiftc \
 	-o "$NAVIGATION_HISTORY_TEST_BINARY"
 "$NAVIGATION_HISTORY_TEST_BINARY"
 rm -f "$NAVIGATION_HISTORY_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbarLayoutPolicy.swift" \
+	"$SCRIPT_DIR/BottomToolbarLayoutPolicyTests.swift" \
+	-o "$TOOLBAR_LAYOUT_TEST_BINARY"
+"$TOOLBAR_LAYOUT_TEST_BINARY"
+rm -f "$TOOLBAR_LAYOUT_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageDecodePolicy.swift" \
+	"$SCRIPT_DIR/DownloadImageDecodePolicyTests.swift" \
+	-o "$IMAGE_DECODE_TEST_BINARY"
+"$IMAGE_DECODE_TEST_BINARY"
+rm -f "$IMAGE_DECODE_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Addons/AddonPackageStaging.swift" \
+	"$SCRIPT_DIR/AddonPackageStagingTests.swift" \
+	-o "$ADDON_STAGING_TEST_BINARY"
+"$ADDON_STAGING_TEST_BINARY"
+rm -f "$ADDON_STAGING_TEST_BINARY"
 
 if ! rg -q 'universalLinksOnly' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift" ||
