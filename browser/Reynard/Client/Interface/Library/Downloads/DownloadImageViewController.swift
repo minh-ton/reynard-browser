@@ -3,6 +3,7 @@
 //  Reynard
 //
 
+import ImageIO
 import UIKit
 
 final class DownloadImageViewController: UIViewController, UIScrollViewDelegate {
@@ -22,6 +23,7 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
     private var appliedInitialZoom = false
     private var previousViewportSize = CGSize.zero
     private var isApplyingHorizontalLock = false
+    private var loadGeneration: UInt = 0
 
     init(fileURL: URL, fileName: String) {
         self.fileURL = fileURL
@@ -45,6 +47,23 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
         guard scrollView.bounds.size != previousViewportSize else { return }
         previousViewportSize = scrollView.bounds.size
         updateZoomScales(preservingPosition: appliedInitialZoom)
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        if isBeingDismissed || isMovingFromParent {
+            releaseDecodedImage()
+        }
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        releaseDecodedImage()
+        errorLabel.text = NSLocalizedString(
+            "The image was unloaded to free memory.",
+            comment: ""
+        )
+        errorLabel.isHidden = false
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -127,11 +146,13 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
     }
 
     private func loadImage() {
+        loadGeneration &+= 1
+        let generation = loadGeneration
         let fileURL = self.fileURL
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let image = UIImage(contentsOfFile: fileURL.path)
+            let image = Self.decodeDisplayImage(at: fileURL)
             DispatchQueue.main.async {
-                guard let self else { return }
+                guard let self, self.loadGeneration == generation else { return }
                 self.loadingIndicator.stopAnimating()
                 guard let image, image.size.width > 0, image.size.height > 0 else {
                     self.errorLabel.isHidden = false
@@ -146,6 +167,48 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
                 self.updateZoomScales(preservingPosition: false)
             }
         }
+    }
+
+    private static func decodeDisplayImage(at fileURL: URL) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, sourceOptions),
+              let properties = CGImageSourceCopyPropertiesAtIndex(
+                source,
+                0,
+                sourceOptions
+              ) as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
+              let bounded = DownloadImageDecodePolicy.boundedDimensions(
+                width: width,
+                height: height
+              ) else {
+            return nil
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(bounded.width, bounded.height),
+        ] as CFDictionary
+        guard let image = CGImageSourceCreateThumbnailAtIndex(
+            source,
+            0,
+            thumbnailOptions
+        ) else {
+            return nil
+        }
+        return UIImage(cgImage: image, scale: 1, orientation: .up)
+    }
+
+    private func releaseDecodedImage() {
+        loadGeneration &+= 1
+        imageView.image = nil
+        image = nil
+        scrollView.zoomScale = 1
+        scrollView.contentSize = .zero
+        appliedInitialZoom = false
     }
 
     private func updateZoomScales(preservingPosition: Bool) {
