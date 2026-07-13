@@ -58,6 +58,16 @@ struct ExternalAppLinkPolicyTests {
             triggerUri: "https://www.reddit.com/",
             hasUserGesture: true
         ) == .reject(.internalScheme))
+        precondition(ExternalAppLinkPolicy.decision(
+            uri: "tel:+15555550123",
+            triggerUri: "https://www.reddit.com/",
+            hasUserGesture: true
+        ) == .reject(.unsupportedExternalScheme))
+        precondition(ExternalAppLinkPolicy.decision(
+            uri: "sms:+15555550123",
+            triggerUri: "https://www.reddit.com/",
+            hasUserGesture: true
+        ) == .reject(.unsupportedExternalScheme))
 
         print("ExternalAppLinkPolicyTests passed")
     }

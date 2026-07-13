@@ -1,103 +1,3 @@
-diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-index 8a22300f29..609cc88e5e 100644
---- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-+++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-@@ -12,6 +12,51 @@ ChromeUtils.defineESModuleGetters(lazy, {
-
- // Implements nsILoadURIDelegate.
- export class LoadURIDelegateChild extends GeckoViewActorChild {
-+  handleEvent(aEvent) {
-+    if (
-+      aEvent.type !== "click" ||
-+      !aEvent.isTrusted ||
-+      aEvent.defaultPrevented ||
-+      aEvent.button !== 0 ||
-+      aEvent.altKey ||
-+      aEvent.ctrlKey ||
-+      aEvent.metaKey ||
-+      aEvent.shiftKey
-+    ) {
-+      return;
-+    }
-+
-+    const link = aEvent
-+      .composedPath()
-+      .find(node => node?.localName === "a" && typeof node.href === "string");
-+    if (!link) {
-+      return;
-+    }
-+    if (
-+      link.hasAttribute("download") ||
-+      (link.target && link.target.toLowerCase() !== "_self")
-+    ) {
-+      return;
-+    }
-+
-+    let uri;
-+    try {
-+      uri = Services.io.newURI(link.href);
-+    } catch (e) {
-+      return;
-+    }
-+    if (uri.scheme !== "http" && uri.scheme !== "https") {
-+      return;
-+    }
-+
-+    this.sendAsyncMessage("Reynard:OnTrustedLinkClick", {
-+      requestId: Services.uuid.generateUUID().toString(),
-+      uri: uri.displaySpec,
-+      triggerUri:
-+        this.contentWindow.document.documentURIObject?.displaySpec ?? null,
-+    });
-+  }
-+
-   // nsILoadURIDelegate.
-   handleLoadError(aUri, aError, aErrorModule) {
-     debug`handleLoadError: uri=${aUri && aUri.spec}
-diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-index 2039c79e1d..ea167f7eed 100644
---- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-+++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-@@ -13,6 +13,25 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
-           data
-         );
-       }
-+      case "Reynard:OnTrustedLinkClick": {
-+        try {
-+          await this.eventDispatcher.sendRequestForResult(
-+            "Reynard:OnExternalAppLinkRequest",
-+            {
-+              requestId: data.requestId,
-+              uri: data.uri,
-+              triggerUri: data.triggerUri,
-+              where: 1,
-+              flags: 0,
-+              isTopLevel: true,
-+              hasUserGesture: true,
-+            }
-+          );
-+        } catch (e) {
-+          // The page click remains untouched when the app delegate is absent.
-+        }
-+        return undefined;
-+      }
-       default: {
-         return super.receiveMessage({ name, data });
-       }
-diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-index 2c65a07020..def9fd0450 100644
---- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-+++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-@@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
-     },
-     child: {
-       esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
-+      events: {
-+        click: { capture: true, mozSystemGroup: true },
-+      },
-     },
-     messageManagerGroups: ["browsers"],
-   },
 diff --git a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
 index de5223c2c3..7cb137387b 100644
 --- a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
@@ -162,7 +62,7 @@ index ffefed3b8d..6eb45b4073 100644
    // GetFileTokenForPath must be implemented by each platform.
    // platformAppPath --> a platform specific path to an application that we got
 diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.mm b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
-index 552dd81e84..85132e0242 100644
+index 552dd81e84..672d4c1eab 100644
 --- a/uriloader/exthandler/uikit/nsOSHelperAppService.mm
 +++ b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
 @@ -3,6 +3,27 @@
@@ -177,7 +77,7 @@ index 552dd81e84..85132e0242 100644
 +
 +bool ReynardOpenLinksInAppsEnabled() {
 +  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-+  NSString* key = @"default.BrowsingSettings.openLinksInApps";
++  NSString* key = @"Reynard.Browsing.openLinksInApps";
 +  id storedValue = [defaults objectForKey:key];
 +  return storedValue ? [defaults boolForKey:key] : true;
 +}

@@ -62,15 +62,6 @@ final class ExternalAppLinkCoordinator {
         return result
     }
 
-    func cancelRequests(for session: AnyObject) {
-        let sessionID = ObjectIdentifier(session)
-        let keys = inFlight.keys.filter { $0.sessionID == sessionID }
-        for key in keys {
-            inFlight.removeValue(forKey: key)?.cancel()
-        }
-        completed = completed.filter { $0.key.sessionID != sessionID }
-    }
-
     private func discardExpiredResults() {
         let now = uptime()
         completed = completed.filter {

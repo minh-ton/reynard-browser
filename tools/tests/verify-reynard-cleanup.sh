@@ -62,8 +62,12 @@ if ! rg -q 'Reynard-TextInputDebug\.log' \
 	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
 	! rg -q 'ReynardTextInputDiagnosticsEnabled' \
 	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'setPendingKeyboardEditSelection:NSMakeRange\(deleteRange\.location, 0\)' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
+	! rg -q 'mPendingKeyboardEditSourceSelection' \
+		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
+	! rg -q 'sourceSelection:sourceSelection' \
+		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
+	! rg -q 'invalidatePendingKeyboardEditSelection' \
+		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
 	! rg -q 'handler->SetSelectedRange\(pendingSelection\)' \
 	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
 	! rg -q 'clearPendingKeyboardEditSelection' \
@@ -161,17 +165,21 @@ if ! rg -q 'OSProtocolHandlerExists' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
 	! rg -q 'LoadUriInternal' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'default\.BrowsingSettings\.openLinksInApps' \
-	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
+	! rg -q 'Reynard\.Browsing\.openLinksInApps' \
+		"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
 	! rg -q 'ReynardSupportsExternalScheme' \
-	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'Reynard:OnExternalAppLinkRequest' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
 	! rg -q 'com\.reddit\.frontpage' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
 	! rg -q 'if \(dispatcher\)' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
 	echo "The native UIKit external-protocol bridge is incomplete." >&2
+	exit 1
+fi
+
+if rg -q 'OnTrustedLinkClick|default\.BrowsingSettings\.openLinksInApps' \
+	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
+	echo "A duplicate or profile-specific external app-link path remains." >&2
 	exit 1
 fi
 

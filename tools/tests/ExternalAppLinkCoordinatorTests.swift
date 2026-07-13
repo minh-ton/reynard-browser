@@ -39,7 +39,6 @@ struct ExternalAppLinkCoordinatorTests {
         precondition(!otherSessionResult)
         precondition(openCount == 2)
 
-        coordinator.cancelRequests(for: session)
         print("ExternalAppLinkCoordinatorTests passed")
     }
 }

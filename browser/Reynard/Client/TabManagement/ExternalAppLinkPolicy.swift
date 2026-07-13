@@ -21,6 +21,7 @@ enum ExternalAppLinkRejection: Equatable {
     case invalidSource
     case invalidDestination
     case internalScheme
+    case unsupportedExternalScheme
 }
 
 enum ExternalAppLinkDecision: Equatable {
@@ -40,6 +41,7 @@ enum ExternalAppLinkPolicy {
         "resource",
         "view-source",
     ]
+    private static let allowedExternalSchemes: Set<String> = ["reddit"]
 
     static func route(
         uri: String,
@@ -92,6 +94,9 @@ enum ExternalAppLinkPolicy {
 
         guard !internalSchemes.contains(scheme) else {
             return .reject(.internalScheme)
+        }
+        guard allowedExternalSchemes.contains(scheme) else {
+            return .reject(.unsupportedExternalScheme)
         }
         return .route(ExternalAppLinkRoute(url: url, kind: .externalScheme))
     }

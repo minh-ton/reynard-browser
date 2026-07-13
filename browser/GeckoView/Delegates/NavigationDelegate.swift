@@ -61,7 +61,6 @@ enum NavigationEvents: String, CaseIterable {
     case onNewSession = "GeckoView:OnNewSession"
     case onLoadError = "GeckoView:OnLoadError"
     case onLoadRequest = "GeckoView:OnLoadRequest"
-    case onExternalAppLinkRequest = "Reynard:OnExternalAppLinkRequest"
 }
 
 // MARK: - Navigation Handler
@@ -124,7 +123,7 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
         case .onLoadError:
             return nil
             
-        case .onLoadRequest, .onExternalAppLinkRequest:
+        case .onLoadRequest:
             guard let uri = message?["uri"] as? String else {
                 return true
             }

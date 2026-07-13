@@ -12,6 +12,7 @@ typealias Prefs = BrowserPreferences
 
 final class BrowserPreferences {
     static var shared = BrowserPreferences()
+    static let openLinksInAppsBridgeKey = "Reynard.Browsing.openLinksInApps"
     
     let profile: String
     
@@ -23,6 +24,10 @@ final class BrowserPreferences {
     // Possible future work
     static func useProfile(_ name: String) {
         shared = BrowserPreferences(profile: name)
+        UserDefaults.standard.set(
+            BrowsingSettings.openLinksInApps,
+            forKey: openLinksInAppsBridgeKey
+        )
     }
     
     func key(_ setting: String, _ name: String) -> String {
@@ -118,6 +123,12 @@ final class BrowserPreferences {
             key("ClearBrowsingData", "clearsSitePermissions"): true,
             key("ClearBrowsingData", "clearsOpenedTabs"): true,
         ])
+        UserDefaults.standard.set(
+            UserDefaults.standard.bool(
+                forKey: key("BrowsingSettings", "openLinksInApps")
+            ),
+            forKey: Self.openLinksInAppsBridgeKey
+        )
     }
     
     func bool(forSetting setting: String, key name: String) -> Bool {
@@ -280,6 +291,10 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "openLinksInApps")
+                UserDefaults.standard.set(
+                    newValue,
+                    forKey: BrowserPreferences.openLinksInAppsBridgeKey
+                )
             }
         }
     }
