@@ -92,7 +92,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         let metaData = addon.metaData
         if metaData.isBlocklisted {
             return StatusMessage(
-                text: NSLocalizedString("This add-on was blocked for violating Mozilla’s policies and has been disabled.", comment: ""),
+                text: NSLocalizedString("This add-on was blocked for violating Mozilla’s policies and has been disabled.", tableName: "AddonLocalizable", comment: ""),
                 color: .systemRed
             )
         }
@@ -107,7 +107,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isUnsigned {
             let addonName = metaData.name ?? addon.id
             return StatusMessage(
-                text: String(format: NSLocalizedString("%@ couldn’t be verified and has been disabled.", comment: "Add-on name"), addonName),
+                text: String(format: NSLocalizedString("%@ couldn’t be verified and has been disabled.", tableName: "AddonLocalizable", comment: "Add-on name"), addonName),
                 color: .systemRed
             )
         }
@@ -115,7 +115,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isIncompatible {
             let addonName = metaData.name ?? addon.id
             return StatusMessage(
-                text: String(format: NSLocalizedString("%@ isn’t compatible with this version of Reynard.", comment: "Add-on name"), addonName),
+                text: String(format: NSLocalizedString("%@ isn’t compatible with this version of Reynard.", tableName: "AddonLocalizable", comment: "Add-on name"), addonName),
                 color: .systemOrange
             )
         }
@@ -123,8 +123,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         if metaData.isSoftBlocked {
             return StatusMessage(
                 text: metaData.enabled
-                ? NSLocalizedString("This add-on is restricted. Using it may be risky.", comment: "")
-                : NSLocalizedString("This add-on is restricted and has been disabled. You can enable it, but this may be risky.", comment: ""),
+                ? NSLocalizedString("This add-on is restricted. Using it may be risky.", tableName: "AddonLocalizable", comment: "")
+                : NSLocalizedString("This add-on is restricted and has been disabled. You can enable it, but this may be risky.", tableName: "AddonLocalizable", comment: ""),
                 color: .systemOrange
             )
         }

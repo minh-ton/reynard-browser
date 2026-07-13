@@ -92,7 +92,7 @@ public struct AddonErrorPresenter {
         if cancelledByUser || normalizedCode == "ERROR_USER_CANCELED" || normalizedCode == "ERROR_ABORTED" {
             return AddonErrorPresentation(
                 statusText: nil,
-                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "This add-on couldn’t be updated.",
+                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : updateFailedMessage(),
                 isUserCancelled: true
             )
         }
@@ -101,49 +101,49 @@ public struct AddonErrorPresenter {
         case "ERROR_BLOCKLISTED":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Blocked", comment: ""),
-                alertMessage: "\(resolvedAddonName) violates Mozilla’s policies and can’t be installed on Reynard.",
+                alertMessage: String(format: NSLocalizedString("%@ violates Mozilla’s policies and can’t be installed on Reynard.", tableName: "AddonLocalizable", comment: "Add-on name"), resolvedAddonName),
                 isUserCancelled: false
             )
         case "ERROR_SOFT_BLOCKED":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Restricted", comment: ""),
-                alertMessage: "\(resolvedAddonName) is restricted and can’t be installed on Reynard.",
+                alertMessage: String(format: NSLocalizedString("%@ is restricted and can’t be installed on Reynard.", tableName: "AddonLocalizable", comment: "Add-on name"), resolvedAddonName),
                 isUserCancelled: false
             )
         case "ERROR_NETWORK_FAILURE":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Network Error", comment: ""),
-                alertMessage: "This add-on couldn’t be downloaded because of a connection failure.",
+                alertMessage: NSLocalizedString("This add-on couldn’t be downloaded because of a connection failure.", tableName: "AddonLocalizable", comment: ""),
                 isUserCancelled: false
             )
         case "ERROR_CORRUPT_FILE":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Corrupt File", comment: ""),
-                alertMessage: "This add-on couldn’t be installed because it appears to be corrupt.",
+                alertMessage: NSLocalizedString("This add-on couldn’t be installed because it appears to be corrupt.", tableName: "AddonLocalizable", comment: ""),
                 isUserCancelled: false
             )
         case "ERROR_SIGNEDSTATE_REQUIRED":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Not Verified", comment: ""),
-                alertMessage: "This add-on couldn’t be installed because it hasn’t been verified.",
+                alertMessage: NSLocalizedString("This add-on couldn’t be installed because it hasn’t been verified.", tableName: "AddonLocalizable", comment: ""),
                 isUserCancelled: false
             )
         case "ERROR_INCOMPATIBLE":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Incompatible", comment: ""),
-                alertMessage: "\(resolvedAddonName) couldn’t be installed because it isn’t compatible with this version of Reynard.",
+                alertMessage: String(format: NSLocalizedString("%@ couldn’t be installed because it isn’t compatible with this version of Reynard.", tableName: "AddonLocalizable", comment: "Add-on name"), resolvedAddonName),
                 isUserCancelled: false
             )
         case "ERROR_ADMIN_INSTALL_ONLY":
             return AddonErrorPresentation(
                 statusText: NSLocalizedString("Admin Only", comment: ""),
-                alertMessage: "\(resolvedAddonName) couldn’t be installed because it can only be installed by an organization using enterprise policies, which isn’t supported on this platform.",
+                alertMessage: String(format: NSLocalizedString("%@ couldn’t be installed because it can only be installed by an organization using enterprise policies, which isn’t supported on this platform.", tableName: "AddonLocalizable", comment: "Add-on name"), resolvedAddonName),
                 isUserCancelled: false
             )
         default:
             return AddonErrorPresentation(
                 statusText: isInstallation ? NSLocalizedString("Error", comment: "") : NSLocalizedString("Update Failed", comment: ""),
-                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : "This add-on couldn’t be updated.",
+                alertMessage: isInstallation ? defaultInstallMessage(for: trimmedAddonName) : updateFailedMessage(),
                 isUserCancelled: false
             )
         }
@@ -154,6 +154,10 @@ public struct AddonErrorPresenter {
             return String(format: NSLocalizedString("Couldn’t install %@.", comment: "Add-on name"), addonName)
         }
         return NSLocalizedString("Couldn’t install this add-on.", comment: "")
+    }
+    
+    private static func updateFailedMessage() -> String {
+        return NSLocalizedString("This add-on couldn’t be updated.", comment: "")
     }
     
     private static func normalizeCode(_ code: String?) -> String? {

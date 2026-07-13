@@ -56,17 +56,6 @@
         }
       }
     },
-    "%@ couldn’t be verified and has been disabled." : {
-      "comment" : "Add-on name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ couldn’t be verified and has been disabled."
-          }
-        }
-      }
-    },
     "%@ has been updated. Approve the additional permissions before the updated version is installed. Dismissing this prompt keeps your current add-on version." : {
       "comment" : "Add-on name",
       "localizations" : {
@@ -85,17 +74,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ is disabled for Reynard. Open Settings to allow access."
-          }
-        }
-      }
-    },
-    "%@ isn’t compatible with this version of Reynard." : {
-      "comment" : "Add-on name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ isn’t compatible with this version of Reynard."
           }
         }
       }
@@ -737,6 +715,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allow in Private Browsing"
+          }
+        }
+      }
+    },
+    "Allow on All Websites" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow on All Websites"
+          }
+        }
+      }
+    },
+    "Allow this add-on to access every website." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow this add-on to access every website."
           }
         }
       }
@@ -2089,6 +2087,28 @@
         }
       }
     },
+    "New required data collection: The developer says this add-on will collect %@." : {
+      "comment" : "Data collection list",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New required data collection: The developer says this add-on will collect %@."
+          }
+        }
+      }
+    },
+    "New required permissions: %@" : {
+      "comment" : "Permission list",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New required permissions: %@"
+          }
+        }
+      }
+    },
     "New Tab" : {
       "localizations" : {
         "en" : {
@@ -3119,28 +3139,6 @@
         }
       }
     },
-    "tab" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tab"
-          }
-        }
-      }
-    },
-    "tabs" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tabs"
-          }
-        }
-      }
-    },
     "Tabs" : {
       "localizations" : {
         "en" : {
@@ -3212,22 +3210,22 @@
         }
       }
     },
-    "This add-on is restricted and has been disabled. You can enable it, but this may be risky." : {
+    "This add-on couldn’t be updated." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This add-on is restricted and has been disabled. You can enable it, but this may be risky."
+            "value" : "This add-on couldn’t be updated."
           }
         }
       }
     },
-    "This add-on is restricted. Using it may be risky." : {
+    "This add-on doesn’t require any permissions." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This add-on is restricted. Using it may be risky."
+            "value" : "This add-on doesn’t require any permissions."
           }
         }
       }
@@ -3238,16 +3236,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This add-on isn’t supported by this version of Reynard and has been disabled."
-          }
-        }
-      }
-    },
-    "This add-on was blocked for violating Mozilla’s policies and has been disabled." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This add-on was blocked for violating Mozilla’s policies and has been disabled."
           }
         }
       }
