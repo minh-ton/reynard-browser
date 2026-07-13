@@ -52,6 +52,18 @@ await FullPageCaptureCompat.install(
   {}
 );
 assert.ok(injectedCode.includes("maximumPixels"));
+assert.ok(injectedCode.includes('"capture":"Capture"'));
+
+await FullPageCaptureCompat.install(
+  {
+    async executeScript(_context, details) {
+      injectedCode = details.code;
+    },
+  },
+  {},
+  { capture: "Take Screenshot" }
+);
+assert.ok(injectedCode.includes('"capture":"Take Screenshot"'));
 
 function createFixture({ failAtTile = 0, youtube = false } = {}) {
   const scrolls = [];

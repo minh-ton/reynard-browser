@@ -1,9 +1,9 @@
 diff --git a/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs b/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs
 new file mode 100644
-index 0000000000..195dc13ae7
+index 0000000000..92d088b15a
 --- /dev/null
 +++ b/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs
-@@ -0,0 +1,1288 @@
+@@ -0,0 +1,1301 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -21,6 +21,7 @@ index 0000000000..195dc13ae7
 +const NATIVE_MESSAGES = Object.freeze({
 +  beginRegionSelection: "GeckoView:WebExtension:BeginRegionSelection",
 +  clipboardImage: "GeckoView:WebExtension:ClipboardImage",
++  localizedStrings: "GeckoView:WebExtension:FullPageCaptureStrings",
 +});
 +const STAGED_FILES = Object.freeze({
 +  beginRegionSelection: "reynard-begin-region-selection.bin",
@@ -77,6 +78,13 @@ index 0000000000..195dc13ae7
 +
 +const captureGeometrySource = `(${calculateCaptureGeometry.toString()})`;
 +const captureLimitsSource = JSON.stringify(CAPTURE_LIMITS);
++const DEFAULT_STRINGS = Object.freeze({
++  cancel: "Cancel",
++  capture: "Capture",
++  dragRegion: "Drag to select an area",
++  extendRegion: "Drag a region, then extend with the blue handle",
++  redraw: "Redraw",
++});
 +
 +function assertSupported(extension) {
 +  if (extension.id !== EXTENSION_ID) {
@@ -206,11 +214,16 @@ index 0000000000..195dc13ae7
 +  }
 +}
 +
-+async function install(tab, context) {
++async function install(tab, context, localizedStrings = {}) {
++  const localizedStringsSource = JSON.stringify({
++    ...DEFAULT_STRINGS,
++    ...localizedStrings,
++  });
 +  await tab.executeScript(context, {
 +    code: `(() => {
 +      const fpc = window.FullPageCapture;
 +      if (!fpc) return;
++      const reynardStrings = ${localizedStringsSource};
 +      fpc._reynardCaptureCompatibility = true;
 +      const originalOutputResult = fpc.outputResult.bind(fpc);
 +      fpc.outputResult = async function outputResult(image, output) {
@@ -287,7 +300,7 @@ index 0000000000..195dc13ae7
 +            font: "14px system-ui, sans-serif",
 +            whiteSpace: "nowrap",
 +          });
-+          hint.textContent = "Drag to select an area";
++          hint.textContent = reynardStrings.dragRegion;
 +
 +          const cancel = document.createElement("button");
 +          Object.assign(cancel.style, {
@@ -304,7 +317,7 @@ index 0000000000..195dc13ae7
 +            font: "600 15px system-ui, sans-serif",
 +            touchAction: "manipulation",
 +          });
-+          cancel.textContent = "Cancel";
++          cancel.textContent = reynardStrings.cancel;
 +
 +          const toolbar = document.createElement("div");
 +          Object.assign(toolbar.style, {
@@ -343,9 +356,9 @@ index 0000000000..195dc13ae7
 +            return button;
 +          }
 +
-+          const captureButton = makeEditorButton("Capture", "#2675D8");
-+          const redrawButton = makeEditorButton("Redraw", "#555");
-+          const editorCancelButton = makeEditorButton("Cancel", "#555");
++          const captureButton = makeEditorButton(reynardStrings.capture, "#2675D8");
++          const redrawButton = makeEditorButton(reynardStrings.redraw, "#555");
++          const editorCancelButton = makeEditorButton(reynardStrings.cancel, "#555");
 +          const sizeLabel = document.createElement("span");
 +          Object.assign(sizeLabel.style, {
 +            color: "#ddd",
@@ -713,9 +726,9 @@ index 0000000000..195dc13ae7
 +            return button;
 +          }
 +
-+          const captureButton = makeButton("Capture", "#2675D8");
-+          const redrawButton = makeButton("Redraw", "#555");
-+          const cancelButton = makeButton("Cancel", "#555");
++          const captureButton = makeButton(reynardStrings.capture, "#2675D8");
++          const redrawButton = makeButton(reynardStrings.redraw, "#555");
++          const cancelButton = makeButton(reynardStrings.cancel, "#555");
 +          const sizeLabel = document.createElement("span");
 +          Object.assign(sizeLabel.style, {
 +            color: "#ddd",
@@ -742,7 +755,7 @@ index 0000000000..195dc13ae7
 +            whiteSpace: "nowrap",
 +            pointerEvents: "none",
 +          });
-+          hint.textContent = "Drag a region, then extend with the blue handle";
++          hint.textContent = reynardStrings.extendRegion;
 +
 +          container.appendChild(overlay);
 +          container.appendChild(box);
@@ -1293,7 +1306,7 @@ index 0000000000..195dc13ae7
 +  install,
 +});
 diff --git a/mobile/shared/components/extensions/ext-tabs.js b/mobile/shared/components/extensions/ext-tabs.js
-index 56a9a4eec5..4e17137054 100644
+index 56a9a4eec5..acd6115b6d 100644
 --- a/mobile/shared/components/extensions/ext-tabs.js
 +++ b/mobile/shared/components/extensions/ext-tabs.js
 @@ -5,6 +5,8 @@
@@ -1374,7 +1387,7 @@ index 56a9a4eec5..4e17137054 100644
          },
 
          async detectLanguage(tabId) {
-@@ -555,8 +606,14 @@ this.tabs = class extends ExtensionAPIPersistent {
+@@ -555,8 +606,21 @@ this.tabs = class extends ExtensionAPIPersistent {
 
          async executeScript(tabId, details) {
            const tab = await promiseTabWhenReady(tabId);
@@ -1385,7 +1398,14 @@ index 56a9a4eec5..4e17137054 100644
 +            usesFullPageCaptureCompatibility &&
 +            details.file?.endsWith("/content/capture.js")
 +          ) {
-+            await FullPageCaptureCompat.install(tab, context);
++            let localizedStrings = {};
++            try {
++              localizedStrings = await EventDispatcher.instance.sendRequestForResult(
++                FullPageCaptureCompat.NATIVE_MESSAGES.localizedStrings,
++                { extensionId: extension.id }
++              );
++            } catch (_) {}
++            await FullPageCaptureCompat.install(tab, context, localizedStrings);
 +          }
 +          return result;
          },

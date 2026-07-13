@@ -17,6 +17,7 @@ enum AddonRuntimeEvent: String, CaseIterable {
     case download = "GeckoView:WebExtension:Download"
     case clipboardImage = "GeckoView:WebExtension:ClipboardImage"
     case beginRegionSelection = "GeckoView:WebExtension:BeginRegionSelection"
+    case fullPageCaptureStrings = "GeckoView:WebExtension:FullPageCaptureStrings"
     case installPrompt = "GeckoView:WebExtension:InstallPrompt"
     case optionalPrompt = "GeckoView:WebExtension:OptionalPrompt"
     case updatePrompt = "GeckoView:WebExtension:UpdatePrompt"

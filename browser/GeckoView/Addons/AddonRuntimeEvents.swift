@@ -176,6 +176,20 @@ extension AddonRuntime {
             return try handleClipboardImage(message: message)
         case .beginRegionSelection:
             return try handleBeginRegionSelection(message: message)
+        case .fullPageCaptureStrings:
+            guard message?["extensionId"] as? String == "fullpage-capture@mosfor" else {
+                throw GeckoHandlerError("Capture strings are not available for this extension")
+            }
+            return [
+                "cancel": NSLocalizedString("Cancel", comment: ""),
+                "capture": NSLocalizedString("Capture", comment: ""),
+                "dragRegion": NSLocalizedString("Drag to select an area", comment: ""),
+                "extendRegion": NSLocalizedString(
+                    "Drag a region, then extend with the blue handle",
+                    comment: ""
+                ),
+                "redraw": NSLocalizedString("Redraw", comment: ""),
+            ]
         case .installPrompt:
             return try await installPromptResponse(message: message)
         case .optionalPrompt:
