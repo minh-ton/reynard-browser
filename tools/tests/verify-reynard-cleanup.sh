@@ -17,13 +17,15 @@ node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
 
 sh -n \
+	"$ROOT_DIR/tools/development/apply-patches.sh" \
+	"$ROOT_DIR/tools/development/build-gecko.sh" \
 	"$ROOT_DIR/tools/firefox/apply-reynard-patches.sh" \
+	"$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" \
+	"$ROOT_DIR/tools/firefox/prepare-firefox.sh" \
 	"$ROOT_DIR/tools/release/build-app.sh" \
 	"$ROOT_DIR/tools/release/create-ipa.sh"
 
-for patch in "$ROOT_DIR"/patches/firefox/*.patch; do
-	git -C "$FIREFOX_DIR" apply --cached --check "$patch"
-done
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
 
 if rg -q 'Reynard-(Addon|Download)Debug-\$\{' \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
@@ -176,5 +178,22 @@ if ! rg -q 'scheduleAutomaticKeyboardFocusForNewTab' \
 	exit 1
 fi
 
+DIFF_BASE="${REYNARD_DIFF_BASE:-}"
+if [ -z "$DIFF_BASE" ]; then
+	for candidate in upstream/main origin/main main; do
+		if git -C "$ROOT_DIR" rev-parse -q --verify "$candidate^{commit}" >/dev/null; then
+			DIFF_BASE="$(git -C "$ROOT_DIR" merge-base HEAD "$candidate")"
+			break
+		fi
+	done
+fi
+
+if [ -z "$DIFF_BASE" ]; then
+	echo "Unable to determine the base revision for committed diff verification." >&2
+	echo "Set REYNARD_DIFF_BASE to the pull request base revision." >&2
+	exit 1
+fi
+
+git -C "$ROOT_DIR" diff --check "$DIFF_BASE...HEAD"
 git -C "$ROOT_DIR" diff --check
 echo "Reynard cleanup verification passed"

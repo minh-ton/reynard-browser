@@ -1,0 +1,28 @@
+name: Reynard Verification
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  focused-regressions:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout complete source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install verification tools
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Prepare Firefox source
+        run: ./tools/firefox/prepare-firefox.sh
+
+      - name: Run focused regression verification
+        env:
+          REYNARD_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: ./tools/tests/verify-reynard-cleanup.sh
