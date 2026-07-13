@@ -27,6 +27,8 @@ if [ ! -d "$FIREFOX_DIR" ]; then
 	exit 1
 fi
 
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh"
+
 rm -f "$FIREFOX_DIR/.mozconfig"
 
 {
@@ -45,3 +47,6 @@ fi
 
 cd "$FIREFOX_DIR"
 ./mach build
+
+GECKO_DIST="$FIREFOX_DIR/obj-aarch64-apple-ios/dist"
+"$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" write "$GECKO_DIST"

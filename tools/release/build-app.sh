@@ -18,8 +18,10 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 PROJECT_PATH="$ROOT_DIR/browser/Reynard.xcodeproj"
 XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
+GECKO_DIST="$ROOT_DIR/engine/firefox/obj-aarch64-apple-ios/dist"
 
-"$ROOT_DIR/tools/firefox/apply-reynard-patches.sh"
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
+"$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" check "$GECKO_DIST"
 
 XCODE_VERSION="$(xcodebuild -version | sed -n '1s/^Xcode //p')"
 SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
@@ -39,6 +41,8 @@ sed -i '' "s/CURRENT_BUILD = .*/CURRENT_BUILD = $BUILD_SHA/" "$DIST_DIR/Reynard.
 	echo "iphoneos_sdk_version=$SDK_VERSION"
 	echo "reynard_revision=$(git -C "$ROOT_DIR" rev-parse HEAD)"
 	echo "firefox_revision=$FIREFOX_SHA"
+	echo "gecko_source_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-source-manifest.txt" | awk '{print $1}')"
+	echo "gecko_artifact_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-gecko-artifact-manifest.txt" | awk '{print $1}')"
 	for patch in "$ROOT_DIR"/patches/firefox/*.patch; do
 		shasum -a 256 "$patch"
 	done

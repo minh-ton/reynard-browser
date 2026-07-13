@@ -133,12 +133,16 @@ git clone --recursive https://github.com/minh-ton/reynard-browser
 cd reynard-browser
 ```
 
-Download Gecko and apply patches.
+Download Gecko and apply the complete ordered patch series.
 
 ```bash
 ./tools/development/update-gecko.sh
 ./tools/development/apply-patches.sh
 ```
+
+The patch command is idempotent and verifies both the upstream UIKit patches
+and Reynard's incremental Firefox patches. It rejects partial or unrelated
+Firefox source changes.
 
 Build dependencies and the Gecko engine.
 

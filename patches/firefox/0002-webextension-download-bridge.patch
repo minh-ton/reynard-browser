@@ -152,7 +152,7 @@ index 62f446ef4d21f5060577dd35ee9bde51219918a5..1630fe1a15ff06998062a0b80d0dd776
 
              if (pathComponents.some(component => component == "..")) {
                return Promise.reject({
-@@ -237,15 +340,55 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -237,14 +340,54 @@ this.downloads = class extends ExtensionAPIPersistent {
              }
            }
 
@@ -207,4 +207,3 @@ index 62f446ef4d21f5060577dd35ee9bde51219918a5..1630fe1a15ff06998062a0b80d0dd776
 +              throw error;
              });
          },
- 
