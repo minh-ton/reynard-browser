@@ -17,6 +17,20 @@ struct ExternalAppLinkPolicyTests {
         )
         precondition(redditScheme?.kind == .externalScheme)
 
+        let googleMapsScheme = ExternalAppLinkPolicy.route(
+            uri: "comgooglemaps://?q=Total%20Wine",
+            triggerUri: "https://www.google.com/maps/",
+            hasUserGesture: true
+        )
+        precondition(googleMapsScheme?.kind == .externalScheme)
+
+        let googleMapsURLScheme = ExternalAppLinkPolicy.route(
+            uri: "comgooglemapsurl://google/link?deep_link_id=example",
+            triggerUri: "https://www.google.com/maps/",
+            hasUserGesture: true
+        )
+        precondition(googleMapsURLScheme?.kind == .externalScheme)
+
         precondition(ExternalAppLinkPolicy.route(
             uri: "https://www.reddit.com/r/firefox/",
             triggerUri: nil,
@@ -25,6 +39,11 @@ struct ExternalAppLinkPolicyTests {
         precondition(ExternalAppLinkPolicy.route(
             uri: "reddit://r/firefox/",
             triggerUri: "https://www.reddit.com/",
+            hasUserGesture: false
+        ) == nil)
+        precondition(ExternalAppLinkPolicy.route(
+            uri: "comgooglemapsurl://google/link?deep_link_id=example",
+            triggerUri: "https://www.google.com/maps/",
             hasUserGesture: false
         ) == nil)
         precondition(ExternalAppLinkPolicy.route(

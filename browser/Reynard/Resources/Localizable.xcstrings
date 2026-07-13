@@ -2328,6 +2328,16 @@
         }
       }
     },
+    "Motion & Orientation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion & Orientation"
+          }
+        }
+      }
+    },
     "More About This Add-on" : {
       "localizations" : {
         "en" : {

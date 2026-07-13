@@ -1,8 +1,86 @@
+diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+index 8a22300f29..cc7bd1cd5b 100644
+--- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+@@ -12,6 +12,44 @@ ChromeUtils.defineESModuleGetters(lazy, {
+
+ // Implements nsILoadURIDelegate.
+ export class LoadURIDelegateChild extends GeckoViewActorChild {
++  handleEvent(event) {
++    if (
++      event.type !== "click" ||
++      !event.isTrusted ||
++      event.button !== 0 ||
++      event.altKey ||
++      event.ctrlKey ||
++      event.metaKey ||
++      event.shiftKey ||
++      this.contentWindow.top !== this.contentWindow ||
++      !this.contentWindow.document.hasValidTransientUserGestureActivation
++    ) {
++      return;
++    }
++
++    const link = event
++      .composedPath()
++      .find(node => node?.localName === "a" || node?.localName === "area");
++    if (!link?.href) {
++      return;
++    }
++
++    let destination;
++    try {
++      destination = Services.io.newURI(link.href);
++    } catch (e) {
++      return;
++    }
++    if (destination.scheme !== "http" && destination.scheme !== "https") {
++      return;
++    }
++
++    this.sendAsyncMessage("GeckoView:LinkActivated", {
++      uri: destination.displaySpec,
++      triggerUri: this.contentWindow.document.documentURI,
++    });
++  }
++
+   // nsILoadURIDelegate.
+   handleLoadError(aUri, aError, aErrorModule) {
+     debug`handleLoadError: uri=${aUri && aUri.spec}
+diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+index 2039c79e1d..9d3e7bb540 100644
+--- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+@@ -13,6 +13,10 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
+           data
+         );
+       }
++      case "GeckoView:LinkActivated": {
++        this.eventDispatcher.sendRequest("GeckoView:LinkActivated", data);
++        return null;
++      }
+       default: {
+         return super.receiveMessage({ name, data });
+       }
+diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+index 2c65a07020..def9fd0450 100644
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
+     },
+     child: {
+       esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
++      events: {
++        click: { capture: true, mozSystemGroup: true },
++      },
+     },
+     messageManagerGroups: ["browsers"],
+   },
 diff --git a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
-index de5223c2c3..7cb137387b 100644
+index de5223c2c3..3bb158776e 100644
 --- a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
 +++ b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
-@@ -4,11 +4,38 @@
+@@ -4,11 +4,39 @@
 
  #include "nsMIMEInfoUIKit.h"
 
@@ -30,7 +108,8 @@ index de5223c2c3..7cb137387b 100644
 +  nsAutoCString scheme;
 +  rv = aURI->GetScheme(scheme);
 +  NS_ENSURE_SUCCESS(rv, rv);
-+  if (!enabled || !url || !ReynardSupportsExternalScheme(scheme.get())) {
++  if (!enabled || !url || scheme.EqualsLiteral("intent") ||
++      !ReynardSupportsExternalScheme(scheme.get())) {
 +    return NS_ERROR_NOT_AVAILABLE;
 +  }
 +
@@ -62,10 +141,10 @@ index ffefed3b8d..6eb45b4073 100644
    // GetFileTokenForPath must be implemented by each platform.
    // platformAppPath --> a platform specific path to an application that we got
 diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.mm b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
-index 552dd81e84..672d4c1eab 100644
+index 552dd81e84..f5dd87f673 100644
 --- a/uriloader/exthandler/uikit/nsOSHelperAppService.mm
 +++ b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
-@@ -3,6 +3,27 @@
+@@ -3,6 +3,108 @@
   * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
  #include "nsOSHelperAppService.h"
@@ -74,6 +153,84 @@ index 552dd81e84..672d4c1eab 100644
 +#include "nsIURI.h"
 +
 +#import <UIKit/UIKit.h>
++
++namespace {
++
++NSURL* GoogleMapsURLFromAndroidIntent(NSString* aValue) {
++  if (![aValue hasPrefix:@"intent://"]) {
++    return nil;
++  }
++
++  NSUInteger terminatorLength = 0;
++  if ([aValue hasSuffix:@";end;"]) {
++    terminatorLength = @";end;".length;
++  } else if ([aValue hasSuffix:@";end"]) {
++    terminatorLength = @";end".length;
++  } else {
++    return nil;
++  }
++
++  NSRange marker = [aValue rangeOfString:@"#Intent;"
++                                 options:NSBackwardsSearch];
++  if (marker.location == NSNotFound || marker.location <= @"intent://".length) {
++    return nil;
++  }
++
++  NSUInteger metadataStart = NSMaxRange(marker);
++  NSUInteger metadataLength = aValue.length - metadataStart - terminatorLength;
++  NSString* metadata = [aValue substringWithRange:
++                                  NSMakeRange(metadataStart, metadataLength)];
++  NSMutableDictionary<NSString*, NSString*>* parameters =
++      [NSMutableDictionary dictionary];
++  for (NSString* component in [metadata componentsSeparatedByString:@";"]) {
++    NSRange separator = [component rangeOfString:@"="];
++    if (separator.location == NSNotFound || separator.location == 0) {
++      continue;
++    }
++    parameters[[component substringToIndex:separator.location]] =
++        [component substringFromIndex:NSMaxRange(separator)];
++  }
++
++  if (![parameters[@"package"]
++          isEqualToString:@"com.google.android.apps.maps"]) {
++    return nil;
++  }
++
++  NSString* webScheme = [parameters[@"scheme"] lowercaseString] ?: @"https";
++  if (![webScheme isEqualToString:@"http"] &&
++      ![webScheme isEqualToString:@"https"]) {
++    return nil;
++  }
++
++  NSString* destination = [aValue
++      substringWithRange:NSMakeRange(@"intent://".length,
++                                     marker.location - @"intent://".length)];
++  NSURL* webURL = [NSURL URLWithString:
++                             [NSString stringWithFormat:@"%@://%@", webScheme,
++                                                        destination]];
++  NSString* host = webURL.host.lowercaseString;
++  NSString* path = webURL.path.lowercaseString;
++  const BOOL isMapsPage =
++      ([host isEqualToString:@"google.com"] ||
++       [host hasSuffix:@".google.com"]) &&
++      ([path isEqualToString:@"/maps"] || [path hasPrefix:@"/maps/"]);
++  const BOOL isMapsShortLink = [host isEqualToString:@"maps.app.goo.gl"];
++  if (!webURL || (!isMapsPage && !isMapsShortLink)) {
++    return nil;
++  }
++
++  NSURLComponents* components = [[NSURLComponents alloc] init];
++  components.scheme = @"comgooglemapsurl";
++  components.host = @"google";
++  components.path = @"/link";
++  components.queryItems = @[
++    [NSURLQueryItem queryItemWithName:@"deep_link_id"
++                                value:webURL.absoluteString]
++  ];
++  return components.URL;
++}
++
++}  // namespace
 +
 +bool ReynardOpenLinksInAppsEnabled() {
 +  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
@@ -87,13 +244,16 @@ index 552dd81e84..672d4c1eab 100644
 +    return false;
 +  }
 +  NSString* scheme = [[NSString stringWithUTF8String:aScheme] lowercaseString];
-+  return [scheme isEqualToString:@"market"] ||
++  return [scheme isEqualToString:@"comgooglemaps"] ||
++         [scheme isEqualToString:@"comgooglemapsurl"] ||
++         [scheme isEqualToString:@"intent"] ||
++         [scheme isEqualToString:@"market"] ||
 +         [scheme isEqualToString:@"reddit"];
 +}
 
  nsOSHelperAppService::nsOSHelperAppService() : nsExternalHelperAppService() {}
 
-@@ -10,7 +31,8 @@ nsOSHelperAppService::~nsOSHelperAppService() {}
+@@ -10,7 +112,8 @@ nsOSHelperAppService::~nsOSHelperAppService() {}
 
  nsresult nsOSHelperAppService::OSProtocolHandlerExists(
      const char* aProtocolScheme, bool* aHandlerExists) {
@@ -103,7 +263,7 @@ index 552dd81e84..672d4c1eab 100644
    return NS_OK;
  }
 
-@@ -51,7 +73,107 @@ NS_IMETHODIMP
+@@ -51,7 +154,116 @@ NS_IMETHODIMP
  nsOSHelperAppService::GetProtocolHandlerInfoFromOS(const nsACString& aScheme,
                                                     bool* found,
                                                     nsIHandlerInfo** _retval) {
@@ -171,6 +331,15 @@ index 552dd81e84..672d4c1eab 100644
 +  if (!ReynardSupportsExternalScheme(scheme.get())) {
 +    return NS_ERROR_NOT_AVAILABLE;
 +  }
++
++  if (scheme.EqualsLiteral("intent")) {
++    NSURL* googleMapsURL = GoogleMapsURLFromAndroidIntent(requestedValue);
++    if (!googleMapsURL) {
++      return NS_ERROR_NOT_AVAILABLE;
++    }
++    launchValue = googleMapsURL.absoluteString;
++  }
++
 +  const BOOL isRedditMarketFallback =
 +      scheme.EqualsLiteral("market") &&
 +      spec.Find("com.reddit.frontpage") != kNotFound;
@@ -229,77 +398,3 @@ index 62fd7646da..5309e19e84 100644
      }
    } else {
      return nsBaseAppShell::Observe(aSubject, aTopic, aData);
-diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
---- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-+++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-@@ -13,5 +13,43 @@ ChromeUtils.defineESModuleGetters(lazy, {
- // Implements nsILoadURIDelegate.
- export class LoadURIDelegateChild extends GeckoViewActorChild {
-+  handleEvent(event) {
-+    if (
-+      event.type !== "click" ||
-+      !event.isTrusted ||
-+      event.button !== 0 ||
-+      event.altKey ||
-+      event.ctrlKey ||
-+      event.metaKey ||
-+      event.shiftKey ||
-+      this.contentWindow.top !== this.contentWindow ||
-+      !this.contentWindow.document.hasValidTransientUserGestureActivation
-+    ) {
-+      return;
-+    }
-+
-+    const link = event
-+      .composedPath()
-+      .find(node => node?.localName === "a" || node?.localName === "area");
-+    if (!link?.href) {
-+      return;
-+    }
-+
-+    let destination;
-+    try {
-+      destination = Services.io.newURI(link.href);
-+    } catch (e) {
-+      return;
-+    }
-+    if (destination.scheme !== "http" && destination.scheme !== "https") {
-+      return;
-+    }
-+
-+    this.sendAsyncMessage("GeckoView:LinkActivated", {
-+      uri: destination.displaySpec,
-+      triggerUri: this.contentWindow.document.documentURI,
-+    });
-+  }
-+
-   // nsILoadURIDelegate.
-   handleLoadError(aUri, aError, aErrorModule) {
-     debug`handleLoadError: uri=${aUri && aUri.spec}
-diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
---- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-+++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-@@ -13,6 +13,10 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
-           data
-         );
-       }
-+      case "GeckoView:LinkActivated": {
-+        this.eventDispatcher.sendRequest("GeckoView:LinkActivated", data);
-+        return null;
-+      }
-       default: {
-         return super.receiveMessage({ name, data });
-       }
-diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
---- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-+++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-@@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
-     },
-     child: {
-       esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
-+      events: {
-+        click: { capture: true, mozSystemGroup: true },
-+      },
-     },
-     messageManagerGroups: ["browsers"],
-   },

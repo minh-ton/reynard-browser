@@ -41,7 +41,11 @@ enum ExternalAppLinkPolicy {
         "resource",
         "view-source",
     ]
-    private static let allowedExternalSchemes: Set<String> = ["reddit"]
+    private static let allowedExternalSchemes: Set<String> = [
+        "comgooglemaps",
+        "comgooglemapsurl",
+        "reddit",
+    ]
 
     static func route(
         uri: String,

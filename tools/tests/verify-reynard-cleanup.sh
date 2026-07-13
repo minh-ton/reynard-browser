@@ -105,23 +105,20 @@ if ! rg -q 'addressBar\.setPageMenuIndicatesUpdate\(hasUpdate\)' \
 	exit 1
 fi
 
-if ! rg -q 'Reynard-TextInputDebug\.log' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'isSecureTextEntry' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'ReynardTextInputDiagnosticsEnabled' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'mPendingKeyboardEditSourceSelection' \
-		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'sourceSelection:sourceSelection' \
-		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
-	! rg -q 'invalidatePendingKeyboardEditSelection' \
-		"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
+AUTOCORRECTION_PATCH="$ROOT_DIR/patches/firefox/0004-uikit-autocorrection-state.patch"
+if ! rg -q 'kPendingKeyboardEditLifetime' \
+		"$AUTOCORRECTION_PATCH" ||
+	! rg -q 'pendingKeyboardEditSelection:&pendingSelection' \
+		"$AUTOCORRECTION_PATCH" ||
+	! rg -q 'setPendingKeyboardEditSelection:NSMakeRange' \
+		"$AUTOCORRECTION_PATCH" ||
 	! rg -q 'handler->SetSelectedRange\(pendingSelection\)' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch" ||
+	"$AUTOCORRECTION_PATCH" ||
 	! rg -q 'clearPendingKeyboardEditSelection' \
-	"$ROOT_DIR/patches/firefox/0004-uikit-text-input-diagnostics.patch"; then
-	echo "The bounded, secure-field-safe website text input diagnostics are incomplete." >&2
+		"$AUTOCORRECTION_PATCH" ||
+	rg -q 'ReynardTextInput|mPendingKeyboardEditSourceSelection|invalidatePendingKeyboardEditSelection' \
+		"$AUTOCORRECTION_PATCH"; then
+	echo "The focused UIKit autocorrection state fix is incomplete." >&2
 	exit 1
 fi
 
@@ -134,9 +131,16 @@ fi
 EXTERNAL_LINK_PATCH="$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"
 if ! rg -q '!event\.isTrusted' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'hasValidTransientUserGestureActivation' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'isEqualToString:@"comgooglemaps"' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'isEqualToString:@"comgooglemapsurl"' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'GoogleMapsURLFromAndroidIntent' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'com\.google\.android\.apps\.maps' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'scheme\.EqualsLiteral\("intent"\)' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'this\.contentWindow\.top !== this\.contentWindow' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'destination\.scheme !== "http"' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'GeckoView:LinkActivated' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q '"comgooglemapsurl"' \
+		"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkPolicy.swift" ||
 	rg -q 'event\.defaultPrevented' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'func onLinkActivated' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift"; then

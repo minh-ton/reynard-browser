@@ -1,0 +1,126 @@
+diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
+index 71fce485b9..7ab5f18382 100644
+--- a/widget/uikit/GeckoEditableSupport.h
++++ b/widget/uikit/GeckoEditableSupport.h
+@@ -66,6 +66,8 @@ struct GeckoEditableState {
+   GeckoSelectionHandle mActiveSelectionHandle;
+   NSUInteger mSelectionHandleAnchorOffset;
+   NSRange mShadowSelectedRange;
++  NSRange mPendingKeyboardEditSelection;
++  CFTimeInterval mPendingKeyboardEditTimestamp;
+   CGRect mShadowActiveHandleRect;
+   NSUInteger mShadowActiveHandleOffset;
+   NSUInteger mLineBoundaryStart;
+diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
+index c09753c091..0b17f77d95 100644
+--- a/widget/uikit/GeckoEditableSupport.mm
++++ b/widget/uikit/GeckoEditableSupport.mm
+@@ -29,6 +29,7 @@ namespace {
+
+ constexpr CGFloat kHandleHitRadius = 44.0;
+ constexpr CGFloat kFallbackCharWidth = 8.0;
++constexpr CFTimeInterval kPendingKeyboardEditLifetime = 0.5;
+
+ struct EndpointRects {
+   CGRect startRect;
+@@ -410,6 +411,10 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+                            lineEnd:(NSUInteger)aLineEnd
+                            handler:(widget::TextInputHandler*)aHandler;
+ - (NSRange)deleteBackwardRangeWithHandler:(widget::TextInputHandler*)aHandler;
++- (BOOL)pendingKeyboardEditSelection:(NSRange*)aSelection
++                             handler:(widget::TextInputHandler*)aHandler;
++- (void)setPendingKeyboardEditSelection:(NSRange)aSelection;
++- (void)clearPendingKeyboardEditSelection;
+ - (void)updateTextInteractions;
+ - (void)scheduleResponderBlur;
+ - (void)cancelResponderBlur;
+@@ -505,6 +510,7 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+   // The other Vietnamese fields are meaningful only while this buffer exists.
+   mEditable.mVietnameseBufferText = nil;
+   mEditable.mKoreanComposedText = nil;
++  [self clearPendingKeyboardEditSelection];
+   [self resetHandleState];
+
+   mEditable.mEditableTextInteraction = [[UITextInteraction
+@@ -534,6 +540,7 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+   // Drop any temporary Vietnamese mirror before releasing UIKit interactions.
+   [self clearVietnameseBuffer];
+   [self clearKoreanCompositionState];
++  [self clearPendingKeyboardEditSelection];
+
+   [self teardownModernTextInput];
+   [self resetHandleState];
+@@ -1118,10 +1125,49 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+   return bestOffset;
+ }
+
++// Keeps rapid keyboard replacement commands coherent while Gecko's DOM
++// selection is still catching up to the preceding command.
++- (BOOL)pendingKeyboardEditSelection:(NSRange*)aSelection
++                             handler:(widget::TextInputHandler*)aHandler {
++  if (!aSelection || !aHandler ||
++      mEditable.mPendingKeyboardEditSelection.location == NSNotFound) {
++    return NO;
++  }
++
++  if (CFAbsoluteTimeGetCurrent() - mEditable.mPendingKeyboardEditTimestamp >
++      kPendingKeyboardEditLifetime) {
++    [self clearPendingKeyboardEditSelection];
++    return NO;
++  }
++
++  NSRange liveSelection = NSMakeRange(NSNotFound, 0);
++  if (aHandler->SelectedRange(liveSelection) &&
++      NSEqualRanges(liveSelection, mEditable.mPendingKeyboardEditSelection)) {
++    [self clearPendingKeyboardEditSelection];
++    return NO;
++  }
++
++  *aSelection = mEditable.mPendingKeyboardEditSelection;
++  return YES;
++}
++
++- (void)setPendingKeyboardEditSelection:(NSRange)aSelection {
++  mEditable.mPendingKeyboardEditSelection = aSelection;
++  mEditable.mPendingKeyboardEditTimestamp = CFAbsoluteTimeGetCurrent();
++}
++
++- (void)clearPendingKeyboardEditSelection {
++  mEditable.mPendingKeyboardEditSelection = NSMakeRange(NSNotFound, 0);
++  mEditable.mPendingKeyboardEditTimestamp = 0;
++}
++
+ // Returns the Gecko document range that a normal deleteBackward should remove.
+ - (NSRange)deleteBackwardRangeWithHandler:(widget::TextInputHandler*)aHandler {
+   NSRange selection = NSMakeRange(NSNotFound, 0);
+-  if (!aHandler || !aHandler->SelectedRange(selection) ||
++  BOOL hasPendingSelection =
++      [self pendingKeyboardEditSelection:&selection handler:aHandler];
++  if (!aHandler ||
++      (!hasPendingSelection && !aHandler->SelectedRange(selection)) ||
+       selection.location == NSNotFound) {
+     return NSMakeRange(NSNotFound, 0);
+   }
+@@ -2457,6 +2503,11 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+   BOOL hasBuffer = [self ensureVietnameseBufferWithHandler:handler];
+   mEditable.mCaretMenuActive = NO;
+   if (!hasBuffer) {
++    NSRange pendingSelection = NSMakeRange(NSNotFound, 0);
++    if ([self pendingKeyboardEditSelection:&pendingSelection handler:handler]) {
++      handler->SetSelectedRange(pendingSelection);
++      [self clearPendingKeyboardEditSelection];
++    }
+     [mEditable.mTextInputDelegate textWillChange:self];
+     [mEditable.mTextInputDelegate selectionWillChange:self];
+     if (![self isKoreanInputMode] || ![self handleKoreanInsertText:aText
+@@ -2513,7 +2564,9 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+
+     [mEditable.mTextInputDelegate textWillChange:self];
+     [mEditable.mTextInputDelegate selectionWillChange:self];
+-    handler->ReplaceRange(deleteRange, @"");
++    if (handler->ReplaceRange(deleteRange, @"")) {
++      [self setPendingKeyboardEditSelection:NSMakeRange(deleteRange.location, 0)];
++    }
+     [mEditable.mTextInputDelegate textDidChange:self];
+     [mEditable.mTextInputDelegate selectionDidChange:self];
+     [self scheduleEditSelectionUpdate];
