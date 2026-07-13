@@ -131,6 +131,25 @@ if ! rg -q 'export WASM_CC WASM_CXX' \
 	exit 1
 fi
 
+EXTERNAL_LINK_PATCH="$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"
+if ! rg -q '!event\.isTrusted' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'hasValidTransientUserGestureActivation' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'this\.contentWindow\.top !== this\.contentWindow' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'destination\.scheme !== "http"' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'GeckoView:LinkActivated' "$EXTERNAL_LINK_PATCH" ||
+	rg -q 'event\.defaultPrevented' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'func onLinkActivated' \
+	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift"; then
+	echo "The trusted web-link activation bridge is incomplete." >&2
+	exit 1
+fi
+
+if rg -q 'ExternalAppLinkDiagnostics|NavigationEventDiagnostics|ReynardExternalLinks\.log|ReynardNavigationEvents\.log' \
+	"$ROOT_DIR/browser/GeckoView" "$ROOT_DIR/browser/Reynard"; then
+	echo "Temporary external-link diagnostics remain in the application." >&2
+	exit 1
+fi
+
 if "$ROOT_DIR/tools/release/create-ipa.sh" --invalid >/dev/null 2>&1; then
 	echo "create-ipa.sh accepted an unsupported packaging mode." >&2
 	exit 1

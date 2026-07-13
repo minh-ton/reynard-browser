@@ -229,3 +229,77 @@ index 62fd7646da..5309e19e84 100644
      }
    } else {
      return nsBaseAppShell::Observe(aSubject, aTopic, aData);
+diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+--- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
+@@ -13,5 +13,43 @@ ChromeUtils.defineESModuleGetters(lazy, {
+ // Implements nsILoadURIDelegate.
+ export class LoadURIDelegateChild extends GeckoViewActorChild {
++  handleEvent(event) {
++    if (
++      event.type !== "click" ||
++      !event.isTrusted ||
++      event.button !== 0 ||
++      event.altKey ||
++      event.ctrlKey ||
++      event.metaKey ||
++      event.shiftKey ||
++      this.contentWindow.top !== this.contentWindow ||
++      !this.contentWindow.document.hasValidTransientUserGestureActivation
++    ) {
++      return;
++    }
++
++    const link = event
++      .composedPath()
++      .find(node => node?.localName === "a" || node?.localName === "area");
++    if (!link?.href) {
++      return;
++    }
++
++    let destination;
++    try {
++      destination = Services.io.newURI(link.href);
++    } catch (e) {
++      return;
++    }
++    if (destination.scheme !== "http" && destination.scheme !== "https") {
++      return;
++    }
++
++    this.sendAsyncMessage("GeckoView:LinkActivated", {
++      uri: destination.displaySpec,
++      triggerUri: this.contentWindow.document.documentURI,
++    });
++  }
++
+   // nsILoadURIDelegate.
+   handleLoadError(aUri, aError, aErrorModule) {
+     debug`handleLoadError: uri=${aUri && aUri.spec}
+diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+--- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
++++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
+@@ -13,6 +13,10 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
+           data
+         );
+       }
++      case "GeckoView:LinkActivated": {
++        this.eventDispatcher.sendRequest("GeckoView:LinkActivated", data);
++        return null;
++      }
+       default: {
+         return super.receiveMessage({ name, data });
+       }
+diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
+     },
+     child: {
+       esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
++      events: {
++        click: { capture: true, mozSystemGroup: true },
++      },
+     },
+     messageManagerGroups: ["browsers"],
+   },

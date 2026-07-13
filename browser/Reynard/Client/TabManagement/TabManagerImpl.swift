@@ -1127,6 +1127,28 @@ extension TabManagerImplementation: NavigationDelegate {
         return .allow
     }
 
+    func onLinkActivated(session: GeckoSession, uri: String, triggerUri: String) {
+        guard Prefs.BrowsingSettings.openLinksInApps,
+              let route = ExternalAppLinkPolicy.route(
+                uri: uri,
+                triggerUri: triggerUri,
+                hasUserGesture: true
+              ) else {
+            return
+        }
+        Task { @MainActor [weak self, weak session] in
+            guard let self, let session else {
+                return
+            }
+            _ = await externalAppLinkCoordinator.open(route, for: session) { [weak self] route in
+                guard let self else {
+                    return false
+                }
+                return await self.openExternalApplication(route)
+            }
+        }
+    }
+
     private func openExternalApplication(_ route: ExternalAppLinkRoute) async -> Bool {
         let options: [UIApplication.OpenExternalURLOptionsKey: Any]
         switch route.kind {

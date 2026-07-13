@@ -37,6 +37,7 @@ public protocol NavigationDelegate {
     func onCanGoForward(session: GeckoSession, canGoForward: Bool)
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny
     func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny
+    func onLinkActivated(session: GeckoSession, uri: String, triggerUri: String)
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession?
 }
 
@@ -51,6 +52,7 @@ extension NavigationDelegate {
     public func onCanGoForward(session: GeckoSession, canGoForward: Bool) {}
     public func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny { .allow }
     public func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny { .allow }
+    public func onLinkActivated(session: GeckoSession, uri: String, triggerUri: String) {}
     public func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? { nil }
 }
 
@@ -61,6 +63,7 @@ enum NavigationEvents: String, CaseIterable {
     case onNewSession = "GeckoView:OnNewSession"
     case onLoadError = "GeckoView:OnLoadError"
     case onLoadRequest = "GeckoView:OnLoadRequest"
+    case linkActivated = "GeckoView:LinkActivated"
 }
 
 // MARK: - Navigation Handler
@@ -122,7 +125,19 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             
         case .onLoadError:
             return nil
-            
+
+        case .linkActivated:
+            guard let uri = message?["uri"] as? String,
+                  let triggerUri = message?["triggerUri"] as? String else {
+                return nil
+            }
+            delegate?.onLinkActivated(
+                session: session,
+                uri: uri,
+                triggerUri: triggerUri
+            )
+            return nil
+
         case .onLoadRequest:
             guard let uri = message?["uri"] as? String else {
                 return true
