@@ -38,6 +38,7 @@ final class SystemMediaSession: MediaSessionDelegate {
     
     init() {
         registerRemoteCommands()
+        apply(MediaSessionFeatures())
     }
     
     deinit {
@@ -124,6 +125,7 @@ final class SystemMediaSession: MediaSessionDelegate {
         
         if activeSession === session {
             nowPlayingCenter.nowPlayingInfo = state.nowPlayingInfo
+            apply(state.features)
         }
     }
     
@@ -204,10 +206,20 @@ final class SystemMediaSession: MediaSessionDelegate {
     }
     
     private func apply(_ features: MediaSessionFeatures) {
+        let hasActivePlayback = activeSession.flatMap { session in
+            sessionStates[ObjectIdentifier(session)]?.playbackState
+        }.map { $0 != .none } ?? false
+        
+        commandCenter.playCommand.isEnabled = hasActivePlayback || features.contains(.play)
+        commandCenter.pauseCommand.isEnabled = hasActivePlayback || features.contains(.pause)
+        commandCenter.stopCommand.isEnabled = features.contains(.stop)
+        commandCenter.togglePlayPauseCommand.isEnabled = hasActivePlayback || features.contains(.play) || features.contains(.pause)
         commandCenter.nextTrackCommand.isEnabled = features.contains(.nextTrack)
         commandCenter.previousTrackCommand.isEnabled = features.contains(.prevTrack)
         commandCenter.skipForwardCommand.isEnabled = features.contains(.seekForward)
         commandCenter.skipBackwardCommand.isEnabled = features.contains(.seekBackward)
+        commandCenter.seekForwardCommand.isEnabled = features.contains(.seekForward)
+        commandCenter.seekBackwardCommand.isEnabled = features.contains(.seekBackward)
         commandCenter.changePlaybackPositionCommand.isEnabled = features.contains(.seekTo)
     }
     
@@ -226,6 +238,23 @@ final class SystemMediaSession: MediaSessionDelegate {
         targets.append(commandCenter.stopCommand.addTarget { [weak self] _ in
             guard let session = self?.activeSession else { return .commandFailed }
             session.mediaSession.stop()
+            return .success
+        })
+        targets.append(commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self,
+                  let session = activeSession,
+                  let state = sessionStates[ObjectIdentifier(session)] else {
+                return .commandFailed
+            }
+            
+            switch state.playbackState {
+            case .playing:
+                session.mediaSession.pause()
+            case .paused:
+                session.mediaSession.play()
+            case .none:
+                return .commandFailed
+            }
             return .success
         })
         targets.append(commandCenter.nextTrackCommand.addTarget { [weak self] _ in
@@ -248,6 +277,28 @@ final class SystemMediaSession: MediaSessionDelegate {
             session.mediaSession.seekBackward()
             return .success
         })
+        targets.append(commandCenter.seekForwardCommand.addTarget { [weak self] event in
+            guard let seekEvent = event as? MPSeekCommandEvent else {
+                return .commandFailed
+            }
+            guard seekEvent.type == .beginSeeking else {
+                return .success
+            }
+            guard let session = self?.activeSession else { return .commandFailed }
+            session.mediaSession.seekForward()
+            return .success
+        })
+        targets.append(commandCenter.seekBackwardCommand.addTarget { [weak self] event in
+            guard let seekEvent = event as? MPSeekCommandEvent else {
+                return .commandFailed
+            }
+            guard seekEvent.type == .beginSeeking else {
+                return .success
+            }
+            guard let session = self?.activeSession else { return .commandFailed }
+            session.mediaSession.seekBackward()
+            return .success
+        })
         targets.append(commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
@@ -264,13 +315,17 @@ final class SystemMediaSession: MediaSessionDelegate {
             commandCenter.playCommand,
             commandCenter.pauseCommand,
             commandCenter.stopCommand,
+            commandCenter.togglePlayPauseCommand,
             commandCenter.nextTrackCommand,
             commandCenter.previousTrackCommand,
             commandCenter.skipForwardCommand,
             commandCenter.skipBackwardCommand,
+            commandCenter.seekForwardCommand,
+            commandCenter.seekBackwardCommand,
             commandCenter.changePlaybackPositionCommand,
         ]
         zip(commands, commandTargets).forEach { command, target in
+            command.isEnabled = false
             command.removeTarget(target)
         }
         commandTargets.removeAll()

@@ -94,11 +94,17 @@ public class MediaSession {
     }
     
     public func seekForward() {
-        session?.dispatcher.dispatch(type: "GeckoView:MediaSession:SeekForward")
+        session?.dispatcher.dispatch(
+            type: "GeckoView:MediaSession:SeekForward",
+            message: ["offset": 0.0]
+        )
     }
     
     public func seekBackward() {
-        session?.dispatcher.dispatch(type: "GeckoView:MediaSession:SeekBackward")
+        session?.dispatcher.dispatch(
+            type: "GeckoView:MediaSession:SeekBackward",
+            message: ["offset": 0.0]
+        )
     }
     
     public func seekTo(time: Double, fast: Bool = false) {
