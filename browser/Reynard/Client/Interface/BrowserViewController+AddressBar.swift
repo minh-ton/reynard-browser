@@ -83,6 +83,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                 },
                 onInstallFromFile: { packageURL in
                     let stagedURL = try AddonsPreferencesViewController.stageAddonPackage(from: packageURL)
+                    defer { AddonPackageStaging.remove(stagedURL) }
                     _ = try await AddonRuntime.shared.install(url: stagedURL.absoluteString)
                     _ = try await AddonRuntime.shared.list()
                 },

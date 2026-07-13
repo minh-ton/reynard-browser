@@ -486,6 +486,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             
             do {
                 let stagedPackageURL = try Self.stageAddonPackage(from: packageURL)
+                defer { AddonPackageStaging.remove(stagedPackageURL) }
                 _ = try await AddonRuntime.shared.install(url: stagedPackageURL.absoluteString)
                 await self.loadRuntimeAddons()
                 
@@ -511,27 +512,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }
     
     static func stageAddonPackage(from packageURL: URL) throws -> URL {
-        let fileManager = FileManager.default
-        let stagingDirectoryURL = fileManager.temporaryDirectory.appendingPathComponent("Addons", isDirectory: true)
-        try fileManager.createDirectory(at: stagingDirectoryURL, withIntermediateDirectories: true)
-        
-        let destinationURL = stagingDirectoryURL
-            .appendingPathComponent(UUID().uuidString, isDirectory: false)
-            .appendingPathExtension("xpi")
-        
-        let hasSecurityScopedAccess = packageURL.startAccessingSecurityScopedResource()
-        defer {
-            if hasSecurityScopedAccess {
-                packageURL.stopAccessingSecurityScopedResource()
-            }
-        }
-        
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-        
-        try fileManager.copyItem(at: packageURL, to: destinationURL)
-        return destinationURL
+        return try AddonPackageStaging.stage(packageURL: packageURL)
     }
     
     // MARK: - Icons
