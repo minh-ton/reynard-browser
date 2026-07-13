@@ -12,10 +12,14 @@ import UIKit
 typealias NavigationPreviewImage = UIImage
 #else
 final class NavigationPreviewImage {
-    init?(data: Data) {}
+    private let data: Data
+
+    init?(data: Data) {
+        self.data = data
+    }
 
     func jpegData(compressionQuality: Double) -> Data? {
-        return nil
+        return data
     }
 }
 #endif

@@ -44,6 +44,27 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         (window?.rootViewController as? BrowserViewController)?
             .sessionManager.setApplicationForeground(false)
+        flushNavigationHistoryInBackground()
+    }
+
+    private func flushNavigationHistoryInBackground() {
+        let application = UIApplication.shared
+        var taskIdentifier = UIBackgroundTaskIdentifier.invalid
+        taskIdentifier = application.beginBackgroundTask(withName: "NavigationHistory") {
+            if taskIdentifier != .invalid {
+                application.endBackgroundTask(taskIdentifier)
+                taskIdentifier = .invalid
+            }
+        }
+        DispatchQueue.global(qos: .utility).async {
+            NavigationHistoryStore.shared.flushPendingWrites()
+            DispatchQueue.main.async {
+                if taskIdentifier != .invalid {
+                    application.endBackgroundTask(taskIdentifier)
+                    taskIdentifier = .invalid
+                }
+            }
+        }
     }
     
     private func handleIncomingURLContexts(_ urlContexts: Set<UIOpenURLContext>) {

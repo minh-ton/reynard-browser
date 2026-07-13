@@ -151,6 +151,13 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func applyNavigationState(to tab: Tab) {
+        if tab.isPrivate {
+            tab.state.navigationState = NavigationAvailability(
+                canGoBack: tab.state.sessionNavigationAvailability.canGoBack,
+                canGoForward: tab.state.sessionNavigationAvailability.canGoForward
+            )
+            return
+        }
         tab.state.navigationState = sessionManager.navigationAvailability(
             for: tab.id,
             sessionState: tab.state.sessionNavigationAvailability
@@ -158,6 +165,10 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func recordNavigation(_ url: String, for tab: Tab) {
+        if tab.isPrivate {
+            applyNavigationState(to: tab)
+            return
+        }
         tab.state.navigationState = sessionManager.recordNavigation(
             to: url,
             for: tab.id,
@@ -731,11 +742,20 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func goBack() {
-        guard let tab = selectedTab,
-              let transition = sessionManager.goBack(
-                for: tab.id,
-                sessionState: tab.state.sessionNavigationAvailability
-              ) else {
+        guard let tab = selectedTab else {
+            return
+        }
+        if tab.isPrivate {
+            guard tab.state.sessionNavigationAvailability.canGoBack else {
+                return
+            }
+            tab.session.goBack()
+            return
+        }
+        guard let transition = sessionManager.goBack(
+            for: tab.id,
+            sessionState: tab.state.sessionNavigationAvailability
+        ) else {
             return
         }
         
@@ -750,11 +770,20 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func goForward() {
-        guard let tab = selectedTab,
-              let transition = sessionManager.goForward(
-                for: tab.id,
-                sessionState: tab.state.sessionNavigationAvailability
-              ) else {
+        guard let tab = selectedTab else {
+            return
+        }
+        if tab.isPrivate {
+            guard tab.state.sessionNavigationAvailability.canGoForward else {
+                return
+            }
+            tab.session.goForward()
+            return
+        }
+        guard let transition = sessionManager.goForward(
+            for: tab.id,
+            sessionState: tab.state.sessionNavigationAvailability
+        ) else {
             return
         }
         
@@ -825,10 +854,16 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func updateHistoryThumbnail(_ image: UIImage?, for tab: Tab, url: String) {
+        guard !tab.isPrivate else {
+            return
+        }
         sessionManager.updateCurrentHistoryThumbnail(image, for: tab.id, matching: url)
     }
-    
+
     func navigationPreviewImages(for tab: Tab) -> NavigationPreviewImages {
+        guard !tab.isPrivate else {
+            return NavigationPreviewImages(backImage: nil, forwardImage: nil)
+        }
         return sessionManager.navigationPreviewImages(for: tab.id)
     }
     
