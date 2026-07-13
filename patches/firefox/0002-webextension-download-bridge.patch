@@ -1,136 +1,95 @@
 diff --git a/mobile/shared/components/extensions/ext-downloads.js b/mobile/shared/components/extensions/ext-downloads.js
-index 62f446ef4d21f5060577dd35ee9bde51219918a5..1630fe1a15ff06998062a0b80d0dd7768e56d9d5 100644
+index 62f446ef4d..c4dcefdcb5 100644
 --- a/mobile/shared/components/extensions/ext-downloads.js
 +++ b/mobile/shared/components/extensions/ext-downloads.js
-@@ -7,11 +7,38 @@
+@@ -7,6 +7,9 @@
  ChromeUtils.defineESModuleGetters(this, {
    DownloadPaths: "resource://gre/modules/DownloadPaths.sys.mjs",
    DownloadTracker: "resource://gre/modules/GeckoViewWebExtension.sys.mjs",
++  FullPageCaptureCompat:
++    "resource://gre/modules/FullPageCaptureCompat.sys.mjs",
 +  NetUtil: "resource://gre/modules/NetUtil.sys.mjs",
  });
 
  var { ignoreEvent } = ExtensionCommon;
+@@ -77,6 +80,52 @@ const INTERRUPT_REASON_MAP = new Map([
+   [24, "CRASH"],
+ ]);
 
- const REQUEST_DOWNLOAD_MESSAGE = "GeckoView:WebExtension:Download";
-+const REQUEST_CLIPBOARD_IMAGE_MESSAGE = "GeckoView:WebExtension:ClipboardImage";
-+const FULLPAGE_CAPTURE_ID = "fullpage-capture@mosfor";
-+const CLIPBOARD_IMAGE_FILENAME = "reynard-native-clipboard.png";
-+const REGION_SELECTION_FILENAME = "reynard-begin-region-selection.bin";
-+const REQUEST_REGION_SELECTION_MESSAGE =
-+  "GeckoView:WebExtension:BeginRegionSelection";
-+
-+function recordReynardDownload(event, details = "") {
++async function stageBlobDownload(url, filename) {
++  let stagedFile;
 +  try {
-+    const file = Services.dirsvc.get("ProfD", Ci.nsIFile);
-+    file.append("Reynard-DownloadDebug.log");
-+    if (file.exists() && file.fileSize > 1024 * 1024) {
-+      file.remove(false);
++    return await new Promise((resolve, reject) => {
++      NetUtil.asyncFetch(
++        { uri: url, loadUsingSystemPrincipal: true },
++        (input, status, request) => {
++          if (!Components.isSuccessCode(status)) {
++            reject(Components.Exception("Unable to read blob download", status));
++            return;
++          }
++
++          let mimeType = "";
++          try {
++            mimeType = request.QueryInterface(Ci.nsIChannel).contentType;
++          } catch (_) {}
++
++          const fileExtension = filename?.split(".").pop() || "bin";
++          stagedFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
++          stagedFile.append(`reynard-webextension.${fileExtension}`);
++          stagedFile.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, 0o600);
++
++          const output = Cc[
++            "@mozilla.org/network/file-output-stream;1"
++          ].createInstance(Ci.nsIFileOutputStream);
++          output.init(stagedFile, 0x02 | 0x08 | 0x20, 0o600, 0);
++          NetUtil.asyncCopy(input, output, copyStatus => {
++            if (!Components.isSuccessCode(copyStatus)) {
++              reject(
++                Components.Exception("Unable to stage blob download", copyStatus)
++              );
++              return;
++            }
++            resolve({ localFilePath: stagedFile.path, mimeType });
++          });
++        }
++      );
++    });
++  } catch (error) {
++    if (stagedFile?.exists()) {
++      stagedFile.remove(false);
 +    }
-+    const stream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(
-+      Ci.nsIFileOutputStream
-+    );
-+    stream.init(file, file.exists() ? 0x1a : 0x2a, 0o600, 0);
-+    const converter = Cc[
-+      "@mozilla.org/intl/converter-output-stream;1"
-+    ].createInstance(Ci.nsIConverterOutputStream);
-+    converter.init(stream, "UTF-8");
-+    converter.writeString(`${new Date().toISOString()} | ${event} | ${details}\n`);
-+    converter.close();
-+  } catch (_) {}
++    throw error;
++  }
 +}
++
+ // TODO Bug 1247794: make id and extension info persistent
+ class DownloadItem {
+   /**
+@@ -167,9 +216,22 @@ this.downloads = class extends ExtensionAPIPersistent {
 
- const FORBIDDEN_HEADERS = [
-   "ACCEPT-CHARSET",
-@@ -169,7 +196,87 @@ this.downloads = class extends ExtensionAPIPersistent {
+   getAPI(context) {
      const { extension } = context;
++    const usesFullPageCaptureCompatibility =
++      FullPageCaptureCompat.assertSupported(extension);
      return {
        downloads: {
 -        download(options) {
 +        async download(options) {
-+          recordReynardDownload(
-+            "begin",
-+            `extension=${extension.id} scheme=${options.url.split(":", 1)[0]} filename=${options.filename ?? "none"}`
-+          );
 +          if (
-+            extension.id === FULLPAGE_CAPTURE_ID &&
-+            options.filename === REGION_SELECTION_FILENAME
++            usesFullPageCaptureCompatibility &&
++            options.filename ===
++              FullPageCaptureCompat.STAGED_FILES.beginRegionSelection
 +          ) {
-+            recordReynardDownload("selection.bridge.begin");
-+            return EventDispatcher.instance
-+              .sendRequestForResult(REQUEST_REGION_SELECTION_MESSAGE, {
-+                extensionId: extension.id,
-+              })
-+              .then(() => {
-+                recordReynardDownload("selection.bridge.success");
-+                return 0;
-+              })
-+              .catch(error => {
-+                recordReynardDownload(
-+                  "selection.bridge.error",
-+                  `${error?.name ?? "Error"}_${error?.message ?? error}`
-+                );
-+                throw error;
-+              });
-+          }
-+          if (options.url.startsWith("blob:")) {
-+            recordReynardDownload("blob.begin");
-+            let bytes;
-+            let mimeType = "";
-+            try {
-+              bytes = await new Promise((resolve, reject) => {
-+                NetUtil.asyncFetch(
-+                  { uri: options.url, loadUsingSystemPrincipal: true },
-+                  (input, status, request) => {
-+                    recordReynardDownload("blob.status", `status=${status}`);
-+                    if (!Components.isSuccessCode(status)) {
-+                      reject(Components.Exception("Unable to read blob download", status));
-+                      return;
-+                    }
-+                    try {
-+                      try {
-+                        mimeType = request.QueryInterface(Ci.nsIChannel).contentType;
-+                      } catch (_) {}
-+                      const data = NetUtil.readInputStream(input, input.available());
-+                      input.close();
-+                      resolve(new Uint8Array(data));
-+                    } catch (error) {
-+                      reject(error);
-+                    }
-+                  }
-+                );
-+              });
-+            } catch (error) {
-+              recordReynardDownload("blob.error", `${error?.name ?? "Error"}_${error?.message ?? error}`);
-+              throw error;
-+            }
-+            recordReynardDownload("blob.bytes", `count=${bytes.length}`);
-+            const fileExtension = options.filename?.split(".").pop() || "bin";
-+            const file = Services.dirsvc.get("TmpD", Ci.nsIFile);
-+            file.append(`reynard-webextension.${fileExtension}`);
-+            file.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, 0o600);
-+            const path = file.path;
-+            recordReynardDownload("file.begin", `extension=${fileExtension}`);
-+            try {
-+              await IOUtils.write(path, bytes);
-+            } catch (error) {
-+              recordReynardDownload(
-+                "file.error",
-+                `${error?.name ?? "Error"}_${error?.message ?? error}`
-+              );
-+              throw error;
-+            }
-+            recordReynardDownload("file.written", `count=${bytes.length}`);
-+            options = {
-+              ...options,
-+              url: "https://reynard.invalid/webextension-download",
-+              localFilePath: path,
-+              mimeType,
-+            };
++            await EventDispatcher.instance.sendRequestForResult(
++              FullPageCaptureCompat.NATIVE_MESSAGES.beginRegionSelection,
++              { extensionId: extension.id }
++            );
++            return 0;
 +          }
            // the validation checks should be kept in sync with the toolkit implementation
            let { filename } = options;
            if (filename != null) {
-@@ -177,7 +284,7 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -177,7 +239,7 @@ this.downloads = class extends ExtensionAPIPersistent {
                return Promise.reject({ message: "filename must not be empty" });
              }
 
@@ -139,7 +98,7 @@ index 62f446ef4d21f5060577dd35ee9bde51219918a5..1630fe1a15ff06998062a0b80d0dd776
                return Promise.reject({
                  message: "filename must not be an absolute path",
                });
-@@ -186,11 +293,7 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -186,11 +248,7 @@ this.downloads = class extends ExtensionAPIPersistent {
              // % is not permitted but relatively common.
              filename = filename.replaceAll("%", "_");
 
@@ -152,58 +111,63 @@ index 62f446ef4d21f5060577dd35ee9bde51219918a5..1630fe1a15ff06998062a0b80d0dd776
 
              if (pathComponents.some(component => component == "..")) {
                return Promise.reject({
-@@ -237,14 +340,54 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -237,16 +295,49 @@ this.downloads = class extends ExtensionAPIPersistent {
              }
            }
 
-+          recordReynardDownload("bridge.begin", `scheme=${options.url.split(":", 1)[0]}`);
-+          if (
-+            extension.id === FULLPAGE_CAPTURE_ID &&
-+            options.filename === CLIPBOARD_IMAGE_FILENAME
-+          ) {
-+            recordReynardDownload("clipboard.bridge.begin");
-+            return EventDispatcher.instance
-+              .sendRequestForResult(REQUEST_CLIPBOARD_IMAGE_MESSAGE, {
+-          return EventDispatcher.instance
+-            .sendRequestForResult(REQUEST_DOWNLOAD_MESSAGE, {
+-              options,
+-              extensionId: extension.id,
+-            })
+-            .then(value => {
+-              const downloadItem = new DownloadItem(value, options, extension);
+-              DownloadTracker.addDownloadItem(downloadItem);
+-              return downloadItem.id;
+-            });
++          if (options.url.startsWith("blob:")) {
++            const staged = await stageBlobDownload(options.url, options.filename);
++            options = {
++              ...options,
++              url: "https://reynard.invalid/webextension-download",
++              ...staged,
++            };
++          }
++
++          try {
++            if (
++              usesFullPageCaptureCompatibility &&
++              options.filename ===
++                FullPageCaptureCompat.STAGED_FILES.clipboardImage
++            ) {
++              await EventDispatcher.instance.sendRequestForResult(
++                FullPageCaptureCompat.NATIVE_MESSAGES.clipboardImage,
++                {
++                  options,
++                  extensionId: extension.id,
++                }
++              );
++              return 0;
++            }
++
++            const value = await EventDispatcher.instance.sendRequestForResult(
++              REQUEST_DOWNLOAD_MESSAGE,
++              {
 +                options,
 +                extensionId: extension.id,
-+              })
-+              .then(value => {
-+                recordReynardDownload(
-+                  "clipboard.bridge.success",
-+                  `bytes=${value?.bytes ?? "unknown"}`
-+                );
-+                return 0;
-+              })
-+              .catch(error => {
-+                recordReynardDownload(
-+                  "clipboard.bridge.error",
-+                  `${error?.name ?? "Error"}_${error?.message ?? error}`
-+                );
-+                if (options.localFilePath) {
-+                  IOUtils.remove(options.localFilePath, { ignoreAbsent: true }).catch(() => {});
-+                }
-+                throw error;
-+              });
-+          }
-           return EventDispatcher.instance
-             .sendRequestForResult(REQUEST_DOWNLOAD_MESSAGE, {
-               options,
-               extensionId: extension.id,
-             })
-             .then(value => {
-+              recordReynardDownload("bridge.success", `id=${value?.id ?? "none"}`);
-               const downloadItem = new DownloadItem(value, options, extension);
-               DownloadTracker.addDownloadItem(downloadItem);
-               return downloadItem.id;
-+            })
-+            .catch(error => {
-+              recordReynardDownload(
-+                "bridge.error",
-+                `${error?.name ?? "Error"}_${error?.message ?? error}`
-+              );
-+              if (options.localFilePath) {
-+                IOUtils.remove(options.localFilePath, { ignoreAbsent: true }).catch(() => {});
 +              }
-+              throw error;
-             });
++            );
++            const downloadItem = new DownloadItem(value, options, extension);
++            DownloadTracker.addDownloadItem(downloadItem);
++            return downloadItem.id;
++          } catch (error) {
++            if (options.localFilePath) {
++              await IOUtils.remove(options.localFilePath, {
++                ignoreAbsent: true,
++              });
++            }
++            throw error;
++          }
          },
+
+         removeFile() {

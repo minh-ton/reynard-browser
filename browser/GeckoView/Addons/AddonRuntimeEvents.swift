@@ -6,44 +6,17 @@
 //
 
 import Foundation
+import ImageIO
 import UIKit
-
-private enum AddonFileDiagnostics {
-    private static let maximumSize = 1024 * 1024
-    private static let queue = DispatchQueue(
-        label: "com.minh-ton.Reynard.AddonFileDiagnostics",
-        qos: .utility
-    )
-
-    static func record(fileName: String, event: String, details: String) {
-        guard let line = "\(Date().timeIntervalSince1970) | \(event) | \(details)\n".data(using: .utf8) else {
-            return
-        }
-        queue.async {
-            guard let cachesURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-                return
-            }
-            let fileURL = cachesURL.appendingPathComponent(fileName)
-            if let size = try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? NSNumber,
-               size.intValue >= maximumSize {
-                try? Data().write(to: fileURL, options: .atomic)
-            }
-            if !FileManager.default.fileExists(atPath: fileURL.path) {
-                FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-            }
-            guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
-            handle.seekToEndOfFile()
-            handle.write(line)
-            handle.closeFile()
-        }
-    }
-}
 
 private enum AddonStagedFile {
     static let prefix = "reynard-webextension"
     static let clipboardFileName = "reynard-native-clipboard.png"
     static let clipboardMimeType = "image/png"
-    static let maximumClipboardImageSize = 128 * 1024 * 1024
+    static let clipboardPasteboardType = "public.png"
+    static let maximumClipboardImageSize = 64 * 1024 * 1024
+    static let maximumImagePixels = 32 * 1024 * 1024
+    static let maximumImageDimension = 32_760
 
     static func validatedURL(path: String) throws -> URL {
         let temporaryDirectory = FileManager.default.temporaryDirectory
@@ -62,25 +35,23 @@ private enum AddonStagedFile {
         }
         return fileURL
     }
-}
 
-private enum AddonClipboardDiagnostics {
-    static func record(_ event: String, _ details: String = "") {
-        AddonFileDiagnostics.record(
-            fileName: "Reynard-ClipboardDebug.log",
-            event: event,
-            details: details
-        )
-    }
-}
-
-private enum AddonSelectionDiagnostics {
-    static func record(_ event: String, _ details: String = "") {
-        AddonFileDiagnostics.record(
-            fileName: "Reynard-AddonSelectionDebug.log",
-            event: event,
-            details: details
-        )
+    static func validatePNG(_ data: Data) throws {
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard !data.isEmpty,
+              let source = CGImageSourceCreateWithData(data as CFData, options),
+              CGImageSourceGetCount(source) == 1,
+              CGImageSourceGetType(source) as String? == clipboardPasteboardType,
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, options) as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
+              width > 0,
+              height > 0,
+              width <= maximumImageDimension,
+              height <= maximumImageDimension,
+              width <= maximumImagePixels / height else {
+            throw GeckoHandlerError("The staged clipboard image exceeds the safe image limits")
+        }
     }
 }
 
@@ -146,10 +117,23 @@ extension AddonRuntime {
             // top-left portion of each frame on high-density iOS displays.
             let widthScale = requestedWidth > 0 ? requestedWidth / view.bounds.width : 1
             let heightScale = requestedHeight > 0 ? requestedHeight / view.bounds.height : widthScale
-            format.scale = max(
+            let outputScale = max(
                 0.1,
                 min(widthScale, heightScale) * max(1, requestedPixelScale)
             )
+            let outputWidth = view.bounds.width * outputScale
+            let outputHeight = view.bounds.height * outputScale
+            guard outputScale.isFinite,
+                  outputWidth.isFinite,
+                  outputHeight.isFinite,
+                  outputWidth > 0,
+                  outputHeight > 0,
+                  outputWidth <= CGFloat(AddonStagedFile.maximumImageDimension),
+                  outputHeight <= CGFloat(AddonStagedFile.maximumImageDimension),
+                  outputWidth * outputHeight <= CGFloat(AddonStagedFile.maximumImagePixels) else {
+                throw GeckoHandlerError("The requested web content capture is too large")
+            }
+            format.scale = outputScale
             let image = UIGraphicsImageRenderer(bounds: captureBounds, format: format).image { _ in
                 view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
             }
@@ -161,13 +145,13 @@ extension AddonRuntime {
             throw GeckoHandlerError("Unhandled WebExtension session event \(type)")
         }
     }
-    
+
     @MainActor
     public func handleMessage(type: String, message: [String: Any?]?) async throws -> Any? {
         guard let event = AddonRuntimeEvent(rawValue: type) else {
             throw GeckoHandlerError("unknown message \(type)")
         }
-        
+
         switch event {
         case .browserActionUpdate:
             try await handleActionUpdate(kind: .browser, message: message, session: nil)
@@ -259,7 +243,6 @@ extension AddonRuntime {
     private func handleClipboardImage(message: [String: Any?]?) throws -> [String: Any] {
         let extensionID = message?["extensionId"] as? String
         guard extensionID == "fullpage-capture@mosfor" else {
-            AddonClipboardDiagnostics.record("reject", "extension=\(extensionID ?? "none")")
             throw GeckoHandlerError("Clipboard image writes are not supported for this extension")
         }
         guard let options = message?["options"] as? [String: Any?],
@@ -267,51 +250,40 @@ extension AddonRuntime {
               !localFilePath.isEmpty,
               options["filename"] as? String == AddonStagedFile.clipboardFileName,
               options["mimeType"] as? String == AddonStagedFile.clipboardMimeType else {
-            AddonClipboardDiagnostics.record("reject", "reason=missing-file")
             throw GeckoHandlerError("Clipboard image write requires the expected staged PNG file")
         }
 
         let fileURL = try AddonStagedFile.validatedURL(path: localFilePath)
-        AddonClipboardDiagnostics.record("begin", "path=\(fileURL.lastPathComponent)")
         defer {
             try? FileManager.default.removeItem(at: fileURL)
         }
 
-        let data: Data
-        do {
-            data = try Data(contentsOf: fileURL, options: .mappedIfSafe)
-        } catch {
-            AddonClipboardDiagnostics.record("read.error", "\(error)")
-            throw GeckoHandlerError("Could not read the staged clipboard image")
-        }
-        guard data.count <= AddonStagedFile.maximumClipboardImageSize else {
-            AddonClipboardDiagnostics.record("reject", "reason=file-too-large bytes=\(data.count)")
-            throw GeckoHandlerError("The staged clipboard image is too large")
-        }
-        guard !data.isEmpty, UIImage(data: data) != nil else {
-            AddonClipboardDiagnostics.record("decode.error", "bytes=\(data.count)")
-            throw GeckoHandlerError("The staged clipboard image is not a valid PNG")
-        }
+        return try autoreleasepool {
+            let data: Data
+            do {
+                data = try Data(contentsOf: fileURL, options: .mappedIfSafe)
+            } catch {
+                throw GeckoHandlerError("Could not read the staged clipboard image")
+            }
+            guard data.count <= AddonStagedFile.maximumClipboardImageSize else {
+                throw GeckoHandlerError("The staged clipboard image is too large")
+            }
+            try AddonStagedFile.validatePNG(data)
 
-        let pasteboard = UIPasteboard.general
-        let beforeChangeCount = pasteboard.changeCount
-        pasteboard.setItems([["public.png": data]])
-        let copiedData = pasteboard.data(forPasteboardType: "public.png")
-        let verified = pasteboard.hasImages && copiedData?.count == data.count
-        AddonClipboardDiagnostics.record(
-            "verify",
-            "bytes=\(data.count) copiedBytes=\(copiedData?.count ?? 0) hasImages=\(pasteboard.hasImages) before=\(beforeChangeCount) after=\(pasteboard.changeCount)"
-        )
-        guard verified else {
-            throw GeckoHandlerError("iOS did not retain the PNG on the pasteboard")
-        }
+            let pasteboard = UIPasteboard.general
+            let beforeChangeCount = pasteboard.changeCount
+            pasteboard.setItems([[AddonStagedFile.clipboardPasteboardType: data]])
+            guard pasteboard.changeCount > beforeChangeCount,
+                  pasteboard.contains(pasteboardTypes: [AddonStagedFile.clipboardPasteboardType]) else {
+                throw GeckoHandlerError("iOS did not retain the PNG on the pasteboard")
+            }
 
-        AddonClipboardDiagnostics.record("success", "bytes=\(data.count)")
-        return [
-            "success": true,
-            "bytes": data.count,
-            "changeCount": pasteboard.changeCount,
-        ]
+            return [
+                "success": true,
+                "bytes": data.count,
+                "changeCount": pasteboard.changeCount,
+            ]
+        }
     }
 
     private func handleBeginRegionSelection(message: [String: Any?]?) throws -> [String: Bool] {
@@ -319,7 +291,6 @@ extension AddonRuntime {
         guard extensionID == "fullpage-capture@mosfor" else {
             throw GeckoHandlerError("Region selection is not supported for this extension")
         }
-        AddonSelectionDiagnostics.record("dismiss.request", "extension=\(extensionID ?? "none")")
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: Notification.Name("GeckoView.WebExtension.BeginRegionSelection"),
@@ -328,7 +299,7 @@ extension AddonRuntime {
         }
         return ["success": true]
     }
-    
+
     private func handleOpenOptionsPage(message: [String: Any?]?) async throws {
         guard let extensionID = message?["extensionId"] as? String,
               let addon = try await addon(byID: extensionID) else {
@@ -336,7 +307,7 @@ extension AddonRuntime {
         }
         delegate?.addonController(self, didRequestOpenOptionsPageFor: addon)
     }
-    
+
     private func handleNewTab(message: [String: Any?]?) async throws -> Bool {
         guard let extensionID = message?["extensionId"] as? String,
               let newSessionID = message?["newSessionId"] as? String,
@@ -353,7 +324,7 @@ extension AddonRuntime {
             newSessionID: newSessionID
         ) ?? false
     }
-    
+
     private func installPromptResponse(message: [String: Any?]?) async throws -> [String: Any] {
         guard let prompt = try await permissionPrompt(for: .installPrompt, message: message) else {
             return [
@@ -369,7 +340,7 @@ extension AddonRuntime {
             "isTechnicalAndInteractionDataGranted": response.technicalAndInteractionDataGranted,
         ]
     }
-    
+
     private func permissionPromptResponse(
         for event: AddonRuntimeEvent,
         message: [String: Any?]?
@@ -380,23 +351,23 @@ extension AddonRuntime {
         let response = await delegate?.addonController(self, promptFor: prompt) ?? .deny
         return ["allow": response.allow]
     }
-    
+
     private func addonForPrompt(from message: [String: Any?]?) async throws -> Addon? {
         if let extensionDictionary = message?["extension"] as? [String: Any?] {
             return Addon(dictionary: extensionDictionary)
         }
-        
+
         guard let extensionID = addonID(from: message) else {
             return nil
         }
-        
+
         if let cachedAddon = addonsByID[extensionID] {
             return cachedAddon
         }
-        
+
         return try await addon(byID: extensionID)
     }
-    
+
     private func permissionPrompt(
         for event: AddonRuntimeEvent,
         message: [String: Any?]?
@@ -404,7 +375,7 @@ extension AddonRuntime {
         guard let addon = try await addonForPrompt(from: message) else {
             return nil
         }
-        
+
         switch event {
         case .installPrompt:
             return AddonPermissionPrompt(
@@ -435,14 +406,14 @@ extension AddonRuntime {
             return nil
         }
     }
-    
+
     private func action(kind: AddonActionKind, from message: [String: Any?]?) -> AddonAction? {
         guard let dictionary = message?["action"] as? [String: Any?] else {
             return nil
         }
         return AddonAction(kind: kind, dictionary: dictionary)
     }
-    
+
     private func handleActionUpdate(
         kind: AddonActionKind,
         message: [String: Any?]?,
@@ -453,7 +424,7 @@ extension AddonRuntime {
               let addon = try await addon(byID: extensionID) else {
             return
         }
-        
+
         if session == nil {
             if kind == .browser {
                 addon.browserAction = action
@@ -463,7 +434,7 @@ extension AddonRuntime {
         }
         delegate?.addonController(self, didUpdate: action, for: addon, session: session)
     }
-    
+
     private func handleOpenPopup(
         kind: AddonActionKind,
         message: [String: Any?]?,

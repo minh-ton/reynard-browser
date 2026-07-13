@@ -14,7 +14,9 @@ MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
+node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
+node "$SCRIPT_DIR/FullPageCaptureCompatTests.mjs"
 
 sh -n \
 	"$ROOT_DIR/tools/development/apply-patches.sh" \
@@ -28,10 +30,11 @@ sh -n \
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
 
-if rg -q 'Reynard-(Addon|Download)Debug-\$\{' \
+if rg -q 'Reynard-(AddonDebug|DownloadDebug|ClipboardDebug|AddonSelectionDebug)\.log|Addon(File|Clipboard|Selection)Diagnostics' \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
-	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"; then
-	echo "Unbounded Gecko diagnostic marker files are still enabled." >&2
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" \
+	"$ROOT_DIR/browser/GeckoView/Addons/AddonRuntimeEvents.swift"; then
+	echo "Temporary add-on diagnostics remain in production code." >&2
 	exit 1
 fi
 
