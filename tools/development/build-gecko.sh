@@ -6,6 +6,8 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
+. "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
+
 TARGET="aarch64-apple-ios"
 LLVM_PREFIX="${LLVM_PREFIX:-/opt/homebrew/opt/llvm}"
 WASM_CC="${WASM_CC:-$LLVM_PREFIX/bin/clang}"

@@ -73,6 +73,17 @@ if [ -z "$EXPECTED_SOURCE_HASH" ] || [ "$EXPECTED_SOURCE_HASH" != "$ACTUAL_SOURC
 	exit 1
 fi
 
+EXPECTED_XCODE="$(sed -n 's/^xcode=//p' "$ARTIFACT_MANIFEST")"
+ACTUAL_XCODE="$(xcodebuild -version | tr '\n' ';' | sed 's/;$//')"
+EXPECTED_SDK="$(sed -n 's/^iphoneos_sdk=//p' "$ARTIFACT_MANIFEST")"
+ACTUAL_SDK="$(xcrun --sdk iphoneos --show-sdk-version)"
+if [ "$EXPECTED_XCODE" != "$ACTUAL_XCODE" ] || [ "$EXPECTED_SDK" != "$ACTUAL_SDK" ]; then
+	echo "Gecko was built with a different Xcode or iPhoneOS SDK." >&2
+	echo "Built with: $EXPECTED_XCODE; iPhoneOS $EXPECTED_SDK" >&2
+	echo "Selected:   $ACTUAL_XCODE; iPhoneOS $ACTUAL_SDK" >&2
+	exit 1
+fi
+
 BINARY_COUNT=0
 while IFS='|' read -r path hash; do
 	case "$path" in

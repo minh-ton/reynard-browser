@@ -7,14 +7,17 @@ if [ "${1:-}" != "--jailbroken-only" ] || [ "$#" -ne 1 ]; then
 	exit 2
 fi
 
-CLANG_PATH="$(xcrun --sdk iphoneos --find clang)"
-SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 ARCHIVE_DIR="$ROOT_DIR/dist/Reynard.xcarchive"
 APP_DIR="$ARCHIVE_DIR/Products/Applications"
 WORK_DIR="$ROOT_DIR/dist/Reynard"
 BUILD_MODE_FILE="$ROOT_DIR/dist/build-mode"
+
+. "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
+
+CLANG_PATH="$(xcrun --sdk iphoneos --find clang)"
+SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
 
 cd "$ROOT_DIR"
 
@@ -75,7 +78,53 @@ PTRACE_JIT_OUT="Payload/Reynard.app/ptrace_jit"
 	-o "$PTRACE_JIT_OUT"
 
 chmod 0755 "$PTRACE_JIT_OUT"
+
+APP_BUNDLE="Payload/Reynard.app"
+MAIN_EXECUTABLE="$APP_BUNDLE/Reynard"
+HELPER_EXECUTABLE="$APP_BUNDLE/PlugIns/Reynard Helper.appex/Reynard Helper"
+OPEN_IN_EXECUTABLE="$APP_BUNDLE/PlugIns/OpenIn.appex/OpenIn"
+MACHO_LIST="$(mktemp "${TMPDIR:-/tmp}/reynard-macho-list.XXXXXX")"
+trap 'rm -f "$MACHO_LIST"' EXIT HUP INT TERM
+
+find "$APP_BUNDLE" -type d -name _CodeSignature -prune -exec rm -rf {} +
+find "$APP_BUNDLE" -type f -name embedded.mobileprovision -delete
+
+is_macho() {
+	file -b "$1" | grep -q 'Mach-O'
+}
+
+find "$APP_BUNDLE" -type f -print | while IFS= read -r candidate; do
+	if is_macho "$candidate"; then
+		printf '%s\n' "$candidate"
+	fi
+done > "$MACHO_LIST"
+
+SIGNED_BINARY_COUNT="$(wc -l < "$MACHO_LIST" | tr -d '[:space:]')"
+if [ "$SIGNED_BINARY_COUNT" -eq 0 ]; then
+	echo "No Mach-O binaries were found in the application bundle." >&2
+	exit 1
+fi
+
+while IFS= read -r binary; do
+	case "$binary" in
+		"$MAIN_EXECUTABLE"|"$HELPER_EXECUTABLE"|"$OPEN_IN_EXECUTABLE"|"$PTRACE_JIT_OUT")
+			continue
+			;;
+	esac
+	ldid -S "$binary"
+done < "$MACHO_LIST"
+
 ldid -S"$ROOT_DIR/browser/Reynard/JIT/Unsandboxed/ptrace_jit.entitlements" "$PTRACE_JIT_OUT"
-ldid -S"$ROOT_DIR/browser/Reynard/Entitlements/Reynard.private.entitlements" "Payload/Reynard.app/Reynard"
-ldid -S"$ROOT_DIR/browser/Helper/Entitlements/Reynard-Helper.private.entitlements" "Payload/Reynard.app/PlugIns/Reynard Helper.appex/Reynard Helper"
-zip -r ../Reynard-Jailbroken.ipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX"
+ldid -S "$OPEN_IN_EXECUTABLE"
+ldid -S"$ROOT_DIR/browser/Helper/Entitlements/Reynard-Helper.private.entitlements" "$HELPER_EXECUTABLE"
+ldid -S"$ROOT_DIR/browser/Reynard/Entitlements/Reynard.private.entitlements" "$MAIN_EXECUTABLE"
+
+while IFS= read -r binary; do
+	if ! ldid -e "$binary" >/dev/null 2>&1; then
+		echo "Jailbreak signature verification failed: ${binary#"$APP_BUNDLE/"}" >&2
+		exit 1
+	fi
+done < "$MACHO_LIST"
+
+echo "Verified jailbreak signatures for $SIGNED_BINARY_COUNT Mach-O binaries."
+zip -qry ../Reynard-Jailbroken.ipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX"

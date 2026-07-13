@@ -23,7 +23,8 @@ sh -n \
 	"$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" \
 	"$ROOT_DIR/tools/firefox/prepare-firefox.sh" \
 	"$ROOT_DIR/tools/release/build-app.sh" \
-	"$ROOT_DIR/tools/release/create-ipa.sh"
+	"$ROOT_DIR/tools/release/create-ipa.sh" \
+	"$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
 
@@ -76,6 +77,11 @@ fi
 
 if "$ROOT_DIR/tools/release/create-ipa.sh" --invalid >/dev/null 2>&1; then
 	echo "create-ipa.sh accepted an unsupported packaging mode." >&2
+	exit 1
+fi
+
+if "$ROOT_DIR/tools/release/build-app.sh" --signed >/dev/null 2>&1; then
+	echo "build-app.sh accepted the unsupported signed packaging mode." >&2
 	exit 1
 fi
 

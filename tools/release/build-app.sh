@@ -6,9 +6,8 @@ BUILD_MODE="jailbroken"
 case "${1:-}" in
 	"") ;;
 	--jailbroken) BUILD_MODE="jailbroken" ;;
-	--signed) BUILD_MODE="signed" ;;
 	*)
-		echo "Usage: $0 [--jailbroken|--signed]" >&2
+		echo "Usage: $0 [--jailbroken]" >&2
 		exit 2
 		;;
 esac
@@ -19,6 +18,8 @@ DIST_DIR="$ROOT_DIR/dist"
 PROJECT_PATH="$ROOT_DIR/browser/Reynard.xcodeproj"
 XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
 GECKO_DIST="$ROOT_DIR/engine/firefox/obj-aarch64-apple-ios/dist"
+
+. "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
 "$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" check "$GECKO_DIST"
@@ -49,25 +50,14 @@ sed -i '' "s/CURRENT_BUILD = .*/CURRENT_BUILD = $BUILD_SHA/" "$DIST_DIR/Reynard.
 } > "$DIST_DIR/source-revisions.txt"
 echo "$BUILD_MODE" > "$DIST_DIR/build-mode"
 
-if [ "$BUILD_MODE" = "jailbroken" ]; then
-	xcodebuild archive \
-		-scheme "Reynard" \
-		-archivePath "$DIST_DIR/Reynard.xcarchive" \
-		-project "$PROJECT_PATH" \
-		-sdk iphoneos \
-		-destination "generic/platform=iOS" \
-		-configuration Release \
-		-xcconfig "$DIST_DIR/Reynard.xcconfig" \
-		CODE_SIGNING_ALLOWED=NO \
-		CODE_SIGNING_REQUIRED=NO \
-		CODE_SIGN_IDENTITY=""
-else
-	xcodebuild archive \
-		-scheme "Reynard" \
-		-archivePath "$DIST_DIR/Reynard.xcarchive" \
-		-project "$PROJECT_PATH" \
-		-sdk iphoneos \
-		-destination "generic/platform=iOS" \
-		-configuration Release \
-		-xcconfig "$DIST_DIR/Reynard.xcconfig"
-fi
+xcodebuild archive \
+	-scheme "Reynard" \
+	-archivePath "$DIST_DIR/Reynard.xcarchive" \
+	-project "$PROJECT_PATH" \
+	-sdk iphoneos \
+	-destination "generic/platform=iOS" \
+	-configuration Release \
+	-xcconfig "$DIST_DIR/Reynard.xcconfig" \
+	CODE_SIGNING_ALLOWED=NO \
+	CODE_SIGNING_REQUIRED=NO \
+	CODE_SIGN_IDENTITY=""
