@@ -18,12 +18,15 @@ fi
 
 RUST_TARGET="aarch64-apple-ios"
 DEPLOYMENT_FLAG="-miphoneos-version-min=${DEPLOYMENT_TARGET}"
+RUSTC_BIN="$(rustup which --toolchain stable rustc)"
+CARGO_BIN="$(rustup which --toolchain stable cargo)"
 
-if ! rustup target list | grep -q "^$RUST_TARGET (installed)"; then
-	rustup target add "$RUST_TARGET"
+if ! rustup target list --toolchain stable | grep -q "^$RUST_TARGET (installed)"; then
+	rustup target add --toolchain stable "$RUST_TARGET"
 fi
 
 export IPHONEOS_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
+export RUSTC="$RUSTC_BIN"
 if [ -n "${RUSTFLAGS:-}" ]; then
   export RUSTFLAGS="${RUSTFLAGS} -C link-arg=${DEPLOYMENT_FLAG}"
 else
@@ -33,5 +36,9 @@ export TARGET_DIR
 
 mkdir -p "$(dirname "$OUTPUT_LIB")"
 cd "$FFI_DIR"
-cargo build --release --target "$RUST_TARGET" --no-default-features --features full,ring
+"$CARGO_BIN" build \
+  --release \
+  --target "$RUST_TARGET" \
+  --no-default-features \
+  --features full,ring
 cp "$TARGET_DIR/$RUST_TARGET/release/libidevice_ffi.a" "$OUTPUT_LIB"

@@ -33,6 +33,7 @@ sh -n \
 	"$ROOT_DIR/tools/release/build-app.sh" \
 	"$ROOT_DIR/tools/release/create-ipa.sh" \
 	"$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
+zsh -n "$ROOT_DIR/tools/development/build-idevice.sh"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
 
@@ -139,6 +140,16 @@ fi
 
 if "$ROOT_DIR/tools/release/build-app.sh" --signed >/dev/null 2>&1; then
 	echo "build-app.sh accepted the unsupported signed packaging mode." >&2
+	exit 1
+fi
+
+if ! rg -q 'tools/development/build-idevice\.sh' \
+	"$ROOT_DIR/tools/release/build-app.sh" ||
+	! rg -q 'lipo "\$IDEVICE_LIBRARY" -verify_arch arm64' \
+	"$ROOT_DIR/tools/release/build-app.sh" ||
+	! rg -q 'idevice_library_sha256=' \
+	"$ROOT_DIR/tools/release/build-app.sh"; then
+	echo "The release build does not reproduce and record its idevice library." >&2
 	exit 1
 fi
 
