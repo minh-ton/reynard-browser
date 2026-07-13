@@ -144,7 +144,7 @@ final class BottomToolbar: UIView {
 
     private lazy var overflowButton: ToolbarButton = {
         let button = ToolbarButton(
-            buttonType: .more,
+            buttonType: .library,
             target: self,
             action: #selector(overflowTapped)
         )

@@ -26,7 +26,7 @@ final class ToolbarButton: UIButton {
         case back
         case forward
         case share
-        case more
+        case library
         case bookmarks
         case history
         case settings
@@ -194,7 +194,7 @@ final class ToolbarButton: UIButton {
         case .back: return "reynard.chevron.backward"
         case .forward: return "reynard.chevron.forward"
         case .share: return "reynard.square.and.arrow.up"
-        case .more: return "reynard.ellipsis.circle"
+        case .library: return "reynard.ellipsis.circle"
         case .bookmarks: return "reynard.book"
         case .history: return "reynard.clock"
         case .settings: return "reynard.gearshape"
@@ -213,7 +213,7 @@ final class ToolbarButton: UIButton {
         case .back: return NSLocalizedString("Back", comment: "")
         case .forward: return NSLocalizedString("Forward", comment: "")
         case .share: return NSLocalizedString("Share", comment: "")
-        case .more: return NSLocalizedString("More", comment: "Toolbar overflow")
+        case .library: return NSLocalizedString("Library", comment: "")
         case .bookmarks: return NSLocalizedString("Bookmarks", comment: "")
         case .history: return NSLocalizedString("History", comment: "")
         case .settings: return NSLocalizedString("Settings", comment: "")
