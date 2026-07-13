@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
-index 71fce485b9..7ab5f18382 100644
+index 71fce485b971f89322fc3fc313f0dbee6ec1e268..7ab5f18382c3b5cd8f43592fa210b0436f8d7f11 100644
 --- a/widget/uikit/GeckoEditableSupport.h
 +++ b/widget/uikit/GeckoEditableSupport.h
 @@ -66,6 +66,8 @@ struct GeckoEditableState {
@@ -12,7 +12,7 @@ index 71fce485b9..7ab5f18382 100644
    NSUInteger mShadowActiveHandleOffset;
    NSUInteger mLineBoundaryStart;
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
-index c09753c091..0b17f77d95 100644
+index 9d86127ada92d5fb95d45979ca3e15a006d299c2..590ea3eb4b23f542a575e413df5a1f61659ce6b4 100644
 --- a/widget/uikit/GeckoEditableSupport.mm
 +++ b/widget/uikit/GeckoEditableSupport.mm
 @@ -29,6 +29,7 @@ namespace {
@@ -113,14 +113,14 @@ index c09753c091..0b17f77d95 100644
      [mEditable.mTextInputDelegate textWillChange:self];
      [mEditable.mTextInputDelegate selectionWillChange:self];
      if (![self isKoreanInputMode] || ![self handleKoreanInsertText:aText
-@@ -2513,7 +2564,9 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+@@ -2512,7 +2563,9 @@ bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
+     }
 
      [mEditable.mTextInputDelegate textWillChange:self];
-     [mEditable.mTextInputDelegate selectionWillChange:self];
 -    handler->ReplaceRange(deleteRange, @"");
 +    if (handler->ReplaceRange(deleteRange, @"")) {
 +      [self setPendingKeyboardEditSelection:NSMakeRange(deleteRange.location, 0)];
 +    }
      [mEditable.mTextInputDelegate textDidChange:self];
-     [mEditable.mTextInputDelegate selectionDidChange:self];
-     [self scheduleEditSelectionUpdate];
+     return;
+   }
