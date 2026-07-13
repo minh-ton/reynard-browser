@@ -50,6 +50,7 @@ final class TabOverviewCard: UICollectionViewCell {
     static let reuseIdentifier = "TabOverviewCard"
     
     var onClose: (() -> Void)?
+    private(set) var tabID: UUID?
     
     private static let fallbackFaviconImage = UIImage(named: "reynard.globe")
     private(set) var transitionState: TransitionState = .visible
@@ -172,6 +173,7 @@ final class TabOverviewCard: UICollectionViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
+        tabID = nil
         webpagePreviewImageView.image = nil
         faviconImageView.image = Self.fallbackFaviconImage
         onClose = nil
@@ -184,6 +186,7 @@ final class TabOverviewCard: UICollectionViewCell {
     // MARK: - Content
     
     func configure(with tab: Tab) {
+        tabID = tab.id
         tabTitleLabel.text = tab.title.isEmpty ? NSLocalizedString("Homepage", comment: "") : tab.title
         webpagePreviewImageView.image = tab.thumbnail
         faviconImageView.image = tab.favicon ?? Self.fallbackFaviconImage

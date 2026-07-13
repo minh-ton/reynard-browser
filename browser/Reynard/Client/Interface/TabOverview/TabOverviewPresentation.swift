@@ -101,6 +101,7 @@ final class TabOverviewPresentation {
             collectionView.reloadData()
             collectionView.layoutIfNeeded()
         }
+        tabOverview.collection.restoreActiveTabCardCloseSwipeIfNeeded()
         tabOverview.collection.applyPresentationTransforms()
     }
     

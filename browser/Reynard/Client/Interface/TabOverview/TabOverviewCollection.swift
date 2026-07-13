@@ -28,7 +28,14 @@ final class TabOverviewCollection: NSObject {
     
     enum SwipeState {
         case idle
-        case active(collectionView: UICollectionView, cell: TabOverviewCard)
+        case active(
+            collectionView: UICollectionView,
+            cell: TabOverviewCard,
+            tabID: UUID,
+            mode: TabOverview.Mode,
+            offset: CGFloat,
+            progress: CGFloat
+        )
     }
     
     private final class TabChangeAnimationState {
@@ -143,7 +150,34 @@ final class TabOverviewCollection: NSObject {
     func reloadTabCards() {
         tabChangeAnimationState.insertionPlaceholderMode = nil
         allCollectionViews.forEach { $0.reloadData() }
+        restoreActiveTabCardCloseSwipeIfNeeded()
         refreshTabIdentitySnapshot()
+    }
+    
+    func restoreActiveTabCardCloseSwipeIfNeeded() {
+        guard case .active(let collectionView, let previousCell, let tabID, let mode, let offset, let progress) = swipeState else {
+            return
+        }
+        
+        previousCell.layer.zPosition = 0
+        previousCell.setSwipeOffset(0, progress: 0)
+        collectionView.layoutIfNeeded()
+        
+        guard let cell = tabCard(withID: tabID, mode: mode, in: collectionView) else {
+            swipeState = .idle
+            return
+        }
+        
+        cell.layer.zPosition = 1
+        cell.setSwipeOffset(offset, progress: progress)
+        swipeState = .active(
+            collectionView: collectionView,
+            cell: cell,
+            tabID: tabID,
+            mode: mode,
+            offset: offset,
+            progress: progress
+        )
     }
     
     func refreshTabIdentitySnapshot() {
@@ -502,27 +536,64 @@ final class TabOverviewCollection: NSObject {
     
     private func beginTabCardCloseSwipe(_ gestureRecognizer: UIPanGestureRecognizer, in collectionView: UICollectionView) {
         let location = gestureRecognizer.location(in: collectionView)
-        guard let indexPath = collectionView.indexPathForItem(at: location),
+        guard let tabMode = tabMode(for: collectionView),
+              let indexPath = collectionView.indexPathForItem(at: location),
               !isInsertionPlaceholder(in: collectionView, at: indexPath),
+              tabs(for: tabMode).indices.contains(indexPath.item),
               let cell = collectionView.cellForItem(at: indexPath) as? TabOverviewCard else {
             swipeState = .idle
             return
         }
         
+        let tabID = tabs(for: tabMode)[indexPath.item].id
         cell.layer.zPosition = 1
-        swipeState = .active(collectionView: collectionView, cell: cell)
+        swipeState = .active(
+            collectionView: collectionView,
+            cell: cell,
+            tabID: tabID,
+            mode: tabMode,
+            offset: 0,
+            progress: 0
+        )
         updateTabCardCloseSwipe(gestureRecognizer)
     }
     
     private func updateTabCardCloseSwipe(_ gestureRecognizer: UIPanGestureRecognizer) {
-        guard case .active(_, let cell) = swipeState else { return }
+        guard case .active(let collectionView, let currentCell, let tabID, let mode, _, _) = swipeState,
+              let cell = activeTabCardCloseSwipeCell(
+                currentCell: currentCell,
+                tabID: tabID,
+                mode: mode,
+                in: collectionView
+              ) else {
+            return
+        }
+        
         let offset = min(0, gestureRecognizer.translation(in: cell).x)
         let progress = abs(offset) / max(cell.bounds.width, 1)
         cell.setSwipeOffset(offset, progress: progress)
+        swipeState = .active(
+            collectionView: collectionView,
+            cell: cell,
+            tabID: tabID,
+            mode: mode,
+            offset: offset,
+            progress: progress
+        )
     }
     
     private func finishTabCardCloseSwipe(_ gestureRecognizer: UIPanGestureRecognizer, cancelled: Bool) {
-        guard case .active(let collectionView, let cell) = swipeState else { return }
+        guard case .active(let collectionView, let currentCell, let tabID, let mode, _, _) = swipeState,
+              let cell = activeTabCardCloseSwipeCell(
+                currentCell: currentCell,
+                tabID: tabID,
+                mode: mode,
+                in: collectionView
+              ) else {
+            swipeState = .idle
+            return
+        }
+        
         swipeState = .idle
         
         let offset = min(0, gestureRecognizer.translation(in: cell).x)
@@ -537,11 +608,11 @@ final class TabOverviewCollection: NSObject {
                 animations: {
                     cell.setSwipeOffset(-max(collectionView.bounds.width, cell.bounds.width), progress: 1)
                 },
-                completion: { [weak self, weak collectionView, weak cell] _ in
-                    guard let self, let collectionView, let cell else { return }
+                completion: { [weak self, weak cell] _ in
+                    guard let self, let cell else { return }
                     cell.layer.zPosition = 0
                     cell.isHidden = true
-                    self.closeTab(for: cell, in: collectionView)
+                    self.closeTab(withID: tabID, mode: mode)
                 }
             )
         } else {
@@ -559,6 +630,42 @@ final class TabOverviewCollection: NSObject {
                 }
             )
         }
+    }
+    
+    private func activeTabCardCloseSwipeCell(
+        currentCell: TabOverviewCard,
+        tabID: UUID,
+        mode: TabOverview.Mode,
+        in collectionView: UICollectionView
+    ) -> TabOverviewCard? {
+        if currentCell.tabID == tabID {
+            return currentCell
+        }
+        
+        currentCell.layer.zPosition = 0
+        currentCell.setSwipeOffset(0, progress: 0)
+        guard let cell = tabCard(withID: tabID, mode: mode, in: collectionView) else {
+            return nil
+        }
+        cell.layer.zPosition = 1
+        return cell
+    }
+    
+    private func tabCard(withID tabID: UUID, mode: TabOverview.Mode, in collectionView: UICollectionView) -> TabOverviewCard? {
+        guard let index = tabs(for: mode).firstIndex(where: { $0.id == tabID }) else {
+            return nil
+        }
+        return collectionView.cellForItem(at: IndexPath(item: index, section: 0)) as? TabOverviewCard
+    }
+    
+    private func closeTab(withID tabID: UUID, mode: TabOverview.Mode) {
+        guard let index = tabs(for: mode).firstIndex(where: { $0.id == tabID }),
+              let tabOverview else {
+            return
+        }
+        
+        tabOverview.delegate?.tabOverviewDidRequestClearPendingTabExpansion(tabOverview)
+        tabOverview.dataSource?.closeTab(at: index, mode: mode.tabMode)
     }
     
     func closeTab(for cell: TabOverviewCard, in collectionView: UICollectionView) {
