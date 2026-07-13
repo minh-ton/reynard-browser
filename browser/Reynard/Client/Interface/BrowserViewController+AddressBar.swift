@@ -108,10 +108,6 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         }
     }
 
-    func addressBarDidRequestPageZoom(_ addressBar: AddressBar) {
-        browserChrome.showPageZoomDropdownFromAddressBarMenu()
-    }
-
     func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int? {
         return tabManager.selectedTab?.session.settings.pageZoom.level
     }
@@ -268,11 +264,20 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     private func confirmAddonUninstall(_ addon: Addon) {
         let addonName = addon.metaData.name ?? addon.id
         AlertPresenter.show(
-            title: "Uninstall \(addonName)?",
+            title: String(
+                format: NSLocalizedString("Uninstall %@?", comment: "Add-on name"),
+                addonName
+            ),
             message: nil,
             buttons: [
-                AlertPresenter.Button(title: "Cancel", style: .cancel),
-                AlertPresenter.Button(title: "Uninstall", style: .destructive) { [weak self] in
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Cancel", comment: ""),
+                    style: .cancel
+                ),
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Uninstall", comment: ""),
+                    style: .destructive
+                ) { [weak self] in
                     Task { [weak self] in
                         do {
                             try await AddonRuntime.shared.uninstall(addon)
@@ -290,7 +295,13 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                             }
                         } catch {
                             await MainActor.run {
-                                AlertPresenter.show(title: "Failed to uninstall add-on", message: "\(error)")
+                                AlertPresenter.show(
+                                    title: NSLocalizedString(
+                                        "Failed to uninstall add-on",
+                                        comment: ""
+                                    ),
+                                    message: "\(error)"
+                                )
                             }
                         }
                     }

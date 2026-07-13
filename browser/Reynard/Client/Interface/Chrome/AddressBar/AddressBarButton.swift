@@ -199,32 +199,6 @@ final class AddressBarButton: UIButton {
         return hitFrame.contains(point)
     }
 
-    private func menuSummary(_ menu: UIMenu?) -> String {
-        guard let menu else {
-            return "menu=nil"
-        }
-        let actionCount = recursiveActionCount(in: menu)
-        let menuCount = recursiveMenuCount(in: menu)
-        return "menuID=\(menu.identifier) rootChildren=\(menu.children.count) menus=\(menuCount) actions=\(actionCount)"
-    }
-
-    private func recursiveActionCount(in menu: UIMenu) -> Int {
-        menu.children.reduce(0) { count, child in
-            if let childMenu = child as? UIMenu {
-                return count + recursiveActionCount(in: childMenu)
-            }
-            return count + (child is UIAction ? 1 : 0)
-        }
-    }
-
-    private func recursiveMenuCount(in menu: UIMenu) -> Int {
-        menu.children.reduce(1) { count, child in
-            guard let childMenu = child as? UIMenu else {
-                return count
-            }
-            return count + recursiveMenuCount(in: childMenu)
-        }
-    }
 }
 
 // MARK: - iOS 13 Context Menu Support

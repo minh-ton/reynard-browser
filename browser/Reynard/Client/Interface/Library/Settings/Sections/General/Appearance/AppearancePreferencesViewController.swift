@@ -514,8 +514,8 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
 
 private final class BottomToolbarPreviewView: UIView {
     private enum UX {
-        static let horizontalInset: CGFloat = 24
-        static let buttonSpacing: CGFloat = 4
+        static let horizontalInset = BottomToolbarLayoutPolicy.horizontalInset
+        static let buttonSpacing = BottomToolbarLayoutPolicy.spacing
         static let symbolPointSize: CGFloat = 18
         static let separatorHeight = 1 / UIScreen.main.scale
     }
@@ -529,6 +529,8 @@ private final class BottomToolbarPreviewView: UIView {
         stack.spacing = UX.buttonSpacing
         return stack
     }()
+    private var actions: [BottomToolbarAction] = []
+    private var displayedWidth: CGFloat = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -562,19 +564,62 @@ private final class BottomToolbarPreviewView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width != displayedWidth else {
+            return
+        }
+        displayedWidth = bounds.width
+        rebuildButtons()
+    }
+
     func apply(actions: [BottomToolbarAction]) {
+        self.actions = actions
+        displayedWidth = 0
+        setNeedsLayout()
+    }
+
+    private func rebuildButtons() {
         buttonStack.arrangedSubviews.forEach { button in
             buttonStack.removeArrangedSubview(button)
             button.removeFromSuperview()
         }
 
-        let configuration = UIImage.SymbolConfiguration(pointSize: UX.symbolPointSize, weight: .regular)
-        for action in actions {
+        let slots = BottomToolbarLayoutPolicy.availableSlotCount(width: bounds.width)
+        let directCount = BottomToolbarLayoutPolicy.directActionCount(
+            configuredCount: actions.count,
+            availableSlots: slots
+        )
+        let visibleActions = Array(actions.prefix(directCount))
+        let hasOverflow = actions.count > directCount
+        let configuration = UIImage.SymbolConfiguration(
+            pointSize: UX.symbolPointSize,
+            weight: .regular
+        )
+        for action in visibleActions {
             let button = UIButton(type: .system)
             button.isUserInteractionEnabled = false
             button.tintColor = .label
             button.setImage(UIImage(named: action.imageName, in: .main, with: configuration), for: .normal)
             button.accessibilityLabel = action.title
+            buttonStack.addArrangedSubview(button)
+        }
+        if hasOverflow {
+            let button = UIButton(type: .system)
+            button.isUserInteractionEnabled = false
+            button.tintColor = .label
+            button.setImage(
+                UIImage(
+                    named: "reynard.ellipsis.circle",
+                    in: .main,
+                    with: configuration
+                ),
+                for: .normal
+            )
+            button.accessibilityLabel = NSLocalizedString(
+                "More",
+                comment: "Toolbar overflow"
+            )
             buttonStack.addArrangedSubview(button)
         }
     }

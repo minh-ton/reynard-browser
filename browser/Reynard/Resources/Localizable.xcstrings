@@ -167,6 +167,266 @@
         }
       }
     },
+    "%lld add-ons need permission." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-on needs permission."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-ons need permission."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld add-ons updated." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-on updated."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-ons updated."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld updates failed." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld update failed."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld updates failed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "Capture" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture"
+          }
+        }
+      }
+    },
+    "Display add-ons button in the URL bar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display add-ons button in the URL bar."
+          }
+        }
+      }
+    },
+    "Double tap to open. Swipe up or down for available actions." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double tap to open. Swipe up or down for available actions."
+          }
+        }
+      }
+    },
+    "Drag a region, then extend with the blue handle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag a region, then extend with the blue handle"
+          }
+        }
+      }
+    },
+    "Drag to select an area" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to select an area"
+          }
+        }
+      }
+    },
+    "Failed to uninstall add-on" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to uninstall add-on"
+          }
+        }
+      }
+    },
+    "Forward" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forward"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "Reload" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reload"
+          }
+        }
+      }
+    },
+    "Redraw" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redraw"
+          }
+        }
+      }
+    },
+    "Shows installed add-ons" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows installed add-ons"
+          }
+        }
+      }
+    },
+    "Sidebar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sidebar"
+          }
+        }
+      }
+    },
+    "The image was unloaded to free memory." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The image was unloaded to free memory."
+          }
+        }
+      }
+    },
+    "Touch and hold to close the current tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold to close the current tab"
+          }
+        }
+      }
+    },
+    "Touch and hold to open a new tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold to open a new tab"
+          }
+        }
+      }
+    },
+    "Uninstall" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uninstall"
+          }
+        }
+      }
+    },
+    "Uninstall %@?" : {
+      "comment" : "Add-on name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uninstall %@?"
+          }
+        }
+      }
+    },
+    "Update available" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update available"
+          }
+        }
+      }
+    },
     "%d add-ons couldn’t be updated." : {
       "comment" : "Add-on count",
       "localizations" : {
@@ -776,6 +1036,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apps and Services"
+          }
+        }
+      }
+    },
+    "Are you sure you want to upload all files from \"%@\"? Only do this if you trust the site." : {
+      "comment" : "Uploaded folder name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to upload all files from \"%@\"? Only do this if you trust the site."
           }
         }
       }

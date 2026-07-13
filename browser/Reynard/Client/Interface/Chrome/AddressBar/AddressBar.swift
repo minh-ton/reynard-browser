@@ -12,7 +12,6 @@ protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar)
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
     func addressBarDidRequestAddonList(_ addressBar: AddressBar)
-    func addressBarDidRequestPageZoom(_ addressBar: AddressBar)
     func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int?
     func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
@@ -27,7 +26,6 @@ final class AddressBar: UIView {
         static let addressBarBackgroundCornerRadius: CGFloat = 16
         static let addressBarContentHorizontalInset: CGFloat = 12
         static let addressBarButtonToTextSpacing: CGFloat = 8
-        static let zoomButtonToTrailingButtonSpacing: CGFloat = 18
         static let addressBarDismissButtonSpacing: CGFloat = 9
         static let addressBarButtonSize: CGFloat = 18
         static let phoneAddressBarHeight: CGFloat = 42
@@ -41,10 +39,6 @@ final class AddressBar: UIView {
         static let addressBarBackgroundShadowOpacity: Float = 0.12
         static let addressBarBackgroundShadowRadius: CGFloat = 10
         static let addressBarBackgroundShadowOffset = CGSize(width: 0, height: 2)
-        static let zoomDropdownWidth: CGFloat = 184
-        static let zoomDropdownHeight: CGFloat = 38
-        static let zoomDropdownSpacing: CGFloat = 8
-        static let zoomDropdownScreenInset: CGFloat = 8
     }
     
     enum EditingState: Equatable {
@@ -87,7 +81,6 @@ final class AddressBar: UIView {
         let content: ContentState
         let leadingButton: LeadingButtonState
         let showsAddonButton: Bool
-        let showsZoomButton: Bool
         let trailingButton: TrailingButtonState
     }
     
@@ -111,8 +104,7 @@ final class AddressBar: UIView {
     private var preserveAutocompleteAfterResign = false
     private var pageMenuItems: [AddressBarMenu.Item] = []
     private weak var pageMenuOverlay: AddressBarPageMenuView?
-    private var zoomDropdownOverlay: UIControl?
-    private var zoomDropdownView: AddressBarZoomDropdown?
+    private var pageMenuIndicatesUpdate = false
     
     private var lastEditingText = ""
     private var lastEditWasDelete = false
@@ -120,13 +112,11 @@ final class AddressBar: UIView {
     private var textLeadingToButtonConstraint: NSLayoutConstraint!
     private var textLeadingToAddonButtonConstraint: NSLayoutConstraint!
     private var textLeadingToBackgroundConstraint: NSLayoutConstraint!
-    private var textTrailingToZoomButtonConstraint: NSLayoutConstraint!
     private var textTrailingToButtonConstraint: NSLayoutConstraint!
     private var textTrailingToBackgroundConstraint: NSLayoutConstraint!
     private var labelLeadingToButtonConstraint: NSLayoutConstraint!
     private var labelLeadingToAddonButtonConstraint: NSLayoutConstraint!
     private var labelLeadingToBackgroundConstraint: NSLayoutConstraint!
-    private var labelTrailingToZoomButtonConstraint: NSLayoutConstraint!
     private var labelTrailingToButtonConstraint: NSLayoutConstraint!
     private var labelTrailingToBackgroundConstraint: NSLayoutConstraint!
     
@@ -162,17 +152,25 @@ final class AddressBar: UIView {
         return button
     }()
 
+    private let pageMenuUpdateBadge: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .systemRed
+        view.layer.cornerRadius = 4
+        view.isHidden = true
+        view.isAccessibilityElement = false
+        return view
+    }()
+
     private let addonButton: AddressBarButton = {
         let button = AddressBarButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.tintColor = .white
-        let image = UIImage(named: "reynard.puzzlepiece.extension")?
-            .withTintColor(.white, renderingMode: .alwaysOriginal)
-        button.setImage(image, for: .normal)
+        button.tintColor = .label
+        button.setImage(UIImage(named: "reynard.puzzlepiece.extension"), for: .normal)
         button.alpha = 1
         button.adjustsImageWhenHighlighted = false
         button.accessibilityLabel = NSLocalizedString("Add-ons", comment: "")
-        button.accessibilityHint = "Shows installed add-ons"
+        button.accessibilityHint = NSLocalizedString("Shows installed add-ons", comment: "")
         button.isHidden = true
         return button
     }()
@@ -186,18 +184,6 @@ final class AddressBar: UIView {
         return button
     }()
 
-    private let zoomButton: AddressBarButton = {
-        let button = AddressBarButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.tintColor = .label
-        button.setImage(UIImage(named: "reynard.textformat.size"), for: .normal)
-        button.accessibilityLabel = NSLocalizedString("Page Zoom", comment: "")
-        button.accessibilityHint = "Shows page zoom controls"
-        button.isHidden = true
-        button.isUserInteractionEnabled = false
-        return button
-    }()
-    
     private let textField: AddressBarTextField = {
         let field = AddressBarTextField()
         field.translatesAutoresizingMaskIntoConstraints = false
@@ -301,7 +287,6 @@ final class AddressBar: UIView {
         addressBarBackground.layer.shadowPath = showsShadow
         ? UIBezierPath(roundedRect: addressBarBackground.bounds, cornerRadius: UX.addressBarBackgroundCornerRadius).cgPath
         : nil
-        updateZoomDropdownFrame()
     }
     
     // MARK: - Configuration
@@ -360,6 +345,11 @@ final class AddressBar: UIView {
                 self.delegate?.addressBar(self, didRequestBookmarkInFavorites: favorites)
             }
         )
+        applyState()
+    }
+
+    func setPageMenuIndicatesUpdate(_ hasUpdate: Bool) {
+        pageMenuIndicatesUpdate = hasUpdate
         applyState()
     }
     
@@ -484,19 +474,9 @@ final class AddressBar: UIView {
         }
     }
 
-    func showPageZoomDropdownAfterMenuDismissal() {
-        leadingButton.performAfterMenuDismissal { [weak self] in
-            self?.togglePageZoomDropdown()
-        }
-    }
-
     func invalidateMenuPresentation() {
         pageMenuOverlay?.dismiss(animated: false)
         applyState()
-    }
-
-    func togglePageZoomDropdown() {
-        handleZoomButtonTap()
     }
 
     func currentPageZoomLevel() -> Int? {
@@ -541,8 +521,8 @@ final class AddressBar: UIView {
         addSubview(dismissButton)
         addressBarBackground.addSubview(addressBarContent)
         addressBarContent.addSubview(leadingButton)
+        addressBarContent.addSubview(pageMenuUpdateBadge)
         addressBarContent.addSubview(addonButton)
-        addressBarContent.addSubview(zoomButton)
         addressBarContent.addSubview(trailingButton)
         addressBarContent.addSubview(textField)
         addressBarContent.addSubview(autocompleteButton)
@@ -583,16 +563,16 @@ final class AddressBar: UIView {
             leadingButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
             leadingButton.heightAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
 
+            pageMenuUpdateBadge.widthAnchor.constraint(equalToConstant: 8),
+            pageMenuUpdateBadge.heightAnchor.constraint(equalToConstant: 8),
+            pageMenuUpdateBadge.topAnchor.constraint(equalTo: leadingButton.topAnchor, constant: -2),
+            pageMenuUpdateBadge.trailingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: 2),
+
             addonButton.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing),
             addonButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
             addonButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
             addonButton.heightAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
 
-            zoomButton.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.zoomButtonToTrailingButtonSpacing),
-            zoomButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
-            zoomButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
-            zoomButton.heightAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
-            
             trailingButton.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset),
             trailingButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
             trailingButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
@@ -623,13 +603,11 @@ final class AddressBar: UIView {
         textLeadingToButtonConstraint = textField.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         textLeadingToAddonButtonConstraint = textField.leadingAnchor.constraint(equalTo: addonButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         textLeadingToBackgroundConstraint = textField.leadingAnchor.constraint(equalTo: addressBarContent.leadingAnchor, constant: UX.addressBarContentHorizontalInset)
-        textTrailingToZoomButtonConstraint = textField.trailingAnchor.constraint(equalTo: zoomButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         textTrailingToButtonConstraint = textField.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         textTrailingToBackgroundConstraint = textField.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset)
         labelLeadingToButtonConstraint = addressLabel.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         labelLeadingToAddonButtonConstraint = addressLabel.leadingAnchor.constraint(equalTo: addonButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         labelLeadingToBackgroundConstraint = addressLabel.leadingAnchor.constraint(equalTo: addressBarContent.leadingAnchor, constant: UX.addressBarContentHorizontalInset)
-        labelTrailingToZoomButtonConstraint = addressLabel.trailingAnchor.constraint(equalTo: zoomButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         labelTrailingToButtonConstraint = addressLabel.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         labelTrailingToBackgroundConstraint = addressLabel.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset)
     }
@@ -643,7 +621,6 @@ final class AddressBar: UIView {
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         leadingButton.addTarget(self, action: #selector(handleLeadingButtonTap), for: .touchUpInside)
         addonButton.addTarget(self, action: #selector(handleAddonButtonTap), for: .touchUpInside)
-        zoomButton.addTarget(self, action: #selector(handleZoomButtonTap), for: .touchUpInside)
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
         dismissButton.addTarget(self, action: #selector(handleDismissButtonTap), for: .touchUpInside)
@@ -689,7 +666,6 @@ final class AddressBar: UIView {
             content: content,
             leadingButton: resolveLeadingButtonState(for: content),
             showsAddonButton: resolveShowsAddonButton(for: content),
-            showsZoomButton: resolveShowsZoomButton(for: content),
             trailingButton: resolveTrailingButtonState(for: content)
         )
     }
@@ -719,10 +695,6 @@ final class AddressBar: UIView {
         }
     }
 
-    private func resolveShowsZoomButton(for content: ContentState) -> Bool {
-        return false
-    }
-
     private func resolveShowsAddonButton(for content: ContentState) -> Bool {
         guard Prefs.AddonSettings.showsAddressBarButton,
               editingState == .inactive,
@@ -745,34 +717,30 @@ final class AddressBar: UIView {
         applyLeadingButtonState(model.leadingButton)
         addonButton.isHidden = !model.showsAddonButton
         addonButton.isUserInteractionEnabled = model.showsAddonButton
-        applyZoomButtonVisibility(model.showsZoomButton)
         applyTrailingButtonState(model.trailingButton)
         
         let showsLeadingButton = model.leadingButton != .hidden
         let showsAddonButton = model.showsAddonButton
-        let showsZoomButton = model.showsZoomButton
         let showsTrailingButton = model.trailingButton != .hidden
         
         NSLayoutConstraint.deactivate([
             textLeadingToButtonConstraint,
             textLeadingToAddonButtonConstraint,
             textLeadingToBackgroundConstraint,
-            textTrailingToZoomButtonConstraint,
             textTrailingToButtonConstraint,
             textTrailingToBackgroundConstraint,
             labelLeadingToButtonConstraint,
             labelLeadingToAddonButtonConstraint,
             labelLeadingToBackgroundConstraint,
-            labelTrailingToZoomButtonConstraint,
             labelTrailingToButtonConstraint,
             labelTrailingToBackgroundConstraint,
         ])
         
         NSLayoutConstraint.activate([
             showsAddonButton ? textLeadingToAddonButtonConstraint : (showsLeadingButton ? textLeadingToButtonConstraint : textLeadingToBackgroundConstraint),
-            showsZoomButton ? textTrailingToZoomButtonConstraint : (showsTrailingButton ? textTrailingToButtonConstraint : textTrailingToBackgroundConstraint),
+            showsTrailingButton ? textTrailingToButtonConstraint : textTrailingToBackgroundConstraint,
             showsAddonButton ? labelLeadingToAddonButtonConstraint : (showsLeadingButton ? labelLeadingToButtonConstraint : labelLeadingToBackgroundConstraint),
-            showsZoomButton ? labelTrailingToZoomButtonConstraint : (showsTrailingButton ? labelTrailingToButtonConstraint : labelTrailingToBackgroundConstraint),
+            showsTrailingButton ? labelTrailingToButtonConstraint : labelTrailingToBackgroundConstraint,
         ])
     }
     
@@ -790,6 +758,11 @@ final class AddressBar: UIView {
     }
     
     private func applyLeadingButtonState(_ state: LeadingButtonState) {
+        let showsUpdate = state == .menu && pageMenuIndicatesUpdate
+        pageMenuUpdateBadge.isHidden = !showsUpdate
+        leadingButton.accessibilityValue = showsUpdate
+            ? NSLocalizedString("Update available", comment: "")
+            : nil
         guard state != .hidden else {
             leadingButton.isHidden = true
             leadingButton.setImage(nil, for: .normal)
@@ -821,14 +794,6 @@ final class AddressBar: UIView {
         leadingButton.isUserInteractionEnabled = !pageMenuItems.isEmpty
     }
 
-    private func applyZoomButtonVisibility(_ visible: Bool) {
-        zoomButton.isHidden = !visible
-        zoomButton.isUserInteractionEnabled = visible
-        if !visible {
-            dismissZoomDropdown(animated: false)
-        }
-    }
-    
     private func applyTrailingButtonState(_ state: TrailingButtonState) {
         let visible = state != .hidden
         trailingButton.isHidden = !visible
@@ -968,20 +933,6 @@ final class AddressBar: UIView {
     }
 
     @objc
-    private func handleZoomButtonTap() {
-        playZoomToggleHaptic()
-        if zoomDropdownOverlay != nil {
-            dismissZoomDropdown(animated: true)
-            return
-        }
-
-        guard let level = delegate?.addressBarCurrentPageZoomLevel(self) else {
-            return
-        }
-        showZoomDropdown(level: level, animated: true)
-    }
-    
-    @objc
     private func handleDismissButtonTap() {
         searchDelegate?.addressBarDidTapDismiss(self)
     }
@@ -1007,132 +958,6 @@ final class AddressBar: UIView {
         }
     }
 
-    // MARK: - Zoom Dropdown
-
-    private func showZoomDropdown(level: Int, animated: Bool) {
-        guard let window else {
-            return
-        }
-
-        let overlay = UIControl(frame: window.bounds)
-        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        overlay.backgroundColor = .clear
-        overlay.addTarget(self, action: #selector(handleZoomDropdownOverlayTap), for: .touchUpInside)
-
-        let dropdown = AddressBarZoomDropdown()
-        dropdown.setZoomLevel(level)
-        dropdown.onZoomOut = { [weak self] in
-            self?.setZoomDropdownLevel(offset: -1)
-        }
-        dropdown.onZoomIn = { [weak self] in
-            self?.setZoomDropdownLevel(offset: 1)
-        }
-        dropdown.onReset = { [weak self] in
-            self?.setZoomDropdownLevel(Prefs.AppearanceSettings.defaultPageZoomLevel)
-        }
-
-        overlay.addSubview(dropdown)
-        window.addSubview(overlay)
-        zoomDropdownOverlay = overlay
-        zoomDropdownView = dropdown
-        updateZoomDropdownFrame()
-
-        guard animated else {
-            return
-        }
-        dropdown.alpha = 0
-        dropdown.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
-        UIView.animate(withDuration: 0.12) {
-            dropdown.alpha = 1
-            dropdown.transform = .identity
-        }
-    }
-
-    private func dismissZoomDropdown(animated: Bool) {
-        guard let overlay = zoomDropdownOverlay else {
-            return
-        }
-
-        let cleanup = {
-            overlay.removeFromSuperview()
-            if self.zoomDropdownOverlay === overlay {
-                self.zoomDropdownOverlay = nil
-                self.zoomDropdownView = nil
-            }
-        }
-
-        guard animated, let dropdown = zoomDropdownView else {
-            cleanup()
-            return
-        }
-
-        UIView.animate(withDuration: 0.1, animations: {
-            dropdown.alpha = 0
-            dropdown.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
-        }, completion: { _ in
-            cleanup()
-        })
-    }
-
-    private func updateZoomDropdownFrame() {
-        guard let overlay = zoomDropdownOverlay,
-              let dropdown = zoomDropdownView else {
-            return
-        }
-
-        let size = CGSize(width: UX.zoomDropdownWidth, height: UX.zoomDropdownHeight)
-        let anchorRect = zoomButton.convert(zoomButton.bounds, to: overlay)
-        let safeInsets = overlay.safeAreaInsets
-        let minX = safeInsets.left + UX.zoomDropdownScreenInset
-        let maxX = overlay.bounds.width - safeInsets.right - UX.zoomDropdownScreenInset - size.width
-        let minY = safeInsets.top + UX.zoomDropdownScreenInset
-        let maxY = overlay.bounds.height - safeInsets.bottom - UX.zoomDropdownScreenInset - size.height
-        let unclampedX = anchorRect.midX - (size.width / 2)
-        let x = min(max(unclampedX, minX), maxX)
-        let dropsDown = anchorRect.midY < overlay.bounds.midY
-        let unclampedY = dropsDown
-        ? anchorRect.maxY + UX.zoomDropdownSpacing
-        : anchorRect.minY - UX.zoomDropdownSpacing - size.height
-        let y = min(max(unclampedY, minY), maxY)
-        dropdown.frame = CGRect(origin: CGPoint(x: x, y: y), size: size)
-    }
-
-    private func setZoomDropdownLevel(offset: Int) {
-        let currentLevel = delegate?.addressBarCurrentPageZoomLevel(self) ?? Prefs.AppearanceSettings.defaultPageZoomLevel
-        let normalizedLevel = PageZoomLevels.all.contains(currentLevel) ? currentLevel : Prefs.AppearanceSettings.defaultPageZoomLevel
-        guard let index = PageZoomLevels.all.firstIndex(of: normalizedLevel) else {
-            return
-        }
-
-        let nextIndex = min(max(index + offset, 0), PageZoomLevels.all.count - 1)
-        setZoomDropdownLevel(PageZoomLevels.all[nextIndex])
-    }
-
-    private func setZoomDropdownLevel(_ level: Int) {
-        guard PageZoomLevels.all.contains(level) else {
-            return
-        }
-
-        playZoomChangeHaptic()
-        delegate?.addressBar(self, didRequestPageZoomLevel: level)
-        let displayedLevel = delegate?.addressBarCurrentPageZoomLevel(self) ?? level
-        zoomDropdownView?.setZoomLevel(displayedLevel)
-    }
-
-    @objc
-    private func handleZoomDropdownOverlayTap() {
-        playZoomToggleHaptic()
-        dismissZoomDropdown(animated: true)
-    }
-
-    private func playZoomToggleHaptic() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-
-    private func playZoomChangeHaptic() {
-        UISelectionFeedbackGenerator().selectionChanged()
-    }
-    
     // MARK: - Autocomplete Presentation
     
     private func commitAutocompleteForEditing() {
@@ -1243,200 +1068,6 @@ final class AddressBar: UIView {
         let start = textField.beginningOfDocument
         let end = textField.endOfDocument
         textField.selectedTextRange = textField.textRange(from: start, to: end)
-    }
-}
-
-private final class AddressBarZoomDropdown: UIView {
-    private enum UX {
-        static let cornerRadius: CGFloat = 19
-        static let controlButtonWidth: CGFloat = 55
-        static let separatorWidth: CGFloat = 1
-        static let percentFontSize: CGFloat = 16
-        static let controlSymbolPointSize: CGFloat = 14
-        static let backgroundAlpha: CGFloat = 0.34
-        static let disabledAlpha: CGFloat = 0.32
-        static let shadowOpacity: Float = 0.14
-        static let shadowRadius: CGFloat = 8
-        static let shadowOffset = CGSize(width: 0, height: 3)
-        static let borderWidth: CGFloat = 0.5
-    }
-
-    var onZoomOut: (() -> Void)?
-    var onZoomIn: (() -> Void)?
-    var onReset: (() -> Void)?
-
-    private(set) var zoomLevel = Prefs.AppearanceSettings.defaultPageZoomLevel
-
-    private let backgroundView: UIVisualEffectView = {
-        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.contentView.backgroundColor = UIColor.systemBackground.withAlphaComponent(UX.backgroundAlpha)
-        view.layer.cornerCurve = .continuous
-        view.layer.cornerRadius = UX.cornerRadius
-        view.layer.borderWidth = UX.borderWidth
-        view.clipsToBounds = true
-        return view
-    }()
-
-    private lazy var zoomOutButton = makeControlButton(
-        named: "reynard.minus",
-        accessibilityLabel: NSLocalizedString("Zoom Out", comment: ""),
-        action: #selector(zoomOutTapped)
-    )
-
-    private lazy var zoomInButton = makeControlButton(
-        named: "reynard.plus",
-        accessibilityLabel: NSLocalizedString("Zoom In", comment: ""),
-        action: #selector(zoomInTapped)
-    )
-
-    private lazy var resetButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.titleLabel?.font = UIFont.systemFont(ofSize: UX.percentFontSize, weight: .regular)
-        button.setTitleColor(.secondaryLabel, for: .normal)
-        button.accessibilityLabel = NSLocalizedString("Reset Page Zoom", comment: "")
-        button.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
-        return button
-    }()
-
-    private let leadingSeparator = AddressBarZoomDropdown.makeSeparator()
-    private let trailingSeparator = AddressBarZoomDropdown.makeSeparator()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        configureAppearance()
-        configureHierarchy()
-        configureConstraints()
-        updateShadowColor()
-        updateBorderColor()
-        setZoomLevel(zoomLevel)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        layer.shadowPath = UIBezierPath(
-            roundedRect: bounds,
-            cornerRadius: UX.cornerRadius
-        ).cgPath
-    }
-
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else {
-            return
-        }
-
-        updateShadowColor()
-        updateBorderColor()
-    }
-
-    func setZoomLevel(_ level: Int) {
-        zoomLevel = PageZoomLevels.all.contains(level) ? level : Prefs.AppearanceSettings.defaultPageZoomLevel
-        let displayText = PageZoomLevels.displayText(for: zoomLevel)
-        resetButton.setTitle(displayText, for: .normal)
-        resetButton.accessibilityValue = displayText
-        zoomOutButton.isEnabled = zoomLevel > PageZoomLevels.all.first!
-        zoomInButton.isEnabled = zoomLevel < PageZoomLevels.all.last!
-        zoomOutButton.alpha = zoomOutButton.isEnabled ? 1 : UX.disabledAlpha
-        zoomInButton.alpha = zoomInButton.isEnabled ? 1 : UX.disabledAlpha
-    }
-
-    @objc private func zoomOutTapped() {
-        onZoomOut?()
-    }
-
-    @objc private func zoomInTapped() {
-        onZoomIn?()
-    }
-
-    @objc private func resetTapped() {
-        onReset?()
-    }
-
-    private func configureAppearance() {
-        backgroundColor = .clear
-        layer.cornerCurve = .continuous
-        layer.cornerRadius = UX.cornerRadius
-        layer.shadowOpacity = UX.shadowOpacity
-        layer.shadowRadius = UX.shadowRadius
-        layer.shadowOffset = UX.shadowOffset
-    }
-
-    private func configureHierarchy() {
-        addSubview(backgroundView)
-        [zoomOutButton, leadingSeparator, resetButton, trailingSeparator, zoomInButton].forEach {
-            backgroundView.contentView.addSubview($0)
-        }
-    }
-
-    private func configureConstraints() {
-        NSLayoutConstraint.activate([
-            backgroundView.topAnchor.constraint(equalTo: topAnchor),
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            zoomOutButton.leadingAnchor.constraint(equalTo: backgroundView.contentView.leadingAnchor),
-            zoomOutButton.topAnchor.constraint(equalTo: backgroundView.contentView.topAnchor),
-            zoomOutButton.bottomAnchor.constraint(equalTo: backgroundView.contentView.bottomAnchor),
-            zoomOutButton.widthAnchor.constraint(equalToConstant: UX.controlButtonWidth),
-
-            leadingSeparator.leadingAnchor.constraint(equalTo: zoomOutButton.trailingAnchor),
-            leadingSeparator.topAnchor.constraint(equalTo: backgroundView.contentView.topAnchor),
-            leadingSeparator.bottomAnchor.constraint(equalTo: backgroundView.contentView.bottomAnchor),
-            leadingSeparator.widthAnchor.constraint(equalToConstant: UX.separatorWidth),
-
-            resetButton.leadingAnchor.constraint(equalTo: leadingSeparator.trailingAnchor),
-            resetButton.topAnchor.constraint(equalTo: backgroundView.contentView.topAnchor),
-            resetButton.bottomAnchor.constraint(equalTo: backgroundView.contentView.bottomAnchor),
-
-            trailingSeparator.leadingAnchor.constraint(equalTo: resetButton.trailingAnchor),
-            trailingSeparator.topAnchor.constraint(equalTo: backgroundView.contentView.topAnchor),
-            trailingSeparator.bottomAnchor.constraint(equalTo: backgroundView.contentView.bottomAnchor),
-            trailingSeparator.widthAnchor.constraint(equalToConstant: UX.separatorWidth),
-
-            zoomInButton.leadingAnchor.constraint(equalTo: trailingSeparator.trailingAnchor),
-            zoomInButton.trailingAnchor.constraint(equalTo: backgroundView.contentView.trailingAnchor),
-            zoomInButton.topAnchor.constraint(equalTo: backgroundView.contentView.topAnchor),
-            zoomInButton.bottomAnchor.constraint(equalTo: backgroundView.contentView.bottomAnchor),
-            zoomInButton.widthAnchor.constraint(equalToConstant: UX.controlButtonWidth),
-        ])
-    }
-
-    private func makeControlButton(
-        named imageName: String,
-        accessibilityLabel: String,
-        action: Selector
-    ) -> UIButton {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        let configuration = UIImage.SymbolConfiguration(pointSize: UX.controlSymbolPointSize, weight: .regular)
-        button.setImage(UIImage(named: imageName, in: .main, with: configuration), for: .normal)
-        button.tintColor = .label
-        button.backgroundColor = .clear
-        button.accessibilityLabel = accessibilityLabel
-        button.addTarget(self, action: action, for: .touchUpInside)
-        return button
-    }
-
-    private static func makeSeparator() -> UIView {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .separator
-        return view
-    }
-
-    private func updateShadowColor() {
-        layer.shadowColor = UIColor.black.cgColor
-    }
-
-    private func updateBorderColor() {
-        backgroundView.layer.borderColor = UIColor.separator.cgColor
     }
 }
 
@@ -1569,10 +1200,6 @@ extension AddressBar: UIGestureRecognizerDelegate {
             return false
         }
 
-        if touch.view?.isDescendant(of: zoomButton) == true {
-            return false
-        }
-        
         if touch.view?.isDescendant(of: trailingButton) == true {
             return false
         }

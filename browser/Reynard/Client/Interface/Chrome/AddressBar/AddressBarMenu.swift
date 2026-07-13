@@ -9,10 +9,6 @@ import UIKit
 import GeckoView
 
 enum AddressBarMenu {
-    private struct Identifier {
-        static let addressBarMenu = UIMenu.Identifier("com.minh-ton.Reynard.AddressBarMenu")
-    }
-    
     struct AddonItem {
         let menuItem: AddonMenuItem
         let image: UIImage?
@@ -44,13 +40,13 @@ enum AddressBarMenu {
                 onBookmark(false)
             })
             if !BookmarkStore.shared.isSavedInFavorites(url) {
-                items.append(Item(title: "Add to Favorites", image: UIImage(named: "reynard.star"), startsSection: false) {
+                items.append(Item(title: NSLocalizedString("Add to Favorites", comment: ""), image: UIImage(named: "reynard.star"), startsSection: false) {
                     onBookmark(true)
                 })
             }
         }
         items.append(Item(
-            title: "Add-ons",
+            title: NSLocalizedString("Add-ons", comment: ""),
             image: UIImage(named: "reynard.puzzlepiece.extension"),
             startsSection: !items.isEmpty,
             action: onShowAddons
@@ -67,85 +63,19 @@ enum AddressBarMenu {
         }
         if url?.host != nil {
             items.append(Item(
-                title: "Website Settings",
+                title: NSLocalizedString("Website Settings", comment: ""),
                 image: UIImage(named: "reynard.gear"),
                 startsSection: true,
                 action: onWebsiteSettings
             ))
         }
         items.append(Item(
-            title: "Settings",
+            title: NSLocalizedString("Settings", comment: ""),
             image: UIImage(named: "reynard.gear"),
             startsSection: url?.host == nil,
             action: onSettings
         ))
         return items
-    }
-
-    static func makeMenu(
-        selectedURL: String?,
-        usesDesktopWebsite: Bool?,
-        addonItems: [AddonItem],
-        onShowAddons: @escaping () -> Void,
-        onPageZoom: @escaping () -> Void,
-        onChangeWebsiteMode: @escaping () -> Void,
-        onWebsiteSettings: @escaping () -> Void,
-        onSettings: @escaping () -> Void,
-        onBookmark: @escaping (Bool) -> Void
-    ) -> UIMenu {
-        var tabActions: [UIMenuElement] = []
-        
-        let url = selectedURL.flatMap(URL.init(string:))
-        if let url, url.host != nil {
-            let title = BookmarkStore.shared.bookmark(savedFor: url) == nil ? NSLocalizedString("Add Bookmark", comment: "") : NSLocalizedString("Edit Bookmark", comment: "")
-            tabActions.append(UIAction(title: title, image: UIImage(named: "reynard.book")) { _ in
-                onBookmark(false)
-            })
-            
-            if !BookmarkStore.shared.isSavedInFavorites(url) {
-                tabActions.append(UIAction(title: NSLocalizedString("Add to Favorites", comment: ""), image: UIImage(named: "reynard.star")) { _ in
-                    onBookmark(true)
-                })
-            }
-        }
-        
-        var pageActions: [UIMenuElement] = [
-            UIAction(
-                title: NSLocalizedString("Add-ons", comment: ""),
-                image: UIImage(named: "reynard.puzzlepiece.extension")
-            ) { _ in
-                onShowAddons()
-            }
-        ]
-        
-        if url?.host != nil {
-            pageActions.append(UIAction(title: NSLocalizedString("Page Zoom", comment: ""), image: UIImage(named: "reynard.textformat.size")) { _ in
-                onPageZoom()
-            })
-        }
-        
-        if let isDesktop = usesDesktopWebsite {
-            let title = isDesktop ? NSLocalizedString("Request Mobile Website", comment: "") : NSLocalizedString("Request Desktop Website", comment: "")
-            let imageName = isDesktop ? "reynard.smartphone" : "reynard.desktopcomputer"
-            pageActions.append(UIAction(title: title, image: UIImage(named: imageName)) { _ in
-                onChangeWebsiteMode()
-            })
-        }
-        
-        var settingsActions: [UIMenuElement] = []
-        if url?.host != nil {
-            settingsActions.append(UIAction(title: NSLocalizedString("Website Settings", comment: ""), image: UIImage(named: "reynard.gear")) { _ in
-                onWebsiteSettings()
-            })
-        }
-        settingsActions.append(UIAction(title: "Settings", image: UIImage(named: "reynard.gear")) { _ in
-            onSettings()
-        })
-        
-        let children = tabActions + [UIMenu(options: .displayInline, children: pageActions)] + [UIMenu(options: .displayInline, children: settingsActions)]
-        
-        let menu = UIMenu(title: "", image: nil, identifier: Identifier.addressBarMenu, options: [], children: children)
-        return menu
     }
 }
 
@@ -153,7 +83,6 @@ final class AddressBarPageMenuView: UIControl {
     private enum UX {
         static let maximumWidth: CGFloat = 286
         static let relativeWidth: CGFloat = 0.7
-        static let rowHeight: CGFloat = 44
         static let zoomHeight: CGFloat = 46
         static let separatorHeight = 1 / UIScreen.main.scale
         static let screenInset: CGFloat = 12
@@ -167,6 +96,10 @@ final class AddressBarPageMenuView: UIControl {
     private var rowViews: [(UIView, Bool)] = []
     private var isDismissing = false
     private var dismissalCompletions: [() -> Void] = []
+
+    private var rowHeight: CGFloat {
+        max(44, ceil(UIFont.preferredFont(forTextStyle: .body).lineHeight + 20))
+    }
 
     init(
         zoomLevel: Int,
@@ -187,6 +120,7 @@ final class AddressBarPageMenuView: UIControl {
         panel.layer.shadowRadius = 18
         panel.layer.shadowOffset = CGSize(width: 0, height: 8)
         panel.clipsToBounds = false
+        panel.accessibilityViewIsModal = true
         addSubview(panel)
 
         scrollView.showsVerticalScrollIndicator = true
@@ -213,7 +147,7 @@ final class AddressBarPageMenuView: UIControl {
         autoresizingMask = [.flexibleWidth, .flexibleHeight]
         window.addSubview(self)
 
-        let contentHeight = UX.zoomHeight + CGFloat(items.count) * UX.rowHeight
+        let contentHeight = UX.zoomHeight + CGFloat(items.count) * rowHeight
             + CGFloat(rowViews.filter { $0.1 }.count) * UX.separatorHeight
         let safeFrame = window.bounds.inset(by: window.safeAreaInsets).insetBy(
             dx: UX.screenInset,
@@ -236,9 +170,11 @@ final class AddressBarPageMenuView: UIControl {
 
         panel.alpha = 0
         panel.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
-        UIView.animate(withDuration: 0.18) {
+        UIView.animate(withDuration: 0.18, animations: {
             self.panel.alpha = 1
             self.panel.transform = .identity
+        }) { _ in
+            UIAccessibility.post(notification: .screenChanged, argument: self.zoomControl)
         }
     }
 
@@ -292,14 +228,19 @@ final class AddressBarPageMenuView: UIControl {
                 scrollView.insertSubview(separator, belowSubview: view)
                 y += UX.separatorHeight
             }
-            view.frame = CGRect(x: 0, y: y, width: width, height: UX.rowHeight)
-            y += UX.rowHeight
+            view.frame = CGRect(x: 0, y: y, width: width, height: rowHeight)
+            y += rowHeight
         }
         scrollView.contentSize = CGSize(width: width, height: max(contentHeight, y))
     }
 
     @objc private func backgroundTapped() {
         dismiss(animated: true)
+    }
+
+    override func accessibilityPerformEscape() -> Bool {
+        dismiss(animated: true)
+        return true
     }
 }
 
@@ -388,7 +329,9 @@ private final class AddressBarMenuActionButton: UIButton {
         setTitleColor(.label, for: .normal)
         setImage(item.image, for: .normal)
         tintColor = .label
-        titleLabel?.font = .systemFont(ofSize: 16)
+        titleLabel?.font = .preferredFont(forTextStyle: .body)
+        titleLabel?.adjustsFontForContentSizeCategory = true
+        titleLabel?.lineBreakMode = .byTruncatingTail
         addTarget(self, action: #selector(tapped), for: .touchUpInside)
         let separator = UIView()
         separator.translatesAutoresizingMaskIntoConstraints = false

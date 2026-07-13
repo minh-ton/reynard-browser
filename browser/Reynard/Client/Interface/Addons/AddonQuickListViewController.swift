@@ -79,6 +79,11 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         dismiss(animated: true)
     }
 
+    override func accessibilityPerformEscape() -> Bool {
+        close()
+        return true
+    }
+
     @objc private func reloadItems() {
         items = itemProvider()
         tableView.reloadData()
@@ -134,10 +139,15 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         cell.selectionStyle = .default
         cell.textLabel?.textColor = .label
         cell.detailTextLabel?.textColor = .secondaryLabel
+        cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+        cell.detailTextLabel?.font = .preferredFont(forTextStyle: .subheadline)
         cell.textLabel?.adjustsFontForContentSizeCategory = true
         cell.detailTextLabel?.adjustsFontForContentSizeCategory = true
         cell.accessibilityIdentifier = "AddonQuickList.Item.\(item.menuItem.addon.id)"
-        cell.accessibilityHint = "Double tap to open. Swipe up or down for available actions."
+        cell.accessibilityHint = NSLocalizedString(
+            "Double tap to open. Swipe up or down for available actions.",
+            comment: ""
+        )
         return cell
     }
 
@@ -169,7 +179,10 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         guard items.indices.contains(indexPath.row) else { return nil }
         let addon = items[indexPath.row].menuItem.addon
         guard !addon.isBuiltIn else { return nil }
-        let uninstall = UIContextualAction(style: .destructive, title: "Uninstall") { [weak self] _, _, completion in
+        let uninstall = UIContextualAction(
+            style: .destructive,
+            title: NSLocalizedString("Uninstall", comment: "")
+        ) { [weak self] _, _, completion in
             self?.onUninstall(addon)
             completion(true)
         }
@@ -185,6 +198,8 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
         cell.accessoryType = .none
         cell.textLabel?.textColor = view.tintColor
         cell.detailTextLabel?.textColor = .secondaryLabel
+        cell.textLabel?.font = .preferredFont(forTextStyle: .body)
+        cell.textLabel?.adjustsFontForContentSizeCategory = true
         cell.selectionStyle = .default
         cell.accessibilityHint = nil
         switch action {
@@ -285,14 +300,25 @@ final class AddonQuickListViewController: UITableViewController, UIDocumentPicke
     private func updateSummary(for result: AddonUpdateBatchResult) -> String {
         var parts: [String] = []
         if result.updatedCount > 0 {
-            parts.append(result.updatedCount == 1 ? "1 add-on updated." : "\(result.updatedCount) add-ons updated.")
+            parts.append(String.localizedStringWithFormat(
+                NSLocalizedString("%lld add-ons updated.", comment: "Update count"),
+                Int64(result.updatedCount)
+            ))
         }
         if result.pendingApprovalCount > 0 {
-            parts.append(result.pendingApprovalCount == 1 ? "1 add-on needs permission." : "\(result.pendingApprovalCount) add-ons need permission.")
+            parts.append(String.localizedStringWithFormat(
+                NSLocalizedString("%lld add-ons need permission.", comment: "Update count"),
+                Int64(result.pendingApprovalCount)
+            ))
         }
         if result.failedCount > 0 {
-            parts.append(result.failedCount == 1 ? "1 update failed." : "\(result.failedCount) updates failed.")
+            parts.append(String.localizedStringWithFormat(
+                NSLocalizedString("%lld updates failed.", comment: "Update count"),
+                Int64(result.failedCount)
+            ))
         }
-        return parts.isEmpty ? "No updates found." : parts.joined(separator: " ")
+        return parts.isEmpty
+            ? NSLocalizedString("No updates found.", comment: "")
+            : parts.joined(separator: " ")
     }
 }

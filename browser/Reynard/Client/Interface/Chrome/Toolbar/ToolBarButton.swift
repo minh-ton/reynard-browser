@@ -16,7 +16,7 @@ final class ToolbarButton: UIButton {
         static let downloadProgressTrackHeight: CGFloat = 2.5
         static let downloadProgressTrackBottomInset: CGFloat = 1
         static let downloadProgressTrackCornerRadius: CGFloat = 1.25
-        static let standardButtonSideLength: CGFloat = 30
+        static let standardButtonSideLength = BottomToolbarLayoutPolicy.minimumTargetSize
         static let standardSymbolPointSize: CGFloat = 20
         static let newTabSymbolPointSize: CGFloat = 20
         static let downloadSymbolPointSize: CGFloat = 17
@@ -26,7 +26,7 @@ final class ToolbarButton: UIButton {
         case back
         case forward
         case share
-        case library
+        case more
         case bookmarks
         case history
         case settings
@@ -194,7 +194,7 @@ final class ToolbarButton: UIButton {
         case .back: return "reynard.chevron.backward"
         case .forward: return "reynard.chevron.forward"
         case .share: return "reynard.square.and.arrow.up"
-        case .library: return "reynard.ellipsis.circle"
+        case .more: return "reynard.ellipsis.circle"
         case .bookmarks: return "reynard.book"
         case .history: return "reynard.clock"
         case .settings: return "reynard.gearshape"
@@ -210,20 +210,20 @@ final class ToolbarButton: UIButton {
 
     private var buttonTitle: String {
         switch toolbarButtonType {
-        case .back: return "Back"
-        case .forward: return "Forward"
-        case .share: return "Share"
-        case .library: return "Library"
-        case .bookmarks: return "Bookmarks"
-        case .history: return "History"
-        case .settings: return "Settings"
-        case .tabOverview: return "Tabs"
-        case .download: return "Downloads"
-        case .newTab: return "New Tab"
-        case .closeTab: return "Close Tab"
-        case .reload: return "Reload"
-        case .pageZoom: return "Page Zoom"
-        case .sidebar: return "Sidebar"
+        case .back: return NSLocalizedString("Back", comment: "")
+        case .forward: return NSLocalizedString("Forward", comment: "")
+        case .share: return NSLocalizedString("Share", comment: "")
+        case .more: return NSLocalizedString("More", comment: "Toolbar overflow")
+        case .bookmarks: return NSLocalizedString("Bookmarks", comment: "")
+        case .history: return NSLocalizedString("History", comment: "")
+        case .settings: return NSLocalizedString("Settings", comment: "")
+        case .tabOverview: return NSLocalizedString("Tabs", comment: "")
+        case .download: return NSLocalizedString("Downloads", comment: "")
+        case .newTab: return NSLocalizedString("New Tab", comment: "")
+        case .closeTab: return NSLocalizedString("Close Tab", comment: "")
+        case .reload: return NSLocalizedString("Reload", comment: "")
+        case .pageZoom: return NSLocalizedString("Page Zoom", comment: "")
+        case .sidebar: return NSLocalizedString("Sidebar", comment: "")
         }
     }
     

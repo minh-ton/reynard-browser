@@ -25,7 +25,9 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         var text: SettingsSectionText {
             switch self {
             case .addressBar:
-                return SettingsSectionText(headerTitle: "Address Bar")
+                return SettingsSectionText(
+                    headerTitle: NSLocalizedString("Address Bar", comment: "")
+                )
             case .installed:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Installed Add-ons", comment: ""))
             case .unsupported:
@@ -289,7 +291,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             return nil
         }
 
-        let uninstallAction = UIContextualAction(style: .destructive, title: "Uninstall") { [weak self] _, _, completion in
+        let uninstallAction = UIContextualAction(
+            style: .destructive,
+            title: NSLocalizedString("Uninstall", comment: "")
+        ) { [weak self] _, _, completion in
             completion(false)
             self?.confirmUninstall(addon)
         }
@@ -307,8 +312,11 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         switch displayedSection {
         case .addressBar:
             return SettingsSectionText(
-                headerTitle: "Address Bar",
-                footerTitle: "Display add-ons button in the URL bar."
+                headerTitle: NSLocalizedString("Address Bar", comment: ""),
+                footerTitle: NSLocalizedString(
+                    "Display add-ons button in the URL bar.",
+                    comment: ""
+                )
             )
         case .installed:
             return installedAddons.isEmpty ? SettingsSectionText() : displayedSection.text
@@ -404,11 +412,20 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     private func confirmUninstall(_ addon: Addon) {
         let addonName = addon.metaData.name ?? addon.id
         AlertPresenter.show(
-            title: "Uninstall \(addonName)?",
+            title: String(
+                format: NSLocalizedString("Uninstall %@?", comment: "Add-on name"),
+                addonName
+            ),
             message: nil,
             buttons: [
-                AlertPresenter.Button(title: "Cancel", style: .cancel),
-                AlertPresenter.Button(title: "Uninstall", style: .destructive) { [weak self] in
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Cancel", comment: ""),
+                    style: .cancel
+                ),
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Uninstall", comment: ""),
+                    style: .destructive
+                ) { [weak self] in
                     self?.uninstall(addon)
                 },
             ]
@@ -440,7 +457,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                     self.uninstallingAddonIDs.remove(addon.id)
                     self.addonStatusTextByID.removeValue(forKey: addon.id)
                     self.tableView.reloadData()
-                    AlertPresenter.show(title: "Failed to uninstall add-on", message: "\(error)")
+                    AlertPresenter.show(
+                        title: NSLocalizedString("Failed to uninstall add-on", comment: ""),
+                        message: "\(error)"
+                    )
                 }
             }
         }

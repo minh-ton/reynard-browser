@@ -28,18 +28,18 @@ enum BottomToolbarAction: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .back: return "Back"
-        case .forward: return "Forward"
-        case .reload: return "Reload"
-        case .share: return "Share"
-        case .pageZoom: return "Page Zoom"
-        case .bookmarks: return "Bookmarks"
-        case .history: return "History"
-        case .downloads: return "Downloads"
-        case .settings: return "Settings"
-        case .newTab: return "New Tab"
-        case .closeTab: return "Close Tab"
-        case .tabOverview: return "Tabs"
+        case .back: return NSLocalizedString("Back", comment: "")
+        case .forward: return NSLocalizedString("Forward", comment: "")
+        case .reload: return NSLocalizedString("Reload", comment: "")
+        case .share: return NSLocalizedString("Share", comment: "")
+        case .pageZoom: return NSLocalizedString("Page Zoom", comment: "")
+        case .bookmarks: return NSLocalizedString("Bookmarks", comment: "")
+        case .history: return NSLocalizedString("History", comment: "")
+        case .downloads: return NSLocalizedString("Downloads", comment: "")
+        case .settings: return NSLocalizedString("Settings", comment: "")
+        case .newTab: return NSLocalizedString("New Tab", comment: "")
+        case .closeTab: return NSLocalizedString("Close Tab", comment: "")
+        case .tabOverview: return NSLocalizedString("Tabs", comment: "")
         }
     }
 
@@ -63,15 +63,15 @@ enum BottomToolbarAction: String, CaseIterable {
 
 final class BottomToolbar: UIView {
     private enum UX {
-        static let bottomToolbarStandardContentHeight: CGFloat = 94
+        static let bottomToolbarStandardContentHeight: CGFloat = 108
         static let bottomToolbarFocusedContentHeight: CGFloat = 58
-        static let bottomToolbarCompactContentHeight: CGFloat = 44
-        static let bottomToolbarButtonStackHeight: CGFloat = 30
+        static let bottomToolbarCompactContentHeight: CGFloat = 58
+        static let bottomToolbarButtonStackHeight = BottomToolbarLayoutPolicy.minimumTargetSize
         static let addressBarHorizontalInset: CGFloat = 12
         static let addressBarTopInset: CGFloat = 8
-        static let bottomToolbarButtonStackHorizontalInset: CGFloat = 24
+        static let bottomToolbarButtonStackHorizontalInset = BottomToolbarLayoutPolicy.horizontalInset
         static let bottomToolbarButtonStackTopSpacing: CGFloat = 7
-        static let bottomToolbarButtonSpacing: CGFloat = 4
+        static let bottomToolbarButtonSpacing = BottomToolbarLayoutPolicy.spacing
     }
     
     enum LayoutState {
@@ -141,6 +141,19 @@ final class BottomToolbar: UIView {
         .closeTab: closeTabButton,
         .tabOverview: tabOverviewButton,
     ]
+
+    private lazy var overflowButton: ToolbarButton = {
+        let button = ToolbarButton(
+            buttonType: .more,
+            target: self,
+            action: #selector(overflowTapped)
+        )
+        button.accessibilityLabel = NSLocalizedString("More", comment: "Toolbar overflow")
+        if #available(iOS 14.0, *) {
+            button.showsMenuAsPrimaryAction = true
+        }
+        return button
+    }()
     
     private lazy var buttons: UIStackView = {
         let stack = UIStackView()
@@ -160,6 +173,8 @@ final class BottomToolbar: UIView {
     private var addressBarConstraints: [NSLayoutConstraint] = []
     
     private var verticalOffset: CGFloat = 0
+    private var displayedActions: [BottomToolbarAction] = []
+    private var displayedOverflowActions: [BottomToolbarAction] = []
     
     // MARK: - Lifecycle
     
@@ -185,6 +200,11 @@ final class BottomToolbar: UIView {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        applyConfiguredActionsIfNeeded()
     }
     
     // MARK: - Layout
@@ -256,6 +276,7 @@ final class BottomToolbar: UIView {
         backButton.isEnabled = canGoBack
         forwardButton.isEnabled = canGoForward
         shareButton.isEnabled = canShare
+        configureOverflowMenu(actions: displayedOverflowActions)
     }
     
     func setVerticalOffset(_ offset: CGFloat) {
@@ -265,10 +286,6 @@ final class BottomToolbar: UIView {
     
     func updateDownload(_ summary: DownloadStoreSummary) {
         downloadButton.applyDownloadSummary(summary)
-    }
-    
-    func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
-        _ = hasUpdate
     }
     
     // MARK: - Action Wiring
@@ -295,6 +312,31 @@ final class BottomToolbar: UIView {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
         onNewTab?()
+    }
+
+    @objc private func overflowTapped() {
+        if #available(iOS 14.0, *) {
+            return
+        }
+        guard !displayedOverflowActions.isEmpty,
+              let presenter = nearestViewController else {
+            return
+        }
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        for action in displayedOverflowActions {
+            let alertAction = UIAlertAction(title: action.title, style: .default) { [weak self] _ in
+                self?.perform(action)
+            }
+            alertAction.isEnabled = isActionEnabled(action)
+            alert.addAction(alertAction)
+        }
+        alert.addAction(UIAlertAction(
+            title: NSLocalizedString("Cancel", comment: ""),
+            style: .cancel
+        ))
+        alert.popoverPresentationController?.sourceView = overflowButton
+        alert.popoverPresentationController?.sourceRect = overflowButton.bounds
+        presenter.present(alert, animated: true)
     }
 
     @objc private func newTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
@@ -352,24 +394,103 @@ final class BottomToolbar: UIView {
     }
 
     private func applyConfiguredActions() {
+        displayedActions = []
+        displayedOverflowActions = []
+        setNeedsLayout()
+        applyConfiguredActionsIfNeeded()
+    }
+
+    private func applyConfiguredActionsIfNeeded() {
+        guard bounds.width > 0 else {
+            return
+        }
+        let configuredActions = Prefs.AppearanceSettings.bottomToolbarActions
+        let slots = BottomToolbarLayoutPolicy.availableSlotCount(width: bounds.width)
+        let directCount = BottomToolbarLayoutPolicy.directActionCount(
+            configuredCount: configuredActions.count,
+            availableSlots: slots
+        )
+        let directActions = Array(configuredActions.prefix(directCount))
+        let overflowActions = Array(configuredActions.dropFirst(directCount))
+        guard displayedActions != directActions ||
+                displayedOverflowActions != overflowActions else {
+            return
+        }
+
         for button in buttons.arrangedSubviews {
             buttons.removeArrangedSubview(button)
             button.removeFromSuperview()
         }
-        for action in Prefs.AppearanceSettings.bottomToolbarActions {
+        for action in directActions {
             if let button = actionButtons[action] {
                 button.isHidden = false
                 buttons.addArrangedSubview(button)
             }
         }
+        if !overflowActions.isEmpty {
+            configureOverflowMenu(actions: overflowActions)
+            buttons.addArrangedSubview(overflowButton)
+        }
+        displayedActions = directActions
+        displayedOverflowActions = overflowActions
+    }
+
+    private func configureOverflowMenu(actions: [BottomToolbarAction]) {
+        guard #available(iOS 14.0, *) else {
+            return
+        }
+        overflowButton.menu = UIMenu(children: actions.map { action in
+            UIAction(
+                title: action.title,
+                image: UIImage(named: action.imageName),
+                attributes: isActionEnabled(action) ? [] : .disabled
+            ) { [weak self] _ in
+                self?.perform(action)
+            }
+        })
+    }
+
+    private func perform(_ action: BottomToolbarAction) {
+        guard isActionEnabled(action) else {
+            return
+        }
+        switch action {
+        case .back: backTapped()
+        case .forward: forwardTapped()
+        case .reload: reloadTapped()
+        case .share: shareTapped()
+        case .pageZoom: pageZoomTapped()
+        case .bookmarks: bookmarksTapped()
+        case .history: historyTapped()
+        case .downloads: downloadsTapped()
+        case .settings: settingsTapped()
+        case .newTab: newTabTapped()
+        case .closeTab: closeTabTapped()
+        case .tabOverview: tabOverviewTapped()
+        }
+    }
+
+    private func isActionEnabled(_ action: BottomToolbarAction) -> Bool {
+        return actionButtons[action]?.isEnabled ?? true
     }
 
     private func updateShortcutAccessibility() {
         closeTabButton.accessibilityHint = Prefs.AppearanceSettings.closeTabLongPressOpensNewTab
-            ? "Touch and hold to open a new tab"
+            ? NSLocalizedString("Touch and hold to open a new tab", comment: "")
             : nil
         newTabButton.accessibilityHint = Prefs.AppearanceSettings.newTabLongPressClosesTab
-            ? "Touch and hold to close the current tab"
+            ? NSLocalizedString("Touch and hold to close the current tab", comment: "")
             : nil
+    }
+
+    private var nearestViewController: UIViewController? {
+        var responder: UIResponder? = self
+        while let next = responder?.next {
+            if let viewController = next as? UIViewController {
+                return viewController
+            }
+            responder = next
+        }
+        return nil
     }
 }

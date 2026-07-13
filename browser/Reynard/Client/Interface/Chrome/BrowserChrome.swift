@@ -402,10 +402,6 @@ final class BrowserChrome: UIView {
         addressBar.performAfterMenuDismissal(action)
     }
 
-    func showPageZoomDropdownFromAddressBarMenu() {
-        addressBar.showPageZoomDropdownAfterMenuDismissal()
-    }
-
     func invalidateAddressBarMenuPresentation() {
         addressBar.invalidateMenuPresentation()
     }
@@ -431,7 +427,7 @@ final class BrowserChrome: UIView {
     
     func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
         topToolbar.setMenuButtonIndicatesUpdate(hasUpdate)
-        bottomToolbar.setMenuButtonIndicatesUpdate(hasUpdate)
+        addressBar.setPageMenuIndicatesUpdate(hasUpdate)
     }
     
     func syncSidebarButton(splitViewController: UISplitViewController?) {
