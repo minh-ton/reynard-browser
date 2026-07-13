@@ -10,6 +10,11 @@ enum WebsiteModeHostTests {
         expect(WebsiteModeHost.areRelated("mobile.example.com", "example.com"))
         expect(!WebsiteModeHost.areRelated("news.example.com", "example.com"))
         expect(!WebsiteModeHost.areRelated("one.example.com", "two.example.com"))
+        expect(WebsiteModeHost.relatedAliases(for: "m.Example.com") == [
+            "example.com",
+            "m.example.com",
+            "mobile.example.com",
+        ])
         print("WebsiteModeHostTests passed")
     }
 

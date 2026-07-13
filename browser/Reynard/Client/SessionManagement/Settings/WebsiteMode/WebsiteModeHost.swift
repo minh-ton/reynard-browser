@@ -17,4 +17,9 @@ enum WebsiteModeHost {
     static func areRelated(_ lhs: String, _ rhs: String) -> Bool {
         normalized(lhs) == normalized(rhs)
     }
+
+    static func relatedAliases(for host: String) -> Set<String> {
+        let canonicalHost = normalized(host)
+        return [canonicalHost, "m.\(canonicalHost)", "mobile.\(canonicalHost)"]
+    }
 }

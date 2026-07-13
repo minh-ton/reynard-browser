@@ -14,6 +14,10 @@ enum WebsiteModeAction {
     case load(String)
 }
 
+struct WebsiteModeReset {
+    let navigationAction: WebsiteModeAction?
+}
+
 final class WebsiteModePolicy {
     // MARK: - State
 
@@ -130,6 +134,33 @@ final class WebsiteModePolicy {
         }
 
         return desktopURL.map(WebsiteModeAction.load) ?? .reload
+    }
+
+    func resetPersistentMode(for url: String, tabID: UUID) -> WebsiteModeReset? {
+        guard let host = DomainMatcher.host(from: url),
+              let previousMode = isDesktopMode(for: url, tabID: tabID),
+              siteSettings.clearSettingsForRelatedHosts(of: host) else {
+            return nil
+        }
+
+        var tabOverrides = desktopOverridesByTab[tabID] ?? [:]
+        for relatedHost in Array(tabOverrides.keys) where WebsiteModeHost.areRelated(relatedHost, host) {
+            tabOverrides.removeValue(forKey: relatedHost)
+        }
+        if tabOverrides.isEmpty {
+            desktopOverridesByTab.removeValue(forKey: tabID)
+        } else {
+            desktopOverridesByTab[tabID] = tabOverrides
+        }
+
+        guard let currentMode = isDesktopMode(for: url, tabID: tabID),
+              currentMode != previousMode else {
+            return WebsiteModeReset(navigationAction: nil)
+        }
+        if currentMode, let desktopURL = desktopURL(from: url) {
+            return WebsiteModeReset(navigationAction: .load(desktopURL))
+        }
+        return WebsiteModeReset(navigationAction: .reload)
     }
 
     func clearOverrides(for tabID: UUID) {

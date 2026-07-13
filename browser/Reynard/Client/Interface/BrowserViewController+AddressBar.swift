@@ -310,6 +310,14 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                     if self.tabManager.setPersistentWebsiteMode(mode, forSelectedTabWithID: selectedTab.id) {
                         self.refreshAddressBar()
                     }
+                },
+                onWebsiteSettingsReset: { [weak self] in
+                    guard let self else { return }
+                    if self.tabManager.resetWebsiteSettings(
+                        forSelectedTabWithID: selectedTab.id
+                    ) {
+                        self.refreshAddressBar()
+                    }
                 }
               ) else {
             return

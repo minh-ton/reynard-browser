@@ -90,6 +90,7 @@ final class SiteSettingsViewController: UITableViewController {
     private let origin: String
     private let session: GeckoSession
     private let onWebsiteModeChanged: (SiteWebsiteMode) -> Void
+    private let onWebsiteSettingsReset: () -> Void
     private var loadState: LoadingState = .loading
     private var loadedGeckoPermissions: [ContentPermission] = []
     
@@ -110,7 +111,8 @@ final class SiteSettingsViewController: UITableViewController {
     init?(
         url: URL,
         session: GeckoSession,
-        onWebsiteModeChanged: @escaping (SiteWebsiteMode) -> Void = { _ in }
+        onWebsiteModeChanged: @escaping (SiteWebsiteMode) -> Void = { _ in },
+        onWebsiteSettingsReset: @escaping () -> Void = {}
     ) {
         guard let host = URLUtils.normalizedHost(url.host),
               let origin = URLUtils.httpOriginString(for: url) else {
@@ -122,6 +124,7 @@ final class SiteSettingsViewController: UITableViewController {
         self.origin = origin
         self.session = session
         self.onWebsiteModeChanged = onWebsiteModeChanged
+        self.onWebsiteSettingsReset = onWebsiteSettingsReset
         super.init(style: .insetGrouped)
         title = String(format: NSLocalizedString("Settings for %@", comment: "Website host"), host)
     }
@@ -483,6 +486,7 @@ final class SiteSettingsViewController: UITableViewController {
             SitePermissionStore.shared.removeAction(for: permission, host: host, session: session)
         }
         loadedGeckoPermissions = []
+        onWebsiteSettingsReset()
         tableView.reloadData()
     }
     

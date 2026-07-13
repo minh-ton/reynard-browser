@@ -47,6 +47,8 @@ protocol TabManager: AnyObject {
     func changeWebsiteModeForSelectedTab() -> Bool
     @discardableResult
     func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, forSelectedTabWithID tabID: UUID) -> Bool
+    @discardableResult
+    func resetWebsiteSettings(forSelectedTabWithID tabID: UUID) -> Bool
 }
 
 enum TabManagerUpdateReason {

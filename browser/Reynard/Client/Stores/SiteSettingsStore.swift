@@ -229,6 +229,27 @@ final class SiteSettingsStore {
             deleteSettingsLocked(for: host)
         }
     }
+
+    func clearSettingsForRelatedHosts(of host: String) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
+        }
+        let relatedHosts = WebsiteModeHost.relatedAliases(for: host)
+        return stateQueue.sync {
+            guard executeLocked("BEGIN IMMEDIATE TRANSACTION;") else {
+                return false
+            }
+            for relatedHost in relatedHosts where !deleteSettingsLocked(for: relatedHost) {
+                _ = executeLocked("ROLLBACK;")
+                return false
+            }
+            guard executeLocked("COMMIT;") else {
+                _ = executeLocked("ROLLBACK;")
+                return false
+            }
+            return true
+        }
+    }
     
     func clearAllSettings() -> Bool {
         return stateQueue.sync {
