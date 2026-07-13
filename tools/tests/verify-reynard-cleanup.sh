@@ -4,7 +4,7 @@ set -eu
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
-FIREFOX_DIR="$ROOT_DIR/engine/firefox"
+FIREFOX_DIR="$ROOT_DIR/.build/firefox"
 TEST_BINARY="${TMPDIR:-/tmp}/reynard-website-mode-host-tests"
 NEW_TAB_TEST_BINARY="${TMPDIR:-/tmp}/reynard-new-tab-keyboard-policy-tests"
 EXTERNAL_APP_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-policy-tests"
@@ -16,6 +16,11 @@ ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
+
+if [ -z "${REYNARD_DIFF_BASE:-}" ]; then
+	REYNARD_DIFF_BASE="$(git -C "$ROOT_DIR" merge-base HEAD upstream/main 2>/dev/null || git -C "$ROOT_DIR" rev-parse HEAD^)"
+	export REYNARD_DIFF_BASE
+fi
 
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
@@ -35,7 +40,7 @@ sh -n \
 	"$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 zsh -n "$ROOT_DIR/tools/development/build-idevice.sh"
 
-"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check
+"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check-prepared
 
 if rg -q 'Reynard-(AddonDebug|DownloadDebug|ClipboardDebug|AddonSelectionDebug)\.log|Addon(File|Clipboard|Selection)Diagnostics' \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
