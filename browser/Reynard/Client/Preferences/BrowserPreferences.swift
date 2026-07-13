@@ -114,6 +114,7 @@ final class BrowserPreferences {
             key("SitePermissionSettings", "defaultCrossOriginStorageAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalDeviceAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalNetworkAccessPermission"): SitePermissionAction.askToAllow.rawValue,
+            key("SitePermissionSettings", "defaultDeviceSensorsPermission"): SitePermissionAction.askToAllow.rawValue,
             
             // Clear Browsing Data
             key("ClearBrowsingData", "clearsBrowsingHistory"): true,
@@ -610,6 +611,20 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultLocalNetworkAccessPermission")
+            }
+        }
+
+        static var defaultDeviceSensorsPermission: SitePermissionAction {
+            get {
+                let rawValue = prefs.string(forSetting: "SitePermissionSettings", key: "defaultDeviceSensorsPermission")
+                guard let rawValue,
+                      let action = SitePermissionAction(rawValue: rawValue) else {
+                    return .askToAllow
+                }
+                return action
+            }
+            set {
+                prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultDeviceSensorsPermission")
             }
         }
     }

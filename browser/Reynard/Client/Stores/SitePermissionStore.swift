@@ -19,6 +19,7 @@ enum SitePermission: String, CaseIterable {
     case mediaKeySystemAccess = "media-key-system-access"
     case localDeviceAccess = "loopback-network"
     case localNetworkAccess = "local-network"
+    case deviceSensors = "device-sensors"
     case autoplay = "autoplay-media"
     
     init?(contentPermission permission: ContentPermission) {
@@ -46,7 +47,7 @@ enum SitePermission: String, CaseIterable {
         case .localNetworkAccess:
             self = .localNetworkAccess
         case .deviceSensors:
-            return nil
+            self = .deviceSensors
         case .autoplay:
             self = .autoplay
         case .webxr:

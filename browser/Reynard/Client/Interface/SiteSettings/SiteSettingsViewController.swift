@@ -28,6 +28,7 @@ final class SiteSettingsViewController: UITableViewController {
         case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
+        case deviceSensors
         
         var title: String {
             switch self {
@@ -45,6 +46,8 @@ final class SiteSettingsViewController: UITableViewController {
                 return NSLocalizedString("Device Apps and Services", comment: "")
             case .localNetworkAccess:
                 return NSLocalizedString("Local Network Devices", comment: "")
+            case .deviceSensors:
+                return NSLocalizedString("Motion & Orientation", comment: "")
             case .autoplay:
                 return NSLocalizedString("Autoplay", comment: "")
             }
@@ -66,6 +69,8 @@ final class SiteSettingsViewController: UITableViewController {
                 return .localDeviceAccess
             case .localNetworkAccess:
                 return .localNetworkAccess
+            case .deviceSensors:
+                return .deviceSensors
             case .autoplay:
                 return .autoplay
             }
@@ -84,6 +89,7 @@ final class SiteSettingsViewController: UITableViewController {
         .camera,
         .microphone,
         .location,
+        .deviceSensors,
     ]
     private let host: String
     private let url: URL
