@@ -29,6 +29,7 @@ node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/test_LoadURIDelegateChild.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
@@ -365,6 +366,26 @@ if ! rg -q 'OSProtocolHandlerExists' \
 	! rg -q 'if \(dispatcher\)' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
 	echo "The native UIKit external-protocol bridge is incomplete." >&2
+	exit 1
+fi
+
+if ! rg -q 'click: \{ capture: true, mozSystemGroup: true \}' \
+	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
+	! rg -q 'this\.contentWindow\.queueMicrotask\(\(\) => \{' \
+	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
+	! rg -q 'if \(event\.defaultPrevented\)' \
+	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
+	echo "Trusted web links can be lost or routed before website cancellation is known." >&2
+	exit 1
+fi
+
+GECKO_LINK_TEST="$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/test_LoadURIDelegateChild.js"
+GECKO_XPCSHELL_MANIFEST="$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/xpcshell.toml"
+if ! rg -q 'test_LoadURIDelegateChild\.js' "$GECKO_XPCSHELL_MANIFEST" ||
+	! rg -q 'LoadURIDelegateChild\.prototype' "$GECKO_LINK_TEST" ||
+	! rg -q 'event\.defaultPrevented = true' "$GECKO_LINK_TEST" ||
+	! rg -q 'delivery uses the content window' "$GECKO_LINK_TEST"; then
+	echo "The Gecko trusted-link unit test is missing or incomplete." >&2
 	exit 1
 fi
 

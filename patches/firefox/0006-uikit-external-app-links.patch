@@ -2,7 +2,7 @@ diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/a
 index 8a22300f297c..eb59a4e26f3a 100644
 --- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
 +++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-@@ -12,6 +12,46 @@ ChromeUtils.defineESModuleGetters(lazy, {
+@@ -12,6 +12,51 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
  // Implements nsILoadURIDelegate.
  export class LoadURIDelegateChild extends GeckoViewActorChild {
@@ -10,7 +10,6 @@ index 8a22300f297c..eb59a4e26f3a 100644
 +    if (
 +      event.type !== "click" ||
 +      !event.isTrusted ||
-+      event.defaultPrevented ||
 +      event.button !== 0 ||
 +      event.altKey ||
 +      event.ctrlKey ||
@@ -39,10 +38,16 @@ index 8a22300f297c..eb59a4e26f3a 100644
 +      return;
 +    }
 +
-+    this.sendAsyncMessage("GeckoView:LinkActivated", {
-+      uri: destination.displaySpec,
-+      triggerUri: this.contentWindow.document.documentURI,
-+      defaultPrevented: event.defaultPrevented,
++    const triggerUri = this.contentWindow.document.documentURI;
++    this.contentWindow.queueMicrotask(() => {
++      if (event.defaultPrevented) {
++        return;
++      }
++      this.sendAsyncMessage("GeckoView:LinkActivated", {
++        uri: destination.displaySpec,
++        triggerUri,
++        defaultPrevented: false,
++      });
 +    });
 +  }
 +
@@ -73,7 +78,7 @@ index 2c65a0702095..1d939061632d 100644
      child: {
        esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
 +      events: {
-+        click: { capture: false, mozSystemGroup: true },
++        click: { capture: true, mozSystemGroup: true },
 +      },
      },
      messageManagerGroups: ["browsers"],
