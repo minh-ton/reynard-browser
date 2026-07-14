@@ -47,6 +47,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     private static let sharedIconCache = NSCache<NSString, UIImage>()
     private static var hasLoadedInstalledAddons = false
     
+    private let addonPackageStagingService: AddonPackageStagingService
     private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.Reynard.AddonsPreferencesViewController.IconLoadingQueue", qos: .utility)
     private var loadingIconIDs = Set<String>()
     private var installedAddons: [Addon] = []
@@ -98,7 +99,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     // MARK: - Lifecycle
     
-    init() {
+    init(addonPackageStagingService: AddonPackageStagingService = .shared) {
+        self.addonPackageStagingService = addonPackageStagingService
         super.init(style: .insetGrouped)
         title = NSLocalizedString("Add-ons", comment: "")
     }
@@ -505,10 +507,26 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             
             do {
-                let stagedPackageURL = try Self.stageAddonPackage(from: packageURL)
-                defer { AddonPackageStaging.remove(stagedPackageURL) }
-                _ = try await AddonRuntime.shared.install(url: stagedPackageURL.absoluteString)
-                await self.loadRuntimeAddons()
+                let stagedPackageURL = try await self.addonPackageStagingService.stage(
+                    packageURL: packageURL
+                )
+                do {
+                    _ = try await AddonRuntime.shared.install(url: stagedPackageURL.absoluteString)
+                    await self.loadRuntimeAddons()
+                } catch {
+                    let installationError = error
+                    do {
+                        try await self.addonPackageStagingService.remove(stagedPackageURL)
+                    } catch {
+                        AddonPackageStagingLog.error("Unable to remove a failed staged package", error: error)
+                    }
+                    throw installationError
+                }
+                do {
+                    try await self.addonPackageStagingService.remove(stagedPackageURL)
+                } catch {
+                    AddonPackageStagingLog.error("Unable to remove a staged add-on package", error: error)
+                }
                 
                 await MainActor.run {
                     self.isInstallingAddonFromFile = false
@@ -529,10 +547,6 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 }
             }
         }
-    }
-    
-    static func stageAddonPackage(from packageURL: URL) throws -> URL {
-        return try AddonPackageStaging.stage(packageURL: packageURL)
     }
     
     // MARK: - Icons

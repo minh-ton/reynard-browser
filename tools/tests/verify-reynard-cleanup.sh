@@ -109,13 +109,24 @@ if rg -q 'UIImage\(contentsOfFile:' \
 	exit 1
 fi
 
-if ! rg -q 'AddonPackageStaging\.remove\(stagedURL\)' \
+if ! rg -q 'addonPackageStagingService\.remove\(stagedURL\)' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+AddressBar.swift" ||
-	! rg -q 'AddonPackageStaging\.remove\(stagedPackageURL\)' \
+	! rg -q 'addonPackageStagingService\.remove\(stagedPackageURL\)' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Addons/AddonsPreferencesViewController.swift" ||
-	! rg -q 'AddonPackageStaging\.removeStaleFiles\(\)' \
-	"$ROOT_DIR/browser/Reynard/AppDelegate.swift"; then
+	! rg -q 'AddonPackageStagingService\.shared\.removeStaleFiles\(\)' \
+	"$ROOT_DIR/browser/Reynard/AppDelegate.swift" ||
+	rg -q 'AddonsPreferencesViewController\.stageAddonPackage' \
+	"$ROOT_DIR/browser/Reynard"; then
 	echo "Temporary add-on packages are not cleaned up on every path." >&2
+	exit 1
+fi
+
+if rg -q 'Logger\(|privacy: \.public' \
+	"$ROOT_DIR/browser/Reynard/AppDelegate.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+AddressBar.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Addons/AddonsPreferencesViewController.swift" ||
+	! rg -q 'os_log\(' "$ROOT_DIR/browser/Reynard/Client/Addons/AddonPackageStagingService.swift"; then
+	echo "Add-on staging logging is not compatible with the iOS 13 deployment target." >&2
 	exit 1
 fi
 
@@ -275,7 +286,7 @@ rm -f "$IMAGE_DECODE_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Addons/AddonPackageStaging.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Addons/AddonPackageStagingService.swift" \
 	"$SCRIPT_DIR/AddonPackageStagingTests.swift" \
 	-o "$ADDON_STAGING_TEST_BINARY"
 "$ADDON_STAGING_TEST_BINARY"

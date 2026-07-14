@@ -74,6 +74,7 @@ final class BrowserViewController: UIViewController {
     )
     lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self, sessionManager: sessionManager)
     lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
+    let addonPackageStagingService = AddonPackageStagingService.shared
     lazy var sidebarCoordinator = SidebarCoordinator(
         host: self,
         canHostSidebar: allowsSidebarHosting

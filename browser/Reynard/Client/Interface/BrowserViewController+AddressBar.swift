@@ -81,11 +81,30 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                     )
                     self?.refreshAddressBar()
                 },
-                onInstallFromFile: { packageURL in
-                    let stagedURL = try AddonsPreferencesViewController.stageAddonPackage(from: packageURL)
-                    defer { AddonPackageStaging.remove(stagedURL) }
-                    _ = try await AddonRuntime.shared.install(url: stagedURL.absoluteString)
-                    _ = try await AddonRuntime.shared.list()
+                onInstallFromFile: { [weak self] packageURL in
+                    guard let self else {
+                        throw CancellationError()
+                    }
+                    let stagedURL = try await self.addonPackageStagingService.stage(
+                        packageURL: packageURL
+                    )
+                    do {
+                        _ = try await AddonRuntime.shared.install(url: stagedURL.absoluteString)
+                        _ = try await AddonRuntime.shared.list()
+                    } catch {
+                        let installationError = error
+                        do {
+                            try await self.addonPackageStagingService.remove(stagedURL)
+                        } catch {
+                            AddonPackageStagingLog.error("Unable to remove a failed staged package", error: error)
+                        }
+                        throw installationError
+                    }
+                    do {
+                        try await self.addonPackageStagingService.remove(stagedURL)
+                    } catch {
+                        AddonPackageStagingLog.error("Unable to remove a staged add-on package", error: error)
+                    }
                 },
                 onUpdateAll: { [weak self] in
                     guard let self else {

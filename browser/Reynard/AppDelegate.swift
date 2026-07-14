@@ -10,7 +10,13 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        AddonPackageStaging.removeStaleFiles()
+        Task {
+            do {
+                try await AddonPackageStagingService.shared.removeStaleFiles()
+            } catch {
+                AddonPackageStagingLog.error("Unable to clean staged add-on packages", error: error)
+            }
+        }
         return true
     }
     

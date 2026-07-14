@@ -2,7 +2,7 @@ import Foundation
 
 @main
 enum AddonPackageStagingTests {
-    static func main() throws {
+    static func main() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "reynard-addon-staging-\(UUID().uuidString)",
             isDirectory: true
@@ -13,24 +13,38 @@ enum AddonPackageStagingTests {
         try Data("addon".utf8).write(to: source)
         let staging = root.appendingPathComponent("staging", isDirectory: true)
 
-        let staged = try AddonPackageStaging.stage(
-            packageURL: source,
-            directoryURL: staging
+        let service = AddonPackageStagingService(
+            directoryURL: staging,
+            now: { Date(timeIntervalSince1970: 1_000_000) }
         )
+        let staged = try await service.stage(packageURL: source)
         precondition(FileManager.default.fileExists(atPath: staged.path))
-        AddonPackageStaging.remove(staged)
+        try await service.remove(staged)
         precondition(!FileManager.default.fileExists(atPath: staged.path))
 
-        let stale = try AddonPackageStaging.stage(
-            packageURL: source,
-            directoryURL: staging
-        )
+        let stale = try await service.stage(packageURL: source)
         try FileManager.default.setAttributes(
-            [.modificationDate: Date(timeIntervalSinceNow: -2 * 24 * 60 * 60)],
+            [.modificationDate: Date(timeIntervalSince1970: 1_000_000 - 2 * 24 * 60 * 60)],
             ofItemAtPath: stale.path
         )
-        AddonPackageStaging.removeStaleFiles(directoryURL: staging)
+        try await service.removeStaleFiles()
         precondition(!FileManager.default.fileExists(atPath: stale.path))
+
+        let unsupported = root.appendingPathComponent("source.txt")
+        try Data("addon".utf8).write(to: unsupported)
+        do {
+            _ = try await service.stage(packageURL: unsupported)
+            preconditionFailure("Unsupported packages must be rejected")
+        } catch let error as AddonPackageStagingService.StagingError {
+            precondition(error == .unsupportedPackageType)
+        }
+
+        do {
+            try await service.remove(root.appendingPathComponent("outside.xpi"))
+            preconditionFailure("Cleanup must remain inside the staging directory")
+        } catch let error as AddonPackageStagingService.StagingError {
+            precondition(error == .invalidPackageURL)
+        }
         print("AddonPackageStagingTests passed")
     }
 }
