@@ -376,7 +376,10 @@ final class TabManagerImplementation: NSObject, TabManager {
                 isPrivate: true
             )
             tab.state.restoreState = restoredURL(from: snapshot.url).map(TabRestoreState.pending) ?? .none
-            tab.state.navigationState = .init(canGoBack: false, canGoForward: false)
+            tab.state.navigationState = sessionManager.restoreNavigation(
+                for: tab.id,
+                isPrivate: true
+            )
             return tab
         }
         

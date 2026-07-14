@@ -14,17 +14,20 @@ struct NavigationHistoryConfiguration {
     let maximumCachedTabCount: Int
     let maximumEncodedURLBytes: Int
     let maximumPreviewBytes: Int
+    let maximumPendingWriteCount: Int
 
     init(
         maximumEntryCount: Int = 200,
         maximumCachedTabCount: Int = 24,
         maximumEncodedURLBytes: Int = 64 * 1024,
-        maximumPreviewBytes: Int = 1024 * 1024
+        maximumPreviewBytes: Int = 1024 * 1024,
+        maximumPendingWriteCount: Int = 256
     ) {
         self.maximumEntryCount = max(1, maximumEntryCount)
         self.maximumCachedTabCount = max(1, maximumCachedTabCount)
         self.maximumEncodedURLBytes = max(1, maximumEncodedURLBytes)
         self.maximumPreviewBytes = max(1, maximumPreviewBytes)
+        self.maximumPendingWriteCount = max(1, maximumPendingWriteCount)
     }
 }
 
@@ -46,6 +49,11 @@ struct NavigationPersistencePolicy {
         }
         return trimmedValue
     }
+}
+
+enum NavigationHistoryStorageMode: Equatable {
+    case persistent
+    case memoryOnly
 }
 
 #if canImport(UIKit)

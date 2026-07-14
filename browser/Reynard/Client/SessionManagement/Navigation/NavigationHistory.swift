@@ -19,7 +19,13 @@ final class NavigationHistory {
         self.persistencePolicy = persistencePolicy
     }
     
-    func restoreState(for tabID: UUID) -> NavigationAvailability {
+    func restoreState(
+        for tabID: UUID,
+        storageMode: NavigationHistoryStorageMode = .persistent
+    ) -> NavigationAvailability {
+        guard storageMode == .persistent else {
+            return NavigationAvailability(canGoBack: false, canGoForward: false)
+        }
         let snapshot = store.currentSnapshot(for: tabID)
         if snapshot.canGoBack || snapshot.canGoForward {
             _ = store.setUsesPersistedHistory(true, for: tabID)
@@ -47,9 +53,11 @@ final class NavigationHistory {
     func record(
         to url: String,
         for tabID: UUID,
-        sessionState: SessionNavigationAvailability
+        sessionState: SessionNavigationAvailability,
+        storageMode: NavigationHistoryStorageMode = .persistent
     ) -> NavigationAvailability {
-        guard let persistableURL = persistencePolicy.persistableURL(from: url) else {
+        guard storageMode == .persistent,
+              let persistableURL = persistencePolicy.persistableURL(from: url) else {
             return availability(for: tabID, sessionState: sessionState)
         }
         _ = store.recordNavigation(to: persistableURL, for: tabID)

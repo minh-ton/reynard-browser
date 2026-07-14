@@ -7,6 +7,57 @@
 
 import Foundation
 
+protocol NavigationHistoryFileSystem {
+    func applicationSupportDirectoryURL() -> URL?
+    func createDirectory(at url: URL) throws
+    func readData(at url: URL, options: Data.ReadingOptions) throws -> Data
+    func writeData(_ data: Data, to url: URL, options: Data.WritingOptions) throws
+    func removeItem(at url: URL) throws
+    func moveItem(at sourceURL: URL, to destinationURL: URL) throws
+    func fileExists(at url: URL) -> Bool
+    func contentsOfDirectory(at url: URL) throws -> [URL]
+}
+
+struct FoundationNavigationHistoryFileSystem: NavigationHistoryFileSystem {
+    private let fileManager: FileManager
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
+
+    func applicationSupportDirectoryURL() -> URL? {
+        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+    }
+
+    func createDirectory(at url: URL) throws {
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+    }
+
+    func readData(at url: URL, options: Data.ReadingOptions = []) throws -> Data {
+        try Data(contentsOf: url, options: options)
+    }
+
+    func writeData(_ data: Data, to url: URL, options: Data.WritingOptions) throws {
+        try data.write(to: url, options: options)
+    }
+
+    func removeItem(at url: URL) throws {
+        try fileManager.removeItem(at: url)
+    }
+
+    func moveItem(at sourceURL: URL, to destinationURL: URL) throws {
+        try fileManager.moveItem(at: sourceURL, to: destinationURL)
+    }
+
+    func fileExists(at url: URL) -> Bool {
+        fileManager.fileExists(atPath: url.path)
+    }
+
+    func contentsOfDirectory(at url: URL) throws -> [URL] {
+        try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+    }
+}
+
 final class NavigationHistoryStore {
     static let shared = NavigationHistoryStore()
 
@@ -25,6 +76,11 @@ final class NavigationHistoryStore {
         let cachedTabCount: Int
         let previewByteCount: Int
         let pendingWriteCount: Int
+        let trackedGenerationCount: Int
+        let tombstoneCount: Int
+        let persistenceFailureCount: Int
+        let droppedWriteCount: Int
+        let isPersistenceAvailable: Bool
     }
 
     private struct NavigationEntry: Codable {
@@ -45,6 +101,13 @@ final class NavigationHistoryStore {
         }
     }
 
+    private struct StoredDocument: Codable {
+        static let currentVersion = 1
+
+        let version: Int
+        let history: StoredHistory
+    }
+
     private struct PreviewSet {
         var current: Data?
         var back: Data?
@@ -63,9 +126,15 @@ final class NavigationHistoryStore {
         let previews: PreviewSet
     }
 
+    private enum StorageValidationError: Error {
+        case unsupportedVersion
+        case invalidURL
+    }
+
     private let thumbnailJPEGQuality = 0.8
-    private let fileManager: FileManager
-    private let storageURL: URL
+    private let fileSystem: NavigationHistoryFileSystem
+    private let storageURL: URL?
+    private let now: () -> Date
     private let configuration: NavigationHistoryConfiguration
     private let persistencePolicy: NavigationPersistencePolicy
     private let queue = DispatchQueue(
@@ -83,33 +152,34 @@ final class NavigationHistoryStore {
     private var generations: [UUID: UInt64] = [:]
     private var tombstones: Set<UUID> = []
     private var pendingWrites: [UUID: PendingWrite] = [:]
+    private var pendingWriteOrder: [UUID] = []
     private var persistenceScheduled = false
+    private var persistenceAvailable: Bool
+    private var persistenceFailureCount = 0
+    private var droppedWriteCount = 0
 
     init(
-        fileManager: FileManager = .default,
+        fileSystem: NavigationHistoryFileSystem = FoundationNavigationHistoryFileSystem(),
         storageURL: URL? = nil,
-        configuration: NavigationHistoryConfiguration = .standard
+        configuration: NavigationHistoryConfiguration = .standard,
+        now: @escaping () -> Date = Date.init
     ) {
-        self.fileManager = fileManager
+        self.fileSystem = fileSystem
         self.configuration = configuration
         self.persistencePolicy = NavigationPersistencePolicy(configuration: configuration)
+        self.now = now
 
         if let storageURL {
             self.storageURL = storageURL
         } else {
-            guard let applicationSupportDirectoryURL = fileManager.urls(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first else {
-                fatalError("Application Support directory is unavailable")
-            }
-            self.storageURL = applicationSupportDirectoryURL
+            self.storageURL = fileSystem.applicationSupportDirectoryURL()?
                 .appendingPathComponent("AppData", isDirectory: true)
                 .appendingPathComponent("TabSessions", isDirectory: true)
         }
+        self.persistenceAvailable = self.storageURL != nil
 
         queue.sync {
-            createStorageDirectory()
+            prepareStorageDirectory()
         }
     }
 
@@ -122,9 +192,7 @@ final class NavigationHistoryStore {
 
     func recordNavigation(to url: String, for tabID: UUID) -> Snapshot {
         queue.sync {
-            guard !tombstones.contains(tabID) else {
-                return snapshot(from: emptyHistory(), previews: .empty)
-            }
+            beginMutation(for: tabID)
             var history = loadHistory(for: tabID)
             var previews = loadPreviews(for: tabID)
             // Consecutive commits of the same URL are one browser-history entry.
@@ -150,9 +218,7 @@ final class NavigationHistoryStore {
 
     func setUsesPersistedHistory(_ usesPersistedHistory: Bool, for tabID: UUID) -> Snapshot {
         queue.sync {
-            guard !tombstones.contains(tabID) else {
-                return snapshot(from: emptyHistory(), previews: .empty)
-            }
+            beginMutation(for: tabID)
             var history = loadHistory(for: tabID)
             let previews = loadPreviews(for: tabID)
             history.usesStoredHistory = usesPersistedHistory
@@ -249,16 +315,29 @@ final class NavigationHistoryStore {
         queue.sync {
             tombstones.insert(tabID)
             generations[tabID, default: 0] &+= 1
+            let deletionGeneration = generations[tabID] ?? 0
             pendingWrites.removeValue(forKey: tabID)
+            pendingWriteOrder.removeAll { $0 == tabID }
             historyCache.removeValue(forKey: tabID)
             previewCache.removeValue(forKey: tabID)
             cacheOrder.removeAll { $0 == tabID }
 
-            let historyURL = self.historyURL(for: tabID)
-            let previewDirectoryURL = self.previewDirectoryURL(for: tabID)
+            guard let historyURL = self.historyURL(for: tabID),
+                  let previewDirectoryURL = self.previewDirectoryURL(for: tabID),
+                  persistenceAvailable else {
+                finishDeletion(for: tabID, generation: deletionGeneration)
+                return
+            }
             persistenceQueue.async {
-                try? self.fileManager.removeItem(at: historyURL)
-                try? self.fileManager.removeItem(at: previewDirectoryURL)
+                do {
+                    try self.removeIfPresent(at: historyURL)
+                    try self.removeIfPresent(at: previewDirectoryURL)
+                } catch {
+                    self.registerPersistenceFailure()
+                }
+                self.queue.async {
+                    self.finishDeletion(for: tabID, generation: deletionGeneration)
+                }
             }
         }
     }
@@ -288,7 +367,12 @@ final class NavigationHistoryStore {
             CacheMetrics(
                 cachedTabCount: historyCache.count,
                 previewByteCount: previewCache.values.reduce(0) { $0 + $1.byteCount },
-                pendingWriteCount: pendingWrites.count
+                pendingWriteCount: pendingWrites.count,
+                trackedGenerationCount: generations.count,
+                tombstoneCount: tombstones.count,
+                persistenceFailureCount: persistenceFailureCount,
+                droppedWriteCount: droppedWriteCount,
+                isPersistenceAvailable: persistenceAvailable
             )
         }
     }
@@ -302,11 +386,33 @@ final class NavigationHistoryStore {
         )
     }
 
-    private func createStorageDirectory() {
-        try? fileManager.createDirectory(
-            at: storageURL,
-            withIntermediateDirectories: true
-        )
+    private func beginMutation(for tabID: UUID) {
+        if tombstones.remove(tabID) != nil {
+            generations[tabID, default: 0] &+= 1
+            historyCache[tabID] = emptyHistory()
+            previewCache[tabID] = .empty
+        }
+    }
+
+    private func finishDeletion(for tabID: UUID, generation: UInt64) {
+        guard generations[tabID] == generation,
+              pendingWrites[tabID] == nil else {
+            return
+        }
+        tombstones.remove(tabID)
+        generations.removeValue(forKey: tabID)
+    }
+
+    private func prepareStorageDirectory() {
+        guard persistenceAvailable, let storageURL else {
+            return
+        }
+        do {
+            try fileSystem.createDirectory(at: storageURL)
+        } catch {
+            persistenceAvailable = false
+            persistenceFailureCount += 1
+        }
     }
 
     private func loadHistory(for tabID: UUID) -> StoredHistory {
@@ -319,20 +425,70 @@ final class NavigationHistoryStore {
         }
 
         let history: StoredHistory
-        let fileURL = historyURL(for: tabID)
-        if let data = try? Data(contentsOf: fileURL),
-           let decoded = try? JSONDecoder().decode(StoredHistory.self, from: data) {
-            history = decoded
-        } else {
-            if fileManager.fileExists(atPath: fileURL.path) {
-                try? fileManager.removeItem(at: fileURL)
-            }
+        guard persistenceAvailable, let fileURL = historyURL(for: tabID) else {
+            historyCache[tabID] = emptyHistory()
+            touchCache(tabID)
+            return emptyHistory()
+        }
+        if !fileSystem.fileExists(at: fileURL) {
             history = emptyHistory()
+        } else {
+            do {
+                let data = try fileSystem.readData(at: fileURL, options: .mappedIfSafe)
+                history = try decodeHistory(from: data)
+            } catch is DecodingError {
+                quarantineCorruptHistory(at: fileURL)
+                history = emptyHistory()
+            } catch is StorageValidationError {
+                quarantineCorruptHistory(at: fileURL)
+                history = emptyHistory()
+            } catch {
+                persistenceAvailable = false
+                persistenceFailureCount += 1
+                history = emptyHistory()
+            }
         }
 
         historyCache[tabID] = history
         touchCache(tabID)
         return history
+    }
+
+    private func decodeHistory(from data: Data) throws -> StoredHistory {
+        let decoder = JSONDecoder()
+        let decodedHistory: StoredHistory
+        if let document = try? decoder.decode(StoredDocument.self, from: data) {
+            guard document.version == StoredDocument.currentVersion else {
+                throw StorageValidationError.unsupportedVersion
+            }
+            decodedHistory = document.history
+        } else {
+            decodedHistory = try decoder.decode(StoredHistory.self, from: data)
+        }
+
+        let allURLs = [decodedHistory.currentURL].compactMap { $0 } +
+            decodedHistory.backHistory.map(\.url) +
+            decodedHistory.forwardHistory.map(\.url)
+        guard allURLs.allSatisfy({ persistencePolicy.persistableURL(from: $0) != nil }) else {
+            throw StorageValidationError.invalidURL
+        }
+
+        var validatedHistory = decodedHistory
+        trimOldestEntries(in: &validatedHistory.backHistory)
+        trimNewestEntries(in: &validatedHistory.forwardHistory)
+        return validatedHistory
+    }
+
+    private func quarantineCorruptHistory(at fileURL: URL) {
+        let timestamp = Int(now().timeIntervalSince1970 * 1_000)
+        let quarantineURL = fileURL.appendingPathExtension("corrupt-\(timestamp)")
+        do {
+            try removeIfPresent(at: quarantineURL)
+            try fileSystem.moveItem(at: fileURL, to: quarantineURL)
+        } catch {
+            persistenceAvailable = false
+            persistenceFailureCount += 1
+        }
     }
 
     private func loadPreviews(for tabID: UUID) -> PreviewSet {
@@ -355,13 +511,20 @@ final class NavigationHistoryStore {
     }
 
     private func loadPreview(named name: String, for tabID: UUID) -> Data? {
-        let fileURL = previewDirectoryURL(for: tabID)
-            .appendingPathComponent("\(name).jpg")
-        guard let data = try? Data(contentsOf: fileURL, options: .mappedIfSafe),
-              data.count <= configuration.maximumPreviewBytes else {
+        guard persistenceAvailable,
+              let fileURL = previewDirectoryURL(for: tabID)?
+                .appendingPathComponent("\(name).jpg"),
+              fileSystem.fileExists(at: fileURL) else {
             return nil
         }
-        return data
+        do {
+            let data = try fileSystem.readData(at: fileURL, options: .mappedIfSafe)
+            return data.count <= configuration.maximumPreviewBytes ? data : nil
+        } catch {
+            persistenceAvailable = false
+            persistenceFailureCount += 1
+            return nil
+        }
     }
 
     private func saveHistory(
@@ -377,11 +540,15 @@ final class NavigationHistoryStore {
         touchCache(tabID)
 
         generations[tabID, default: 0] &+= 1
+        if pendingWrites[tabID] == nil {
+            pendingWriteOrder.append(tabID)
+        }
         pendingWrites[tabID] = PendingWrite(
             generation: generations[tabID] ?? 0,
             history: history,
             previews: previews
         )
+        trimPendingWritesIfNeeded()
         schedulePersistenceIfNeeded()
     }
 
@@ -401,44 +568,85 @@ final class NavigationHistoryStore {
 
     private func drainPendingWrites() -> [(UUID, PendingWrite)] {
         persistenceScheduled = false
-        let writes = Array(pendingWrites)
+        let writes = pendingWriteOrder.compactMap { tabID in
+            pendingWrites[tabID].map { (tabID, $0) }
+        }
         pendingWrites.removeAll(keepingCapacity: true)
+        pendingWriteOrder.removeAll(keepingCapacity: true)
         return writes
+    }
+
+    private func trimPendingWritesIfNeeded() {
+        while pendingWriteOrder.count > configuration.maximumPendingWriteCount {
+            let droppedTabID = pendingWriteOrder.removeFirst()
+            pendingWrites.removeValue(forKey: droppedTabID)
+            droppedWriteCount += 1
+            if historyCache[droppedTabID] == nil && !tombstones.contains(droppedTabID) {
+                generations.removeValue(forKey: droppedTabID)
+            }
+        }
+    }
+
+    private func registerPersistenceFailure() {
+        queue.sync {
+            persistenceAvailable = false
+            persistenceFailureCount += 1
+        }
+    }
+
+    private func removeIfPresent(at url: URL) throws {
+        guard fileSystem.fileExists(at: url) else {
+            return
+        }
+        try fileSystem.removeItem(at: url)
     }
 
     private func persist(_ item: (key: UUID, value: PendingWrite)) {
         let tabID = item.key
         let write = item.value
         let isCurrent = queue.sync {
-            !tombstones.contains(tabID) && generations[tabID] == write.generation
+            persistenceAvailable &&
+                !tombstones.contains(tabID) &&
+                generations[tabID] == write.generation
         }
-        guard isCurrent, let data = try? JSONEncoder().encode(write.history) else {
+        guard isCurrent, let historyURL = historyURL(for: tabID) else {
             return
         }
 
-        createStorageDirectory()
-        try? data.write(to: historyURL(for: tabID), options: .atomic)
+        do {
+            let document = StoredDocument(
+                version: StoredDocument.currentVersion,
+                history: write.history
+            )
+            let data = try JSONEncoder().encode(document)
+            guard let storageURL else {
+                return
+            }
+            try fileSystem.createDirectory(at: storageURL)
+            try fileSystem.writeData(data, to: historyURL, options: .atomic)
 
-        let previewDirectoryURL = previewDirectoryURL(for: tabID)
-        if write.previews.byteCount == 0 {
-            try? fileManager.removeItem(at: previewDirectoryURL)
-            return
+            guard let previewDirectoryURL = previewDirectoryURL(for: tabID) else {
+                return
+            }
+            if write.previews.byteCount == 0 {
+                try removeIfPresent(at: previewDirectoryURL)
+                return
+            }
+            try fileSystem.createDirectory(at: previewDirectoryURL)
+            try persistPreview(write.previews.current, named: "current", in: previewDirectoryURL)
+            try persistPreview(write.previews.back, named: "back", in: previewDirectoryURL)
+            try persistPreview(write.previews.forward, named: "forward", in: previewDirectoryURL)
+        } catch {
+            registerPersistenceFailure()
         }
-        try? fileManager.createDirectory(
-            at: previewDirectoryURL,
-            withIntermediateDirectories: true
-        )
-        persistPreview(write.previews.current, named: "current", in: previewDirectoryURL)
-        persistPreview(write.previews.back, named: "back", in: previewDirectoryURL)
-        persistPreview(write.previews.forward, named: "forward", in: previewDirectoryURL)
     }
 
-    private func persistPreview(_ data: Data?, named name: String, in directoryURL: URL) {
+    private func persistPreview(_ data: Data?, named name: String, in directoryURL: URL) throws {
         let fileURL = directoryURL.appendingPathComponent("\(name).jpg")
         if let data {
-            try? data.write(to: fileURL, options: .atomic)
+            try fileSystem.writeData(data, to: fileURL, options: .atomic)
         } else {
-            try? fileManager.removeItem(at: fileURL)
+            try removeIfPresent(at: fileURL)
         }
     }
 
@@ -455,18 +663,24 @@ final class NavigationHistoryStore {
                     history: pending.history,
                     previews: .empty
                 )
+            } else if !tombstones.contains(evicted) {
+                generations.removeValue(forKey: evicted)
             }
         }
     }
 
     private func persistedTabIDs() -> [UUID] {
-        guard let fileURLs = try? fileManager.contentsOfDirectory(
-            at: storageURL,
-            includingPropertiesForKeys: nil
-        ) else {
+        guard persistenceAvailable, let storageURL else {
             return []
         }
-        return fileURLs.compactMap { UUID(uuidString: $0.lastPathComponent) }
+        do {
+            return try fileSystem.contentsOfDirectory(at: storageURL)
+                .compactMap { UUID(uuidString: $0.lastPathComponent) }
+        } catch {
+            persistenceAvailable = false
+            persistenceFailureCount += 1
+            return []
+        }
     }
 
     private func trimOldestEntries(in entries: inout [NavigationEntry]) {
@@ -496,11 +710,11 @@ final class NavigationHistoryStore {
         )
     }
 
-    private func historyURL(for tabID: UUID) -> URL {
-        storageURL.appendingPathComponent(tabID.uuidString, isDirectory: false)
+    private func historyURL(for tabID: UUID) -> URL? {
+        storageURL?.appendingPathComponent(tabID.uuidString, isDirectory: false)
     }
 
-    private func previewDirectoryURL(for tabID: UUID) -> URL {
-        storageURL.appendingPathComponent("\(tabID.uuidString).previews", isDirectory: true)
+    private func previewDirectoryURL(for tabID: UUID) -> URL? {
+        storageURL?.appendingPathComponent("\(tabID.uuidString).previews", isDirectory: true)
     }
 }

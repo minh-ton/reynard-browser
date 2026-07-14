@@ -175,8 +175,11 @@ final class SessionManager {
     
     // MARK: - Navigation
     
-    func restoreNavigation(for tabID: UUID) -> NavigationAvailability {
-        return history.restoreState(for: tabID)
+    func restoreNavigation(for tabID: UUID, isPrivate: Bool = false) -> NavigationAvailability {
+        return history.restoreState(
+            for: tabID,
+            storageMode: isPrivate ? .memoryOnly : .persistent
+        )
     }
     
     func navigationAvailability(
