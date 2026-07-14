@@ -40,8 +40,6 @@ sh -n \
 	"$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 zsh -n "$ROOT_DIR/tools/development/build-idevice.sh"
 
-"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check-prepared
-
 if rg -q 'Reynard-(AddonDebug|DownloadDebug|ClipboardDebug|AddonSelectionDebug)\.log|Addon(File|Clipboard|Selection)Diagnostics' \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" \
