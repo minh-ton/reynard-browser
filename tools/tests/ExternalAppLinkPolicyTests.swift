@@ -17,6 +17,16 @@ struct ExternalAppLinkPolicyTests {
             ),
             .sourceMismatch
         )
+
+        let redditOneLink = "https://reddit.onelink.me/MRHZ?deep_link_value=https%3A%2F%2Fwww.reddit.com%2Fr%2Ffirefox%2F&pid=xpromo"
+        guard case let .route(redditOneLinkRoute) = ExternalAppLinkPolicy.decision(for: request(
+            uri: redditOneLink,
+            source: .trustedLink
+        )) else {
+            preconditionFailure("Expected a Reddit OneLink route")
+        }
+        precondition(redditOneLinkRoute.primary.url.absoluteString == "https://www.reddit.com/r/firefox/")
+        precondition(!redditOneLinkRoute.consumesFailure)
         expectRejection(
             request(
                 uri: "https://www.reddit.com/r/firefox/",
@@ -62,6 +72,7 @@ struct ExternalAppLinkPolicyTests {
         precondition(redditRoute.primary.mode == .universalLink)
         precondition(redditRoute.primary.url.host == "www.reddit.com")
         precondition(redditRoute.fallback?.url.scheme == "reddit")
+        precondition(redditRoute.consumesFailure)
 
         guard case let .route(untrustedRedditRoute) = ExternalAppLinkPolicy.decision(for: request(
             uri: "market://details?id=com.reddit.frontpage",
@@ -72,6 +83,7 @@ struct ExternalAppLinkPolicyTests {
         }
         precondition(untrustedRedditRoute.primary.url.scheme == "reddit")
         precondition(untrustedRedditRoute.fallback == nil)
+        precondition(untrustedRedditRoute.consumesFailure)
 
         expectRejection(
             request(

@@ -1154,12 +1154,13 @@ extension TabManagerImplementation: NavigationDelegate {
         triggerUri: String?,
         hasUserGesture: Bool
     ) async -> Bool {
-        await externalAppLinkRouter.handle(ExternalAppLinkRequest(
+        let disposition = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
             uri: uri,
             triggerUri: triggerUri,
             source: .externalProtocol,
             hasUserGesture: hasUserGesture
-        )) == .opened
+        ))
+        return disposition == .opened || disposition == .handled
     }
 
     @MainActor

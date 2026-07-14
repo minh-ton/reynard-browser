@@ -33,10 +33,16 @@ struct ExternalAppLinkAttempt: Equatable {
 struct ExternalAppLinkRoute: Equatable {
     let primary: ExternalAppLinkAttempt
     let fallback: ExternalAppLinkAttempt?
+    let consumesFailure: Bool
 
-    init(primary: ExternalAppLinkAttempt, fallback: ExternalAppLinkAttempt? = nil) {
+    init(
+        primary: ExternalAppLinkAttempt,
+        fallback: ExternalAppLinkAttempt? = nil,
+        consumesFailure: Bool = false
+    ) {
         self.primary = primary
         self.fallback = fallback
+        self.consumesFailure = consumesFailure
     }
 }
 
@@ -100,6 +106,9 @@ enum ExternalAppLinkPolicy {
             guard request.source == .trustedLink else {
                 return .reject(.sourceMismatch)
             }
+            if let redditURL = redditOneLinkDestination(from: destinationURL) {
+                return .route(route(to: redditURL, mode: .universalLink))
+            }
             return .route(route(to: destinationURL, mode: .universalLink))
         }
 
@@ -138,6 +147,20 @@ enum ExternalAppLinkPolicy {
             return nil
         }
         return url
+    }
+
+    private static func redditOneLinkDestination(from url: URL) -> URL? {
+        guard url.host?.lowercased() == "reddit.onelink.me",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let value = components.queryItems?.first(where: {
+                  $0.name == "deep_link_value"
+              })?.value,
+              let destination = validWebURL(from: value),
+              let host = destination.host?.lowercased(),
+              host == "reddit.com" || host.hasSuffix(".reddit.com") else {
+            return nil
+        }
+        return destination
     }
 
     private static func googleMapsURL(fromAndroidIntent value: String) -> URL? {
@@ -208,11 +231,12 @@ enum ExternalAppLinkPolicy {
         let fallback = ExternalAppLinkAttempt(url: URL(string: "reddit://")!, mode: .externalScheme)
         let host = triggerURL.host?.lowercased() ?? ""
         guard host == "reddit.com" || host.hasSuffix(".reddit.com") else {
-            return ExternalAppLinkRoute(primary: fallback)
+            return ExternalAppLinkRoute(primary: fallback, consumesFailure: true)
         }
         return ExternalAppLinkRoute(
             primary: ExternalAppLinkAttempt(url: triggerURL, mode: .universalLink),
-            fallback: fallback
+            fallback: fallback,
+            consumesFailure: true
         )
     }
 }

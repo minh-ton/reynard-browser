@@ -8,6 +8,7 @@ struct ExternalAppLinkRouterTests {
         await verifiesExplicitExternalProtocolStillOpens()
         await verifiesFailedOpenPreservesFallback()
         await verifiesRedditFallbackOrder()
+        await verifiesRedditMarketFallbackIsConsumed()
         print("ExternalAppLinkRouterTests passed")
     }
 
@@ -77,6 +78,19 @@ struct ExternalAppLinkRouterTests {
         precondition(disposition == .opened)
         precondition(attempts.map(\.mode) == [.universalLink, .externalScheme])
         precondition(attempts.last?.url.scheme == "reddit")
+    }
+
+    @MainActor
+    private static func verifiesRedditMarketFallbackIsConsumed() async {
+        let router = ExternalAppLinkRouter(
+            isAutomaticRoutingEnabled: { true },
+            open: { _ in false }
+        )
+        let disposition = await router.handle(request(
+            uri: "market://details?id=com.reddit.frontpage",
+            source: .externalProtocol
+        ))
+        precondition(disposition == .handled)
     }
 
     private static func request(

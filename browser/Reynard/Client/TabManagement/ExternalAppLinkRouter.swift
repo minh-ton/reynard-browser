@@ -7,6 +7,7 @@ import Foundation
 
 enum ExternalAppLinkDisposition: Equatable {
     case opened
+    case handled
     case notOpened
     case automaticRoutingDisabled
     case rejected(ExternalAppLinkRejection)
@@ -39,8 +40,13 @@ final class ExternalAppLinkRouter {
             if await open(route.primary) {
                 return .opened
             }
-            if let fallback = route.fallback, await open(fallback) {
-                return .opened
+            if let fallback = route.fallback {
+                if await open(fallback) {
+                    return .opened
+                }
+            }
+            if route.consumesFailure {
+                return .handled
             }
             return .notOpened
         }
