@@ -1,8 +1,8 @@
 diff --git a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-index 8a22300f29..cc7bd1cd5b 100644
+index 8a22300f297c..eb59a4e26f3a 100644
 --- a/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
 +++ b/mobile/shared/actors/LoadURIDelegateChild.sys.mjs
-@@ -12,6 +12,44 @@ ChromeUtils.defineESModuleGetters(lazy, {
+@@ -12,6 +12,46 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
  // Implements nsILoadURIDelegate.
  export class LoadURIDelegateChild extends GeckoViewActorChild {
@@ -10,6 +10,7 @@ index 8a22300f29..cc7bd1cd5b 100644
 +    if (
 +      event.type !== "click" ||
 +      !event.isTrusted ||
++      event.defaultPrevented ||
 +      event.button !== 0 ||
 +      event.altKey ||
 +      event.ctrlKey ||
@@ -41,6 +42,7 @@ index 8a22300f29..cc7bd1cd5b 100644
 +    this.sendAsyncMessage("GeckoView:LinkActivated", {
 +      uri: destination.displaySpec,
 +      triggerUri: this.contentWindow.document.documentURI,
++      defaultPrevented: event.defaultPrevented,
 +    });
 +  }
 +
@@ -48,7 +50,7 @@ index 8a22300f29..cc7bd1cd5b 100644
    handleLoadError(aUri, aError, aErrorModule) {
      debug`handleLoadError: uri=${aUri && aUri.spec}
 diff --git a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
-index 2039c79e1d..9d3e7bb540 100644
+index 2039c79e1d46..9d3e7bb540f4 100644
 --- a/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
 +++ b/mobile/shared/actors/LoadURIDelegateParent.sys.mjs
 @@ -13,6 +13,10 @@ export class LoadURIDelegateParent extends GeckoViewActorParent {
@@ -63,7 +65,7 @@ index 2039c79e1d..9d3e7bb540 100644
          return super.receiveMessage({ name, data });
        }
 diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
-index 2c65a07020..def9fd0450 100644
+index 2c65a0702095..1d939061632d 100644
 --- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
 +++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
 @@ -54,6 +54,9 @@ const JSWINDOWACTORS = {
@@ -71,58 +73,13 @@ index 2c65a07020..def9fd0450 100644
      child: {
        esModuleURI: "resource:///actors/LoadURIDelegateChild.sys.mjs",
 +      events: {
-+        click: { capture: true, mozSystemGroup: true },
++        click: { capture: false, mozSystemGroup: true },
 +      },
      },
      messageManagerGroups: ["browsers"],
    },
-diff --git a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
-index de5223c2c3..3bb158776e 100644
---- a/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
-+++ b/uriloader/exthandler/uikit/nsMIMEInfoUIKit.mm
-@@ -4,11 +4,39 @@
-
- #include "nsMIMEInfoUIKit.h"
-
-+#import <UIKit/UIKit.h>
-+
-+extern bool ReynardOpenLinksInAppsEnabled();
-+extern bool ReynardSupportsExternalScheme(const char* aScheme);
-+
- NS_IMETHODIMP
- nsMIMEInfoUIKit::LaunchWithFile(nsIFile* aFile) {
-   return NS_ERROR_NOT_IMPLEMENTED;
- }
-
- nsresult nsMIMEInfoUIKit::LoadUriInternal(nsIURI* aURI) {
--  return NS_ERROR_NOT_IMPLEMENTED;
-+  NS_ENSURE_ARG_POINTER(aURI);
-+
-+  nsAutoCString spec;
-+  nsresult rv = aURI->GetSpec(spec);
-+  NS_ENSURE_SUCCESS(rv, rv);
-+
-+  NSString* value = [NSString stringWithUTF8String:spec.get()];
-+  NSURL* url = value ? [NSURL URLWithString:value] : nil;
-+  const bool enabled = ReynardOpenLinksInAppsEnabled();
-+  nsAutoCString scheme;
-+  rv = aURI->GetScheme(scheme);
-+  NS_ENSURE_SUCCESS(rv, rv);
-+  if (!enabled || !url || scheme.EqualsLiteral("intent") ||
-+      !ReynardSupportsExternalScheme(scheme.get())) {
-+    return NS_ERROR_NOT_AVAILABLE;
-+  }
-+
-+  dispatch_async(dispatch_get_main_queue(), ^{
-+    [[UIApplication sharedApplication]
-+                  openURL:url
-+                  options:@{}
-+        completionHandler:nil];
-+  });
-+  return NS_OK;
- }
 diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.h b/uriloader/exthandler/uikit/nsOSHelperAppService.h
-index ffefed3b8d..6eb45b4073 100644
+index ffefed3b8d95..6eb45b407349 100644
 --- a/uriloader/exthandler/uikit/nsOSHelperAppService.h
 +++ b/uriloader/exthandler/uikit/nsOSHelperAppService.h
 @@ -35,6 +35,14 @@ class nsOSHelperAppService final : public nsExternalHelperAppService {
@@ -141,129 +98,56 @@ index ffefed3b8d..6eb45b4073 100644
    // GetFileTokenForPath must be implemented by each platform.
    // platformAppPath --> a platform specific path to an application that we got
 diff --git a/uriloader/exthandler/uikit/nsOSHelperAppService.mm b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
-index 552dd81e84..f5dd87f673 100644
+index 552dd81e8461..726712829f7a 100644
 --- a/uriloader/exthandler/uikit/nsOSHelperAppService.mm
 +++ b/uriloader/exthandler/uikit/nsOSHelperAppService.mm
-@@ -3,6 +3,108 @@
-  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+@@ -4,13 +4,44 @@
 
  #include "nsOSHelperAppService.h"
-+#include "nsMIMEInfoUIKit.h"
+
++#include "MainThreadUtils.h"
++#include "js/Object.h"
++#include "js/PropertyAndElement.h"
++#include "mozilla/dom/CanonicalBrowsingContext.h"
++#include "mozilla/dom/ScriptSettings.h"
++#include "mozilla/widget/EventDispatcher.h"
++#include "mozilla/widget/nsWindow.h"
 +#include "nsIPrincipal.h"
 +#include "nsIURI.h"
-+
-+#import <UIKit/UIKit.h>
++#include "nsIWidget.h"
++#include "nsMIMEInfoUIKit.h"
++#include "nsReadableUtils.h"
++#include "xpcpublic.h"
 +
 +namespace {
 +
-+NSURL* GoogleMapsURLFromAndroidIntent(NSString* aValue) {
-+  if (![aValue hasPrefix:@"intent://"]) {
-+    return nil;
++bool DefineStringProperty(JSContext* aCx, JS::HandleObject aObject,
++                          const char* aName, const nsACString& aValue) {
++  NS_ConvertUTF8toUTF16 utf16Value(aValue);
++  JS::RootedString string(
++      aCx, JS_NewUCStringCopyN(aCx, utf16Value.get(), utf16Value.Length()));
++  if (!string) {
++    return false;
 +  }
-+
-+  NSUInteger terminatorLength = 0;
-+  if ([aValue hasSuffix:@";end;"]) {
-+    terminatorLength = @";end;".length;
-+  } else if ([aValue hasSuffix:@";end"]) {
-+    terminatorLength = @";end".length;
-+  } else {
-+    return nil;
-+  }
-+
-+  NSRange marker = [aValue rangeOfString:@"#Intent;"
-+                                 options:NSBackwardsSearch];
-+  if (marker.location == NSNotFound || marker.location <= @"intent://".length) {
-+    return nil;
-+  }
-+
-+  NSUInteger metadataStart = NSMaxRange(marker);
-+  NSUInteger metadataLength = aValue.length - metadataStart - terminatorLength;
-+  NSString* metadata = [aValue substringWithRange:
-+                                  NSMakeRange(metadataStart, metadataLength)];
-+  NSMutableDictionary<NSString*, NSString*>* parameters =
-+      [NSMutableDictionary dictionary];
-+  for (NSString* component in [metadata componentsSeparatedByString:@";"]) {
-+    NSRange separator = [component rangeOfString:@"="];
-+    if (separator.location == NSNotFound || separator.location == 0) {
-+      continue;
-+    }
-+    parameters[[component substringToIndex:separator.location]] =
-+        [component substringFromIndex:NSMaxRange(separator)];
-+  }
-+
-+  if (![parameters[@"package"]
-+          isEqualToString:@"com.google.android.apps.maps"]) {
-+    return nil;
-+  }
-+
-+  NSString* webScheme = [parameters[@"scheme"] lowercaseString] ?: @"https";
-+  if (![webScheme isEqualToString:@"http"] &&
-+      ![webScheme isEqualToString:@"https"]) {
-+    return nil;
-+  }
-+
-+  NSString* destination = [aValue
-+      substringWithRange:NSMakeRange(@"intent://".length,
-+                                     marker.location - @"intent://".length)];
-+  NSURL* webURL = [NSURL URLWithString:
-+                             [NSString stringWithFormat:@"%@://%@", webScheme,
-+                                                        destination]];
-+  NSString* host = webURL.host.lowercaseString;
-+  NSString* path = webURL.path.lowercaseString;
-+  const BOOL isMapsPage =
-+      ([host isEqualToString:@"google.com"] ||
-+       [host hasSuffix:@".google.com"]) &&
-+      ([path isEqualToString:@"/maps"] || [path hasPrefix:@"/maps/"]);
-+  const BOOL isMapsShortLink = [host isEqualToString:@"maps.app.goo.gl"];
-+  if (!webURL || (!isMapsPage && !isMapsShortLink)) {
-+    return nil;
-+  }
-+
-+  NSURLComponents* components = [[NSURLComponents alloc] init];
-+  components.scheme = @"comgooglemapsurl";
-+  components.host = @"google";
-+  components.path = @"/link";
-+  components.queryItems = @[
-+    [NSURLQueryItem queryItemWithName:@"deep_link_id"
-+                                value:webURL.absoluteString]
-+  ];
-+  return components.URL;
++  JS::RootedValue value(aCx, JS::StringValue(string));
++  return JS_DefineProperty(aCx, aObject, aName, value, JSPROP_ENUMERATE);
 +}
 +
 +}  // namespace
 +
-+bool ReynardOpenLinksInAppsEnabled() {
-+  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-+  NSString* key = @"Reynard.Browsing.openLinksInApps";
-+  id storedValue = [defaults objectForKey:key];
-+  return storedValue ? [defaults boolForKey:key] : true;
-+}
-+
-+bool ReynardSupportsExternalScheme(const char* aScheme) {
-+  if (!aScheme || !*aScheme) {
-+    return false;
-+  }
-+  NSString* scheme = [[NSString stringWithUTF8String:aScheme] lowercaseString];
-+  return [scheme isEqualToString:@"comgooglemaps"] ||
-+         [scheme isEqualToString:@"comgooglemapsurl"] ||
-+         [scheme isEqualToString:@"intent"] ||
-+         [scheme isEqualToString:@"market"] ||
-+         [scheme isEqualToString:@"reddit"];
-+}
-
  nsOSHelperAppService::nsOSHelperAppService() : nsExternalHelperAppService() {}
 
-@@ -10,7 +112,8 @@ nsOSHelperAppService::~nsOSHelperAppService() {}
+ nsOSHelperAppService::~nsOSHelperAppService() {}
 
  nsresult nsOSHelperAppService::OSProtocolHandlerExists(
      const char* aProtocolScheme, bool* aHandlerExists) {
 -  *aHandlerExists = false;
-+  const bool enabled = ReynardOpenLinksInAppsEnabled();
-+  *aHandlerExists = enabled && ReynardSupportsExternalScheme(aProtocolScheme);
++  NS_ENSURE_ARG_POINTER(aHandlerExists);
++  *aHandlerExists = aProtocolScheme && *aProtocolScheme;
    return NS_OK;
  }
 
-@@ -51,7 +154,116 @@ NS_IMETHODIMP
+@@ -51,7 +82,102 @@ NS_IMETHODIMP
  nsOSHelperAppService::GetProtocolHandlerInfoFromOS(const nsACString& aScheme,
                                                     bool* found,
                                                     nsIHandlerInfo** _retval) {
@@ -273,7 +157,8 @@ index 552dd81e84..f5dd87f673 100644
 +  NS_ENSURE_ARG_POINTER(found);
 +  NS_ENSURE_ARG_POINTER(_retval);
 +
-+  nsresult rv = OSProtocolHandlerExists(PromiseFlatCString(aScheme).get(), found);
++  nsresult rv =
++      OSProtocolHandlerExists(PromiseFlatCString(aScheme).get(), found);
 +  NS_ENSURE_SUCCESS(rv, rv);
 +
 +  nsMIMEInfoUIKit* handler =
@@ -289,21 +174,23 @@ index 552dd81e84..f5dd87f673 100644
 +nsOSHelperAppService::SetProtocolHandlerDefaults(nsIHandlerInfo* aHandlerInfo,
 +                                                 bool aOSHandlerExists) {
 +  NS_ENSURE_ARG_POINTER(aHandlerInfo);
-+  aHandlerInfo->SetPreferredAction(
-+      aOSHandlerExists ? nsIHandlerInfo::useSystemDefault
-+                       : nsIHandlerInfo::alwaysAsk);
++  aHandlerInfo->SetPreferredAction(aOSHandlerExists
++                                       ? nsIHandlerInfo::useSystemDefault
++                                       : nsIHandlerInfo::alwaysAsk);
 +  aHandlerInfo->SetAlwaysAskBeforeHandling(false);
 +  return NS_OK;
 +}
 +
 +NS_IMETHODIMP
-+nsOSHelperAppService::LoadURI(
-+    nsIURI* aURI, nsIPrincipal* aTriggeringPrincipal,
-+    nsIPrincipal* aRedirectPrincipal,
-+    mozilla::dom::BrowsingContext* aBrowsingContext,
-+    bool aWasTriggeredExternally, bool aHasValidUserGestureActivation,
-+    bool aNewWindowTarget) {
++nsOSHelperAppService::LoadURI(nsIURI* aURI, nsIPrincipal* aTriggeringPrincipal,
++                              nsIPrincipal* aRedirectPrincipal,
++                              mozilla::dom::BrowsingContext* aBrowsingContext,
++                              bool aWasTriggeredExternally,
++                              bool aHasValidUserGestureActivation,
++                              bool aNewWindowTarget) {
++  mozilla::AssertIsOnMainThread();
 +  NS_ENSURE_ARG_POINTER(aURI);
++  NS_ENSURE_ARG_POINTER(aBrowsingContext);
 +
 +  if (ExternalProtocolIsBlockedBySandbox(aBrowsingContext,
 +                                         aHasValidUserGestureActivation)) {
@@ -312,79 +199,62 @@ index 552dd81e84..f5dd87f673 100644
 +  if (!aWasTriggeredExternally && !aHasValidUserGestureActivation) {
 +    return NS_OK;
 +  }
-+  if (!ReynardOpenLinksInAppsEnabled()) {
-+    return NS_OK;
-+  }
 +
 +  nsCOMPtr<nsIURI> escapedURI;
 +  nsresult rv = EscapeURI(aURI, getter_AddRefs(escapedURI));
 +  NS_ENSURE_SUCCESS(rv, rv);
 +
++  nsCOMPtr<nsIWidget> widget =
++      aBrowsingContext->Canonical()->GetParentProcessWidgetContaining();
++  NS_ENSURE_TRUE(widget, NS_ERROR_ABORT);
++
++  RefPtr<nsWindow> window = nsWindow::From(widget);
++  NS_ENSURE_TRUE(window && !window->Destroyed(), NS_ERROR_ABORT);
++
++  RefPtr<mozilla::widget::EventDispatcher> dispatcher =
++      window->GetEventDispatcher();
++  NS_ENSURE_TRUE(dispatcher, NS_ERROR_ABORT);
++
++  static constexpr auto kExternalProtocolEvent =
++      u"GeckoView:ExternalProtocol"_ns;
++  NS_ENSURE_TRUE(dispatcher->HasEmbedderListener(kExternalProtocolEvent),
++                 NS_ERROR_ABORT);
++
++  mozilla::dom::AutoJSAPI jsapi;
++  NS_ENSURE_TRUE(jsapi.Init(xpc::PrivilegedJunkScope()), NS_ERROR_FAILURE);
++  JSContext* cx = jsapi.cx();
++  JS::RootedObject payload(cx, JS_NewPlainObject(cx));
++  NS_ENSURE_TRUE(payload, NS_ERROR_OUT_OF_MEMORY);
++
 +  nsAutoCString spec;
-+  escapedURI->GetSpec(spec);
-+  NSString* requestedValue = [NSString stringWithUTF8String:spec.get()];
-+  NSString* launchValue = requestedValue;
-+  BOOL universalLinkOnly = NO;
++  rv = escapedURI->GetSpec(spec);
++  NS_ENSURE_SUCCESS(rv, rv);
++  NS_ENSURE_TRUE(DefineStringProperty(cx, payload, "uri", spec),
++                 NS_ERROR_FAILURE);
 +
-+  nsAutoCString scheme;
-+  escapedURI->GetScheme(scheme);
-+  if (!ReynardSupportsExternalScheme(scheme.get())) {
-+    return NS_ERROR_NOT_AVAILABLE;
++  nsCOMPtr<nsIURI> triggerURI;
++  if (aTriggeringPrincipal) {
++    aTriggeringPrincipal->GetURI(getter_AddRefs(triggerURI));
 +  }
-+
-+  if (scheme.EqualsLiteral("intent")) {
-+    NSURL* googleMapsURL = GoogleMapsURLFromAndroidIntent(requestedValue);
-+    if (!googleMapsURL) {
-+      return NS_ERROR_NOT_AVAILABLE;
-+    }
-+    launchValue = googleMapsURL.absoluteString;
-+  }
-+
-+  const BOOL isRedditMarketFallback =
-+      scheme.EqualsLiteral("market") &&
-+      spec.Find("com.reddit.frontpage") != kNotFound;
-+  if (isRedditMarketFallback) {
-+    nsCOMPtr<nsIURI> sourceURI;
-+    if (aTriggeringPrincipal) {
-+      aTriggeringPrincipal->GetURI(getter_AddRefs(sourceURI));
-+    }
-+    if (sourceURI) {
-+      nsAutoCString sourceSpec;
-+      sourceURI->GetSpec(sourceSpec);
-+      launchValue = [NSString stringWithUTF8String:sourceSpec.get()];
-+      universalLinkOnly = YES;
-+    } else {
-+      launchValue = @"reddit://";
++  if (triggerURI) {
++    nsAutoCString triggerSpec;
++    if (NS_SUCCEEDED(triggerURI->GetSpec(triggerSpec))) {
++      NS_ENSURE_TRUE(
++          DefineStringProperty(cx, payload, "triggerUri", triggerSpec),
++          NS_ERROR_FAILURE);
 +    }
 +  }
++  NS_ENSURE_TRUE(
++      JS_DefineProperty(cx, payload, "hasUserGesture",
++                        aHasValidUserGestureActivation, JSPROP_ENUMERATE),
++      NS_ERROR_FAILURE);
 +
-+  NSURL* launchURL = launchValue ? [NSURL URLWithString:launchValue] : nil;
-+  if (!launchURL) {
-+    return NS_ERROR_MALFORMED_URI;
-+  }
-+
-+  dispatch_async(dispatch_get_main_queue(), ^{
-+    NSDictionary<UIApplicationOpenExternalURLOptionsKey, id>* options =
-+        universalLinkOnly
-+            ? @{UIApplicationOpenURLOptionUniversalLinksOnly : @YES}
-+            : @{};
-+    [[UIApplication sharedApplication]
-+                  openURL:launchURL
-+                  options:options
-+        completionHandler:^(BOOL opened) {
-+          if (!opened && isRedditMarketFallback) {
-+            NSURL* fallbackURL = [NSURL URLWithString:@"reddit://"];
-+            [[UIApplication sharedApplication]
-+                          openURL:fallbackURL
-+                          options:@{}
-+                completionHandler:nil];
-+          }
-+        }];
-+  });
-+  return NS_OK;
++  JS::RootedValue payloadValue(cx, JS::ObjectValue(*payload));
++  return dispatcher->DispatchToEmbedder(cx, kExternalProtocolEvent,
++                                        payloadValue, nullptr);
  }
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index 62fd7646da..5309e19e84 100644
+index 62fd7646da8e..5309e19e8440 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -434,7 +434,9 @@ NS_IMETHODIMP nsAppShell::Observe(nsISupports* aSubject, const char* aTopic,

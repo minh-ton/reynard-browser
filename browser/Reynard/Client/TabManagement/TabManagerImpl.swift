@@ -33,7 +33,10 @@ final class TabManagerImplementation: NSObject, TabManager {
     private let permissionCoordinator = PermissionCoordinator(
         promptPresenter: PermissionPromptPresenter()
     )
-    private let externalAppLinkCoordinator = ExternalAppLinkCoordinator()
+    private lazy var externalAppLinkRouter = ExternalAppLinkRouter(
+        isAutomaticRoutingEnabled: { Prefs.BrowsingSettings.openLinksInApps },
+        open: Self.openExternalApplication
+    )
     private let systemMediaSession = SystemMediaSession()
     
     private weak var delegate: TabManagerDelegate?
@@ -1103,55 +1106,56 @@ extension TabManagerImplementation: NavigationDelegate {
     }
     
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
-        guard Prefs.BrowsingSettings.openLinksInApps else {
-            return .allow
-        }
-        guard let route = ExternalAppLinkPolicy.route(
+        let disposition = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
             uri: request.uri,
             triggerUri: request.triggerUri,
+            source: .navigation,
             hasUserGesture: request.hasUserGesture,
             isRedirect: request.isRedirect
-        ) else {
-            return .allow
-        }
-        let opened = await externalAppLinkCoordinator.open(route, for: session) { [weak self] route in
-            guard let self else {
-                return false
-            }
-            return await self.openExternalApplication(route)
-        }
-        return opened ? .deny : .allow
+        ))
+        return disposition == .opened ? .deny : .allow
     }
     
     func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
         return .allow
     }
 
-    func onLinkActivated(session: GeckoSession, uri: String, triggerUri: String) {
-        guard Prefs.BrowsingSettings.openLinksInApps,
-              let route = ExternalAppLinkPolicy.route(
+    func onLinkActivated(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String,
+        isDefaultPrevented: Bool
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            _ = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
                 uri: uri,
                 triggerUri: triggerUri,
-                hasUserGesture: true
-              ) else {
-            return
-        }
-        Task { @MainActor [weak self, weak session] in
-            guard let self, let session else {
-                return
-            }
-            _ = await externalAppLinkCoordinator.open(route, for: session) { [weak self] route in
-                guard let self else {
-                    return false
-                }
-                return await self.openExternalApplication(route)
-            }
+                source: .trustedLink,
+                hasUserGesture: true,
+                isDefaultPrevented: isDefaultPrevented
+            ))
         }
     }
 
-    private func openExternalApplication(_ route: ExternalAppLinkRoute) async -> Bool {
+    func onExternalProtocolRequest(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String?,
+        hasUserGesture: Bool
+    ) async -> Bool {
+        await externalAppLinkRouter.handle(ExternalAppLinkRequest(
+            uri: uri,
+            triggerUri: triggerUri,
+            source: .externalProtocol,
+            hasUserGesture: hasUserGesture
+        )) == .opened
+    }
+
+    @MainActor
+    private static func openExternalApplication(_ attempt: ExternalAppLinkAttempt) async -> Bool {
         let options: [UIApplication.OpenExternalURLOptionsKey: Any]
-        switch route.kind {
+        switch attempt.mode {
         case .universalLink:
             options = [.universalLinksOnly: true]
         case .externalScheme:
@@ -1159,7 +1163,7 @@ extension TabManagerImplementation: NavigationDelegate {
         }
 
         return await withCheckedContinuation { continuation in
-            UIApplication.shared.open(route.url, options: options) { opened in
+            UIApplication.shared.open(attempt.url, options: options) { opened in
                 continuation.resume(returning: opened)
             }
         }

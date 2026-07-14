@@ -8,7 +8,7 @@ FIREFOX_DIR="$ROOT_DIR/.build/firefox"
 TEST_BINARY="${TMPDIR:-/tmp}/reynard-website-mode-host-tests"
 NEW_TAB_TEST_BINARY="${TMPDIR:-/tmp}/reynard-new-tab-keyboard-policy-tests"
 EXTERNAL_APP_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-policy-tests"
-EXTERNAL_APP_COORDINATOR_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-coordinator-tests"
+EXTERNAL_APP_ROUTER_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-router-tests"
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
 TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
@@ -134,17 +134,11 @@ fi
 EXTERNAL_LINK_PATCH="$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"
 if ! rg -q '!event\.isTrusted' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'hasValidTransientUserGestureActivation' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q 'isEqualToString:@"comgooglemaps"' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q 'isEqualToString:@"comgooglemapsurl"' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q 'GoogleMapsURLFromAndroidIntent' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q 'com\.google\.android\.apps\.maps' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q 'scheme\.EqualsLiteral\("intent"\)' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'event\.defaultPrevented' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'this\.contentWindow\.top !== this\.contentWindow' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'destination\.scheme !== "http"' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'GeckoView:LinkActivated' "$EXTERNAL_LINK_PATCH" ||
-	! rg -q '"comgooglemapsurl"' \
-		"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkPolicy.swift" ||
-	rg -q 'event\.defaultPrevented' "$EXTERNAL_LINK_PATCH" ||
+	! rg -q 'GeckoView:ExternalProtocol' "$EXTERNAL_LINK_PATCH" ||
 	! rg -q 'func onLinkActivated' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift"; then
 	echo "The trusted web-link activation bridge is incomplete." >&2
@@ -206,11 +200,11 @@ rm -f "$EXTERNAL_APP_TEST_BINARY"
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkPolicy.swift" \
-	"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkCoordinator.swift" \
-	"$SCRIPT_DIR/ExternalAppLinkCoordinatorTests.swift" \
-	-o "$EXTERNAL_APP_COORDINATOR_TEST_BINARY"
-"$EXTERNAL_APP_COORDINATOR_TEST_BINARY"
-rm -f "$EXTERNAL_APP_COORDINATOR_TEST_BINARY"
+	"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkRouter.swift" \
+	"$SCRIPT_DIR/ExternalAppLinkRouterTests.swift" \
+	-o "$EXTERNAL_APP_ROUTER_TEST_BINARY"
+"$EXTERNAL_APP_ROUTER_TEST_BINARY"
+rm -f "$EXTERNAL_APP_ROUTER_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
@@ -248,7 +242,7 @@ rm -f "$ADDON_STAGING_TEST_BINARY"
 
 if ! rg -q 'universalLinksOnly' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift" ||
-	! rg -q 'return opened \? \.deny : \.allow' \
+	! rg -q 'disposition == \.opened \? \.deny : \.allow' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift"; then
 	echo "External app links do not preserve a safe web fallback." >&2
 	exit 1
@@ -272,13 +266,7 @@ fi
 
 if ! rg -q 'OSProtocolHandlerExists' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'LoadUriInternal' \
-	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'Reynard\.Browsing\.openLinksInApps' \
-		"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'ReynardSupportsExternalScheme' \
-	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
-	! rg -q 'com\.reddit\.frontpage' \
+	! rg -q 'GeckoView:ExternalProtocol' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch" ||
 	! rg -q 'if \(dispatcher\)' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
@@ -286,9 +274,9 @@ if ! rg -q 'OSProtocolHandlerExists' \
 	exit 1
 fi
 
-if rg -q 'OnTrustedLinkClick|default\.BrowsingSettings\.openLinksInApps' \
+if rg -q 'OnTrustedLinkClick|default\.BrowsingSettings\.openLinksInApps|UIApplication|NSUserDefaults|comgooglemaps|com\.reddit\.frontpage|GoogleMapsURLFromAndroidIntent' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
-	echo "A duplicate or profile-specific external app-link path remains." >&2
+	echo "Product-specific external app-link policy remains in Firefox." >&2
 	exit 1
 fi
 
