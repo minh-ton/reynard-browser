@@ -35,4 +35,9 @@ SECOND_DIRTY_HASH="$(sed -n 's/^dirty_digest=//p' "$DEVELOPMENT_TWO")"
 	exit 1
 }
 
+if "$ROOT_DIR/tools/release/build-fingerprint.sh" invalid >/dev/null 2>&1; then
+	echo "Build fingerprinting accepted an unsupported component." >&2
+	exit 1
+fi
+
 echo "Release tooling tests passed."

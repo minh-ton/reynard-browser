@@ -30,7 +30,25 @@ if [ ! -f "$GECKO_DIST/bin/XUL" ]; then
 	exit 1
 fi
 
-"$SCRIPT_DIR/prepare-firefox.sh" --manifest > "$TEMP_SOURCE"
+if [ "$MODE" = "check" ] && [ "${REYNARD_PREPARED_VERIFIED:-0}" != "1" ]; then
+	"$SCRIPT_DIR/prepare-firefox.sh" --check-prepared >/dev/null
+fi
+PREPARED_DIR="$("$SCRIPT_DIR/prepare-firefox.sh" --print-dir)"
+PREPARED_MARKER="$(git -C "$PREPARED_DIR" rev-parse --git-path reynard-prepared-manifest 2>/dev/null || true)"
+if [ -n "$PREPARED_MARKER" ] && [ -f "$PREPARED_MARKER" ]; then
+	{
+		printf 'input_manifest_version=1\n'
+		sed -n -e '/^firefox_release=/p' \
+			-e '/^firefox_revision=/p' \
+			-e '/^patch_count=/p' \
+			-e '/^patch=/p' "$PREPARED_MARKER"
+	} > "$TEMP_SOURCE"
+else
+	"$SCRIPT_DIR/prepare-firefox.sh" --input-manifest > "$TEMP_SOURCE"
+fi
+CURRENT_SOURCE_HASH="$(shasum -a 256 "$TEMP_SOURCE" | awk '{print $1}')"
+BUILD_FINGERPRINT="$(REYNARD_FIREFOX_INPUT_MANIFEST_SHA256="$CURRENT_SOURCE_HASH" \
+	"$SCRIPT_DIR/../release/build-fingerprint.sh" gecko)"
 
 write_binary_hashes() {
 	find "$GECKO_DIST/bin" -maxdepth 1 -type f \( -name 'XUL' -o -name '*.dylib' \) -print \
@@ -45,7 +63,8 @@ write_binary_hashes() {
 if [ "$MODE" = "write" ]; then
 	cp "$TEMP_SOURCE" "$SOURCE_MANIFEST"
 	{
-		printf 'manifest_version=1\n'
+		printf 'manifest_version=2\n'
+		printf 'build_fingerprint=%s\n' "$BUILD_FINGERPRINT"
 		printf 'source_manifest_sha256=%s\n' "$(shasum -a 256 "$SOURCE_MANIFEST" | awk '{print $1}')"
 		printf 'xcode=%s\n' "$(xcodebuild -version | tr '\n' ';' | sed 's/;$//')"
 		printf 'iphoneos_sdk=%s\n' "$(xcrun --sdk iphoneos --show-sdk-version)"
@@ -60,6 +79,12 @@ fi
 
 if [ ! -f "$SOURCE_MANIFEST" ] || [ ! -f "$ARTIFACT_MANIFEST" ]; then
 	echo "Gecko artifact provenance is missing under $GECKO_DIST" >&2
+	exit 1
+fi
+
+EXPECTED_FINGERPRINT="$(sed -n 's/^build_fingerprint=//p' "$ARTIFACT_MANIFEST")"
+if [ "$EXPECTED_FINGERPRINT" != "$BUILD_FINGERPRINT" ]; then
+	echo "Gecko build fingerprint changed; rebuild Gecko artifacts." >&2
 	exit 1
 fi
 

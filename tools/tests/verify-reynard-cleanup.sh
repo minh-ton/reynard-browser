@@ -70,6 +70,7 @@ sh -n \
 	"$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" \
 	"$ROOT_DIR/tools/firefox/prepare-firefox.sh" \
 	"$ROOT_DIR/tools/release/build-app.sh" \
+	"$ROOT_DIR/tools/release/build-fingerprint.sh" \
 	"$ROOT_DIR/tools/release/create-ipa.sh" \
 	"$ROOT_DIR/tools/release/hash-tree.sh" \
 	"$ROOT_DIR/tools/release/release-preflight.sh" \
@@ -238,8 +239,11 @@ if ! rg -q 'release-preflight\.sh" --clean' \
 	"$ROOT_DIR/tools/release/build-app.sh" \
 	"$ROOT_DIR/tools/release/create-ipa.sh" ||
 	! rg -q 'archive_app_tree_sha256=' "$ROOT_DIR/tools/release/build-app.sh" ||
-	! rg -q 'ipa_sha256=' "$ROOT_DIR/tools/release/create-ipa.sh"; then
-	echo "The jailbroken release provenance workflow is incomplete." >&2
+	! rg -q 'ipa_sha256=' "$ROOT_DIR/tools/release/create-ipa.sh" ||
+	! rg -q -- '--rebuild' \
+	"$ROOT_DIR/tools/development/build-gecko.sh" \
+	"$ROOT_DIR/tools/development/build-idevice.sh"; then
+	echo "The deterministic jailbroken release workflow is incomplete." >&2
 	exit 1
 fi
 

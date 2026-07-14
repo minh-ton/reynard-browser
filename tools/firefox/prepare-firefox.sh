@@ -7,10 +7,11 @@ case "${1:-}" in
 	"") ;;
 	--check) MODE="check" ;;
 	--check-prepared) MODE="check-prepared" ;;
+	--input-manifest) MODE="input-manifest" ;;
 	--manifest) MODE="manifest" ;;
 	--print-dir) MODE="print-dir" ;;
 	*)
-		echo "Usage: $0 [--check|--check-prepared|--manifest|--print-dir]" >&2
+		echo "Usage: $0 [--check|--check-prepared|--input-manifest|--manifest|--print-dir]" >&2
 		exit 2
 		;;
 esac
@@ -69,12 +70,6 @@ if [ "$EXPECTED_REVISION" != "$RELEASE_REVISION" ] || [ "$ACTUAL_REVISION" != "$
 	echo "Checkout: $ACTUAL_REVISION" >&2
 	exit 1
 fi
-if ! git -C "$FIREFOX_REPOSITORY" diff --quiet HEAD -- ||
-	! git -C "$FIREFOX_REPOSITORY" diff --cached --quiet HEAD --; then
-	echo "The Firefox submodule must remain a clean source base." >&2
-	exit 1
-fi
-
 find "$PATCH_DIR" -type f -name '*.patch' ! -path "$PATCH_DIR/firefox/*" -print \
 	| LC_ALL=C sort > "$PATCH_LIST"
 find "$PATCH_DIR/firefox" -maxdepth 1 -type f -name '*.patch' -print \
@@ -109,6 +104,52 @@ if [ "$PATCH_COUNT" -eq 0 ]; then
 	exit 1
 fi
 
+write_input_manifest() {
+	printf 'input_manifest_version=1\n'
+	printf 'firefox_release=%s\n' "$RELEASE_TAG"
+	printf 'firefox_revision=%s\n' "$EXPECTED_REVISION"
+	printf 'patch_count=%s\n' "$PATCH_COUNT"
+	while IFS= read -r patch; do
+		relative_path="${patch#"$ROOT_DIR/"}"
+		patch_hash="$(shasum -a 256 "$patch" | awk '{print $1}')"
+		printf 'patch=%s|%s\n' "$relative_path" "$patch_hash"
+	done < "$PATCH_LIST"
+}
+
+INPUT_MANIFEST_SHA256="$(write_input_manifest | shasum -a 256 | awk '{print $1}')"
+if [ "$MODE" = "input-manifest" ]; then
+	write_input_manifest
+	exit 0
+fi
+
+PREPARED_MARKER=""
+if [ -d "$PREPARED_DIR" ] && git -C "$PREPARED_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+	PREPARED_MARKER="$(git -C "$PREPARED_DIR" rev-parse --git-path reynard-prepared-manifest)"
+fi
+
+if [ -n "$PREPARED_MARKER" ] && [ -f "$PREPARED_MARKER" ] &&
+	[ "$(sed -n 's/^input_manifest_sha256=//p' "$PREPARED_MARKER")" = "$INPUT_MANIFEST_SHA256" ]; then
+	EXPECTED_TREE="$(sed -n 's/^patched_tree=//p' "$PREPARED_MARKER")"
+	if [ -n "$EXPECTED_TREE" ] &&
+		[ "$(git -C "$PREPARED_DIR" rev-parse HEAD 2>/dev/null || true)" = "$EXPECTED_REVISION" ] &&
+		[ "$(git -C "$PREPARED_DIR" write-tree 2>/dev/null || true)" = "$EXPECTED_TREE" ] &&
+		git -C "$PREPARED_DIR" diff --quiet --; then
+		case "$MODE" in
+			manifest) cat "$PREPARED_MARKER" ;;
+			check) echo "Firefox $PATCH_COUNT-patch series is cached at expected tree $EXPECTED_TREE." ;;
+			check-prepared) echo "Prepared Firefox source matches expected tree $EXPECTED_TREE." ;;
+			prepare) echo "Reusing prepared Firefox tree $EXPECTED_TREE at $PREPARED_DIR." ;;
+		esac
+		exit 0
+	fi
+fi
+
+if ! git -C "$FIREFOX_REPOSITORY" diff --quiet HEAD -- ||
+	! git -C "$FIREFOX_REPOSITORY" diff --cached --quiet HEAD --; then
+	echo "The Firefox submodule must remain a clean source base." >&2
+	exit 1
+fi
+
 GIT_INDEX_FILE="$TEMP_INDEX" git -C "$FIREFOX_REPOSITORY" read-tree "$EXPECTED_REVISION"
 PATCH_NUMBER=0
 while IFS= read -r patch; do
@@ -123,7 +164,8 @@ done < "$PATCH_LIST"
 EXPECTED_TREE="$(GIT_INDEX_FILE="$TEMP_INDEX" git -C "$FIREFOX_REPOSITORY" write-tree)"
 
 write_manifest() {
-	printf 'manifest_version=2\n'
+	printf 'manifest_version=3\n'
+	printf 'input_manifest_sha256=%s\n' "$INPUT_MANIFEST_SHA256"
 	printf 'firefox_release=%s\n' "$RELEASE_TAG"
 	printf 'firefox_revision=%s\n' "$EXPECTED_REVISION"
 	printf 'patched_tree=%s\n' "$EXPECTED_TREE"
@@ -189,5 +231,10 @@ if ! prepared_source_matches; then
 	echo "Prepared Firefox source does not match expected tree after checkout." >&2
 	exit 1
 fi
+
+PREPARED_MARKER="$(git -C "$PREPARED_DIR" rev-parse --git-path reynard-prepared-manifest)"
+MARKER_TEMP="$PREPARED_MARKER.tmp.$$"
+write_manifest > "$MARKER_TEMP"
+mv "$MARKER_TEMP" "$PREPARED_MARKER"
 
 echo "Prepared Firefox $PATCH_COUNT-patch tree $EXPECTED_TREE at $PREPARED_DIR."

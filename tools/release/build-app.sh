@@ -20,6 +20,7 @@ XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
 GECKO_DIST="$ROOT_DIR/.build/firefox/obj-aarch64-apple-ios/dist"
 IDEVICE_DIR="$ROOT_DIR/support/idevice"
 IDEVICE_LIBRARY="$ROOT_DIR/browser/Reynard/JIT/RPPairing/libidevice_ffi.a"
+IDEVICE_MANIFEST="$ROOT_DIR/.build/idevice/reynard-idevice-artifact-manifest.txt"
 PREFLIGHT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/reynard-release-preflight.XXXXXX")"
 trap 'rm -f "$PREFLIGHT_MANIFEST"' EXIT HUP INT TERM
 
@@ -83,6 +84,7 @@ fi
 	echo "idevice_revision=$IDEVICE_SHA"
 	echo "release_xcconfig_sha256=$(shasum -a 256 "$DIST_DIR/Reynard.xcconfig" | awk '{print $1}')"
 	echo "idevice_library_sha256=$(shasum -a 256 "$IDEVICE_LIBRARY" | awk '{print $1}')"
+	echo "idevice_artifact_manifest_sha256=$(shasum -a 256 "$IDEVICE_MANIFEST" | awk '{print $1}')"
 	echo "gecko_source_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-source-manifest.txt" | awk '{print $1}')"
 	echo "gecko_artifact_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-gecko-artifact-manifest.txt" | awk '{print $1}')"
 	echo "archive_app_tree_sha256=$("$ROOT_DIR/tools/release/hash-tree.sh" "$ARCHIVE_APP")"

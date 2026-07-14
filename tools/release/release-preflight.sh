@@ -55,4 +55,4 @@ git -C "$ROOT_DIR" submodule status --recursive | while IFS= read -r line; do
 	set -- $line
 	printf 'submodule_revision=%s|%s\n' "$2" "${1#[-+U ]}"
 done
-printf 'patch_manifest_sha256=%s\n' "$($ROOT_DIR/tools/firefox/prepare-firefox.sh --manifest | shasum -a 256 | awk '{print $1}')"
+printf 'patch_manifest_sha256=%s\n' "$($ROOT_DIR/tools/firefox/prepare-firefox.sh --input-manifest | shasum -a 256 | awk '{print $1}')"
