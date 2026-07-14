@@ -27,7 +27,11 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
     private var previewHeaderView: UIView?
 
     private var availableActions: [BottomToolbarAction] {
-        BottomToolbarAction.allCases.filter { !includedActions.contains($0) }
+        BottomToolbarAction.optionalActions.filter { !includedActions.contains($0) }
+    }
+
+    private var canAddAction: Bool {
+        includedActions.count < BottomToolbarLayoutPolicy.maximumConfiguredActions
     }
 
     init() {
@@ -60,6 +64,7 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
         }
         previewHeaderView.frame.size.width = tableView.bounds.width
         tableView.tableHeaderView = previewHeaderView
+        toolbarPreview.setNeedsLayout()
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -129,9 +134,8 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
             cell.textLabel?.text = action.title
             cell.imageView?.image = UIImage(named: action.imageName)
             cell.selectionStyle = .none
-            let canAdd = includedActions.count < BottomToolbarLayoutPolicy.maximumConfiguredActions
-            cell.textLabel?.textColor = canAdd ? .label : .secondaryLabel
-            cell.imageView?.tintColor = canAdd ? view.tintColor : .secondaryLabel
+            cell.textLabel?.textColor = canAddAction ? .label : .secondaryLabel
+            cell.imageView?.tintColor = canAddAction ? view.tintColor : .secondaryLabel
             return cell
         case .feedback:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
@@ -191,9 +195,12 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
     ) -> UITableViewCell.EditingStyle {
         switch Section(rawValue: indexPath.section) {
         case .included:
-            return .delete
+            guard let action = includedActions[safe: indexPath.row] else {
+                return .none
+            }
+            return action.isRemovableFromToolbar ? .delete : .none
         case .available:
-            return includedActions.count < BottomToolbarLayoutPolicy.maximumConfiguredActions ? .insert : .none
+            return canAddAction ? .insert : .none
         default:
             return .none
         }
@@ -218,12 +225,13 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
     ) {
         switch editingStyle {
         case .delete:
-            guard includedActions.indices.contains(indexPath.row) else {
+            guard let action = includedActions[safe: indexPath.row],
+                  action.isRemovableFromToolbar else {
                 return
             }
             includedActions.remove(at: indexPath.row)
         case .insert:
-            guard includedActions.count < BottomToolbarLayoutPolicy.maximumConfiguredActions,
+            guard canAddAction,
                   let action = availableActions[safe: indexPath.row] else {
                 return
             }
@@ -333,6 +341,17 @@ final class BottomToolbarPreferencesViewController: UITableViewController {
             toolbarPreview.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -UX.previewVerticalInset),
         ])
         toolbarPreview.apply(actions: includedActions)
+        toolbarPreview.onRequiredHeightChange = { [weak self] requiredHeight in
+            guard let self, let previewHeaderView = self.previewHeaderView else {
+                return
+            }
+            let headerHeight = requiredHeight + (2 * UX.previewVerticalInset)
+            guard previewHeaderView.frame.height != headerHeight else {
+                return
+            }
+            previewHeaderView.frame.size.height = headerHeight
+            self.tableView.tableHeaderView = previewHeaderView
+        }
         previewHeaderView = header
         tableView.tableHeaderView = header
     }
@@ -349,14 +368,16 @@ private final class BottomToolbarPreviewView: UIView {
     private let buttonStack: UIStackView = {
         let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .horizontal
+        stack.axis = .vertical
         stack.alignment = .fill
         stack.distribution = .fillEqually
-        stack.spacing = UX.buttonSpacing
+        stack.spacing = BottomToolbarLayoutPolicy.verticalSpacing
         return stack
     }()
+    var onRequiredHeightChange: ((CGFloat) -> Void)?
     private var actions: [BottomToolbarAction] = []
     private var displayedWidth: CGFloat = 0
+    private var displayedLayout: BottomToolbarLayoutPolicy.Layout?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -400,8 +421,9 @@ private final class BottomToolbarPreviewView: UIView {
     }
 
     func apply(actions: [BottomToolbarAction]) {
-        self.actions = actions
+        self.actions = BottomToolbarAction.displayedActions(from: actions)
         displayedWidth = 0
+        displayedLayout = nil
         setNeedsLayout()
     }
 
@@ -411,21 +433,38 @@ private final class BottomToolbarPreviewView: UIView {
             button.removeFromSuperview()
         }
 
-        let visibleCount = BottomToolbarLayoutPolicy.visibleActionCount(
+        let layout = BottomToolbarLayoutPolicy.layout(
+            containerWidth: bounds.width,
             configuredCount: actions.count
         )
-        let visibleActions = Array(actions.prefix(visibleCount))
+        guard displayedLayout != layout else {
+            return
+        }
+        displayedLayout = layout
+        onRequiredHeightChange?(layout.requiredHeight)
+
         let configuration = UIImage.SymbolConfiguration(
             pointSize: UX.symbolPointSize,
             weight: .regular
         )
-        for action in visibleActions {
-            let button = UIButton(type: .system)
-            button.isUserInteractionEnabled = false
-            button.tintColor = .label
-            button.setImage(UIImage(named: action.imageName, in: .main, with: configuration), for: .normal)
-            button.accessibilityLabel = action.title
-            buttonStack.addArrangedSubview(button)
+        var actionIndex = 0
+        for rowActionCount in layout.rowActionCounts {
+            let row = UIStackView()
+            row.axis = .horizontal
+            row.alignment = .fill
+            row.distribution = .fillEqually
+            row.spacing = UX.buttonSpacing
+            for _ in 0..<rowActionCount {
+                let action = actions[actionIndex]
+                actionIndex += 1
+                let button = UIButton(type: .system)
+                button.isUserInteractionEnabled = false
+                button.tintColor = .label
+                button.setImage(UIImage(named: action.imageName, in: .main, with: configuration), for: .normal)
+                button.accessibilityLabel = action.title
+                row.addArrangedSubview(button)
+            }
+            buttonStack.addArrangedSubview(row)
         }
     }
 
@@ -436,4 +475,3 @@ private final class BottomToolbarPreviewView: UIView {
         return separator
     }
 }
-

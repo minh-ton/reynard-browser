@@ -125,11 +125,18 @@ if rg -q 'AddressBarZoomDropdown|showsZoomButton|addressBarDidRequestPageZoom|sh
 	exit 1
 fi
 
-if ! rg -q 'BottomToolbarLayoutPolicy\.visibleActionCount' \
+if ! rg -q 'BottomToolbarLayoutPolicy\.layout' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift" ||
 	rg -q 'displayedOverflowActions|overflowButton|overflowTapped' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbar.swift"; then
 	echo "The static 10-action toolbar implementation is incomplete." >&2
+	exit 1
+fi
+
+TOOLBAR_PREFERENCES="$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Toolbar/BottomToolbarPreferencesViewController.swift"
+if ! rg -q 'BottomToolbarAction\.optionalActions\.filter' "$TOOLBAR_PREFERENCES" ||
+	[ "$(rg -o 'isRemovableFromToolbar' "$TOOLBAR_PREFERENCES" | wc -l | tr -d ' ')" -lt 2 ]; then
+	echo "Settings is not protected from bottom-toolbar removal." >&2
 	exit 1
 fi
 
@@ -252,6 +259,7 @@ rm -f "$NAVIGATION_HISTORY_TEST_BINARY"
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbarLayoutPolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/Toolbar/BottomToolbarAction.swift" \
 	"$SCRIPT_DIR/BottomToolbarLayoutPolicyTests.swift" \
 	-o "$TOOLBAR_LAYOUT_TEST_BINARY"
 "$TOOLBAR_LAYOUT_TEST_BINARY"

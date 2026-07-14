@@ -7,58 +7,6 @@
 
 import UIKit
 
-enum BottomToolbarAction: String, CaseIterable {
-    case back
-    case forward
-    case reload
-    case share
-    case pageZoom
-    case bookmarks
-    case history
-    case downloads
-    case settings
-    case newTab
-    case closeTab
-    case tabOverview
-
-    static let defaultActions: [BottomToolbarAction] = [
-        .back, .forward, .share, .bookmarks, .downloads, .tabOverview,
-    ]
-
-    var title: String {
-        switch self {
-        case .back: return NSLocalizedString("Back", comment: "")
-        case .forward: return NSLocalizedString("Forward", comment: "")
-        case .reload: return NSLocalizedString("Reload", comment: "")
-        case .share: return NSLocalizedString("Share", comment: "")
-        case .pageZoom: return NSLocalizedString("Page Zoom", comment: "")
-        case .bookmarks: return NSLocalizedString("Bookmarks", comment: "")
-        case .history: return NSLocalizedString("History", comment: "")
-        case .downloads: return NSLocalizedString("Downloads", comment: "")
-        case .settings: return NSLocalizedString("Settings", comment: "")
-        case .newTab: return NSLocalizedString("New Tab", comment: "")
-        case .closeTab: return NSLocalizedString("Close Tab", comment: "")
-        case .tabOverview: return NSLocalizedString("Tabs", comment: "")
-        }
-    }
-
-    var imageName: String {
-        switch self {
-        case .back: return "reynard.chevron.backward"
-        case .forward: return "reynard.chevron.forward"
-        case .reload: return "reynard.arrow.clockwise"
-        case .share: return "reynard.square.and.arrow.up"
-        case .pageZoom: return "reynard.textformat.size"
-        case .bookmarks: return "reynard.book"
-        case .history: return "reynard.clock"
-        case .downloads: return "reynard.arrow.down.circle"
-        case .settings: return "reynard.gearshape"
-        case .newTab: return "reynard.plus"
-        case .closeTab: return "reynard.xmark"
-        case .tabOverview: return "reynard.square.on.square"
-        }
-    }
-}
 
 final class BottomToolbar: UIView {
     private enum UX {
@@ -144,10 +92,10 @@ final class BottomToolbar: UIView {
     private lazy var buttons: UIStackView = {
         let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .horizontal
+        stack.axis = .vertical
         stack.distribution = .fillEqually
-        stack.alignment = .center
-        stack.spacing = UX.bottomToolbarButtonSpacing
+        stack.alignment = .fill
+        stack.spacing = BottomToolbarLayoutPolicy.verticalSpacing
         return stack
     }()
     
@@ -160,6 +108,9 @@ final class BottomToolbar: UIView {
     
     private var verticalOffset: CGFloat = 0
     private var displayedActions: [BottomToolbarAction] = []
+    private var displayedLayout: BottomToolbarLayoutPolicy.Layout?
+    private var layoutState: LayoutState = .standard
+    private var hidesButtons = false
     
     // MARK: - Lifecycle
     
@@ -195,7 +146,10 @@ final class BottomToolbar: UIView {
     // MARK: - Layout
     
     func configureTopAnchor(to safeAreaBottomAnchor: NSLayoutYAxisAnchor) {
-        topConstraint = topAnchor.constraint(equalTo: safeAreaBottomAnchor, constant: -UX.bottomToolbarStandardContentHeight)
+        topConstraint = topAnchor.constraint(
+            equalTo: safeAreaBottomAnchor,
+            constant: -contentHeight(for: layoutState)
+        )
         topConstraint.isActive = true
     }
     
@@ -225,19 +179,9 @@ final class BottomToolbar: UIView {
     }
     
     func apply(state: LayoutState, hidesButtons: Bool) {
-        let contentHeight: CGFloat
-        switch state {
-        case .hidden:
-            contentHeight = UX.bottomToolbarStandardContentHeight
-        case .collapsed:
-            contentHeight = UX.bottomToolbarCompactContentHeight
-        case .standard:
-            contentHeight = UX.bottomToolbarStandardContentHeight
-        case .focused:
-            contentHeight = UX.bottomToolbarFocusedContentHeight
-        case .compact:
-            contentHeight = UX.bottomToolbarCompactContentHeight
-        }
+        layoutState = state
+        self.hidesButtons = hidesButtons
+        let contentHeight = contentHeight(for: state)
         
         UIView.performWithoutAnimation {
             topConstraint.constant = verticalOffset - contentHeight
@@ -248,7 +192,7 @@ final class BottomToolbar: UIView {
             let isCompact = state == .compact || state == .collapsed
             standardButtonsTopConstraint?.isActive = !isCompact
             compactButtonsTopConstraint.isActive = isCompact
-            buttonsHeightConstraint.constant = state == .focused ? 0 : UX.bottomToolbarButtonStackHeight
+            buttonsHeightConstraint.constant = state == .focused ? 0 : configuredButtonsHeight
             buttons.alpha = state == .focused || hidesButtons ? 0 : 1
             buttons.isUserInteractionEnabled = state != .focused && !hidesButtons
             layoutIfNeeded()
@@ -289,7 +233,11 @@ final class BottomToolbar: UIView {
 
     @objc private func closeTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began,
-              Prefs.ToolbarSettings.closeTabLongPressOpensNewTab else {
+              BottomToolbarShortcutPolicy.longPressAction(
+                for: .closeTab,
+                closeTabOpensNewTab: Prefs.ToolbarSettings.closeTabLongPressOpensNewTab,
+                newTabClosesTab: Prefs.ToolbarSettings.newTabLongPressClosesTab
+              ) == .newTab else {
             return
         }
         if Prefs.ToolbarSettings.toolbarButtonHapticsEnabled {
@@ -300,7 +248,11 @@ final class BottomToolbar: UIView {
 
     @objc private func newTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began,
-              Prefs.ToolbarSettings.newTabLongPressClosesTab else {
+              BottomToolbarShortcutPolicy.longPressAction(
+                for: .newTab,
+                closeTabOpensNewTab: Prefs.ToolbarSettings.closeTabLongPressOpensNewTab,
+                newTabClosesTab: Prefs.ToolbarSettings.newTabLongPressClosesTab
+              ) == .closeTab else {
             return
         }
         if Prefs.ToolbarSettings.toolbarButtonHapticsEnabled {
@@ -341,8 +293,8 @@ final class BottomToolbar: UIView {
             contentView.topAnchor.constraint(equalTo: topAnchor),
             contentHeightConstraint,
             
-            buttons.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: UX.bottomToolbarButtonStackHorizontalInset),
-            buttons.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -UX.bottomToolbarButtonStackHorizontalInset),
+            buttons.leadingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.leadingAnchor, constant: UX.bottomToolbarButtonStackHorizontalInset),
+            buttons.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor, constant: -UX.bottomToolbarButtonStackHorizontalInset),
             buttonsHeightConstraint,
         ])
     }
@@ -354,6 +306,7 @@ final class BottomToolbar: UIView {
 
     private func applyConfiguredActions() {
         displayedActions = []
+        displayedLayout = nil
         setNeedsLayout()
         applyConfiguredActionsIfNeeded()
     }
@@ -362,26 +315,77 @@ final class BottomToolbar: UIView {
         guard bounds.width > 0 else {
             return
         }
-        let configuredActions = Prefs.ToolbarSettings.bottomToolbarActions
-        let visibleCount = BottomToolbarLayoutPolicy.visibleActionCount(
-            configuredCount: configuredActions.count
+        let visibleActions = BottomToolbarAction.displayedActions(
+            from: Prefs.ToolbarSettings.bottomToolbarActions
         )
-        let visibleActions = Array(configuredActions.prefix(visibleCount))
-        guard displayedActions != visibleActions else {
+        let layout = BottomToolbarLayoutPolicy.layout(
+            containerWidth: bounds.width,
+            safeAreaLeft: safeAreaInsets.left,
+            safeAreaRight: safeAreaInsets.right,
+            configuredCount: visibleActions.count
+        )
+        guard displayedActions != visibleActions || displayedLayout != layout else {
             return
         }
 
-        for button in buttons.arrangedSubviews {
-            buttons.removeArrangedSubview(button)
-            button.removeFromSuperview()
+        for row in buttons.arrangedSubviews {
+            buttons.removeArrangedSubview(row)
+            row.removeFromSuperview()
         }
-        for action in visibleActions {
-            if let button = actionButtons[action] {
-                button.isHidden = false
-                buttons.addArrangedSubview(button)
+        var actionIndex = 0
+        for rowActionCount in layout.rowActionCounts {
+            let row = makeButtonRow()
+            for _ in 0..<rowActionCount {
+                let action = visibleActions[actionIndex]
+                actionIndex += 1
+                if let button = actionButtons[action] {
+                    button.isHidden = false
+                    row.addArrangedSubview(button)
+                }
             }
+            buttons.addArrangedSubview(row)
         }
         displayedActions = visibleActions
+        displayedLayout = layout
+        accessibilityElements = visibleActions.compactMap { actionButtons[$0] }
+        applyLayoutMetrics()
+    }
+
+    private func makeButtonRow() -> UIStackView {
+        let row = UIStackView()
+        row.axis = .horizontal
+        row.alignment = .fill
+        row.distribution = .fillEqually
+        row.spacing = UX.bottomToolbarButtonSpacing
+        return row
+    }
+
+    private var configuredButtonsHeight: CGFloat {
+        displayedLayout?.requiredHeight ?? UX.bottomToolbarButtonStackHeight
+    }
+
+    private func contentHeight(for state: LayoutState) -> CGFloat {
+        let additionalRowsHeight = max(
+            0,
+            configuredButtonsHeight - UX.bottomToolbarButtonStackHeight
+        )
+        switch state {
+        case .hidden, .standard:
+            return UX.bottomToolbarStandardContentHeight + additionalRowsHeight
+        case .collapsed, .compact:
+            return UX.bottomToolbarCompactContentHeight + additionalRowsHeight
+        case .focused:
+            return UX.bottomToolbarFocusedContentHeight
+        }
+    }
+
+    private func applyLayoutMetrics() {
+        let contentHeight = contentHeight(for: layoutState)
+        buttonsHeightConstraint.constant = layoutState == .focused ? 0 : configuredButtonsHeight
+        contentHeightConstraint.constant = contentHeight
+        topConstraint?.constant = verticalOffset - contentHeight
+        buttons.alpha = layoutState == .focused || hidesButtons ? 0 : 1
+        buttons.isUserInteractionEnabled = layoutState != .focused && !hidesButtons
     }
 
     private func updateShortcutAccessibility() {

@@ -739,19 +739,14 @@ final class BrowserPreferences {
                     forSetting: "ToolbarSettings",
                     key: "bottomToolbarActions"
                 ) ?? BottomToolbarAction.defaultActions.map(\.rawValue)
-                var seen = Set<BottomToolbarAction>()
                 let actions = rawValues.compactMap { rawValue in
                     rawValue == "library" ? BottomToolbarAction.bookmarks : BottomToolbarAction(rawValue: rawValue)
-                }.filter {
-                    seen.insert($0).inserted
                 }
-                return Array(actions.prefix(BottomToolbarLayoutPolicy.maximumConfiguredActions))
+                return BottomToolbarAction.normalized(actions)
             }
             set {
-                var seen = Set<BottomToolbarAction>()
-                let actions = newValue.filter { seen.insert($0).inserted }
                 prefs.set(
-                    Array(actions.prefix(BottomToolbarLayoutPolicy.maximumConfiguredActions)).map(\.rawValue),
+                    BottomToolbarAction.normalized(newValue).map(\.rawValue),
                     forSetting: "ToolbarSettings",
                     key: "bottomToolbarActions"
                 )
