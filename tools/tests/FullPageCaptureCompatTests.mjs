@@ -8,11 +8,11 @@ const moduleURL = new URL(
 const { FullPageCaptureCompat } = await import(moduleURL);
 
 assert.equal(
-  FullPageCaptureCompat.assertSupported({ id: "another-extension", version: "1" }),
+  FullPageCaptureCompat.matchesExtension({ id: "another-extension", version: "1" }),
   false
 );
 assert.equal(
-  FullPageCaptureCompat.assertSupported({
+  FullPageCaptureCompat.matchesExtension({
     id: FullPageCaptureCompat.EXTENSION_ID,
     version: FullPageCaptureCompat.SUPPORTED_VERSION,
   }),
@@ -20,7 +20,7 @@ assert.equal(
 );
 assert.throws(
   () =>
-    FullPageCaptureCompat.assertSupported({
+    FullPageCaptureCompat.matchesExtension({
       id: FullPageCaptureCompat.EXTENSION_ID,
       version: "0.6.0",
     }),
@@ -43,27 +43,80 @@ assert.throws(
 );
 
 let injectedCode;
-await FullPageCaptureCompat.install(
+const extensionContext = {
+  extension: { id: FullPageCaptureCompat.EXTENSION_ID },
+};
+await FullPageCaptureCompat.didExecuteScript(
   {
     async executeScript(_context, details) {
       injectedCode = details.code;
     },
   },
-  {}
+  extensionContext,
+  { file: "/content/capture.js" },
+  {
+    async sendRequestForResult() {
+      return {};
+    },
+  }
 );
 assert.ok(injectedCode.includes("maximumPixels"));
 assert.ok(injectedCode.includes('"capture":"Capture"'));
 
-await FullPageCaptureCompat.install(
+await FullPageCaptureCompat.didExecuteScript(
   {
     async executeScript(_context, details) {
       injectedCode = details.code;
     },
   },
-  {},
-  { capture: "Take Screenshot" }
+  extensionContext,
+  { file: "/content/capture.js" },
+  {
+    async sendRequestForResult() {
+      return { capture: "Take Screenshot" };
+    },
+  }
 );
 assert.ok(injectedCode.includes('"capture":"Take Screenshot"'));
+
+const compatibilityMessages = [];
+const compatibilityDispatcher = {
+  async sendRequestForResult(type, message) {
+    compatibilityMessages.push({ type, message });
+    return {};
+  },
+};
+assert.equal(
+  await FullPageCaptureCompat.beforeDownload(
+    extensionContext.extension,
+    { filename: "ordinary.png" },
+    compatibilityDispatcher
+  ),
+  null
+);
+assert.equal(
+  await FullPageCaptureCompat.beforeDownload(
+    extensionContext.extension,
+    { filename: FullPageCaptureCompat.STAGED_FILES.beginRegionSelection },
+    compatibilityDispatcher
+  ),
+  0
+);
+assert.equal(
+  await FullPageCaptureCompat.handleStagedDownload(
+    extensionContext.extension,
+    { filename: FullPageCaptureCompat.STAGED_FILES.clipboardImage },
+    compatibilityDispatcher
+  ),
+  0
+);
+assert.deepEqual(
+  compatibilityMessages.map(message => message.type),
+  [
+    FullPageCaptureCompat.NATIVE_MESSAGES.beginRegionSelection,
+    FullPageCaptureCompat.NATIVE_MESSAGES.clipboardImage,
+  ]
+);
 
 function createFixture({ failAtTile = 0, youtube = false } = {}) {
   const scrolls = [];

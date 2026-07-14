@@ -1,27 +1,33 @@
 diff --git a/mobile/shared/components/extensions/ext-downloads.js b/mobile/shared/components/extensions/ext-downloads.js
-index 62f446ef4d..c4dcefdcb5 100644
+index 62f446ef4d21..713971af0d5f 100644
 --- a/mobile/shared/components/extensions/ext-downloads.js
 +++ b/mobile/shared/components/extensions/ext-downloads.js
 @@ -7,6 +7,9 @@
  ChromeUtils.defineESModuleGetters(this, {
    DownloadPaths: "resource://gre/modules/DownloadPaths.sys.mjs",
    DownloadTracker: "resource://gre/modules/GeckoViewWebExtension.sys.mjs",
-+  FullPageCaptureCompat:
-+    "resource://gre/modules/FullPageCaptureCompat.sys.mjs",
 +  NetUtil: "resource://gre/modules/NetUtil.sys.mjs",
++  WebExtensionCompat:
++    "resource://gre/modules/WebExtensionCompat.sys.mjs",
  });
 
  var { ignoreEvent } = ExtensionCommon;
-@@ -77,6 +80,52 @@ const INTERRUPT_REASON_MAP = new Map([
+@@ -77,6 +80,61 @@ const INTERRUPT_REASON_MAP = new Map([
    [24, "CRASH"],
  ]);
 
-+async function stageBlobDownload(url, filename) {
++async function stageBlobDownload(url, filename, principal) {
 +  let stagedFile;
 +  try {
 +    return await new Promise((resolve, reject) => {
 +      NetUtil.asyncFetch(
-+        { uri: url, loadUsingSystemPrincipal: true },
++        {
++          uri: url,
++          loadingPrincipal: principal,
++          securityFlags:
++            Ci.nsILoadInfo.SEC_REQUIRE_SAME_ORIGIN_INHERITS_SEC_CONTEXT,
++          contentPolicyType: Ci.nsIContentPolicy.TYPE_OTHER,
++        },
 +        (input, status, request) => {
 +          if (!Components.isSuccessCode(status)) {
 +            reject(Components.Exception("Unable to read blob download", status));
@@ -33,7 +39,10 @@ index 62f446ef4d..c4dcefdcb5 100644
 +            mimeType = request.QueryInterface(Ci.nsIChannel).contentType;
 +          } catch (_) {}
 +
-+          const fileExtension = filename?.split(".").pop() || "bin";
++          const requestedExtension = filename?.split(".").pop() ?? "";
++          const fileExtension = /^[a-z0-9]{1,10}$/i.test(requestedExtension)
++            ? requestedExtension.toLowerCase()
++            : "bin";
 +          stagedFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
 +          stagedFile.append(`reynard-webextension.${fileExtension}`);
 +          stagedFile.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, 0o600);
@@ -65,53 +74,28 @@ index 62f446ef4d..c4dcefdcb5 100644
  // TODO Bug 1247794: make id and extension info persistent
  class DownloadItem {
    /**
-@@ -167,9 +216,22 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -167,9 +225,19 @@ this.downloads = class extends ExtensionAPIPersistent {
 
    getAPI(context) {
      const { extension } = context;
-+    const usesFullPageCaptureCompatibility =
-+      FullPageCaptureCompat.assertSupported(extension);
++    const compatibility = WebExtensionCompat.forExtension(extension);
      return {
        downloads: {
 -        download(options) {
 +        async download(options) {
-+          if (
-+            usesFullPageCaptureCompatibility &&
-+            options.filename ===
-+              FullPageCaptureCompat.STAGED_FILES.beginRegionSelection
-+          ) {
-+            await EventDispatcher.instance.sendRequestForResult(
-+              FullPageCaptureCompat.NATIVE_MESSAGES.beginRegionSelection,
-+              { extensionId: extension.id }
++          const compatibilityResult =
++            await compatibility?.beforeDownload(
++              extension,
++              options,
++              EventDispatcher.instance
 +            );
-+            return 0;
++          if (compatibilityResult != null) {
++            return compatibilityResult;
 +          }
            // the validation checks should be kept in sync with the toolkit implementation
            let { filename } = options;
            if (filename != null) {
-@@ -177,7 +239,7 @@ this.downloads = class extends ExtensionAPIPersistent {
-               return Promise.reject({ message: "filename must not be empty" });
-             }
-
--            if (PathUtils.isAbsolute(filename)) {
-+            if (/^(?:\/|[a-zA-Z]:[\\/])/.test(filename)) {
-               return Promise.reject({
-                 message: "filename must not be an absolute path",
-               });
-@@ -186,11 +248,7 @@ this.downloads = class extends ExtensionAPIPersistent {
-             // % is not permitted but relatively common.
-             filename = filename.replaceAll("%", "_");
-
--            const pathComponents = PathUtils.splitRelative(filename, {
--              allowEmpty: true,
--              allowCurrentDir: true,
--              allowParentDir: true,
--            });
-+            const pathComponents = filename.split(/[\\/]/);
-
-             if (pathComponents.some(component => component == "..")) {
-               return Promise.reject({
-@@ -237,16 +295,49 @@ this.downloads = class extends ExtensionAPIPersistent {
+@@ -237,16 +305,48 @@ this.downloads = class extends ExtensionAPIPersistent {
              }
            }
 
@@ -126,7 +110,11 @@ index 62f446ef4d..c4dcefdcb5 100644
 -              return downloadItem.id;
 -            });
 +          if (options.url.startsWith("blob:")) {
-+            const staged = await stageBlobDownload(options.url, options.filename);
++            const staged = await stageBlobDownload(
++              options.url,
++              options.filename,
++              extension.principal
++            );
 +            options = {
 +              ...options,
 +              url: "https://reynard.invalid/webextension-download",
@@ -135,19 +123,14 @@ index 62f446ef4d..c4dcefdcb5 100644
 +          }
 +
 +          try {
-+            if (
-+              usesFullPageCaptureCompatibility &&
-+              options.filename ===
-+                FullPageCaptureCompat.STAGED_FILES.clipboardImage
-+            ) {
-+              await EventDispatcher.instance.sendRequestForResult(
-+                FullPageCaptureCompat.NATIVE_MESSAGES.clipboardImage,
-+                {
-+                  options,
-+                  extensionId: extension.id,
-+                }
++            const stagedCompatibilityResult =
++              await compatibility?.handleStagedDownload(
++                extension,
++                options,
++                EventDispatcher.instance
 +              );
-+              return 0;
++            if (stagedCompatibilityResult != null) {
++              return stagedCompatibilityResult;
 +            }
 +
 +            const value = await EventDispatcher.instance.sendRequestForResult(

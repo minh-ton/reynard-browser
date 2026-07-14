@@ -1,9 +1,9 @@
 diff --git a/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs b/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs
 new file mode 100644
-index 0000000000..92d088b15a
+index 000000000000..3f715c9c0c5e
 --- /dev/null
 +++ b/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs
-@@ -0,0 +1,1301 @@
+@@ -0,0 +1,1349 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -86,7 +86,7 @@ index 0000000000..92d088b15a
 +  redraw: "Redraw",
 +});
 +
-+function assertSupported(extension) {
++function matchesExtension(extension) {
 +  if (extension.id !== EXTENSION_ID) {
 +    return false;
 +  }
@@ -98,12 +98,11 @@ index 0000000000..92d088b15a
 +  return true;
 +}
 +
-+function applyPopupLayout(context) {
-+  if (context.extension.id !== "fullpage-capture@mosfor") {
++function applyPopupLayout(extensionID, window) {
++  if (extensionID !== EXTENSION_ID) {
 +    return;
 +  }
 +
-+  const window = context.contentWindow;
 +  const document = window?.document;
 +  if (!document?.body || document.body.dataset.reynardMobileLayout === "true") {
 +    return;
@@ -1294,6 +1293,52 @@ index 0000000000..92d088b15a
 +  });
 +}
 +
++async function prepareCapture(tab, zoom, options) {
++  const pixelScale = Math.max(
++    1,
++    tab.browser.documentGlobal?.devicePixelRatio ?? 1
++  );
++  await tab.queryContent("FlushApzRepaints", { frameIds: [0] });
++  return { ...options, scale: pixelScale / zoom };
++}
++
++async function didExecuteScript(tab, context, details, eventDispatcher) {
++  if (!details.file?.endsWith("/content/capture.js")) {
++    return;
++  }
++
++  let localizedStrings = {};
++  try {
++    localizedStrings = await eventDispatcher.sendRequestForResult(
++      NATIVE_MESSAGES.localizedStrings,
++      { extensionId: context.extension.id }
++    );
++  } catch (_) {}
++  await install(tab, context, localizedStrings);
++}
++
++async function beforeDownload(extension, options, eventDispatcher) {
++  if (options.filename !== STAGED_FILES.beginRegionSelection) {
++    return null;
++  }
++  await eventDispatcher.sendRequestForResult(
++    NATIVE_MESSAGES.beginRegionSelection,
++    { extensionId: extension.id }
++  );
++  return 0;
++}
++
++async function handleStagedDownload(extension, options, eventDispatcher) {
++  if (options.filename !== STAGED_FILES.clipboardImage) {
++    return null;
++  }
++  await eventDispatcher.sendRequestForResult(
++    NATIVE_MESSAGES.clipboardImage,
++    { options, extensionId: extension.id }
++  );
++  return 0;
++}
++
 +export const FullPageCaptureCompat = Object.freeze({
 +  CAPTURE_LIMITS,
 +  EXTENSION_ID,
@@ -1301,34 +1346,64 @@ index 0000000000..92d088b15a
 +  STAGED_FILES,
 +  SUPPORTED_VERSION,
 +  applyPopupLayout,
-+  assertSupported,
++  beforeDownload,
 +  calculateCaptureGeometry,
-+  install,
++  didExecuteScript,
++  handleStagedDownload,
++  matchesExtension,
++  prepareCapture,
++});
+diff --git a/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs b/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs
+new file mode 100644
+index 000000000000..ab96a0634894
+--- /dev/null
++++ b/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs
+@@ -0,0 +1,22 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++import { FullPageCaptureCompat } from "resource://gre/modules/FullPageCaptureCompat.sys.mjs";
++
++const adapters = Object.freeze([FullPageCaptureCompat]);
++
++function forExtension(extension) {
++  return adapters.find(adapter => adapter.matchesExtension(extension)) ?? null;
++}
++
++function applyPopupLayout(extensionID, window) {
++  for (const adapter of adapters) {
++    adapter.applyPopupLayout?.(extensionID, window);
++  }
++}
++
++export const WebExtensionCompat = Object.freeze({
++  applyPopupLayout,
++  forExtension,
 +});
 diff --git a/mobile/shared/components/extensions/ext-tabs.js b/mobile/shared/components/extensions/ext-tabs.js
-index 56a9a4eec5..acd6115b6d 100644
+index 56a9a4eec51a..2883884bba11 100644
 --- a/mobile/shared/components/extensions/ext-tabs.js
 +++ b/mobile/shared/components/extensions/ext-tabs.js
 @@ -5,6 +5,8 @@
  "use strict";
 
  ChromeUtils.defineESModuleGetters(this, {
-+  FullPageCaptureCompat:
-+    "resource://gre/modules/FullPageCaptureCompat.sys.mjs",
++  WebExtensionCompat:
++    "resource://gre/modules/WebExtensionCompat.sys.mjs",
    GeckoViewTabBridge: "resource://gre/modules/GeckoViewTab.sys.mjs",
    mobileWindowTracker: "resource://gre/modules/GeckoViewWebExtension.sys.mjs",
  });
-@@ -227,6 +229,9 @@ this.tabs = class extends ExtensionAPIPersistent {
+@@ -227,6 +229,8 @@ this.tabs = class extends ExtensionAPIPersistent {
      const extensionApi = this;
      const module = "tabs";
 
-+    const usesFullPageCaptureCompatibility =
-+      FullPageCaptureCompat.assertSupported(extension);
++    const compatibility = WebExtensionCompat.forExtension(extension);
 +
      function getTabOrActive(tabId) {
        if (tabId !== null) {
          return tabTracker.getTab(tabId);
-@@ -542,9 +547,55 @@ this.tabs = class extends ExtensionAPIPersistent {
+@@ -542,9 +546,54 @@ this.tabs = class extends ExtensionAPIPersistent {
              throw new ExtensionError("Missing activeTab permission");
            }
            await tabListener.awaitTabReady(tab.nativeTab);
@@ -1357,13 +1432,12 @@ index 56a9a4eec5..acd6115b6d 100644
 +              captureOptions = { ...options, rect: viewport };
 +            }
 +          }
-+          if (usesFullPageCaptureCompatibility) {
-+            const pixelScale = Math.max(
-+              1,
-+              tab.browser.documentGlobal?.devicePixelRatio ?? 1
++          if (compatibility) {
++            captureOptions = await compatibility.prepareCapture(
++              tab,
++              zoom,
++              captureOptions
 +            );
-+            captureOptions = { ...captureOptions, scale: pixelScale / zoom };
-+            await tab.queryContent("FlushApzRepaints", { frameIds: [0] });
 +          }
 +          try {
 +            return await tab.capture(context, zoom, captureOptions);
@@ -1387,39 +1461,33 @@ index 56a9a4eec5..acd6115b6d 100644
          },
 
          async detectLanguage(tabId) {
-@@ -555,8 +606,21 @@ this.tabs = class extends ExtensionAPIPersistent {
+@@ -555,8 +604,14 @@ this.tabs = class extends ExtensionAPIPersistent {
 
          async executeScript(tabId, details) {
            const tab = await promiseTabWhenReady(tabId);
 -
 -          return tab.executeScript(context, details);
 +          const result = await tab.executeScript(context, details);
-+          if (
-+            usesFullPageCaptureCompatibility &&
-+            details.file?.endsWith("/content/capture.js")
-+          ) {
-+            let localizedStrings = {};
-+            try {
-+              localizedStrings = await EventDispatcher.instance.sendRequestForResult(
-+                FullPageCaptureCompat.NATIVE_MESSAGES.localizedStrings,
-+                { extensionId: extension.id }
-+              );
-+            } catch (_) {}
-+            await FullPageCaptureCompat.install(tab, context, localizedStrings);
-+          }
++          await compatibility?.didExecuteScript(
++            tab,
++            context,
++            details,
++            EventDispatcher.instance
++          );
 +          return result;
          },
 
          async insertCSS(tabId, details) {
 diff --git a/mobile/shared/components/extensions/moz.build b/mobile/shared/components/extensions/moz.build
-index c9c6fae567..68c43266c3 100644
+index c9c6fae567fe..90e7bccc05dc 100644
 --- a/mobile/shared/components/extensions/moz.build
 +++ b/mobile/shared/components/extensions/moz.build
-@@ -6,6 +6,7 @@ JAR_MANIFESTS += ["jar.mn"]
+@@ -6,6 +6,8 @@ JAR_MANIFESTS += ["jar.mn"]
 
  EXTRA_JS_MODULES += [
      "ExtensionBrowsingData.sys.mjs",
 +    "FullPageCaptureCompat.sys.mjs",
++    "WebExtensionCompat.sys.mjs",
  ]
 
  EXTRA_COMPONENTS += [
