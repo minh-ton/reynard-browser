@@ -7,8 +7,9 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/.build/firefox"
 
 . "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
+. "$ROOT_DIR/tools/toolchains/release.env"
 
-TARGET="aarch64-apple-ios"
+TARGET="$REYNARD_RUST_TARGET"
 LLVM_PREFIX="${LLVM_PREFIX:-/opt/homebrew/opt/llvm}"
 WASM_CC="${WASM_CC:-$LLVM_PREFIX/bin/clang}"
 WASM_CXX="${WASM_CXX:-$LLVM_PREFIX/bin/clang++}"
@@ -20,6 +21,7 @@ if [ ! -x "$WASM_CC" ] || [ ! -x "$WASM_CXX" ]; then
 fi
 
 export WASM_CC WASM_CXX
+export RUSTUP_TOOLCHAIN="$REYNARD_RUST_TOOLCHAIN"
 
 cd "$ROOT_DIR"
 
@@ -30,19 +32,17 @@ rm -f "$FIREFOX_DIR/.mozconfig"
 {
 	echo "ac_add_options --enable-application=mobile/ios"
 	echo "ac_add_options --target=$TARGET"
-	echo "ac_add_options --enable-ios-target=13.0"
+	echo "ac_add_options --enable-ios-target=$REYNARD_DEPLOYMENT_TARGET"
 	echo "ac_add_options --enable-webrtc"
 	echo "ac_add_options --enable-optimize"
 	echo "ac_add_options --disable-debug"
 	echo "ac_add_options --disable-tests"
 } > "$FIREFOX_DIR/.mozconfig"
 
-if ! rustup target list | grep -q "^$TARGET (installed)"; then
-	rustup target add "$TARGET"
-fi
+"$ROOT_DIR/tools/toolchains/validate-release-toolchain.sh" >/dev/null
 
+GECKO_DIST="$FIREFOX_DIR/obj-aarch64-apple-ios/dist"
 cd "$FIREFOX_DIR"
 ./mach build
 
-GECKO_DIST="$FIREFOX_DIR/obj-aarch64-apple-ios/dist"
 "$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" write "$GECKO_DIST"

@@ -20,10 +20,12 @@ XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
 GECKO_DIST="$ROOT_DIR/.build/firefox/obj-aarch64-apple-ios/dist"
 IDEVICE_DIR="$ROOT_DIR/support/idevice"
 IDEVICE_LIBRARY="$ROOT_DIR/browser/Reynard/JIT/RPPairing/libidevice_ffi.a"
+PREFLIGHT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/reynard-release-preflight.XXXXXX")"
+trap 'rm -f "$PREFLIGHT_MANIFEST"' EXIT HUP INT TERM
 
 . "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
-"$ROOT_DIR/tools/firefox/prepare-firefox.sh" --check-prepared
+"$ROOT_DIR/tools/release/release-preflight.sh" --clean > "$PREFLIGHT_MANIFEST"
 "$ROOT_DIR/tools/firefox/gecko-artifact-manifest.sh" check "$GECKO_DIST"
 "$ROOT_DIR/tools/development/build-idevice.sh"
 
@@ -49,20 +51,6 @@ FIREFOX_SHA=$(git -C "$ROOT_DIR/engine/firefox" rev-parse HEAD)
 IDEVICE_SHA=$(git -C "$IDEVICE_DIR" rev-parse HEAD)
 sed -i '' "s/CURRENT_BUILD = .*/CURRENT_BUILD = $BUILD_SHA/" "$DIST_DIR/Reynard.xcconfig"
 
-{
-	echo "build_mode=$BUILD_MODE"
-	echo "xcode_version=$XCODE_VERSION"
-	echo "iphoneos_sdk_version=$SDK_VERSION"
-	echo "reynard_revision=$(git -C "$ROOT_DIR" rev-parse HEAD)"
-	echo "firefox_revision=$FIREFOX_SHA"
-	echo "idevice_revision=$IDEVICE_SHA"
-	echo "idevice_library_sha256=$(shasum -a 256 "$IDEVICE_LIBRARY" | awk '{print $1}')"
-	echo "gecko_source_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-source-manifest.txt" | awk '{print $1}')"
-	echo "gecko_artifact_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-gecko-artifact-manifest.txt" | awk '{print $1}')"
-	for patch in "$ROOT_DIR"/patches/firefox/*.patch; do
-		shasum -a 256 "$patch"
-	done
-} > "$DIST_DIR/source-revisions.txt"
 echo "$BUILD_MODE" > "$DIST_DIR/build-mode"
 
 xcodebuild archive \
@@ -76,3 +64,28 @@ xcodebuild archive \
 	CODE_SIGNING_ALLOWED=NO \
 	CODE_SIGNING_REQUIRED=NO \
 	CODE_SIGN_IDENTITY=""
+
+ARCHIVE_APP_DIR="$DIST_DIR/Reynard.xcarchive/Products/Applications"
+ARCHIVE_APP="$(find "$ARCHIVE_APP_DIR" -maxdepth 1 -type d -name '*.app' | head -n 1)"
+if [ -z "$ARCHIVE_APP" ]; then
+	echo "Archive did not contain an application bundle." >&2
+	exit 1
+fi
+
+{
+	echo "manifest_version=2"
+	echo "build_mode=$BUILD_MODE"
+	cat "$PREFLIGHT_MANIFEST"
+	echo "xcode_version=$XCODE_VERSION"
+	echo "iphoneos_sdk_version=$SDK_VERSION"
+	echo "reynard_revision=$(git -C "$ROOT_DIR" rev-parse HEAD)"
+	echo "firefox_revision=$FIREFOX_SHA"
+	echo "idevice_revision=$IDEVICE_SHA"
+	echo "release_xcconfig_sha256=$(shasum -a 256 "$DIST_DIR/Reynard.xcconfig" | awk '{print $1}')"
+	echo "idevice_library_sha256=$(shasum -a 256 "$IDEVICE_LIBRARY" | awk '{print $1}')"
+	echo "gecko_source_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-source-manifest.txt" | awk '{print $1}')"
+	echo "gecko_artifact_manifest_sha256=$(shasum -a 256 "$GECKO_DIST/reynard-gecko-artifact-manifest.txt" | awk '{print $1}')"
+	echo "archive_app_tree_sha256=$("$ROOT_DIR/tools/release/hash-tree.sh" "$ARCHIVE_APP")"
+} > "$DIST_DIR/source-revisions.txt"
+
+echo "Created unsigned jailbroken archive with verified source provenance."

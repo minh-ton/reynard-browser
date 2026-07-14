@@ -71,8 +71,12 @@ sh -n \
 	"$ROOT_DIR/tools/firefox/prepare-firefox.sh" \
 	"$ROOT_DIR/tools/release/build-app.sh" \
 	"$ROOT_DIR/tools/release/create-ipa.sh" \
+	"$ROOT_DIR/tools/release/hash-tree.sh" \
+	"$ROOT_DIR/tools/release/release-preflight.sh" \
+	"$ROOT_DIR/tools/toolchains/validate-release-toolchain.sh" \
 	"$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 zsh -n "$ROOT_DIR/tools/development/build-idevice.sh"
+sh "$SCRIPT_DIR/ReleaseToolingTests.sh"
 
 if rg -q 'Reynard-(AddonDebug|DownloadDebug|ClipboardDebug|AddonSelectionDebug)\.log|Addon(File|Clipboard|Selection)Diagnostics' \
 	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
@@ -227,6 +231,15 @@ if ! rg -q 'tools/development/build-idevice\.sh' \
 	! rg -q 'idevice_library_sha256=' \
 	"$ROOT_DIR/tools/release/build-app.sh"; then
 	echo "The release build does not reproduce and record its idevice library." >&2
+	exit 1
+fi
+
+if ! rg -q 'release-preflight\.sh" --clean' \
+	"$ROOT_DIR/tools/release/build-app.sh" \
+	"$ROOT_DIR/tools/release/create-ipa.sh" ||
+	! rg -q 'archive_app_tree_sha256=' "$ROOT_DIR/tools/release/build-app.sh" ||
+	! rg -q 'ipa_sha256=' "$ROOT_DIR/tools/release/create-ipa.sh"; then
+	echo "The jailbroken release provenance workflow is incomplete." >&2
 	exit 1
 fi
 

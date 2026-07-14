@@ -13,6 +13,8 @@ ARCHIVE_DIR="$ROOT_DIR/dist/Reynard.xcarchive"
 APP_DIR="$ARCHIVE_DIR/Products/Applications"
 WORK_DIR="$ROOT_DIR/dist/Reynard"
 BUILD_MODE_FILE="$ROOT_DIR/dist/build-mode"
+SOURCE_MANIFEST="$ROOT_DIR/dist/source-revisions.txt"
+FINAL_MANIFEST="$ROOT_DIR/dist/release-manifest.txt"
 
 . "$ROOT_DIR/tools/xcode/use-xcode-26.2.sh"
 
@@ -20,6 +22,8 @@ CLANG_PATH="$(xcrun --sdk iphoneos --find clang)"
 SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
 
 cd "$ROOT_DIR"
+
+"$ROOT_DIR/tools/release/release-preflight.sh" --clean >/dev/null
 
 if [ ! -f "$BUILD_MODE_FILE" ] || [ "$(cat "$BUILD_MODE_FILE")" != "jailbroken" ]; then
 	echo "The archive was not produced in jailbroken mode." >&2
@@ -44,16 +48,15 @@ if [ -z "$APP_PATH" ]; then
 	exit 1
 fi
 
-# Normalize identifiers before jailbreak signing because unsigned archives may
-# not retain the distribution identifiers from the project configuration.
-plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard" "$APP_PATH/Info.plist"
-plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.Helper" "$APP_PATH/PlugIns/Reynard Helper.appex/Info.plist"
-plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.OpenIn" "$APP_PATH/PlugIns/OpenIn.appex/Info.plist"
 
-if [ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Info.plist")" != "com.minh-ton.Reynard" ] ||
-	[ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/PlugIns/Reynard Helper.appex/Info.plist")" != "com.minh-ton.Reynard.Helper" ] ||
-	[ "$(plutil -extract CFBundleIdentifier raw "$APP_PATH/PlugIns/OpenIn.appex/Info.plist")" != "com.minh-ton.Reynard.OpenIn" ]; then
-	echo "Bundle identifier preflight failed." >&2
+if [ ! -f "$SOURCE_MANIFEST" ] || ! grep -q '^dirty=false$' "$SOURCE_MANIFEST"; then
+	echo "Archive source provenance is missing or was produced from dirty sources." >&2
+	exit 1
+fi
+EXPECTED_ARCHIVE_HASH="$(sed -n 's/^archive_app_tree_sha256=//p' "$SOURCE_MANIFEST")"
+ACTUAL_ARCHIVE_HASH="$("$ROOT_DIR/tools/release/hash-tree.sh" "$APP_PATH")"
+if [ -z "$EXPECTED_ARCHIVE_HASH" ] || [ "$EXPECTED_ARCHIVE_HASH" != "$ACTUAL_ARCHIVE_HASH" ]; then
+	echo "Archive contents changed after the release build." >&2
 	exit 1
 fi
 
@@ -85,6 +88,18 @@ HELPER_EXECUTABLE="$APP_BUNDLE/PlugIns/Reynard Helper.appex/Reynard Helper"
 OPEN_IN_EXECUTABLE="$APP_BUNDLE/PlugIns/OpenIn.appex/OpenIn"
 MACHO_LIST="$(mktemp "${TMPDIR:-/tmp}/reynard-macho-list.XXXXXX")"
 trap 'rm -f "$MACHO_LIST"' EXIT HUP INT TERM
+
+# Normalize only the packaging copy so the archived input remains immutable.
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard" "$APP_BUNDLE/Info.plist"
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.Helper" "$APP_BUNDLE/PlugIns/Reynard Helper.appex/Info.plist"
+plutil -replace CFBundleIdentifier -string "com.minh-ton.Reynard.OpenIn" "$APP_BUNDLE/PlugIns/OpenIn.appex/Info.plist"
+
+if [ "$(plutil -extract CFBundleIdentifier raw "$APP_BUNDLE/Info.plist")" != "com.minh-ton.Reynard" ] ||
+	[ "$(plutil -extract CFBundleIdentifier raw "$APP_BUNDLE/PlugIns/Reynard Helper.appex/Info.plist")" != "com.minh-ton.Reynard.Helper" ] ||
+	[ "$(plutil -extract CFBundleIdentifier raw "$APP_BUNDLE/PlugIns/OpenIn.appex/Info.plist")" != "com.minh-ton.Reynard.OpenIn" ]; then
+	echo "Bundle identifier preflight failed." >&2
+	exit 1
+fi
 
 find "$APP_BUNDLE" -type d -name _CodeSignature -prune -exec rm -rf {} +
 find "$APP_BUNDLE" -type f -name embedded.mobileprovision -delete
@@ -120,7 +135,7 @@ ldid -S"$ROOT_DIR/browser/Helper/Entitlements/Reynard-Helper.private.entitlement
 ldid -S"$ROOT_DIR/browser/Reynard/Entitlements/Reynard.private.entitlements" "$MAIN_EXECUTABLE"
 
 while IFS= read -r binary; do
-	if ! ldid -e "$binary" >/dev/null 2>&1; then
+	if ! ldid -e "$binary" >/dev/null 2>&1 || ! ldid -h "$binary" >/dev/null 2>&1; then
 		echo "Jailbreak signature verification failed: ${binary#"$APP_BUNDLE/"}" >&2
 		exit 1
 	fi
@@ -128,3 +143,15 @@ done < "$MACHO_LIST"
 
 echo "Verified jailbreak signatures for $SIGNED_BINARY_COUNT Mach-O binaries."
 zip -qry ../Reynard-Jailbroken.ipa Payload -x "._*" -x ".DS_Store" -x "__MACOSX"
+
+IPA_PATH="$ROOT_DIR/dist/Reynard-Jailbroken.ipa"
+unzip -tq "$IPA_PATH" >/dev/null
+IPA_HASH="$(shasum -a 256 "$IPA_PATH" | awk '{print $1}')"
+{
+	cat "$SOURCE_MANIFEST"
+	echo "packaged_app_tree_sha256=$("$ROOT_DIR/tools/release/hash-tree.sh" "$WORK_DIR/Payload/Reynard.app")"
+	echo "signed_macho_count=$SIGNED_BINARY_COUNT"
+	echo "ipa_sha256=$IPA_HASH"
+} > "$FINAL_MANIFEST"
+printf '%s  %s\n' "$IPA_HASH" "$(basename "$IPA_PATH")" > "$ROOT_DIR/dist/SHA256SUMS"
+echo "Created and verified $IPA_PATH"

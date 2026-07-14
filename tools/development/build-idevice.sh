@@ -5,25 +5,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+source "$REPO_ROOT/tools/toolchains/release.env"
+
 SUBMODULE_PATH="$REPO_ROOT/support/idevice"
 FFI_DIR="$SUBMODULE_PATH/ffi"
 OUTPUT_LIB="$REPO_ROOT/browser/Reynard/JIT/RPPairing/libidevice_ffi.a"
 
 TARGET_DIR="$SUBMODULE_PATH/target"
-DEPLOYMENT_TARGET="13.0"
+DEPLOYMENT_TARGET="$REYNARD_DEPLOYMENT_TARGET"
 
 if [ ! -e "$SUBMODULE_PATH/.git" ]; then
   git -C "$REPO_ROOT" submodule update --init --recursive support/idevice
 fi
 
-RUST_TARGET="aarch64-apple-ios"
+RUST_TARGET="$REYNARD_RUST_TARGET"
 DEPLOYMENT_FLAG="-miphoneos-version-min=${DEPLOYMENT_TARGET}"
-RUSTC_BIN="$(rustup which --toolchain stable rustc)"
-CARGO_BIN="$(rustup which --toolchain stable cargo)"
+RUSTC_BIN="$(rustup which --toolchain "$REYNARD_RUST_TOOLCHAIN" rustc)"
+CARGO_BIN="$(rustup which --toolchain "$REYNARD_RUST_TOOLCHAIN" cargo)"
 
-if ! rustup target list --toolchain stable | grep -q "^$RUST_TARGET (installed)"; then
-	rustup target add --toolchain stable "$RUST_TARGET"
-fi
+"$REPO_ROOT/tools/toolchains/validate-release-toolchain.sh" >/dev/null
 
 export IPHONEOS_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
 export RUSTC="$RUSTC_BIN"

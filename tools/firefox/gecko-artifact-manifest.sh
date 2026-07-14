@@ -18,6 +18,8 @@ case "$MODE" in
 esac
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
+. "$ROOT_DIR/tools/toolchains/release.env"
 SOURCE_MANIFEST="$GECKO_DIST/reynard-source-manifest.txt"
 ARTIFACT_MANIFEST="$GECKO_DIST/reynard-gecko-artifact-manifest.txt"
 TEMP_SOURCE="$(mktemp "${TMPDIR:-/tmp}/reynard-gecko-source.XXXXXX")"
@@ -47,7 +49,7 @@ if [ "$MODE" = "write" ]; then
 		printf 'source_manifest_sha256=%s\n' "$(shasum -a 256 "$SOURCE_MANIFEST" | awk '{print $1}')"
 		printf 'xcode=%s\n' "$(xcodebuild -version | tr '\n' ';' | sed 's/;$//')"
 		printf 'iphoneos_sdk=%s\n' "$(xcrun --sdk iphoneos --show-sdk-version)"
-		printf 'rustc=%s\n' "$(rustc --version)"
+		printf 'rustc=%s\n' "$(rustup run "$REYNARD_RUST_TOOLCHAIN" rustc --version)"
 		printf 'wasm_cc=%s\n' "${WASM_CC:-unset}"
 		printf 'wasm_cxx=%s\n' "${WASM_CXX:-unset}"
 		write_binary_hashes
