@@ -9,9 +9,14 @@ import Foundation
 
 final class NavigationHistory {
     private let store: NavigationHistoryStore
+    private let persistencePolicy: NavigationPersistencePolicy
     
-    init(store: NavigationHistoryStore = .shared) {
+    init(
+        store: NavigationHistoryStore = .shared,
+        persistencePolicy: NavigationPersistencePolicy = NavigationPersistencePolicy()
+    ) {
         self.store = store
+        self.persistencePolicy = persistencePolicy
     }
     
     func restoreState(for tabID: UUID) -> NavigationAvailability {
@@ -44,12 +49,10 @@ final class NavigationHistory {
         for tabID: UUID,
         sessionState: SessionNavigationAvailability
     ) -> NavigationAvailability {
-        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedURL.isEmpty,
-              trimmedURL.lowercased() != "about:blank" else {
+        guard let persistableURL = persistencePolicy.persistableURL(from: url) else {
             return availability(for: tabID, sessionState: sessionState)
         }
-        _ = store.recordNavigation(to: trimmedURL, for: tabID)
+        _ = store.recordNavigation(to: persistableURL, for: tabID)
         return availability(for: tabID, sessionState: sessionState)
     }
     

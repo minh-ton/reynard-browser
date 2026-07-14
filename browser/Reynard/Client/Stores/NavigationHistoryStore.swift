@@ -64,11 +64,10 @@ final class NavigationHistoryStore {
     }
 
     private let thumbnailJPEGQuality = 0.8
-    private let maximumPreviewBytes = 1024 * 1024
     private let fileManager: FileManager
     private let storageURL: URL
-    private let maximumEntryCount: Int
-    private let maximumCachedTabCount: Int
+    private let configuration: NavigationHistoryConfiguration
+    private let persistencePolicy: NavigationPersistencePolicy
     private let queue = DispatchQueue(
         label: "com.minh-ton.Reynard.NavigationHistoryStore.Queue",
         qos: .userInitiated
@@ -89,12 +88,11 @@ final class NavigationHistoryStore {
     init(
         fileManager: FileManager = .default,
         storageURL: URL? = nil,
-        maximumEntryCount: Int = 200,
-        maximumCachedTabCount: Int = 24
+        configuration: NavigationHistoryConfiguration = .standard
     ) {
         self.fileManager = fileManager
-        self.maximumEntryCount = max(1, maximumEntryCount)
-        self.maximumCachedTabCount = max(1, maximumCachedTabCount)
+        self.configuration = configuration
+        self.persistencePolicy = NavigationPersistencePolicy(configuration: configuration)
 
         if let storageURL {
             self.storageURL = storageURL
@@ -129,7 +127,9 @@ final class NavigationHistoryStore {
             }
             var history = loadHistory(for: tabID)
             var previews = loadPreviews(for: tabID)
-            guard history.currentURL != url else {
+            // Consecutive commits of the same URL are one browser-history entry.
+            guard let persistableURL = persistencePolicy.persistableURL(from: url),
+                  history.currentURL != persistableURL else {
                 return snapshot(from: history, previews: previews)
             }
 
@@ -138,7 +138,7 @@ final class NavigationHistoryStore {
                 trimOldestEntries(in: &history.backHistory)
             }
 
-            history.currentURL = url
+            history.currentURL = persistableURL
             history.forwardHistory.removeAll(keepingCapacity: false)
             previews.back = previews.current
             previews.current = nil
@@ -219,7 +219,7 @@ final class NavigationHistoryStore {
     ) {
         let data = image?
             .jpegData(compressionQuality: thumbnailJPEGQuality)
-            .flatMap { $0.count <= maximumPreviewBytes ? $0 : nil }
+            .flatMap { $0.count <= configuration.maximumPreviewBytes ? $0 : nil }
         queue.async {
             guard !self.tombstones.contains(tabID) else {
                 return
@@ -358,7 +358,7 @@ final class NavigationHistoryStore {
         let fileURL = previewDirectoryURL(for: tabID)
             .appendingPathComponent("\(name).jpg")
         guard let data = try? Data(contentsOf: fileURL, options: .mappedIfSafe),
-              data.count <= maximumPreviewBytes else {
+              data.count <= configuration.maximumPreviewBytes else {
             return nil
         }
         return data
@@ -445,7 +445,7 @@ final class NavigationHistoryStore {
     private func touchCache(_ tabID: UUID) {
         cacheOrder.removeAll { $0 == tabID }
         cacheOrder.append(tabID)
-        while cacheOrder.count > maximumCachedTabCount {
+        while cacheOrder.count > configuration.maximumCachedTabCount {
             let evicted = cacheOrder.removeFirst()
             historyCache.removeValue(forKey: evicted)
             previewCache.removeValue(forKey: evicted)
@@ -470,14 +470,14 @@ final class NavigationHistoryStore {
     }
 
     private func trimOldestEntries(in entries: inout [NavigationEntry]) {
-        let overflow = entries.count - maximumEntryCount
+        let overflow = entries.count - configuration.maximumEntryCount
         if overflow > 0 {
             entries.removeFirst(overflow)
         }
     }
 
     private func trimNewestEntries(in entries: inout [NavigationEntry]) {
-        let overflow = entries.count - maximumEntryCount
+        let overflow = entries.count - configuration.maximumEntryCount
         if overflow > 0 {
             entries.removeLast(overflow)
         }

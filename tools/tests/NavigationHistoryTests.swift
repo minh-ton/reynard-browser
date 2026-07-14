@@ -10,8 +10,10 @@ struct NavigationHistoryTests {
         let tabID = UUID()
         let store = NavigationHistoryStore(
             storageURL: root,
-            maximumEntryCount: 3,
-            maximumCachedTabCount: 4
+            configuration: NavigationHistoryConfiguration(
+                maximumEntryCount: 3,
+                maximumCachedTabCount: 4
+            )
         )
         for url in ["https://a.example", "https://b.example", "https://c.example", "https://d.example", "https://e.example"] {
             _ = store.recordNavigation(to: url, for: tabID)
@@ -47,8 +49,10 @@ struct NavigationHistoryTests {
         store.flushPendingWritesForTesting()
         let restoredStore = NavigationHistoryStore(
             storageURL: root,
-            maximumEntryCount: 3,
-            maximumCachedTabCount: 4
+            configuration: NavigationHistoryConfiguration(
+                maximumEntryCount: 3,
+                maximumCachedTabCount: 4
+            )
         )
         let restored = restoredStore.currentSnapshot(for: tabID)
         precondition(restored.currentURL == snapshot.currentURL)
@@ -113,6 +117,29 @@ struct NavigationHistoryTests {
         precondition(!FileManager.default.fileExists(
             atPath: root.appendingPathComponent(corruptTabID.uuidString).path
         ))
+
+        let rejectedTabID = UUID()
+        for rejectedURL in [
+            "about:blank",
+            "javascript:alert(1)",
+            "data:text/plain,private",
+            "blob:https://example.com/value",
+            String(repeating: "x", count: 64 * 1024) + "https://oversized.example"
+        ] {
+            _ = restoredStore.recordNavigation(to: rejectedURL, for: rejectedTabID)
+        }
+        restoredStore.flushPendingWritesForTesting()
+        precondition(restoredStore.currentSnapshot(for: rejectedTabID).currentURL == nil)
+        precondition(!FileManager.default.fileExists(
+            atPath: root.appendingPathComponent(rejectedTabID.uuidString).path
+        ))
+
+        let boundaryConfiguration = NavigationHistoryConfiguration(maximumEncodedURLBytes: 32)
+        let boundaryPolicy = NavigationPersistencePolicy(configuration: boundaryConfiguration)
+        let acceptedBoundaryURL = "https://example.com/" + String(repeating: "a", count: 12)
+        precondition(acceptedBoundaryURL.utf8.count == 32)
+        precondition(boundaryPolicy.persistableURL(from: acceptedBoundaryURL) == acceptedBoundaryURL)
+        precondition(boundaryPolicy.persistableURL(from: acceptedBoundaryURL + "a") == nil)
 
         print("NavigationHistoryTests passed")
     }
