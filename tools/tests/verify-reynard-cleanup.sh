@@ -13,6 +13,7 @@ NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests
 TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
 ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
+ADDON_STAGED_FILE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staged-file-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
@@ -25,8 +26,40 @@ fi
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
+node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
 node "$SCRIPT_DIR/FullPageCaptureCompatTests.mjs"
+
+FULLPAGE_ID_FILES="$(rg -l 'fullpage-capture@mosfor' "$ROOT_DIR/browser/GeckoView" || true)"
+if [ "$FULLPAGE_ID_FILES" != "$ROOT_DIR/browser/GeckoView/Addons/FullPageCaptureCompatibility.swift" ]; then
+	echo "FullPage identity is not isolated to its Swift compatibility gate." >&2
+	exit 1
+fi
+
+if rg -q 'FullPageCaptureCompat|fullpage-capture@mosfor' \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" \
+	"$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js" ||
+	! rg -q 'WebExtensionCompat\.forExtension' \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js" \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"; then
+	echo "Generic WebExtension APIs still contain FullPage product policy." >&2
+	exit 1
+fi
+
+if ! rg -q 'loadingPrincipal: principal' \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" ||
+	! rg -q 'PathUtils\.splitRelative' \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" ||
+	rg -q 'loadUsingSystemPrincipal' \
+	"$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js" ||
+	rg -q 'ext-storage\.js' "$ROOT_DIR/patches/firefox/0003-fullpage-popup-layout.patch"; then
+	echo "The WebExtension staging or popup bridge bypasses its security boundary." >&2
+	exit 1
+fi
 node "$SCRIPT_DIR/verify-localizations.mjs"
 
 sh -n \
@@ -239,6 +272,14 @@ swiftc \
 	-o "$ADDON_STAGING_TEST_BINARY"
 "$ADDON_STAGING_TEST_BINARY"
 rm -f "$ADDON_STAGING_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/GeckoView/Addons/AddonStagedFile.swift" \
+	"$SCRIPT_DIR/AddonStagedFileTests.swift" \
+	-o "$ADDON_STAGED_FILE_TEST_BINARY"
+"$ADDON_STAGED_FILE_TEST_BINARY"
+rm -f "$ADDON_STAGED_FILE_TEST_BINARY"
 
 if ! rg -q 'universalLinksOnly' \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift" ||
