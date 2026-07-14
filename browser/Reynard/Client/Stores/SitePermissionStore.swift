@@ -8,6 +8,7 @@
 import Foundation
 import GeckoView
 import SQLite3
+import os
 
 enum SitePermission: String, CaseIterable {
     case camera = "camera"
@@ -112,12 +113,34 @@ enum SitePermissionAction: String {
     }
 }
 
+struct SitePermissionResolution {
+    enum Source: Equatable {
+        case persisted
+        case privateSession
+        case defaultValue
+        case systemDisabled
+        case storageFailure
+        case invalidHost
+    }
+
+    let action: SitePermissionAction
+    let source: Source
+}
+
 final class SitePermissionStore {
+    private static let log = OSLog(subsystem: "com.minh-ton.Reynard", category: "SitePermissions")
+    private enum ActionLookup {
+        case found(SitePermissionAction)
+        case missing
+        case failure
+    }
+
     static let shared = SitePermissionStore()
     
     private struct StorageURLs {
         let directoryURL: URL
         let databaseURL: URL
+        let isInMemory: Bool
     }
     
     private let fileManager: FileManager
@@ -129,20 +152,22 @@ final class SitePermissionStore {
     
     // MARK: - Lifecycle
     
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, storageDirectoryURL: URL? = nil) {
         self.fileManager = fileManager
-        
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
-        }
-        
-        let directoryURL = applicationSupportDirectoryURL
+        let applicationSupportDirectoryURL = storageDirectoryURL ?? fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first
+        let isInMemory = applicationSupportDirectoryURL == nil
+        let directoryURL = applicationSupportDirectoryURL?
             .appendingPathComponent("AppData", isDirectory: true)
             .appendingPathComponent("SitePermissions", isDirectory: true)
+            ?? fileManager.temporaryDirectory
         
         self.storage = StorageURLs(
             directoryURL: directoryURL,
-            databaseURL: directoryURL.appendingPathComponent("SitePermissions", isDirectory: false)
+            databaseURL: directoryURL.appendingPathComponent("SitePermissions", isDirectory: false),
+            isInMemory: isInMemory
         )
         
         stateQueue.sync {
@@ -167,44 +192,71 @@ final class SitePermissionStore {
     // MARK: - Permissions
     
     func resolvedAction(for permission: SitePermission, host: String, session: GeckoSession) -> SitePermissionAction {
-        let host = URLUtils.normalizedHost(host) ?? ""
+        resolution(for: permission, host: host, session: session).action
+    }
+
+    func resolution(
+        for permission: SitePermission,
+        host: String,
+        session: GeckoSession
+    ) -> SitePermissionResolution {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return SitePermissionResolution(
+                action: SiteSettingsUtils.defaultAction(for: permission),
+                source: .invalidHost
+            )
+        }
         return stateQueue.sync {
-            let resolvedAction: SitePermissionAction
-            if session.isPrivateMode {
-                resolvedAction = privateActions[ObjectIdentifier(session)]?[host]?[permission] ?? SiteSettingsUtils.defaultAction(for: permission)
-            } else {
-                resolvedAction = actionLocked(for: permission, host: host) ?? SiteSettingsUtils.defaultAction(for: permission)
-            }
-            
             if SiteSettingsUtils.isSystemDisabled(permission) {
-                return .blocked
+                return SitePermissionResolution(action: .blocked, source: .systemDisabled)
             }
-            
-            return resolvedAction
+            if SitePermissionDecisionPolicy.storageScope(isPrivate: session.isPrivateMode) == .sessionOnly {
+                if let action = privateActions[ObjectIdentifier(session)]?[host]?[permission] {
+                    return SitePermissionResolution(action: action, source: .privateSession)
+                }
+                return SitePermissionResolution(
+                    action: SiteSettingsUtils.defaultAction(for: permission),
+                    source: .defaultValue
+                )
+            }
+            switch actionLocked(for: permission, host: host) {
+            case let .found(action):
+                return SitePermissionResolution(action: action, source: .persisted)
+            case .missing:
+                return SitePermissionResolution(
+                    action: SiteSettingsUtils.defaultAction(for: permission),
+                    source: .defaultValue
+                )
+            case .failure:
+                return SitePermissionResolution(
+                    action: SiteSettingsUtils.defaultAction(for: permission),
+                    source: .storageFailure
+                )
+            }
         }
     }
-    
-    func scheduleActionUpdate(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
-        let host = URLUtils.normalizedHost(host) ?? ""
-        stateQueue.async {
+
+    @discardableResult
+    func updateAction(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
+        }
+        return stateQueue.sync {
             self.setActionLocked(action, for: permission, host: host, session: session)
         }
     }
     
-    func updateAction(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
-        let host = URLUtils.normalizedHost(host) ?? ""
-        stateQueue.sync {
-            self.setActionLocked(action, for: permission, host: host, session: session)
+    @discardableResult
+    func removeAction(for permission: SitePermission, host: String, session: GeckoSession) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
         }
-    }
-    
-    func removeAction(for permission: SitePermission, host: String, session: GeckoSession) {
-        let host = URLUtils.normalizedHost(host) ?? ""
-        stateQueue.sync {
+        return stateQueue.sync {
             if session.isPrivateMode {
                 self.removePrivateActionLocked(for: permission, host: host, session: session)
+                return true
             } else {
-                _ = self.deleteActionLocked(for: permission, host: host)
+                return self.deleteActionLocked(for: permission, host: host)
             }
         }
     }
@@ -225,17 +277,33 @@ final class SitePermissionStore {
         }
     }
     
-    func removePersistedAction(for permission: SitePermission, host: String) {
-        let host = URLUtils.normalizedHost(host) ?? ""
-        stateQueue.sync {
-            _ = deleteActionLocked(for: permission, host: host)
+    @discardableResult
+    func removePersistedAction(for permission: SitePermission, host: String) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
+        }
+        return stateQueue.sync {
+            deleteActionLocked(for: permission, host: host)
         }
     }
     
     // MARK: - Storage
     
     private func prepareStorageLocked() {
-        try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
+        guard !storage.isInMemory else {
+            return
+        }
+        do {
+            try fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
+        } catch {
+            os_log(
+                "Unable to create the site permissions directory: %{public}@",
+                log: Self.log,
+                type: .error,
+                error.localizedDescription
+            )
+            return
+        }
     }
     
     private func openDatabaseLocked() {
@@ -245,11 +313,12 @@ final class SitePermissionStore {
         
         var database: OpaquePointer?
         let flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
-        guard sqlite3_open_v2(storage.databaseURL.path, &database, flags, nil) == SQLITE_OK else {
+        let databasePath = storage.isInMemory ? ":memory:" : storage.databaseURL.path
+        guard sqlite3_open_v2(databasePath, &database, flags, nil) == SQLITE_OK else {
             if let database {
                 sqlite3_close(database)
             }
-            assertionFailure("Failed to open SitePermissions database")
+            os_log("Failed to open the site permissions database", log: Self.log, type: .error)
             return
         }
         
@@ -287,7 +356,7 @@ final class SitePermissionStore {
     
     // MARK: - Permission Records
     
-    private func actionLocked(for permission: SitePermission, host: String) -> SitePermissionAction? {
+    private func actionLocked(for permission: SitePermission, host: String) -> ActionLookup {
         guard let statement = prepareStatementLocked(
             """
             SELECT action
@@ -296,7 +365,7 @@ final class SitePermissionStore {
             LIMIT 1;
             """
         ) else {
-            return nil
+            return .failure
         }
         
         defer {
@@ -306,11 +375,14 @@ final class SitePermissionStore {
         bind(host, to: statement, at: 1)
         bind(permission.rawValue, to: statement, at: 2)
         
-        guard sqlite3_step(statement) == SQLITE_ROW else {
-            return nil
+        let result = sqlite3_step(statement)
+        guard result == SQLITE_ROW else {
+            return result == SQLITE_DONE ? .missing : .failure
         }
-        
-        return SitePermissionAction(rawValue: string(from: statement, at: 0))
+        guard let action = SitePermissionAction(rawValue: string(from: statement, at: 0)) else {
+            return .failure
+        }
+        return .found(action)
     }
     
     private func upsertActionLocked(_ action: SitePermissionAction, for permission: SitePermission, host: String, updatedAt: Date) -> Bool {
@@ -337,11 +409,12 @@ final class SitePermissionStore {
         return sqlite3_step(statement) == SQLITE_DONE
     }
     
-    private func setActionLocked(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) {
-        if session.isPrivateMode {
+    private func setActionLocked(_ action: SitePermissionAction, for permission: SitePermission, host: String, session: GeckoSession) -> Bool {
+        if SitePermissionDecisionPolicy.storageScope(isPrivate: session.isPrivateMode) == .sessionOnly {
             privateActions[ObjectIdentifier(session), default: [:]][host, default: [:]][permission] = action
+            return true
         } else {
-            _ = upsertActionLocked(action, for: permission, host: host, updatedAt: Date())
+            return upsertActionLocked(action, for: permission, host: host, updatedAt: Date())
         }
     }
     
@@ -414,7 +487,11 @@ final class SitePermissionStore {
         
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else {
-            assertionFailure("Failed to prepare SitePermissions SQL statement")
+            os_log(
+                "Failed to prepare a site permissions database operation",
+                log: Self.log,
+                type: .error
+            )
             return nil
         }
         
@@ -425,8 +502,17 @@ final class SitePermissionStore {
         guard let database else {
             return false
         }
-        
-        return sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK
+
+        let result = sqlite3_exec(database, sql, nil, nil, nil)
+        if result != SQLITE_OK {
+            os_log(
+                "A site permissions database operation failed with code %{public}d",
+                log: Self.log,
+                type: .error,
+                result
+            )
+        }
+        return result == SQLITE_OK
     }
     
     private func bind(_ text: String, to statement: OpaquePointer, at index: Int32) {

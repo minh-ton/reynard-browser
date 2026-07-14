@@ -23,6 +23,7 @@ final class WebsiteModePolicy {
 
     private var desktopOverridesByTab: [UUID: [String: Bool]] = [:]
     private let siteSettings: SiteSettingsStore
+    private let stateLock = NSRecursiveLock()
 
     init(siteSettings: SiteSettingsStore = .shared) {
         self.siteSettings = siteSettings
@@ -31,6 +32,8 @@ final class WebsiteModePolicy {
     // MARK: - Mode Resolution
 
     func prefersDesktopMode(for url: String, tabID: UUID?) -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         guard let tabID else {
             return Prefs.BrowsingSettings.requestDesktopWebsite
         }
@@ -38,6 +41,8 @@ final class WebsiteModePolicy {
     }
 
     func isDesktopMode(for url: String, tabID: UUID) -> Bool? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         guard let host = DomainMatcher.host(from: url),
               !url.starts(with: "moz-extension://"),
               host != "addons.mozilla.org" else {
@@ -61,6 +66,8 @@ final class WebsiteModePolicy {
     // MARK: - Overrides
 
     func toggle(for url: String, tabID: UUID) -> WebsiteModeAction? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         guard let host = DomainMatcher.host(from: url),
               let isDesktop = isDesktopMode(for: url, tabID: tabID) else {
             return nil
@@ -96,6 +103,8 @@ final class WebsiteModePolicy {
     }
 
     func setPersistentMode(_ mode: SiteWebsiteMode, for url: String, tabID: UUID) -> WebsiteModeAction? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         guard let host = DomainMatcher.host(from: url),
               !url.starts(with: "moz-extension://"),
               host != "addons.mozilla.org" else {
@@ -104,19 +113,12 @@ final class WebsiteModePolicy {
 
         let desktopURL = mode == .desktop ? desktopURL(from: url) : nil
         let desktopHost = desktopURL.flatMap(DomainMatcher.host)
-        let storedOverrides = Dictionary(uniqueKeysWithValues: siteSettings.settingsWithWebsiteMode().map {
-            ($0.host, $0.websiteMode == .desktop)
-        })
-        for relatedHost in relatedOverrideHosts(
-            for: host,
-            desktopHost: desktopHost,
-            existingOverrides: storedOverrides
-        ) {
-            _ = siteSettings.clearWebsiteMode(forHost: relatedHost)
-        }
-        _ = siteSettings.setWebsiteMode(mode, forHost: host)
-        if let desktopHost, desktopHost != host {
-            _ = siteSettings.setWebsiteMode(mode, forHost: desktopHost)
+        guard siteSettings.replaceWebsiteMode(
+            mode,
+            forHost: host,
+            additionalHost: desktopHost
+        ) else {
+            return nil
         }
 
         var tabOverrides = desktopOverridesByTab[tabID] ?? [:]
@@ -137,6 +139,8 @@ final class WebsiteModePolicy {
     }
 
     func resetPersistentMode(for url: String, tabID: UUID) -> WebsiteModeReset? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         guard let host = DomainMatcher.host(from: url),
               let previousMode = isDesktopMode(for: url, tabID: tabID),
               siteSettings.clearSettingsForRelatedHosts(of: host) else {
@@ -164,6 +168,8 @@ final class WebsiteModePolicy {
     }
 
     func clearOverrides(for tabID: UUID) {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         desktopOverridesByTab.removeValue(forKey: tabID)
     }
 
@@ -204,13 +210,14 @@ final class WebsiteModePolicy {
     }
 
     private func storedWebsiteMode(for host: String) -> SiteWebsiteMode? {
-        let storedSettings = siteSettings.settingsWithWebsiteMode()
-        if let exactMatch = storedSettings.first(where: { $0.host == host }) {
-            return exactMatch.websiteMode
+        if let exactMode = siteSettings.websiteMode(forHost: host) {
+            return exactMode
         }
-
-        return storedSettings.first(where: {
-            WebsiteModeHost.areRelated($0.host, host)
-        })?.websiteMode
+        for alias in WebsiteModeHost.orderedAliases(for: host) where alias != host {
+            if let mode = siteSettings.websiteMode(forHost: alias) {
+                return mode
+            }
+        }
+        return nil
     }
 }

@@ -6,8 +6,10 @@
 import Foundation
 
 enum WebsiteModeHost {
+    // Mobile host aliases share one website-mode preference. Other subdomains,
+    // including www, remain independent sites.
     static func normalized(_ host: String) -> String {
-        let normalizedHost = host.lowercased()
+        let normalizedHost = host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
         for prefix in ["m.", "mobile."] where normalizedHost.hasPrefix(prefix) {
             return String(normalizedHost.dropFirst(prefix.count))
         }
@@ -19,7 +21,14 @@ enum WebsiteModeHost {
     }
 
     static func relatedAliases(for host: String) -> Set<String> {
+        Set(orderedAliases(for: host))
+    }
+
+    static func orderedAliases(for host: String) -> [String] {
         let canonicalHost = normalized(host)
+        guard !canonicalHost.isEmpty else {
+            return []
+        }
         return [canonicalHost, "m.\(canonicalHost)", "mobile.\(canonicalHost)"]
     }
 }

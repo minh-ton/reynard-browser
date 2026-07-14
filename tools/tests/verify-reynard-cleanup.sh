@@ -7,6 +7,7 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/.build/firefox"
 TEST_BINARY="${TMPDIR:-/tmp}/reynard-website-mode-host-tests"
 NEW_TAB_TEST_BINARY="${TMPDIR:-/tmp}/reynard-new-tab-keyboard-policy-tests"
+SITE_PERMISSION_TEST_BINARY="${TMPDIR:-/tmp}/reynard-site-permission-policy-tests"
 EXTERNAL_APP_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-policy-tests"
 EXTERNAL_APP_ROUTER_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-router-tests"
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
@@ -130,6 +131,11 @@ if rg -q 'Logger\(|privacy: \.public' \
 	exit 1
 fi
 
+if git -C "$ROOT_DIR" diff "$REYNARD_DIFF_BASE" -- '*.swift' | rg -q '^\+.*(Logger\(|privacy: \.public)'; then
+	echo "The changed Swift code uses logging APIs unavailable on the iOS 13 deployment target." >&2
+	exit 1
+fi
+
 if rg -q 'AddressBarZoomDropdown|showsZoomButton|addressBarDidRequestPageZoom|showPageZoomDropdown' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface"; then
 	echo "Obsolete address-bar zoom controls remain." >&2
@@ -231,6 +237,14 @@ swiftc \
 	-o "$TEST_BINARY"
 "$TEST_BINARY"
 rm -f "$TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/SessionManagement/Permissions/SitePermissionDecisionPolicy.swift" \
+	"$SCRIPT_DIR/SitePermissionDecisionPolicyTests.swift" \
+	-o "$SITE_PERMISSION_TEST_BINARY"
+"$SITE_PERMISSION_TEST_BINARY"
+rm -f "$SITE_PERMISSION_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \

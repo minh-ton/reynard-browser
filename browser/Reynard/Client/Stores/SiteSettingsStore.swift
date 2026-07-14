@@ -7,6 +7,7 @@
 
 import Foundation
 import SQLite3
+import os
 
 enum SiteWebsiteMode: String {
     case desktop
@@ -23,6 +24,7 @@ struct SiteSettingsRecord {
 }
 
 final class SiteSettingsStore {
+    private static let log = OSLog(subsystem: "com.minh-ton.Reynard", category: "SiteSettings")
     static let shared = SiteSettingsStore()
     
     private enum Constants {
@@ -39,6 +41,7 @@ final class SiteSettingsStore {
     private struct StorageURLs {
         let directoryURL: URL
         let databaseURL: URL
+        let isInMemory: Bool
     }
     
     private let fileManager: FileManager
@@ -49,20 +52,22 @@ final class SiteSettingsStore {
     
     // MARK: - Lifecycle
     
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, storageDirectoryURL: URL? = nil) {
         self.fileManager = fileManager
-        
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
-        }
-        
-        let directoryURL = applicationSupportDirectoryURL
+        let applicationSupportDirectoryURL = storageDirectoryURL ?? fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first
+        let isInMemory = applicationSupportDirectoryURL == nil
+        let directoryURL = applicationSupportDirectoryURL?
             .appendingPathComponent("AppData", isDirectory: true)
             .appendingPathComponent("SiteSettings", isDirectory: true)
+            ?? fileManager.temporaryDirectory
         
         self.storage = StorageURLs(
             directoryURL: directoryURL,
-            databaseURL: directoryURL.appendingPathComponent(Constants.databaseName, isDirectory: false)
+            databaseURL: directoryURL.appendingPathComponent(Constants.databaseName, isDirectory: false),
+            isInMemory: isInMemory
         )
         
         stateQueue.sync {
@@ -113,6 +118,15 @@ final class SiteSettingsStore {
             settingsLocked(where: "website_mode IS NOT NULL")
         }
     }
+
+    func websiteMode(forHost host: String) -> SiteWebsiteMode? {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return nil
+        }
+        return stateQueue.sync {
+            websiteModeLocked(for: host)
+        }
+    }
     
     func settingsWithReaderMode() -> [SiteSettingsRecord] {
         return stateQueue.sync {
@@ -150,6 +164,45 @@ final class SiteSettingsStore {
         
         return stateQueue.sync {
             setTextSettingLocked(mode.rawValue, column: .websiteMode, for: host)
+        }
+    }
+
+    func replaceWebsiteMode(
+        _ mode: SiteWebsiteMode,
+        forHost host: String,
+        additionalHost: String?
+    ) -> Bool {
+        guard let host = URLUtils.normalizedHost(host) else {
+            return false
+        }
+        let additionalHost = additionalHost.flatMap { URLUtils.normalizedHost($0) }
+        var aliases = WebsiteModeHost.relatedAliases(for: host)
+        if let additionalHost {
+            aliases.formUnion(WebsiteModeHost.relatedAliases(for: additionalHost))
+        }
+        let destinationHosts = Set([host, additionalHost].compactMap { $0 })
+
+        return stateQueue.sync {
+            guard executeLocked("BEGIN IMMEDIATE TRANSACTION;") else {
+                return false
+            }
+            for alias in aliases where !clearSettingLocked(.websiteMode, for: alias) {
+                _ = executeLocked("ROLLBACK;")
+                return false
+            }
+            for destinationHost in destinationHosts where !setTextSettingLocked(
+                mode.rawValue,
+                column: .websiteMode,
+                for: destinationHost
+            ) {
+                _ = executeLocked("ROLLBACK;")
+                return false
+            }
+            guard executeLocked("COMMIT;") else {
+                _ = executeLocked("ROLLBACK;")
+                return false
+            }
+            return true
         }
     }
     
@@ -266,7 +319,20 @@ final class SiteSettingsStore {
     // MARK: - Storage
     
     private func prepareStorageLocked() {
-        try? fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
+        guard !storage.isInMemory else {
+            return
+        }
+        do {
+            try fileManager.createDirectory(at: storage.directoryURL, withIntermediateDirectories: true)
+        } catch {
+            os_log(
+                "Unable to create the site settings directory: %{public}@",
+                log: Self.log,
+                type: .error,
+                error.localizedDescription
+            )
+            return
+        }
     }
     
     private func openDatabaseLocked() {
@@ -276,11 +342,12 @@ final class SiteSettingsStore {
         
         var database: OpaquePointer?
         let flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
-        guard sqlite3_open_v2(storage.databaseURL.path, &database, flags, nil) == SQLITE_OK else {
+        let databasePath = storage.isInMemory ? ":memory:" : storage.databaseURL.path
+        guard sqlite3_open_v2(databasePath, &database, flags, nil) == SQLITE_OK else {
             if let database {
                 sqlite3_close(database)
             }
-            assertionFailure("Failed to open SiteSettings database")
+            os_log("Failed to open the site settings database", log: Self.log, type: .error)
             return
         }
         
@@ -344,6 +411,21 @@ final class SiteSettingsStore {
         }
         
         return record(from: statement)
+    }
+
+    private func websiteModeLocked(for host: String) -> SiteWebsiteMode? {
+        guard let statement = prepareStatementLocked(
+            "SELECT website_mode FROM site_settings WHERE host = ? LIMIT 1;"
+        ) else {
+            return nil
+        }
+        defer { sqlite3_finalize(statement) }
+        bind(host, to: statement, at: 1)
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              sqlite3_column_type(statement, 0) != SQLITE_NULL else {
+            return nil
+        }
+        return SiteWebsiteMode(rawValue: string(from: statement, at: 0))
     }
     
     private func settingsLocked(where condition: String?) -> [SiteSettingsRecord] {
@@ -537,7 +619,11 @@ final class SiteSettingsStore {
         
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else {
-            assertionFailure("Failed to prepare SiteSettings SQL statement")
+            os_log(
+                "Failed to prepare a site settings database operation",
+                log: Self.log,
+                type: .error
+            )
             return nil
         }
         
@@ -548,8 +634,17 @@ final class SiteSettingsStore {
         guard let database else {
             return false
         }
-        
-        return sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK
+
+        let result = sqlite3_exec(database, sql, nil, nil, nil)
+        if result != SQLITE_OK {
+            os_log(
+                "A site settings database operation failed with code %{public}d",
+                log: Self.log,
+                type: .error,
+                result
+            )
+        }
+        return result == SQLITE_OK
     }
     
     private func bind(_ text: String, to statement: OpaquePointer, at index: Int32) {

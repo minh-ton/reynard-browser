@@ -9,8 +9,16 @@ enum WebsiteModeHostTests {
         expect(WebsiteModeHost.areRelated("m.example.com", "example.com"))
         expect(WebsiteModeHost.areRelated("mobile.example.com", "example.com"))
         expect(!WebsiteModeHost.areRelated("news.example.com", "example.com"))
+        expect(!WebsiteModeHost.areRelated("www.example.com", "example.com"))
         expect(!WebsiteModeHost.areRelated("one.example.com", "two.example.com"))
+        expect(WebsiteModeHost.normalized("M.Example.com.") == "example.com")
+        expect(WebsiteModeHost.relatedAliases(for: "...").isEmpty)
         expect(WebsiteModeHost.relatedAliases(for: "m.Example.com") == [
+            "example.com",
+            "m.example.com",
+            "mobile.example.com",
+        ])
+        expect(WebsiteModeHost.orderedAliases(for: "m.Example.com") == [
             "example.com",
             "m.example.com",
             "mobile.example.com",
