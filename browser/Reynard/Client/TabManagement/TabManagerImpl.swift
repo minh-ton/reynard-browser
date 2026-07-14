@@ -968,7 +968,14 @@ extension TabManagerImplementation: ContentDelegate {
         removeTab(at: location.index, mode: location.mode)
     }
     
-    func onFirstComposite(session: GeckoSession) {}
+    func onFirstComposite(session: GeckoSession) {
+        guard let location = tabLocation(for: session) else {
+            return
+        }
+        let tab = tabs(for: location.mode)[location.index]
+        tab.state.hasFirstComposite = true
+        delegate?.tabManager(self, didFirstCompositeFor: tab.id)
+    }
     
     func onFirstContentfulPaint(session: GeckoSession) {}
     

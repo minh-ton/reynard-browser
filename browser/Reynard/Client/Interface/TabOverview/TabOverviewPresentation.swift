@@ -58,7 +58,15 @@ final class TabOverviewPresentation {
     private var activePresentationTransition: ActivePresentationTransition?
     private var presentationToken = 0
     
-    private(set) var state: State = .dismissed
+    private(set) var state: State = .dismissed {
+        didSet {
+            guard state != oldValue,
+                  state == .dismissed || state == .presented else {
+                return
+            }
+            tabOverview.presentationContext?.tabOverviewPresentationDidFinishTransition()
+        }
+    }
     
     var isPresented: Bool {
         return state == .presented || state == .presenting

@@ -52,21 +52,25 @@ extension BrowserViewController {
         present(activityController, animated: true)
     }
     
-    func createNewTab() {
+    func createNewTab(intent: NewTabCreationIntent = .userInitiated) {
         dismissAddressBarEditingAndOverlays()
         
         if tabOverview.isPresented {
             tabOverview.prepareNextTabChangesWithoutAnimation()
-            createTabFromOverview(mode: tabOverview.mode.tabMode)
+            createTabFromOverview(mode: tabOverview.mode.tabMode, intent: intent)
         } else {
             homepageOverlayCoordinator.prepareHomepageForNewTab(mode: tabManager.selectedTabMode)
             let createdIndex = tabManager.createTab(selecting: true)
             applyNewTabDisplayOption(toTabAt: createdIndex)
             tabBar.setPendingExpansion(at: createdIndex)
             setTabOverviewVisible(false, animated: true)
-            scheduleAutomaticKeyboardFocusForNewTab(
-                tabManager.activeTabs[safe: createdIndex]
-            )
+            if intent.automaticallyFocusesAddressBar {
+                scheduleAutomaticKeyboardFocusForNewTab(
+                    tabManager.activeTabs[safe: createdIndex]
+                )
+            } else {
+                cancelAutomaticKeyboardFocusForNewTab()
+            }
         }
     }
 
@@ -74,52 +78,53 @@ extension BrowserViewController {
         guard Prefs.NewTabSettings.automaticallyOpensKeyboard,
               Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
               let tab else {
+            cancelAutomaticKeyboardFocusForNewTab()
             return
         }
 
-        focusAddressBarWhenNewTabIsReady(
-            tabID: tab.id,
-            retriesRemaining: 24,
-            stablePassesRemaining: 2
-        )
+        pendingNewTabKeyboardFocusTabID = tab.id
+        isPendingNewTabKeyboardFocusEventDispatchComplete = false
+        isPendingNewTabContentReady = tab.state.hasFirstComposite
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.pendingNewTabKeyboardFocusTabID == tab.id else {
+                return
+            }
+            self.isPendingNewTabKeyboardFocusEventDispatchComplete = true
+            self.fulfillPendingAutomaticKeyboardFocusIfPossible()
+        }
     }
 
-    private func focusAddressBarWhenNewTabIsReady(
-        tabID: UUID,
-        retriesRemaining: Int,
-        stablePassesRemaining: Int
-    ) {
-        guard Prefs.NewTabSettings.automaticallyOpensKeyboard,
-              Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
-              tabManager.selectedTab?.id == tabID else {
+    func fulfillPendingAutomaticKeyboardFocusIfPossible() {
+        guard let requestedTabID = pendingNewTabKeyboardFocusTabID else {
             return
         }
-
-        guard viewIfLoaded?.window != nil,
-              !tabOverview.isPresented,
-              !tabOverview.isTransitionRunning else {
-            guard retriesRemaining > 0 else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                self?.focusAddressBarWhenNewTabIsReady(
-                    tabID: tabID,
-                    retriesRemaining: retriesRemaining - 1,
-                    stablePassesRemaining: 2
-                )
-            }
+        let context = NewTabKeyboardFocusPolicy.Context(
+            requestedTabID: requestedTabID,
+            selectedTabID: tabManager.selectedTab?.id,
+            isEnabled: Prefs.NewTabSettings.automaticallyOpensKeyboard,
+            displayOptionSupportsFocus: Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
+            isViewVisible: viewIfLoaded?.window != nil,
+            isTabOverviewPresented: tabOverview.isPresented,
+            isTransitionRunning: tabOverview.isTransitionRunning,
+            isEventDispatchComplete: isPendingNewTabKeyboardFocusEventDispatchComplete,
+            isContentReady: isPendingNewTabContentReady
+        )
+        if NewTabKeyboardFocusPolicy.shouldCancel(context) {
+            cancelAutomaticKeyboardFocusForNewTab()
             return
         }
-
-        if stablePassesRemaining > 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                self?.focusAddressBarWhenNewTabIsReady(
-                    tabID: tabID,
-                    retriesRemaining: retriesRemaining,
-                    stablePassesRemaining: stablePassesRemaining - 1
-                )
-            }
+        guard NewTabKeyboardFocusPolicy.shouldFulfill(context) else {
             return
         }
+        if browserChrome.focusAddressBar() {
+            pendingNewTabKeyboardFocusTabID = nil
+        }
+    }
 
-        browserChrome.focusAddressBar()
+    func cancelAutomaticKeyboardFocusForNewTab() {
+        pendingNewTabKeyboardFocusTabID = nil
+        isPendingNewTabKeyboardFocusEventDispatchComplete = false
+        isPendingNewTabContentReady = false
     }
 }

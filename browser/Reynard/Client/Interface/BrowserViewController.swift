@@ -29,6 +29,9 @@ final class BrowserViewController: UIViewController {
         sessionManager: sessionManager
     )
     private var preFullscreenOrientation: UIInterfaceOrientation?
+    var pendingNewTabKeyboardFocusTabID: UUID?
+    var isPendingNewTabKeyboardFocusEventDispatchComplete = false
+    var isPendingNewTabContentReady = false
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
     private(set) var browserLayout = BrowserLayout.initial(
@@ -178,6 +181,7 @@ final class BrowserViewController: UIViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        cancelAutomaticKeyboardFocusForNewTab()
         performContentLifecycle {
             view.endEditing(true)
         }
@@ -190,6 +194,7 @@ final class BrowserViewController: UIViewController {
             browserChrome.syncSidebarButton(splitViewController: splitViewController)
             downloadsCoordinator.syncToolbarButtonState()
             updateBrowserLayout(animated: false)
+            fulfillPendingAutomaticKeyboardFocusIfPossible()
         }
     }
     
@@ -323,7 +328,7 @@ final class BrowserViewController: UIViewController {
             }
             self.closeTab(at: self.tabManager.selectedTabIndex, mode: self.tabManager.selectedTabMode)
             if self.tabManager.selectedTab == nil {
-                self.createNewTab()
+                self.createNewTab(intent: .lastTabReplacement)
             }
         }
         browserChrome.onReload = { [weak self] in

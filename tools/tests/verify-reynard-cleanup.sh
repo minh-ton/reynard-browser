@@ -235,6 +235,7 @@ rm -f "$TEST_BINARY"
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/NewTab/NewTabDisplayOption.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/NewTab/NewTabKeyboardFocusPolicy.swift" \
 	"$SCRIPT_DIR/NewTabKeyboardPolicyTests.swift" \
 	-o "$NEW_TAB_TEST_BINARY"
 "$NEW_TAB_TEST_BINARY"
@@ -344,9 +345,15 @@ if ! rg -q 'scheduleAutomaticKeyboardFocusForNewTab' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
 	! rg -q 'scheduleAutomaticKeyboardFocusForNewTab' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+TabPresentation.swift" ||
-	! rg -q 'tabManager\.selectedTab\?\.id == tabID' \
+	! rg -q 'NewTabKeyboardFocusPolicy\.shouldFulfill' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
-	! rg -q 'stablePassesRemaining' \
+	! rg -q 'intent\.automaticallyFocusesAddressBar' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
+	! rg -q 'createNewTab\(intent: \.lastTabReplacement\)' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController.swift" ||
+	! rg -q 'contentFocusSettlingDelay' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
+	rg -q 'retriesRemaining|stablePassesRemaining' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift"; then
 	echo "Foreground new-tab keyboard focus is not consistently guarded." >&2
 	exit 1
