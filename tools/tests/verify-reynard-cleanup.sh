@@ -103,8 +103,10 @@ fi
 if rg -q 'UIImage\(contentsOfFile:' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageViewController.swift" ||
 	! rg -q 'CGImageSourceCreateThumbnailAtIndex' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageViewController.swift" ||
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageDecoder.swift" ||
 	! rg -q 'maximumPixelCount' \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageDecodePolicy.swift" ||
+	! rg -q 'maximumFileBytes' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Downloads/DownloadImageDecodePolicy.swift"; then
 	echo "Downloaded images are not decoded with bounded ImageIO memory use." >&2
 	exit 1

@@ -3,9 +3,9 @@
 //  Reynard
 //
 
-import ImageIO
 import UIKit
 
+@MainActor
 final class DownloadImageViewController: UIViewController, UIScrollViewDelegate {
     private enum UX {
         static let maximumZoomMultiplier: CGFloat = 8
@@ -14,6 +14,7 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
 
     private let fileURL: URL
     private let fileName: String
+    private let imageDecoder: DownloadImageDecoder
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
     private let loadingIndicator = UIActivityIndicatorView(style: .large)
@@ -24,10 +25,16 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
     private var previousViewportSize = CGSize.zero
     private var isApplyingHorizontalLock = false
     private var loadGeneration: UInt = 0
+    private var loadTask: Task<Void, Never>?
 
-    init(fileURL: URL, fileName: String) {
+    init(
+        fileURL: URL,
+        fileName: String,
+        imageDecoder: DownloadImageDecoder = DownloadImageDecoder()
+    ) {
         self.fileURL = fileURL
         self.fileName = fileName
+        self.imageDecoder = imageDecoder
         super.init(nibName: nil, bundle: nil)
         title = fileName
     }
@@ -146,63 +153,60 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
     }
 
     private func loadImage() {
+        loadTask?.cancel()
         loadGeneration &+= 1
         let generation = loadGeneration
         let fileURL = self.fileURL
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let image = Self.decodeDisplayImage(at: fileURL)
-            DispatchQueue.main.async {
-                guard let self, self.loadGeneration == generation else { return }
-                self.loadingIndicator.stopAnimating()
-                guard let image, image.size.width > 0, image.size.height > 0 else {
-                    self.errorLabel.isHidden = false
-                    return
+        let imageDecoder = self.imageDecoder
+        loadTask = Task { [weak self] in
+            do {
+                let decodedImage = try await imageDecoder.decode(fileURL: fileURL)
+                try Task.checkCancellation()
+                guard let self else { return }
+                guard loadGeneration == generation else { return }
+                let image = decodedImage.image
+                guard image.size.width > 0, image.size.height > 0 else {
+                    throw DownloadImageDecodingError.unsupportedOrCorruptFile
                 }
+                loadingIndicator.stopAnimating()
                 self.image = image
-                self.imageView.image = image
-                self.imageView.frame = CGRect(origin: .zero, size: image.size)
-                self.scrollView.contentSize = image.size
-                self.shareButton.isEnabled = true
-                self.shareButton.alpha = 1
-                self.updateZoomScales(preservingPosition: false)
+                imageView.image = image
+                imageView.frame = CGRect(origin: .zero, size: image.size)
+                scrollView.contentSize = image.size
+                shareButton.isEnabled = true
+                shareButton.alpha = 1
+                errorLabel.isHidden = true
+                updateZoomScales(preservingPosition: false)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard let self else { return }
+                guard loadGeneration == generation else { return }
+                loadingIndicator.stopAnimating()
+                showDecodeError(error)
             }
         }
     }
 
-    private static func decodeDisplayImage(at fileURL: URL) -> UIImage? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, sourceOptions),
-              let properties = CGImageSourceCopyPropertiesAtIndex(
-                source,
-                0,
-                sourceOptions
-              ) as? [CFString: Any],
-              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
-              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
-              let bounded = DownloadImageDecodePolicy.boundedDimensions(
-                width: width,
-                height: height
-              ) else {
-            return nil
+    private func showDecodeError(_ error: Error) {
+        switch error as? DownloadImageDecodingError {
+        case .missingFile:
+            errorLabel.text = NSLocalizedString("This image is no longer available.", comment: "")
+        case .oversizedFile:
+            errorLabel.text = NSLocalizedString("This image is too large to display safely.", comment: "")
+        case .unsupportedOrCorruptFile, nil:
+            errorLabel.text = NSLocalizedString("This image is unsupported or damaged.", comment: "")
         }
-
-        let thumbnailOptions = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: max(bounded.width, bounded.height),
-        ] as CFDictionary
-        guard let image = CGImageSourceCreateThumbnailAtIndex(
-            source,
-            0,
-            thumbnailOptions
-        ) else {
-            return nil
+        errorLabel.isHidden = false
+        if error as? DownloadImageDecodingError == .missingFile {
+            shareButton.isEnabled = false
+            shareButton.alpha = 0.45
         }
-        return UIImage(cgImage: image, scale: 1, orientation: .up)
     }
 
     private func releaseDecodedImage() {
+        loadTask?.cancel()
+        loadTask = nil
         loadGeneration &+= 1
         imageView.image = nil
         image = nil
@@ -232,6 +236,7 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
         }
         centerImageIfNeeded()
         lockHorizontalPositionIfNeeded()
+        updatePanAvailability()
     }
 
     private func centerImageIfNeeded() {
@@ -250,12 +255,13 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
             return
         }
 
-        let centeredOffsetX: CGFloat
-        if scrollView.contentSize.width <= scrollView.bounds.width {
-            centeredOffsetX = -scrollView.contentInset.left
-        } else {
-            centeredOffsetX = (scrollView.contentSize.width - scrollView.bounds.width) / 2
+        guard !DownloadImageDecodePolicy.allowsPanning(
+            contentLength: scrollView.contentSize.width,
+            viewportLength: scrollView.bounds.width
+        ) else {
+            return
         }
+        let centeredOffsetX = -scrollView.contentInset.left
         guard abs(scrollView.contentOffset.x - centeredOffsetX) > UX.horizontalLockTolerance else {
             return
         }
@@ -266,6 +272,12 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
             y: scrollView.contentOffset.y
         )
         isApplyingHorizontalLock = false
+    }
+
+    private func updatePanAvailability() {
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.alwaysBounceVertical = false
+        scrollView.isDirectionalLockEnabled = true
     }
 
     @objc private func imageDoubleTapped(_ recognizer: UITapGestureRecognizer) {
@@ -295,6 +307,10 @@ final class DownloadImageViewController: UIViewController, UIScrollViewDelegate 
     }
 
     @objc private func shareImage() {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            showDecodeError(DownloadImageDecodingError.missingFile)
+            return
+        }
         let controller = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
         controller.popoverPresentationController?.sourceView = shareButton
         controller.popoverPresentationController?.sourceRect = shareButton.bounds

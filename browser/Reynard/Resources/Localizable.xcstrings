@@ -4220,6 +4220,46 @@
         }
       }
     },
+    "This downloaded file is no longer available." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This downloaded file is no longer available."
+          }
+        }
+      }
+    },
+    "This image is no longer available." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is no longer available."
+          }
+        }
+      }
+    },
+    "This image is too large to display safely." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is too large to display safely."
+          }
+        }
+      }
+    },
+    "This image is unsupported or damaged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is unsupported or damaged."
+          }
+        }
+      }
+    },
     "Unable to display this image." : {
       "localizations" : {
         "en" : {

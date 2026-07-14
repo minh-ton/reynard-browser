@@ -505,7 +505,14 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         
         tableView.deselectRow(at: indexPath, animated: true)
         
-        guard item.state == .completed, item.fileExists else {
+        guard item.state == .completed else {
+            return
+        }
+        guard item.fileExists else {
+            AlertPresenter.show(
+                title: nil,
+                message: NSLocalizedString("This downloaded file is no longer available.", comment: "")
+            )
             return
         }
         

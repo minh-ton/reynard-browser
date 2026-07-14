@@ -6,10 +6,15 @@
 import Foundation
 
 enum DownloadImageDecodePolicy {
-    static let maximumPixelCount = 24 * 1024 * 1024
-    static let maximumDimension = 32_760
+    nonisolated static let maximumPixelCount = 24 * 1024 * 1024
+    nonisolated static let maximumDimension = 32_760
+    nonisolated static let maximumFileBytes: Int64 = 256 * 1024 * 1024
 
-    static func boundedDimensions(width: Int, height: Int) -> (width: Int, height: Int)? {
+    nonisolated static func acceptsFileByteCount(_ byteCount: Int64) -> Bool {
+        byteCount > 0 && byteCount <= maximumFileBytes
+    }
+
+    nonisolated static func boundedDimensions(width: Int, height: Int) -> (width: Int, height: Int)? {
         guard width > 0, height > 0 else {
             return nil
         }
@@ -30,5 +35,9 @@ enum DownloadImageDecodePolicy {
             return nil
         }
         return (boundedWidth, boundedHeight)
+    }
+
+    nonisolated static func allowsPanning(contentLength: CGFloat, viewportLength: CGFloat) -> Bool {
+        contentLength > viewportLength + 0.5
     }
 }

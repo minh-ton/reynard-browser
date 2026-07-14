@@ -18,6 +18,12 @@ enum DownloadImageDecodePolicyTests {
         precondition(tall!.width * tall!.height <= DownloadImageDecodePolicy.maximumPixelCount)
         precondition(tall!.height <= DownloadImageDecodePolicy.maximumDimension)
         precondition(DownloadImageDecodePolicy.boundedDimensions(width: 0, height: 10) == nil)
+        precondition(DownloadImageDecodePolicy.acceptsFileByteCount(1))
+        precondition(DownloadImageDecodePolicy.acceptsFileByteCount(DownloadImageDecodePolicy.maximumFileBytes))
+        precondition(!DownloadImageDecodePolicy.acceptsFileByteCount(0))
+        precondition(!DownloadImageDecodePolicy.acceptsFileByteCount(DownloadImageDecodePolicy.maximumFileBytes + 1))
+        precondition(!DownloadImageDecodePolicy.allowsPanning(contentLength: 390, viewportLength: 390))
+        precondition(DownloadImageDecodePolicy.allowsPanning(contentLength: 391, viewportLength: 390))
         print("DownloadImageDecodePolicyTests passed")
     }
 }
