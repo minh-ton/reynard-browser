@@ -147,7 +147,7 @@ final class ToolbarButton: UIButton {
     }
 
     @objc private func playTapHaptic() {
-        guard Prefs.AppearanceSettings.toolbarButtonHapticsEnabled else {
+        guard Prefs.ToolbarSettings.toolbarButtonHapticsEnabled else {
             return
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()

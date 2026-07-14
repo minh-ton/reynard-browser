@@ -21,7 +21,6 @@ enum BottomToolbarAction: String, CaseIterable {
     case closeTab
     case tabOverview
 
-    static let maximumVisibleActions = 10
     static let defaultActions: [BottomToolbarAction] = [
         .back, .forward, .share, .bookmarks, .downloads, .tabOverview,
     ]
@@ -290,10 +289,10 @@ final class BottomToolbar: UIView {
 
     @objc private func closeTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began,
-              Prefs.AppearanceSettings.closeTabLongPressOpensNewTab else {
+              Prefs.ToolbarSettings.closeTabLongPressOpensNewTab else {
             return
         }
-        if Prefs.AppearanceSettings.toolbarButtonHapticsEnabled {
+        if Prefs.ToolbarSettings.toolbarButtonHapticsEnabled {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
         onNewTab?()
@@ -301,10 +300,10 @@ final class BottomToolbar: UIView {
 
     @objc private func newTabLongPressed(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began,
-              Prefs.AppearanceSettings.newTabLongPressClosesTab else {
+              Prefs.ToolbarSettings.newTabLongPressClosesTab else {
             return
         }
-        if Prefs.AppearanceSettings.toolbarButtonHapticsEnabled {
+        if Prefs.ToolbarSettings.toolbarButtonHapticsEnabled {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
         onCloseTab?()
@@ -363,7 +362,7 @@ final class BottomToolbar: UIView {
         guard bounds.width > 0 else {
             return
         }
-        let configuredActions = Prefs.AppearanceSettings.bottomToolbarActions
+        let configuredActions = Prefs.ToolbarSettings.bottomToolbarActions
         let visibleCount = BottomToolbarLayoutPolicy.visibleActionCount(
             configuredCount: configuredActions.count
         )
@@ -386,10 +385,10 @@ final class BottomToolbar: UIView {
     }
 
     private func updateShortcutAccessibility() {
-        closeTabButton.accessibilityHint = Prefs.AppearanceSettings.closeTabLongPressOpensNewTab
+        closeTabButton.accessibilityHint = Prefs.ToolbarSettings.closeTabLongPressOpensNewTab
             ? NSLocalizedString("Touch and hold to open a new tab", comment: "")
             : nil
-        newTabButton.accessibilityHint = Prefs.AppearanceSettings.newTabLongPressClosesTab
+        newTabButton.accessibilityHint = Prefs.ToolbarSettings.newTabLongPressClosesTab
             ? NSLocalizedString("Touch and hold to close the current tab", comment: "")
             : nil
     }
