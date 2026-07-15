@@ -15,6 +15,7 @@ TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
 ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
 ADDON_STAGED_FILE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staged-file-tests"
+DEFAULT_BROWSER_SETTINGS_TEST_BINARY="${TMPDIR:-/tmp}/reynard-default-browser-settings-policy-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
@@ -274,6 +275,14 @@ swiftc \
 	-o "$NEW_TAB_TEST_BINARY"
 "$NEW_TAB_TEST_BINARY"
 rm -f "$NEW_TAB_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/DefaultBrowser/DefaultBrowserSettingsPolicy.swift" \
+	"$SCRIPT_DIR/DefaultBrowserSettingsPolicyTests.swift" \
+	-o "$DEFAULT_BROWSER_SETTINGS_TEST_BINARY"
+"$DEFAULT_BROWSER_SETTINGS_TEST_BINARY"
+rm -f "$DEFAULT_BROWSER_SETTINGS_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
