@@ -3229,6 +3229,16 @@
         }
       }
     },
+    "Set as Default Browser" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set as Default Browser"
+          }
+        }
+      }
+    },
     "Settings" : {
       "localizations" : {
         "en" : {
