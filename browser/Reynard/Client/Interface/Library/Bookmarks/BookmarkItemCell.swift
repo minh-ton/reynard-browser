@@ -17,7 +17,7 @@ final class BookmarkItemCell: UITableViewCell {
     
     static let reuseIdentifier = "BookmarkItemCell"
     
-    private static let faviconStore = FaviconStore.shared
+    @MainActor private static let iconProvider = BookmarkIconProvider.shared
     
     private let itemIconView: UIImageView = {
         let imageView = UIImageView()
@@ -47,7 +47,7 @@ final class BookmarkItemCell: UITableViewCell {
         return label
     }()
     
-    private var representedURL: URL?
+    private var representedBookmarkGUID: String?
     private var faviconTask: Task<Void, Never>?
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -91,7 +91,7 @@ final class BookmarkItemCell: UITableViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        representedURL = nil
+        representedBookmarkGUID = nil
         faviconTask?.cancel()
         faviconTask = nil
         itemTitleLabel.text = nil
@@ -103,7 +103,7 @@ final class BookmarkItemCell: UITableViewCell {
     // MARK: - Configuration
     
     func configure(folder: BookmarkFolderSnapshot) {
-        representedURL = nil
+        representedBookmarkGUID = nil
         faviconTask?.cancel()
         faviconTask = nil
         itemTitleLabel.text = folder.isProtected && folder.title == "Favorites" ? NSLocalizedString("Favorites", comment: "") : folder.title
@@ -118,36 +118,32 @@ final class BookmarkItemCell: UITableViewCell {
     }
     
     func configure(bookmark: BookmarkSnapshot) {
-        representedURL = bookmark.url
+        representedBookmarkGUID = bookmark.guid
         faviconTask?.cancel()
         faviconTask = nil
         itemTitleLabel.text = bookmark.title
         countLabel.text = nil
         countLabel.isHidden = true
         
-        if let cachedImage = Self.faviconStore.cachedFavicon(for: bookmark.url) {
-            applyIcon(cachedImage, tintColor: nil)
-            return
-        }
-        
-        applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
-        let expectedURL = bookmark.url
+        let cachedIcon = Self.iconProvider.cachedIcon(for: bookmark)
+        applyIcon(cachedIcon.image, tintColor: cachedIcon.tintColor)
+        let expectedGUID = bookmark.guid
         faviconTask = Task { [weak self] in
             guard let self else {
                 return
             }
             
-            let image = await Self.faviconStore.favicon(for: expectedURL)
+            let icon = await Self.iconProvider.icon(for: bookmark)
             guard !Task.isCancelled else {
                 return
             }
             
             await MainActor.run {
-                guard self.representedURL == expectedURL else {
+                guard self.representedBookmarkGUID == expectedGUID else {
                     return
                 }
-                
-                self.applyIcon(image ?? UIImage(named: "reynard.globe"), tintColor: image == nil ? .secondaryLabel : nil)
+
+                self.applyIcon(icon.image, tintColor: icon.tintColor)
             }
         }
     }

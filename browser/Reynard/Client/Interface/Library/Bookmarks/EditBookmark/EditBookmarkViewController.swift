@@ -25,6 +25,13 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
     private var selectedFolderID: String?
     private var faviconTask: Task<Void, Never>?
     private var storeObserver: NSObjectProtocol?
+    private var pendingCustomIconMutation: BookmarkCustomIconMutation = .unchanged
+    private lazy var iconEditingCoordinator = BookmarkIconEditingCoordinator(
+        presenter: self
+    ) { [weak self] icon in
+        self?.pendingCustomIconMutation = .set(icon)
+        self?.applyIconPreview(BookmarkCustomIconRenderer.image(for: icon))
+    }
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -48,6 +55,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         imageView.layer.cornerRadius = UX.faviconCornerRadius
         imageView.layer.cornerCurve = .continuous
         imageView.clipsToBounds = true
+        imageView.isUserInteractionEnabled = true
         return imageView
     }()
     private let urlFaviconView: UIImageView = {
@@ -59,6 +67,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         imageView.layer.cornerRadius = UX.faviconCornerRadius
         imageView.layer.cornerCurve = .continuous
         imageView.clipsToBounds = true
+        imageView.isUserInteractionEnabled = true
         return imageView
     }()
     
@@ -153,6 +162,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         ])
         
         reloadFolderRows()
+        configureIconEditing()
         
         storeObserver = NotificationCenter.default.addObserver(
             forName: .bookmarkStoreDidChange,
@@ -163,27 +173,7 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
             self?.tableView.reloadSections(IndexSet(integer: 2), with: .none)
         }
         
-        if let url = bookmark?.url ?? URL(string: urlField.text ?? "") {
-            if let image = FaviconStore.shared.cachedFavicon(for: url) {
-                titleFaviconView.image = image
-                titleFaviconView.tintColor = nil
-                urlFaviconView.image = image
-                urlFaviconView.tintColor = nil
-            } else {
-                faviconTask = Task { [weak self] in
-                    let image = await FaviconStore.shared.favicon(for: url)
-                    await MainActor.run {
-                        guard let self, let image else {
-                            return
-                        }
-                        self.titleFaviconView.image = image
-                        self.titleFaviconView.tintColor = nil
-                        self.urlFaviconView.image = image
-                        self.urlFaviconView.tintColor = nil
-                    }
-                }
-            }
-        }
+        loadInitialIcon()
         
         validateSaveButton()
     }
@@ -310,12 +300,28 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
             return
         }
         
+        let savedBookmark: BookmarkSnapshot?
         if let bookmark {
-            _ = store.updateBookmark(guid: bookmark.guid, title: title, url: url, parentGUID: selectedFolderID)
+            savedBookmark = store.updateBookmark(
+                guid: bookmark.guid,
+                title: title,
+                url: url,
+                parentGUID: selectedFolderID,
+                customIcon: pendingCustomIconMutation
+            )
         } else {
-            _ = store.addBookmark(title: title, url: url, to: selectedFolderID)
+            savedBookmark = store.addBookmark(
+                title: title,
+                url: url,
+                to: selectedFolderID,
+                customIcon: pendingCustomIconMutation
+            )
         }
-        
+
+        guard savedBookmark != nil else {
+            presentSaveError()
+            return
+        }
         dismiss(animated: true)
     }
     
@@ -337,6 +343,36 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         let urlString = urlField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         navigationItem.rightBarButtonItem?.isEnabled = !title.isEmpty && URL(string: urlString) != nil
     }
+
+    @objc private func editIcon() {
+        view.endEditing(true)
+        let alert = UIAlertController(
+            title: NSLocalizedString("Bookmark Icon", comment: ""),
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+        alert.addAction(UIAlertAction(title: NSLocalizedString("Choose Photo", comment: ""), style: .default) { [weak self] _ in
+            self?.iconEditingCoordinator.choosePhoto()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("Choose File", comment: ""), style: .default) { [weak self] _ in
+            self?.iconEditingCoordinator.chooseFile()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("Choose Symbol & Color", comment: ""), style: .default) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            iconEditingCoordinator.chooseSymbol(initialIcon: currentCustomIcon)
+        })
+        if hasCustomIconOverride {
+            alert.addAction(UIAlertAction(title: NSLocalizedString("Restore Website Icon", comment: ""), style: .destructive) { [weak self] _ in
+                self?.restoreWebsiteIcon()
+            })
+        }
+        alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel))
+        alert.popoverPresentationController?.sourceView = titleFaviconView
+        alert.popoverPresentationController?.sourceRect = titleFaviconView.bounds
+        present(alert, animated: true)
+    }
     
     // MARK: - Folder Loading
     
@@ -346,5 +382,84 @@ final class EditBookmarkViewController: UIViewController, UITableViewDataSource,
         if selectedFolderID == nil {
             selectedFolderID = root.parent.guid
         }
+    }
+
+    private var hasCustomIconOverride: Bool {
+        return currentCustomIcon != nil
+    }
+
+    private var currentCustomIcon: BookmarkCustomIcon? {
+        let storedIcon = bookmark.flatMap { store.customIcon(for: $0.guid) }
+        return pendingCustomIconMutation.resolved(over: storedIcon)
+    }
+
+    private func configureIconEditing() {
+        let titleTap = UITapGestureRecognizer(target: self, action: #selector(editIcon))
+        let urlTap = UITapGestureRecognizer(target: self, action: #selector(editIcon))
+        titleFaviconView.addGestureRecognizer(titleTap)
+        urlFaviconView.addGestureRecognizer(urlTap)
+        let label = NSLocalizedString("Edit Bookmark Icon", comment: "")
+        titleFaviconView.accessibilityLabel = label
+        urlFaviconView.accessibilityLabel = label
+        titleFaviconView.isAccessibilityElement = true
+        urlFaviconView.isAccessibilityElement = false
+        titleFaviconView.accessibilityTraits = .button
+        urlFaviconView.accessibilityTraits = .button
+    }
+
+    private func loadInitialIcon() {
+        if let bookmark,
+           let customIcon = store.customIcon(for: bookmark.guid),
+           let image = BookmarkCustomIconRenderer.image(for: customIcon) {
+            applyIconPreview(image)
+            return
+        }
+        loadWebsiteIcon()
+    }
+
+    private func restoreWebsiteIcon() {
+        pendingCustomIconMutation = .remove
+        loadWebsiteIcon()
+    }
+
+    private func loadWebsiteIcon() {
+        faviconTask?.cancel()
+        guard let url = URL(string: urlField.text ?? "") else {
+            applyIconPreview(nil)
+            return
+        }
+        if let image = FaviconStore.shared.cachedFavicon(for: url) {
+            applyIconPreview(image)
+            return
+        }
+        applyIconPreview(nil)
+        faviconTask = Task { [weak self] in
+            let image = await FaviconStore.shared.favicon(for: url)
+            guard !Task.isCancelled else {
+                return
+            }
+            await MainActor.run {
+                self?.applyIconPreview(image)
+            }
+        }
+    }
+
+    private func applyIconPreview(_ image: UIImage?) {
+        let resolvedImage = image ?? UIImage(named: "reynard.globe")
+        titleFaviconView.image = resolvedImage
+        urlFaviconView.image = resolvedImage
+        let tintColor: UIColor? = image == nil ? .secondaryLabel : nil
+        titleFaviconView.tintColor = tintColor
+        urlFaviconView.tintColor = tintColor
+    }
+
+    private func presentSaveError() {
+        let alert = UIAlertController(
+            title: NSLocalizedString("Unable to Save Bookmark", comment: ""),
+            message: NSLocalizedString("Your bookmark was not changed. Please try again.", comment: ""),
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default))
+        present(alert, animated: true)
     }
 }

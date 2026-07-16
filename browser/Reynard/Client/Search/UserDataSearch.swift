@@ -17,6 +17,7 @@ struct UserDataSearchResult: Equatable {
     let source: Source
     let title: String
     let url: URL
+    let bookmarkGUID: String?
     let tabID: UUID?
     let lastVisitedAt: Date?
 }
@@ -139,6 +140,7 @@ final class UserDataSearch {
             source: .bookmark,
             title: resultTitle(bookmark.title, fallbackURL: bookmark.url),
             url: bookmark.url,
+            bookmarkGUID: bookmark.guid,
             tabID: nil,
             lastVisitedAt: nil
         )
@@ -153,6 +155,7 @@ final class UserDataSearch {
             source: .tab,
             title: resultTitle(tab.title, fallbackURL: url),
             url: url,
+            bookmarkGUID: nil,
             tabID: tab.id,
             lastVisitedAt: nil
         )
@@ -163,6 +166,7 @@ final class UserDataSearch {
             source: .history,
             title: resultTitle(site.title, fallbackURL: site.url),
             url: site.url,
+            bookmarkGUID: nil,
             tabID: nil,
             lastVisitedAt: site.lastVisitedAt
         )

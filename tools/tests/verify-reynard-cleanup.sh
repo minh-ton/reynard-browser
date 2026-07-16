@@ -13,6 +13,9 @@ EXTERNAL_APP_ROUTER_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-route
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
 TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
+BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-icon-image-policy-tests"
+BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-custom-icon-store-tests"
+BOOKMARK_ICON_RESOLUTION_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-icon-resolution-policy-tests"
 ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
 ADDON_STAGED_FILE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staged-file-tests"
 DEFAULT_BROWSER_SETTINGS_TEST_BINARY="${TMPDIR:-/tmp}/reynard-default-browser-settings-policy-tests"
@@ -491,6 +494,36 @@ swiftc \
 	-o "$IMAGE_DECODE_TEST_BINARY"
 "$IMAGE_DECODE_TEST_BINARY"
 rm -f "$IMAGE_DECODE_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Bookmarks/BookmarkIconImagePolicy.swift" \
+	"$SCRIPT_DIR/BookmarkIconImagePolicyTests.swift" \
+	-o "$BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY"
+"$BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY"
+rm -f "$BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	-lsqlite3 \
+	"$ROOT_DIR/browser/Reynard/Client/Bookmarks/BookmarkIconImagePolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Bookmarks/BookmarkCustomIcon.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Extensions/Notifications.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Shared/URLUtils.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Stores/BookmarkStore.swift" \
+	"$SCRIPT_DIR/BookmarkCustomIconStoreTests.swift" \
+	-o "$BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY"
+"$BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY"
+rm -f "$BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Bookmarks/BookmarkIconResolutionPolicy.swift" \
+	"$SCRIPT_DIR/BookmarkIconResolutionPolicyTests.swift" \
+	-o "$BOOKMARK_ICON_RESOLUTION_POLICY_TEST_BINARY"
+"$BOOKMARK_ICON_RESOLUTION_POLICY_TEST_BINARY"
+rm -f "$BOOKMARK_ICON_RESOLUTION_POLICY_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \

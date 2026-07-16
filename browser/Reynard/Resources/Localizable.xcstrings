@@ -1,6 +1,64 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Bookmark Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bookmark Icon" } } }
+    },
+    "Blue" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Blue" } } }
+    },
+    "Choose a smaller image and try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a smaller image and try again." } } }
+    },
+    "Choose a valid image and try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a valid image and try again." } } }
+    },
+    "Choose Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Color" } } }
+    },
+    "Choose Photo" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Photo" } } }
+    },
+    "Choose Symbol & Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Symbol & Color" } } }
+    },
+    "Crop Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Crop Icon" } } }
+    },
+    "Edit Bookmark Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit Bookmark Icon" } } }
+    },
+    "Green" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Green" } } }
+    },
+    "Orange" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Orange" } } }
+    },
+    "Purple" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Purple" } } }
+    },
+    "Red" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Red" } } }
+    },
+    "Restore Website Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore Website Icon" } } }
+    },
+    "Symbol & Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Symbol & Color" } } }
+    },
+    "Unable to Save Bookmark" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to Save Bookmark" } } }
+    },
+    "Unable to Use Image" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to Use Image" } } }
+    },
+    "Use" : {
+      "comment" : "Use the cropped bookmark icon",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Use" } } }
+    },
+    "Your bookmark was not changed. Please try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your bookmark was not changed. Please try again." } } }
+    },
     " of %@" : {
       "comment" : "Total file size",
       "localizations" : {

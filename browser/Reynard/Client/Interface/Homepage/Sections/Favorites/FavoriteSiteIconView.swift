@@ -16,9 +16,8 @@ final class FavoriteSiteIconView: UIView {
         return view
     }()
     
-    private lazy var faviconLoader = HomepageFaviconLoader { [weak self] image, tintColor in
-        self?.applyIcon(image, tintColor: tintColor)
-    }
+    private var representedBookmarkGUID: String?
+    private var iconTask: Task<Void, Never>?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -30,11 +29,29 @@ final class FavoriteSiteIconView: UIView {
     }
     
     func configure(bookmark: BookmarkSnapshot) {
-        faviconLoader.loadIcon(for: bookmark.url)
+        representedBookmarkGUID = bookmark.guid
+        iconTask?.cancel()
+        let cachedIcon = BookmarkIconProvider.shared.cachedIcon(for: bookmark)
+        applyIcon(cachedIcon.image, tintColor: cachedIcon.tintColor)
+        iconTask = Task { [weak self] in
+            let icon = await BookmarkIconProvider.shared.icon(for: bookmark)
+            guard !Task.isCancelled else {
+                return
+            }
+            await MainActor.run {
+                guard self?.representedBookmarkGUID == bookmark.guid else {
+                    return
+                }
+                self?.applyIcon(icon.image, tintColor: icon.tintColor)
+            }
+        }
     }
     
     func reset() {
-        faviconLoader.reset()
+        representedBookmarkGUID = nil
+        iconTask?.cancel()
+        iconTask = nil
+        applyIcon(UIImage(named: "reynard.globe"), tintColor: .secondaryLabel)
     }
     
     private func configureView() {
@@ -48,7 +65,7 @@ final class FavoriteSiteIconView: UIView {
             imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
         
-        faviconLoader.reset()
+        reset()
     }
     
     private func applyIcon(_ image: UIImage?, tintColor: UIColor?) {

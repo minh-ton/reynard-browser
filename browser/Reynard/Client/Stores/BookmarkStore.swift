@@ -57,6 +57,7 @@ final class BookmarkStore {
         static let databaseName = "Bookmarks"
         static let bookmarkTableName = "bookmarks"
         static let structureTableName = "bookmark_structure"
+        static let customIconTableName = "bookmark_custom_icons"
         static let rootFolderGUID = "root________"
         static let rootFolderTitle = "Bookmarks"
         static let favoritesFolderGUID = "favorites___"
@@ -151,6 +152,12 @@ final class BookmarkStore {
             bookmarkSnapshotLocked(url: url)
         }
     }
+
+    func customIcon(for bookmarkGUID: String) -> BookmarkCustomIcon? {
+        stateQueue.sync {
+            customIconLocked(for: bookmarkGUID)
+        }
+    }
     
     // MARK: - Folder Queries
     
@@ -205,7 +212,12 @@ final class BookmarkStore {
     // MARK: - Bookmark Mutations
     
     @discardableResult
-    func addBookmark(title: String, url: URL, to parentGUID: String? = nil) -> BookmarkSnapshot? {
+    func addBookmark(
+        title: String,
+        url: URL,
+        to parentGUID: String? = nil,
+        customIcon: BookmarkCustomIconMutation = .unchanged
+    ) -> BookmarkSnapshot? {
         let normalizedTitle = bookmarkTitle(title, fallbackURL: url)
         guard URLUtils.isAbsoluteURL(url), !normalizedTitle.isEmpty else {
             return nil
@@ -232,7 +244,8 @@ final class BookmarkStore {
                 parentName: parent.title,
                 title: normalizedTitle,
                 url: url
-            ), insertStructureEntryLocked(parentGUID: parent.guid, childGUID: guid, index: placementIndex) else {
+            ), insertStructureEntryLocked(parentGUID: parent.guid, childGUID: guid, index: placementIndex),
+               applyCustomIconMutationLocked(customIcon, bookmarkGUID: guid) else {
                 rollbackTransactionLocked()
                 return nil
             }
@@ -249,7 +262,13 @@ final class BookmarkStore {
     }
     
     @discardableResult
-    func updateBookmark(guid: String, title: String, url: URL, parentGUID: String? = nil) -> BookmarkSnapshot? {
+    func updateBookmark(
+        guid: String,
+        title: String,
+        url: URL,
+        parentGUID: String? = nil,
+        customIcon: BookmarkCustomIconMutation = .unchanged
+    ) -> BookmarkSnapshot? {
         let normalizedTitle = bookmarkTitle(title, fallbackURL: url)
         guard URLUtils.isAbsoluteURL(url), !normalizedTitle.isEmpty else {
             return nil
@@ -283,7 +302,8 @@ final class BookmarkStore {
                 }
             }
             
-            guard updateBookmarkLocked(guid: guid, title: normalizedTitle, url: url, parentGUID: parent.guid, parentName: parent.title) else {
+            guard updateBookmarkLocked(guid: guid, title: normalizedTitle, url: url, parentGUID: parent.guid, parentName: parent.title),
+                  applyCustomIconMutationLocked(customIcon, bookmarkGUID: guid) else {
                 rollbackTransactionLocked()
                 return nil
             }
@@ -468,6 +488,25 @@ final class BookmarkStore {
    idx INTEGER NOT NULL,
    PRIMARY KEY(parent, child),
    UNIQUE(parent, idx)
+  );
+
+  CREATE TABLE IF NOT EXISTS \(Constants.customIconTableName) (
+   bookmark_guid TEXT PRIMARY KEY REFERENCES \(Constants.bookmarkTableName)(guid) ON DELETE CASCADE,
+   kind INTEGER NOT NULL,
+   raster_data BLOB,
+   symbol_name TEXT,
+   color_red REAL,
+   color_green REAL,
+   color_blue REAL,
+   color_alpha REAL,
+   CHECK (
+    (kind = 1 AND raster_data IS NOT NULL AND length(raster_data) > 0 AND symbol_name IS NULL
+     AND color_red IS NULL AND color_green IS NULL AND color_blue IS NULL AND color_alpha IS NULL)
+    OR
+    (kind = 2 AND raster_data IS NULL AND length(symbol_name) > 0
+     AND color_red BETWEEN 0 AND 1 AND color_green BETWEEN 0 AND 1
+     AND color_blue BETWEEN 0 AND 1 AND color_alpha BETWEEN 0 AND 1)
+   )
   );
   
   CREATE INDEX IF NOT EXISTS idx_bookmarks_parent_type_date ON \(Constants.bookmarkTableName)(parentid, type, date_added DESC, id DESC);
@@ -745,7 +784,7 @@ final class BookmarkStore {
     
     private func rankedMatchesLocked(matching query: String, limit: Int) -> [BookmarkSnapshot] {
         let tokens = query
-            .split(whereSeparator: \Character.isWhitespace)
+            .split(whereSeparator: { $0.isWhitespace })
             .map(String.init)
             .filter { !$0.isEmpty }
         
@@ -1021,6 +1060,52 @@ final class BookmarkStore {
         
         return childGUIDs
     }
+
+    private func customIconLocked(for bookmarkGUID: String) -> BookmarkCustomIcon? {
+        guard let statement = prepareStatementLocked(
+            """
+            SELECT kind, raster_data, symbol_name, color_red, color_green, color_blue, color_alpha
+            FROM \(Constants.customIconTableName)
+            WHERE bookmark_guid = ?
+            LIMIT 1;
+            """
+        ) else {
+            return nil
+        }
+
+        defer {
+            sqlite3_finalize(statement)
+        }
+
+        bind(bookmarkGUID, to: statement, at: 1)
+        guard sqlite3_step(statement) == SQLITE_ROW else {
+            return nil
+        }
+
+        switch sqlite3_column_int64(statement, 0) {
+        case 1:
+            let byteCount = Int(sqlite3_column_bytes(statement, 1))
+            guard byteCount > 0,
+                  let bytes = sqlite3_column_blob(statement, 1) else {
+                return nil
+            }
+            let icon = BookmarkCustomIcon.raster(Data(bytes: bytes, count: byteCount))
+            return icon.isValid ? icon : nil
+        case 2:
+            let icon = BookmarkCustomIcon.symbol(
+                name: string(from: statement, at: 2),
+                color: BookmarkIconColor(
+                    red: sqlite3_column_double(statement, 3),
+                    green: sqlite3_column_double(statement, 4),
+                    blue: sqlite3_column_double(statement, 5),
+                    alpha: sqlite3_column_double(statement, 6)
+                )
+            )
+            return icon.isValid ? icon : nil
+        default:
+            return nil
+        }
+    }
     
     // MARK: - Record Mutations
     
@@ -1109,6 +1194,84 @@ final class BookmarkStore {
         bind(guid, to: statement, at: 7)
         sqlite3_bind_int64(statement, 8, BookmarkNodeType.bookmark.rawValue)
         
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+
+    private func applyCustomIconMutationLocked(
+        _ mutation: BookmarkCustomIconMutation,
+        bookmarkGUID: String
+    ) -> Bool {
+        switch mutation {
+        case .unchanged:
+            return true
+        case let .set(icon):
+            return upsertCustomIconLocked(icon, bookmarkGUID: bookmarkGUID)
+        case .remove:
+            return deleteCustomIconLocked(bookmarkGUID: bookmarkGUID)
+        }
+    }
+
+    private func upsertCustomIconLocked(_ icon: BookmarkCustomIcon, bookmarkGUID: String) -> Bool {
+        guard icon.isValid,
+              let statement = prepareStatementLocked(
+                """
+                INSERT INTO \(Constants.customIconTableName) (
+                 bookmark_guid, kind, raster_data, symbol_name,
+                 color_red, color_green, color_blue, color_alpha
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(bookmark_guid) DO UPDATE SET
+                 kind = excluded.kind,
+                 raster_data = excluded.raster_data,
+                 symbol_name = excluded.symbol_name,
+                 color_red = excluded.color_red,
+                 color_green = excluded.color_green,
+                 color_blue = excluded.color_blue,
+                 color_alpha = excluded.color_alpha;
+                """
+              ) else {
+            return false
+        }
+
+        defer {
+            sqlite3_finalize(statement)
+        }
+
+        bind(bookmarkGUID, to: statement, at: 1)
+        switch icon {
+        case let .raster(data):
+            sqlite3_bind_int64(statement, 2, 1)
+            _ = data.withUnsafeBytes { bytes in
+                sqlite3_bind_blob(statement, 3, bytes.baseAddress, Int32(bytes.count), sqliteTransient)
+            }
+            sqlite3_bind_null(statement, 4)
+            for index in 5...8 {
+                sqlite3_bind_null(statement, Int32(index))
+            }
+        case let .symbol(name, color):
+            sqlite3_bind_int64(statement, 2, 2)
+            sqlite3_bind_null(statement, 3)
+            bind(name, to: statement, at: 4)
+            sqlite3_bind_double(statement, 5, color.red)
+            sqlite3_bind_double(statement, 6, color.green)
+            sqlite3_bind_double(statement, 7, color.blue)
+            sqlite3_bind_double(statement, 8, color.alpha)
+        }
+
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+
+    private func deleteCustomIconLocked(bookmarkGUID: String) -> Bool {
+        guard let statement = prepareStatementLocked(
+            "DELETE FROM \(Constants.customIconTableName) WHERE bookmark_guid = ?;"
+        ) else {
+            return false
+        }
+
+        defer {
+            sqlite3_finalize(statement)
+        }
+
+        bind(bookmarkGUID, to: statement, at: 1)
         return sqlite3_step(statement) == SQLITE_DONE
     }
     
