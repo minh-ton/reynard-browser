@@ -81,24 +81,25 @@ enum AddressBarMenu {
 
 final class AddressBarPageMenuView: UIControl {
     private enum UX {
-        static let maximumWidth: CGFloat = 286
-        static let relativeWidth: CGFloat = 0.7
-        static let zoomHeight: CGFloat = 46
-        static let separatorHeight = 1 / UIScreen.main.scale
-        static let screenInset: CGFloat = 12
-        static let anchorSpacing: CGFloat = 8
+        static let cornerRadius: CGFloat = 14
     }
 
     private let panel = UIView()
+    private let materialView = UIVisualEffectView(
+        effect: UIBlurEffect(style: .systemChromeMaterial)
+    )
     private let scrollView = UIScrollView()
     private let zoomControl: AddressBarMenuZoomControl
     private let items: [AddressBarMenu.Item]
-    private var rowViews: [(UIView, Bool)] = []
+    private var rowViews: [(view: UIView, sectionDivider: UIView?)] = []
     private var isDismissing = false
     private var dismissalCompletions: [() -> Void] = []
 
     private var rowHeight: CGFloat {
-        max(44, ceil(UIFont.preferredFont(forTextStyle: .body).lineHeight + 20))
+        max(
+            AddressBarPageMenuLayoutPolicy.minimumRowHeight,
+            ceil(UIFont.preferredFont(forTextStyle: .body).lineHeight + 28)
+        )
     }
 
     init(
@@ -112,29 +113,48 @@ final class AddressBarPageMenuView: UIControl {
         backgroundColor = UIColor.black.withAlphaComponent(0.08)
         addTarget(self, action: #selector(backgroundTapped), for: .touchUpInside)
 
-        panel.backgroundColor = .secondarySystemBackground
-        panel.layer.cornerRadius = 12
+        panel.backgroundColor = .clear
+        panel.layer.cornerRadius = UX.cornerRadius
         panel.layer.cornerCurve = .continuous
         panel.layer.shadowColor = UIColor.black.cgColor
-        panel.layer.shadowOpacity = 0.24
-        panel.layer.shadowRadius = 18
-        panel.layer.shadowOffset = CGSize(width: 0, height: 8)
+        panel.layer.shadowOpacity = 0.28
+        panel.layer.shadowRadius = 22
+        panel.layer.shadowOffset = CGSize(width: 0, height: 10)
         panel.clipsToBounds = false
         panel.accessibilityViewIsModal = true
         addSubview(panel)
 
+        materialView.layer.cornerRadius = UX.cornerRadius
+        materialView.layer.cornerCurve = .continuous
+        materialView.clipsToBounds = true
+        panel.addSubview(materialView)
+
+        scrollView.backgroundColor = .clear
         scrollView.showsVerticalScrollIndicator = true
-        scrollView.layer.cornerRadius = 12
-        scrollView.clipsToBounds = true
-        panel.addSubview(scrollView)
+        scrollView.alwaysBounceVertical = false
+        materialView.contentView.addSubview(scrollView)
         scrollView.addSubview(zoomControl)
 
-        for item in items {
-            let button = AddressBarMenuActionButton(item: item) { [weak self] in
+        for (index, item) in items.enumerated() {
+            let nextStartsSection = items.indices.contains(index + 1)
+                && items[index + 1].startsSection
+            let row = AddressBarMenuActionRow(
+                item: item,
+                showsSeparator: index < items.count - 1 && !nextStartsSection
+            ) { [weak self] in
                 self?.dismiss(animated: true, completion: item.action)
             }
-            scrollView.addSubview(button)
-            rowViews.append((button, item.startsSection))
+            let sectionDivider: UIView?
+            if item.startsSection {
+                let divider = UIView()
+                divider.backgroundColor = UIColor.separator.withAlphaComponent(0.16)
+                scrollView.addSubview(divider)
+                sectionDivider = divider
+            } else {
+                sectionDivider = nil
+            }
+            scrollView.addSubview(row)
+            rowViews.append((row, sectionDivider))
         }
     }
 
@@ -147,26 +167,24 @@ final class AddressBarPageMenuView: UIControl {
         autoresizingMask = [.flexibleWidth, .flexibleHeight]
         window.addSubview(self)
 
-        let contentHeight = UX.zoomHeight + CGFloat(items.count) * rowHeight
-            + CGFloat(rowViews.filter { $0.1 }.count) * UX.separatorHeight
-        let safeFrame = window.bounds.inset(by: window.safeAreaInsets).insetBy(
-            dx: UX.screenInset,
-            dy: UX.screenInset
+        let contentHeight = AddressBarPageMenuLayoutPolicy.zoomHeight
+            + CGFloat(items.count) * rowHeight
+            + CGFloat(rowViews.filter { $0.sectionDivider != nil }.count)
+                * AddressBarPageMenuLayoutPolicy.sectionSpacing
+        panel.frame = AddressBarPageMenuLayoutPolicy.panelFrame(
+            containerBounds: window.bounds,
+            safeAreaInsets: AddressBarPageMenuSafeAreaInsets(
+                top: window.safeAreaInsets.top,
+                left: window.safeAreaInsets.left,
+                bottom: window.safeAreaInsets.bottom,
+                right: window.safeAreaInsets.right
+            ),
+            anchorRect: anchorRect,
+            contentHeight: contentHeight
         )
-        let panelWidth = min(UX.maximumWidth, safeFrame.width * UX.relativeWidth)
-        let panelHeight = min(contentHeight, safeFrame.height)
-        let proposedX = anchorRect.minX - UX.screenInset
-        let panelX = min(max(safeFrame.minX, proposedX), safeFrame.maxX - panelWidth)
-        let spaceBelow = safeFrame.maxY - anchorRect.maxY - UX.anchorSpacing
-        let panelY: CGFloat
-        if spaceBelow >= panelHeight {
-            panelY = anchorRect.maxY + UX.anchorSpacing
-        } else {
-            panelY = max(safeFrame.minY, anchorRect.minY - UX.anchorSpacing - panelHeight)
-        }
-        panel.frame = CGRect(x: panelX, y: panelY, width: panelWidth, height: panelHeight)
+        materialView.frame = panel.bounds
         scrollView.frame = panel.bounds
-        layoutRows(width: panelWidth, contentHeight: contentHeight)
+        layoutRows(width: panel.bounds.width, contentHeight: contentHeight)
 
         panel.alpha = 0
         panel.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
@@ -219,16 +237,24 @@ final class AddressBarPageMenuView: UIControl {
 
     private func layoutRows(width: CGFloat, contentHeight: CGFloat) {
         var y: CGFloat = 0
-        zoomControl.frame = CGRect(x: 0, y: y, width: width, height: UX.zoomHeight)
-        y += UX.zoomHeight
-        for (view, startsSection) in rowViews {
-            if startsSection {
-                let separator = UIView(frame: CGRect(x: 0, y: y, width: width, height: UX.separatorHeight))
-                separator.backgroundColor = .separator
-                scrollView.insertSubview(separator, belowSubview: view)
-                y += UX.separatorHeight
+        zoomControl.frame = CGRect(
+            x: 0,
+            y: y,
+            width: width,
+            height: AddressBarPageMenuLayoutPolicy.zoomHeight
+        )
+        y += AddressBarPageMenuLayoutPolicy.zoomHeight
+        for row in rowViews {
+            if let sectionDivider = row.sectionDivider {
+                sectionDivider.frame = CGRect(
+                    x: 0,
+                    y: y,
+                    width: width,
+                    height: AddressBarPageMenuLayoutPolicy.sectionSpacing
+                )
+                y += AddressBarPageMenuLayoutPolicy.sectionSpacing
             }
-            view.frame = CGRect(x: 0, y: y, width: width, height: rowHeight)
+            row.view.frame = CGRect(x: 0, y: y, width: width, height: rowHeight)
             y += rowHeight
         }
         scrollView.contentSize = CGSize(width: width, height: max(contentHeight, y))
@@ -248,42 +274,73 @@ private final class AddressBarMenuZoomControl: UIView {
     private let levels = PageZoomLevels.all
     private var level: Int
     private let onLevel: (Int) -> Void
+    private let decreaseButton = UIButton(type: .system)
     private let percentageButton = UIButton(type: .system)
+    private let increaseButton = UIButton(type: .system)
 
     init(level: Int, onLevel: @escaping (Int) -> Void) {
         self.level = level
         self.onLevel = onLevel
         super.init(frame: .zero)
-        backgroundColor = .tertiarySystemBackground
+        backgroundColor = .clear
 
-        let decrease = UIButton(type: .system)
-        decrease.setTitle("A", for: .normal)
-        decrease.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
-        decrease.accessibilityLabel = NSLocalizedString("Zoom Out", comment: "")
-        decrease.addTarget(self, action: #selector(decreaseTapped), for: .touchUpInside)
+        configure(
+            decreaseButton,
+            title: "A",
+            font: .systemFont(ofSize: 15, weight: .medium),
+            accessibilityLabel: NSLocalizedString("Zoom Out", comment: ""),
+            action: #selector(decreaseTapped)
+        )
 
-        percentageButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
-        percentageButton.accessibilityLabel = NSLocalizedString("Reset Page Zoom", comment: "")
-        percentageButton.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
+        configure(
+            percentageButton,
+            title: nil,
+            font: .systemFont(ofSize: 17, weight: .regular),
+            accessibilityLabel: NSLocalizedString("Reset Page Zoom", comment: ""),
+            action: #selector(resetTapped)
+        )
 
-        let increase = UIButton(type: .system)
-        increase.setTitle("A", for: .normal)
-        increase.titleLabel?.font = .systemFont(ofSize: 21, weight: .medium)
-        increase.accessibilityLabel = NSLocalizedString("Zoom In", comment: "")
-        increase.addTarget(self, action: #selector(increaseTapped), for: .touchUpInside)
+        configure(
+            increaseButton,
+            title: "A",
+            font: .systemFont(ofSize: 22, weight: .medium),
+            accessibilityLabel: NSLocalizedString("Zoom In", comment: ""),
+            action: #selector(increaseTapped)
+        )
 
-        let stack = UIStackView(arrangedSubviews: [decrease, percentageButton, increase])
+        let stack = UIStackView(
+            arrangedSubviews: [decreaseButton, percentageButton, increaseButton]
+        )
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.distribution = .fillEqually
         addSubview(stack)
+
+        let firstDivider = makeDivider()
+        let secondDivider = makeDivider()
+        let bottomDivider = makeDivider()
+        addSubview(firstDivider)
+        addSubview(secondDivider)
+        addSubview(bottomDivider)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            firstDivider.centerXAnchor.constraint(equalTo: decreaseButton.trailingAnchor),
+            firstDivider.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            firstDivider.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            firstDivider.widthAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
+            secondDivider.centerXAnchor.constraint(equalTo: percentageButton.trailingAnchor),
+            secondDivider.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            secondDivider.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            secondDivider.widthAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
+            bottomDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bottomDivider.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bottomDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomDivider.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
         ])
-        updatePercentage()
+        updateControls()
     }
 
     required init?(coder: NSCoder) {
@@ -306,39 +363,97 @@ private final class AddressBarMenuZoomControl: UIView {
 
     private func setLevel(_ newLevel: Int) {
         level = newLevel
-        updatePercentage()
+        updateControls()
         UISelectionFeedbackGenerator().selectionChanged()
         onLevel(newLevel)
     }
 
-    private func updatePercentage() {
-        percentageButton.setTitle(PageZoomLevels.displayText(for: level), for: .normal)
+    private func updateControls() {
+        let displayText = PageZoomLevels.displayText(for: level)
+        percentageButton.setTitle(displayText, for: .normal)
+        percentageButton.accessibilityValue = displayText
+        if let index = levels.firstIndex(of: level) {
+            decreaseButton.isEnabled = index > levels.startIndex
+            increaseButton.isEnabled = index < levels.index(before: levels.endIndex)
+        }
+        decreaseButton.alpha = decreaseButton.isEnabled ? 1 : 0.32
+        increaseButton.alpha = increaseButton.isEnabled ? 1 : 0.32
+    }
+
+    private func configure(
+        _ button: UIButton,
+        title: String?,
+        font: UIFont,
+        accessibilityLabel: String,
+        action: Selector
+    ) {
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.label, for: .normal)
+        button.titleLabel?.font = UIFontMetrics(forTextStyle: .body).scaledFont(for: font)
+        button.titleLabel?.adjustsFontForContentSizeCategory = true
+        button.accessibilityLabel = accessibilityLabel
+        button.addTarget(self, action: action, for: .touchUpInside)
+    }
+
+    private func makeDivider() -> UIView {
+        let divider = UIView()
+        divider.translatesAutoresizingMaskIntoConstraints = false
+        divider.backgroundColor = .separator
+        divider.isUserInteractionEnabled = false
+        return divider
     }
 }
 
-private final class AddressBarMenuActionButton: UIButton {
+private final class AddressBarMenuActionRow: UIControl {
     private let actionHandler: () -> Void
+    private let titleView = UILabel()
+    private let iconView = UIImageView()
 
-    init(item: AddressBarMenu.Item, action: @escaping () -> Void) {
+    init(
+        item: AddressBarMenu.Item,
+        showsSeparator: Bool,
+        action: @escaping () -> Void
+    ) {
         actionHandler = action
         super.init(frame: .zero)
-        contentHorizontalAlignment = .left
-        contentEdgeInsets = UIEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
-        titleEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 0)
-        setTitle(item.title, for: .normal)
-        setTitleColor(.label, for: .normal)
-        setImage(item.image, for: .normal)
-        tintColor = .label
-        titleLabel?.font = .preferredFont(forTextStyle: .body)
-        titleLabel?.adjustsFontForContentSizeCategory = true
-        titleLabel?.lineBreakMode = .byTruncatingTail
+        isAccessibilityElement = true
+        accessibilityLabel = item.title
+        accessibilityTraits = .button
+
+        titleView.translatesAutoresizingMaskIntoConstraints = false
+        titleView.text = item.title
+        titleView.textColor = .label
+        titleView.font = .preferredFont(forTextStyle: .body)
+        titleView.adjustsFontForContentSizeCategory = true
+        titleView.lineBreakMode = .byTruncatingTail
+        addSubview(titleView)
+
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.contentMode = .scaleAspectFit
+        iconView.image = item.image?.withRenderingMode(.alwaysTemplate)
+        iconView.tintColor = .label
+        iconView.isHidden = item.image == nil
+        addSubview(iconView)
+
         addTarget(self, action: #selector(tapped), for: .touchUpInside)
         let separator = UIView()
         separator.translatesAutoresizingMaskIntoConstraints = false
         separator.backgroundColor = .separator
+        separator.isHidden = !showsSeparator
+        separator.isUserInteractionEnabled = false
         addSubview(separator)
         NSLayoutConstraint.activate([
-            separator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            titleView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 18),
+            titleView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            titleView.trailingAnchor.constraint(
+                lessThanOrEqualTo: iconView.leadingAnchor,
+                constant: -16
+            ),
+            iconView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -18),
+            iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 24),
+            iconView.heightAnchor.constraint(equalToConstant: 24),
+            separator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 18),
             separator.trailingAnchor.constraint(equalTo: trailingAnchor),
             separator.bottomAnchor.constraint(equalTo: bottomAnchor),
             separator.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
@@ -351,5 +466,13 @@ private final class AddressBarMenuActionButton: UIButton {
 
     @objc private func tapped() {
         actionHandler()
+    }
+
+    override var isHighlighted: Bool {
+        didSet {
+            backgroundColor = isHighlighted
+                ? UIColor.label.withAlphaComponent(0.08)
+                : .clear
+        }
     }
 }

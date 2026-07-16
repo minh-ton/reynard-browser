@@ -12,6 +12,7 @@ EXTERNAL_APP_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-policy-tests
 EXTERNAL_APP_ROUTER_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-router-tests"
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
 TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
+PAGE_MENU_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-page-menu-layout-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
 BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-icon-image-policy-tests"
 BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-custom-icon-store-tests"
@@ -486,6 +487,15 @@ swiftc \
 	-o "$TOOLBAR_LAYOUT_TEST_BINARY"
 "$TOOLBAR_LAYOUT_TEST_BINARY"
 rm -f "$TOOLBAR_LAYOUT_TEST_BINARY"
+
+swiftc \
+	-parse-as-library \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/AddressBar/AddressBarPageMenuLayoutPolicy.swift" \
+	"$SCRIPT_DIR/AddressBarPageMenuLayoutPolicyTests.swift" \
+	-o "$PAGE_MENU_LAYOUT_TEST_BINARY"
+"$PAGE_MENU_LAYOUT_TEST_BINARY"
+rm -f "$PAGE_MENU_LAYOUT_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
