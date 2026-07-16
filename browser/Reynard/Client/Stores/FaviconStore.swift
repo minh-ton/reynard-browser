@@ -72,15 +72,12 @@ final class FaviconStore {
     
     // MARK: - Lifecycle
     
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        directories: ReynardDirectories = .shared
+    ) {
         self.fileManager = fileManager
-        
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
-        }
-        
-        let directoryURL = applicationSupportDirectoryURL
-            .appendingPathComponent("AppData", isDirectory: true)
+        let directoryURL = directories.appData
             .appendingPathComponent("Favicons", isDirectory: true)
         
         self.storage = StorageURLs(

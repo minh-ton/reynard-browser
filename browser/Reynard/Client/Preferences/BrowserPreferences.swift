@@ -15,6 +15,7 @@ final class BrowserPreferences {
     static let openLinksInAppsBridgeKey = "Reynard.Browsing.openLinksInApps"
     
     let profile: String
+    private(set) var registeredDefaults: [String: Any] = [:]
     
     init(profile: String = "default") {
         self.profile = profile
@@ -42,7 +43,7 @@ final class BrowserPreferences {
             UserDefaults.standard.set(Date().addingTimeInterval(delay).timeIntervalSince1970, forKey: donationRecommendationShowTimeKey)
         }
         
-        UserDefaults.standard.register(defaults: [
+        registeredDefaults = [
             // Search
             key("SearchSettings", "searchEngine"): SearchEngine.google.rawValue,
             key("SearchSettings", "customSearchTemplate"): "",
@@ -124,7 +125,8 @@ final class BrowserPreferences {
             key("ClearBrowsingData", "clearsDownloadedFiles"): false,
             key("ClearBrowsingData", "clearsSitePermissions"): true,
             key("ClearBrowsingData", "clearsOpenedTabs"): true,
-        ])
+        ]
+        UserDefaults.standard.register(defaults: registeredDefaults)
         UserDefaults.standard.set(
             UserDefaults.standard.bool(
                 forKey: key("BrowsingSettings", "openLinksInApps")
@@ -787,8 +789,7 @@ final class BrowserPreferences {
     // MARK: - JIT
     struct JITSettings {
         static var hasPairingFile: Bool {
-            FileManager.default.fileExists(atPath: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("pairingFile.plist", isDirectory: false).path)
+            FileManager.default.fileExists(atPath: ReynardDirectories.shared.pairingFile.path)
         }
         
         static var isJITEnabled: Bool {

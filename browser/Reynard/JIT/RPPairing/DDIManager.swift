@@ -11,7 +11,6 @@ final class DDIManager: NSObject {
     enum DDIError: LocalizedError {
         case alreadyInProgress
         case cancelled
-        case appSupportDirUnavail
         case invalidRemoteURL
         
         var errorDescription: String? {
@@ -20,8 +19,6 @@ final class DDIManager: NSObject {
                 return NSLocalizedString("A Developer Disk Image download is already in progress.", comment: "")
             case .cancelled:
                 return NSLocalizedString("Developer Disk Image download was cancelled.", comment: "")
-            case .appSupportDirUnavail:
-                return NSLocalizedString("Unable to access the app Application Support directory.", comment: "")
             case .invalidRemoteURL:
                 return NSLocalizedString("Developer Disk Image source URL is invalid.", comment: "")
             }
@@ -295,11 +292,7 @@ final class DDIManager: NSObject {
     }
     
     private func ddiRootDirectoryURL() throws -> URL {
-        guard let applicationSupportDirectory = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            throw DDIError.appSupportDirUnavail
-        }
-        
-        return applicationSupportDirectory.appendingPathComponent("DDI", isDirectory: true)
+        ReynardDirectories.shared.ddi
     }
 }
 

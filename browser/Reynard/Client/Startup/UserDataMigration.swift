@@ -30,19 +30,13 @@ final class UserDataMigration {
         applicationSupportDirectoryURL.appendingPathComponent("DDI", isDirectory: true)
     }
     
-    private init(fileManager: FileManager = .default) {
+    private init(
+        fileManager: FileManager = .default,
+        directories: ReynardDirectories = .shared
+    ) {
         self.fileManager = fileManager
-        
-        guard let documentsDirectoryURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            fatalError("Documents directory is unavailable")
-        }
-        
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
-        }
-        
-        self.documentsDirectoryURL = documentsDirectoryURL
-        self.applicationSupportDirectoryURL = applicationSupportDirectoryURL
+        self.documentsDirectoryURL = directories.documents
+        self.applicationSupportDirectoryURL = directories.applicationSupport
     }
     
     func run() {

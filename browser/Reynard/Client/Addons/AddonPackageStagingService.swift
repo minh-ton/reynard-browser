@@ -36,10 +36,11 @@ final class AddonPackageStagingService: @unchecked Sendable {
     init(
         makeFileManager: @escaping @Sendable () -> FileManager = { .default },
         directoryURL: URL? = nil,
+        directories: ReynardDirectories = .shared,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.makeFileManager = makeFileManager
-        self.directoryURL = directoryURL ?? FileManager.default.temporaryDirectory
+        self.directoryURL = directoryURL ?? directories.temporary
             .appendingPathComponent("Addons", isDirectory: true)
         self.now = now
     }

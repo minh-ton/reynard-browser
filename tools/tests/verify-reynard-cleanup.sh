@@ -16,6 +16,16 @@ IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
 ADDON_STAGING_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staging-tests"
 ADDON_STAGED_FILE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-addon-staged-file-tests"
 DEFAULT_BROWSER_SETTINGS_TEST_BINARY="${TMPDIR:-/tmp}/reynard-default-browser-settings-policy-tests"
+DIRECTORIES_TEST_BINARY="${TMPDIR:-/tmp}/reynard-directories-tests"
+BACKUP_MANIFEST_TEST_BINARY="${TMPDIR:-/tmp}/reynard-backup-manifest-tests"
+BACKUP_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-backup-policy-tests"
+BACKUP_VALIDATOR_TEST_BINARY="${TMPDIR:-/tmp}/reynard-backup-validator-tests"
+MIGRATION_TRANSACTION_TEST_BINARY="${TMPDIR:-/tmp}/reynard-migration-transaction-tests"
+MIGRATION_RECOVERY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-migration-recovery-tests"
+STARTUP_MODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-startup-mode-tests"
+DATA_TRANSFER_SETTINGS_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-data-transfer-settings-policy-tests"
+PENDING_IMPORT_PREFLIGHT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-pending-import-preflight-tests"
+PREFERENCES_SNAPSHOT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-preferences-snapshot-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
@@ -30,7 +40,6 @@ node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs"
-node --check "$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/test_LoadURIDelegateChild.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
@@ -64,6 +73,14 @@ if ! rg -q 'loadingPrincipal: principal' \
 	exit 1
 fi
 node "$SCRIPT_DIR/verify-localizations.mjs"
+
+INFO_PLIST="$ROOT_DIR/browser/Reynard/Resources/Info.plist"
+if [ "$(/usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeIdentifier' "$INFO_PLIST" 2>/dev/null || true)" != "com.minh-ton.reynard.backup" ] ||
+	[ "$(/usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0' "$INFO_PLIST" 2>/dev/null || true)" != "reynardbackup" ] ||
+	[ "$(/usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeConformsTo:0' "$INFO_PLIST" 2>/dev/null || true)" != "com.apple.package" ]; then
+	echo "The Reynard backup document type is missing or incomplete." >&2
+	exit 1
+fi
 
 sh -n \
 	"$ROOT_DIR/tools/development/apply-patches.sh" \
@@ -145,6 +162,25 @@ if git -C "$ROOT_DIR" diff "$REYNARD_DIFF_BASE" -- '*.swift' | rg -q '^\+.*(Logg
 	exit 1
 fi
 
+if rg -q 'read\(upToCount:' \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardFileHasher.swift"; then
+	echo "The backup hasher uses a file API unavailable on the iOS 13 deployment target." >&2
+	exit 1
+fi
+
+if ! rg -q 'ReynardMigrationRecovery\(\)\.recoverPendingTransactions\(\)' \
+		"$ROOT_DIR/browser/Reynard/main.swift" ||
+	! rg -q 'if startupMode\.usesUIKitOnlyStartup' "$ROOT_DIR/browser/Reynard/main.swift" ||
+	! rg -q 'UIApplicationMain\(' "$ROOT_DIR/browser/Reynard/main.swift" ||
+	! rg -q 'guard !ReynardStartupMode\.current\.usesUIKitOnlyStartup' \
+		"$ROOT_DIR/browser/Reynard/AppDelegate.swift" ||
+	! rg -q 'case \.recoveryFailure' "$ROOT_DIR/browser/Reynard/SceneDelegate.swift" ||
+	rg -q 'BrowserViewController|GeckoRuntime|JITController|NavigationHistoryStore|AddonPackageStagingService' \
+		"$ROOT_DIR/browser/Reynard/Client/Interface/DataTransfer/DataTransferOperationViewController.swift"; then
+	echo "The data-transfer launch path does not remain isolated from browser startup." >&2
+	exit 1
+fi
+
 if rg -q 'AddressBarZoomDropdown|showsZoomButton|addressBarDidRequestPageZoom|showPageZoomDropdown' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface"; then
 	echo "Obsolete address-bar zoom controls remain." >&2
@@ -217,6 +253,23 @@ if rg -q 'ExternalAppLinkDiagnostics|NavigationEventDiagnostics|ReynardExternalL
 	exit 1
 fi
 
+if rg -q 'REYNARD_DEBUG|I.m not sure if this will work' \
+	"$ROOT_DIR/browser/Reynard"; then
+	echo "Temporary or uncertain development text remains in production files." >&2
+	exit 1
+fi
+
+DIRECTORY_LOOKUP_FILES="$(rg -l \
+	'FileManager\.default\.urls|fileManager\.urls|\.temporaryDirectory|NSTemporaryDirectory\(|URLsForDirectory:' \
+	"$ROOT_DIR/browser/Reynard" \
+	--glob '*.{swift,m,mm}' | sort)"
+EXPECTED_DIRECTORY_LOOKUP_FILE="$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift"
+if [ "$DIRECTORY_LOOKUP_FILES" != "$EXPECTED_DIRECTORY_LOOKUP_FILE" ]; then
+	echo "Reynard-owned data paths bypass ReynardDirectories:" >&2
+	echo "$DIRECTORY_LOOKUP_FILES" >&2
+	exit 1
+fi
+
 if "$ROOT_DIR/tools/release/create-ipa.sh" --invalid >/dev/null 2>&1; then
 	echo "create-ipa.sh accepted an unsupported packaging mode." >&2
 	exit 1
@@ -286,6 +339,116 @@ rm -f "$DEFAULT_BROWSER_SETTINGS_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectoriesBridge.swift" \
+	"$SCRIPT_DIR/ReynardDirectoriesTests.swift" \
+	-o "$DIRECTORIES_TEST_BINARY"
+"$DIRECTORIES_TEST_BINARY"
+rm -f "$DIRECTORIES_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupContentPolicy.swift" \
+	"$SCRIPT_DIR/ReynardBackupContentPolicyTests.swift" \
+	-o "$BACKUP_POLICY_TEST_BINARY"
+"$BACKUP_POLICY_TEST_BINARY"
+rm -f "$BACKUP_POLICY_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupManifest.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupContentPolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardFileHasher.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupExporter.swift" \
+	"$SCRIPT_DIR/ReynardBackupManifestTests.swift" \
+	-o "$BACKUP_MANIFEST_TEST_BINARY"
+"$BACKUP_MANIFEST_TEST_BINARY"
+rm -f "$BACKUP_MANIFEST_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardPreferencesSnapshot.swift" \
+	"$SCRIPT_DIR/ReynardPreferencesSnapshotTests.swift" \
+	-o "$PREFERENCES_SNAPSHOT_TEST_BINARY"
+"$PREFERENCES_SNAPSHOT_TEST_BINARY"
+rm -f "$PREFERENCES_SNAPSHOT_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferError.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupManifest.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupContentPolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardFileHasher.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupValidator.swift" \
+	"$SCRIPT_DIR/ReynardBackupValidatorTests.swift" \
+	-o "$BACKUP_VALIDATOR_TEST_BINARY"
+"$BACKUP_VALIDATOR_TEST_BINARY"
+rm -f "$BACKUP_VALIDATOR_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferError.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupManifest.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupContentPolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardFileHasher.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupExporter.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupValidator.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardPreferencesStore.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardMigrationFileSystem.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardMigrationRecovery.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardMigrationTransaction.swift" \
+	"$SCRIPT_DIR/ReynardMigrationTransactionTests.swift" \
+	-o "$MIGRATION_TRANSACTION_TEST_BINARY"
+"$MIGRATION_TRANSACTION_TEST_BINARY"
+rm -f "$MIGRATION_TRANSACTION_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferError.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardPreferencesStore.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardMigrationFileSystem.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardMigrationRecovery.swift" \
+	"$SCRIPT_DIR/ReynardMigrationRecoveryTests.swift" \
+	-o "$MIGRATION_RECOVERY_TEST_BINARY"
+"$MIGRATION_RECOVERY_TEST_BINARY"
+rm -f "$MIGRATION_RECOVERY_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferOperation.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferLaunchStore.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardStartupMode.swift" \
+	"$SCRIPT_DIR/ReynardStartupModeTests.swift" \
+	-o "$STARTUP_MODE_TEST_BINARY"
+"$STARTUP_MODE_TEST_BINARY"
+rm -f "$STARTUP_MODE_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Interface/Library/Settings/Sections/General/DataTransfer/DataTransferSettingsPolicy.swift" \
+	"$SCRIPT_DIR/DataTransferSettingsPolicyTests.swift" \
+	-o "$DATA_TRANSFER_SETTINGS_POLICY_TEST_BINARY"
+"$DATA_TRANSFER_SETTINGS_POLICY_TEST_BINARY"
+rm -f "$DATA_TRANSFER_SETTINGS_POLICY_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardDataTransferError.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupManifest.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupContentPolicy.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardFileHasher.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardBackupValidator.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/DataTransfer/ReynardPendingImportPreflight.swift" \
+	"$SCRIPT_DIR/ReynardPendingImportPreflightTests.swift" \
+	-o "$PENDING_IMPORT_PREFLIGHT_TEST_BINARY"
+"$PENDING_IMPORT_PREFLIGHT_TEST_BINARY"
+rm -f "$PENDING_IMPORT_PREFLIGHT_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
 	"$ROOT_DIR/browser/Reynard/Client/TabManagement/ExternalAppLinkPolicy.swift" \
 	"$SCRIPT_DIR/ExternalAppLinkPolicyTests.swift" \
 	-o "$EXTERNAL_APP_TEST_BINARY"
@@ -303,6 +466,7 @@ rm -f "$EXTERNAL_APP_ROUTER_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
 	"$ROOT_DIR/browser/Reynard/Client/SessionManagement/Navigation/NavigationState.swift" \
 	"$ROOT_DIR/browser/Reynard/Client/Stores/NavigationHistoryStore.swift" \
 	"$ROOT_DIR/browser/Reynard/Client/SessionManagement/Navigation/NavigationHistory.swift" \
@@ -330,6 +494,7 @@ rm -f "$IMAGE_DECODE_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/Directories/ReynardDirectories.swift" \
 	"$ROOT_DIR/browser/Reynard/Client/Addons/AddonPackageStagingService.swift" \
 	"$SCRIPT_DIR/AddonPackageStagingTests.swift" \
 	-o "$ADDON_STAGING_TEST_BINARY"
@@ -388,16 +553,6 @@ if ! rg -q 'click: \{ capture: true, mozSystemGroup: true \}' \
 	exit 1
 fi
 
-GECKO_LINK_TEST="$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/test_LoadURIDelegateChild.js"
-GECKO_XPCSHELL_MANIFEST="$FIREFOX_DIR/mobile/shared/modules/geckoview/test/xpcshell/xpcshell.toml"
-if ! rg -q 'test_LoadURIDelegateChild\.js' "$GECKO_XPCSHELL_MANIFEST" ||
-	! rg -q 'LoadURIDelegateChild\.prototype' "$GECKO_LINK_TEST" ||
-	! rg -q 'event\.defaultPrevented = true' "$GECKO_LINK_TEST" ||
-	! rg -q 'delivery uses the content window' "$GECKO_LINK_TEST"; then
-	echo "The Gecko trusted-link unit test is missing or incomplete." >&2
-	exit 1
-fi
-
 if rg -q 'OnTrustedLinkClick|default\.BrowsingSettings\.openLinksInApps|UIApplication|NSUserDefaults|comgooglemaps|com\.reddit\.frontpage|GoogleMapsURLFromAndroidIntent' \
 	"$ROOT_DIR/patches/firefox/0006-uikit-external-app-links.patch"; then
 	echo "Product-specific external app-link policy remains in Firefox." >&2
@@ -411,13 +566,20 @@ if ! rg -q 'scheduleAutomaticKeyboardFocusForNewTab' \
 	! rg -q 'NewTabKeyboardFocusPolicy\.shouldFulfill' \
 	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
 	! rg -q 'intent\.automaticallyFocusesAddressBar' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
 	! rg -q 'createNewTab\(intent: \.lastTabReplacement\)' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController.swift" ||
-	! rg -q 'contentFocusSettlingDelay' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
-	rg -q 'retriesRemaining|stablePassesRemaining' \
-	"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift"; then
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController.swift" ||
+	! rg -q 'createTabFromOverview\(mode: tabOverview\.mode\.tabMode, intent: intent\)' \
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift" ||
+	[ "$(rg -c 'intent: \.lastTabReplacement' \
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+TabPresentation.swift" || true)" -ne 2 ] ||
+	! rg -q 'didFirstCompositeFor' \
+		"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabManagerImpl.swift" \
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+TabManager.swift" ||
+	! rg -q 'hasFirstComposite' \
+		"$ROOT_DIR/browser/Reynard/Client/TabManagement/TabState.swift" ||
+	rg -q 'contentFocusSettlingDelay|asyncAfter|retriesRemaining|stablePassesRemaining' \
+		"$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+BrowserActions.swift"; then
 	echo "Foreground new-tab keyboard focus is not consistently guarded." >&2
 	exit 1
 fi

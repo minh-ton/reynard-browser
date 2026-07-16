@@ -129,11 +129,7 @@ final class DownloadFileIconProvider {
     }
     
     private func placeholderFileURL(fileName: String, mimeType: String?) -> URL? {
-        guard let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        
-        let placeholderDirectory = cachesDirectory
+        let placeholderDirectory = ReynardDirectories.shared.caches
             .appendingPathComponent("Downloads", isDirectory: true)
             .appendingPathComponent("IconPlaceholders", isDirectory: true)
         

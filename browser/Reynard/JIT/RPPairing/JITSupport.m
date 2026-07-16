@@ -9,6 +9,7 @@
 #import "JITErrors.h"
 #import "JITUtils.h"
 #import "IdeviceFFI.h"
+#import "Reynard-Swift.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -476,13 +477,13 @@ void freeDeviceProvider(DeviceProvider *provider) {
 // of the logic from there with only a few modifications here.
 
 static NSURL *ddiDirectoryURL(NSError **error) {
-    NSURL *applicationSupportDirectory = [[NSFileManager defaultManager] URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
-    if (!applicationSupportDirectory) {
+    NSString *path = ReynardDirectoriesBridge.ddiPath;
+    if (path.length == 0) {
         if (error) *error = MakeError(DDIMountPathResolveFailed);
         return nil;
     }
-    
-    return [applicationSupportDirectory URLByAppendingPathComponent:@"DDI" isDirectory:YES];
+
+    return [NSURL fileURLWithPath:path isDirectory:YES];
 }
 
 static NSData *ddiFileData(NSURL *ddiDirectory, NSString *fileName, NSError **error) {

@@ -13,17 +13,29 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
-        let browserViewController = BrowserViewController()
-        browserViewController.sessionManager.setApplicationForeground(scene.activationState != .background)
-        
         let window = UIWindow(windowScene: windowScene)
-        window.overrideUserInterfaceStyle = AppAppearanceController.userInterfaceStyle(for: Prefs.AppearanceSettings.appAppearance)
         window.backgroundColor = .systemBackground
-        window.rootViewController = browserViewController
+        switch ReynardStartupMode.current {
+        case .normal:
+            let browserViewController = BrowserViewController()
+            browserViewController.sessionManager.setApplicationForeground(
+                scene.activationState != .background
+            )
+            window.overrideUserInterfaceStyle = AppAppearanceController.userInterfaceStyle(
+                for: Prefs.AppearanceSettings.appAppearance
+            )
+            window.rootViewController = browserViewController
+        case let .dataTransfer(operation):
+            window.rootViewController = DataTransferOperationViewController(operation: operation)
+        case .recoveryFailure:
+            window.rootViewController = DataTransferRecoveryFailureViewController()
+        }
         window.makeKeyAndVisible()
         self.window = window
         
-        handleIncomingURLContexts(connectionOptions.urlContexts)
+        if case .normal = ReynardStartupMode.current {
+            handleIncomingURLContexts(connectionOptions.urlContexts)
+        }
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -42,8 +54,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
     
     func sceneDidEnterBackground(_ scene: UIScene) {
-        (window?.rootViewController as? BrowserViewController)?
-            .sessionManager.setApplicationForeground(false)
+        guard let browserViewController = window?.rootViewController as? BrowserViewController else {
+            return
+        }
+        browserViewController.sessionManager.setApplicationForeground(false)
         flushNavigationHistoryInBackground()
     }
 

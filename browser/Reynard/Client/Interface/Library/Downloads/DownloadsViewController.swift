@@ -276,11 +276,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     }
     
     private func openDownloadsFolder() {
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return
-        }
-        
-        let downloadsURL = documentsURL.appendingPathComponent("Downloads", isDirectory: true)
+        let downloadsURL = ReynardDirectories.shared.downloads
         let encodedPath = downloadsURL.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
         guard let filesURL = URL(string: "shareddocuments://\(encodedPath)") else {
             return

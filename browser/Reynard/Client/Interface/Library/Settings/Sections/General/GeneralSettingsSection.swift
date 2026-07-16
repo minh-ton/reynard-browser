@@ -18,6 +18,7 @@ struct GeneralSettingsSection {
         case appearance
         case toolbar
         case compatibility
+        case dataTransfer
     }
     
     var rowCount: Int {
@@ -48,6 +49,8 @@ struct GeneralSettingsSection {
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Toolbar", comment: ""))
         case .compatibility:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Compatibility", comment: ""))
+        case .dataTransfer:
+            return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Import/Backup Data", comment: ""))
         }
     }
     
@@ -76,6 +79,8 @@ struct GeneralSettingsSection {
             destination = BottomToolbarPreferencesViewController()
         case .compatibility:
             destination = CompatibilityPreferencesViewController()
+        case .dataTransfer:
+            destination = DataTransferPreferencesViewController()
         }
         viewController.navigationController?.pushViewController(destination, animated: true)
     }

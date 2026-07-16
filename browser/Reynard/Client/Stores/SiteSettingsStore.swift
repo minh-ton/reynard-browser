@@ -52,22 +52,21 @@ final class SiteSettingsStore {
     
     // MARK: - Lifecycle
     
-    init(fileManager: FileManager = .default, storageDirectoryURL: URL? = nil) {
+    init(
+        fileManager: FileManager = .default,
+        storageDirectoryURL: URL? = nil,
+        directories: ReynardDirectories = .shared
+    ) {
         self.fileManager = fileManager
-        let applicationSupportDirectoryURL = storageDirectoryURL ?? fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first
-        let isInMemory = applicationSupportDirectoryURL == nil
-        let directoryURL = applicationSupportDirectoryURL?
+        let applicationSupportDirectoryURL = storageDirectoryURL ?? directories.applicationSupport
+        let directoryURL = applicationSupportDirectoryURL
             .appendingPathComponent("AppData", isDirectory: true)
             .appendingPathComponent("SiteSettings", isDirectory: true)
-            ?? fileManager.temporaryDirectory
         
         self.storage = StorageURLs(
             directoryURL: directoryURL,
             databaseURL: directoryURL.appendingPathComponent(Constants.databaseName, isDirectory: false),
-            isInMemory: isInMemory
+            isInMemory: false
         )
         
         stateQueue.sync {

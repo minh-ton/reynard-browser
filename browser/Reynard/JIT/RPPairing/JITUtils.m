@@ -6,15 +6,14 @@
 //
 
 #import "JITUtils.h"
+#import "Reynard-Swift.h"
 
 void logger(NSString *message) {
-    NSLog(@"[REYNARD_DEBUG] %@", message);
+    NSLog(@"[Reynard] %@", message);
 }
 
 NSString *pairingFilePath(void) {
-    NSURL *documentsDirectory = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
-    if (!documentsDirectory) return @"";
-    return [[documentsDirectory URLByAppendingPathComponent:@"pairingFile.plist"] path] ?: @"";
+    return ReynardDirectoriesBridge.pairingFilePath ?: @"";
 }
 
 uint64_t parseLittleEndianHex64(NSString *hexString) {

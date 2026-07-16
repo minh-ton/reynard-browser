@@ -19,8 +19,7 @@ final class BrowserUpdates: NSObject {
     private override init() {
         super.init()
         
-        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let sideloadIPA = docs.appendingPathComponent("Reynard.ipa")
+        let sideloadIPA = ReynardDirectories.shared.documents.appendingPathComponent("Reynard.ipa")
         try? FileManager.default.removeItem(at: sideloadIPA)
         
         fetchUpdates()

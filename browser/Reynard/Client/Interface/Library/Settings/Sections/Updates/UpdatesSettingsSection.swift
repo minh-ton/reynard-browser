@@ -156,11 +156,7 @@ final class UpdatesSettingsSection {
         message: String,
         viewController: UIViewController
     ) {
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return
-        }
-        
-        let destinationURL = documentsURL.appendingPathComponent(fileName)
+        let destinationURL = ReynardDirectories.shared.documents.appendingPathComponent(fileName)
         if isDownloadedUpdateCurrent(at: destinationURL, expectedSize: expectedSize) {
             shareDownloadedUpdate(at: destinationURL, from: viewController)
             return

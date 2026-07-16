@@ -20,13 +20,18 @@ protocol NavigationHistoryFileSystem {
 
 struct FoundationNavigationHistoryFileSystem: NavigationHistoryFileSystem {
     private let fileManager: FileManager
+    private let directories: ReynardDirectories
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        directories: ReynardDirectories = .shared
+    ) {
         self.fileManager = fileManager
+        self.directories = directories
     }
 
     func applicationSupportDirectoryURL() -> URL? {
-        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        directories.applicationSupport
     }
 
     func createDirectory(at url: URL) throws {

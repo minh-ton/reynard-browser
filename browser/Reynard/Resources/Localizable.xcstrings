@@ -1124,6 +1124,26 @@
         }
       }
     },
+    "Automatic recovery couldn’t finish. Your recovery files were kept." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic recovery couldn’t finish. Your recovery files were kept."
+          }
+        }
+      }
+    },
+    "Backup export cancelled. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup export cancelled. Close and reopen Reynard."
+          }
+        }
+      }
+    },
     "Blocked" : {
       "localizations" : {
         "en" : {
@@ -1272,6 +1292,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose Folder"
+          }
+        }
+      }
+    },
+    "Choose where to save your Reynard backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose where to save your Reynard backup."
           }
         }
       }
@@ -2807,6 +2837,16 @@
         }
       }
     },
+    "Preparing your Reynard data…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing your Reynard data…"
+          }
+        }
+      }
+    },
     "Previous 7 Days" : {
       "localizations" : {
         "en" : {
@@ -3065,6 +3105,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reynard Browser"
+          }
+        }
+      }
+    },
+    "Reynard backup saved. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard backup saved. Close and reopen Reynard."
+          }
+        }
+      }
+    },
+    "Reynard couldn’t finish the data transfer. Close and reopen Reynard to try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard couldn’t finish the data transfer. Close and reopen Reynard to try again."
+          }
+        }
+      }
+    },
+    "Reynard couldn’t prepare this backup for restore." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard couldn’t prepare this backup for restore."
+          }
+        }
+      }
+    },
+    "Reynard data restored. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard data restored. Close and reopen Reynard."
           }
         }
       }
@@ -3532,6 +3612,26 @@
         }
       }
     },
+    "The restore failed. Your previous Reynard data was restored." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The restore failed. Your previous Reynard data was restored."
+          }
+        }
+      }
+    },
+    "There isn’t enough free space to restore this backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There isn’t enough free space to restore this backup."
+          }
+        }
+      }
+    },
     "This add-on" : {
       "localizations" : {
         "en" : {
@@ -3578,6 +3678,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This build does not support in-app updates. Visit the project's Releases page to download the latest version of the app."
+          }
+        }
+      }
+    },
+    "This backup version isn’t supported." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup version isn’t supported."
+          }
+        }
+      }
+    },
+    "This Reynard backup is damaged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Reynard backup is damaged."
+          }
+        }
+      }
+    },
+    "This Reynard backup is invalid or unsafe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Reynard backup is invalid or unsafe."
           }
         }
       }
@@ -4306,6 +4436,206 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "When long-pressing links"
+          }
+        }
+      }
+    },
+    "A Reynard data action is already pending." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Reynard data action is already pending."
+          }
+        }
+      }
+    },
+    "A Reynard data action is waiting. Close and reopen Reynard to continue." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Reynard data action is waiting. Close and reopen Reynard to continue."
+          }
+        }
+      }
+    },
+    "Choose a Reynard backup to restore on the next launch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a Reynard backup to restore on the next launch."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to finish the waiting data action first." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to finish the waiting data action first."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to prepare the backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to prepare the backup."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to restore the selected backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to restore the selected backup."
+          }
+        }
+      }
+    },
+    "Copying and checking the selected backup…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copying and checking the selected backup…"
+          }
+        }
+      }
+    },
+    "Couldn’t Prepare Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Prepare Import"
+          }
+        }
+      }
+    },
+    "Data Action Already Pending" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Action Already Pending"
+          }
+        }
+      }
+    },
+    "Export Reynard Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Reynard Data"
+          }
+        }
+      }
+    },
+    "Export" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export"
+          }
+        }
+      }
+    },
+    "Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import"
+          }
+        }
+      }
+    },
+    "Import/Backup Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import/Backup Data"
+          }
+        }
+      }
+    },
+    "Prepare Backup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare Backup"
+          }
+        }
+      }
+    },
+    "Prepares a backup on the next launch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepares a backup on the next launch."
+          }
+        }
+      }
+    },
+    "Preparing Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing Import"
+          }
+        }
+      }
+    },
+    "Ready for Next Launch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready for Next Launch"
+          }
+        }
+      }
+    },
+    "Reynard closes the browser engine during export and restore so your backup stays consistent." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard closes the browser engine during export and restore so your backup stays consistent."
+          }
+        }
+      }
+    },
+    "Reynard must reopen without the browser engine to make a consistent backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard must reopen without the browser engine to make a consistent backup."
+          }
+        }
+      }
+    },
+    "The selected file is not a valid Reynard backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The selected file is not a valid Reynard backup."
           }
         }
       }
