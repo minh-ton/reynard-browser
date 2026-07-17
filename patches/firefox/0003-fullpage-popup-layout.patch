@@ -1,0 +1,63 @@
+diff --git a/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs b/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs
+new file mode 100644
+index 000000000000..a83acd33e332
+--- /dev/null
++++ b/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs
+@@ -0,0 +1,25 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++import { GeckoViewActorChild } from "resource://gre/modules/GeckoViewActorChild.sys.mjs";
++import { WebExtensionCompat } from "resource://gre/modules/WebExtensionCompat.sys.mjs";
++
++export class FullPageCapturePopupChild extends GeckoViewActorChild {
++  handleEvent(event) {
++    const document = event.target;
++    const window = document?.defaultView;
++    if (
++      event.type !== "DOMContentLoaded" ||
++      !window ||
++      window.top !== window ||
++      !document.nodePrincipal?.addonId
++    ) {
++      return;
++    }
++    WebExtensionCompat.applyPopupLayout(
++      document.nodePrincipal.addonId,
++      window
++    );
++  }
++}
+diff --git a/mobile/shared/actors/moz.build b/mobile/shared/actors/moz.build
+index f9572acc3d1a..64a0e9d40aca 100644
+--- a/mobile/shared/actors/moz.build
++++ b/mobile/shared/actors/moz.build
+@@ -8,6 +8,7 @@ with Files("**"):
+ FINAL_TARGET_FILES.actors += [
+     "ContentDelegateChild.sys.mjs",
+     "ContentDelegateParent.sys.mjs",
++    "FullPageCapturePopupChild.sys.mjs",
+     "GeckoViewAutoFillChild.sys.mjs",
+     "GeckoViewAutoFillParent.sys.mjs",
+     "GeckoViewContentChild.sys.mjs",
+diff --git a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+index 2c65a0702095..2a368ab28cb0 100644
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -48,6 +48,15 @@ const JSPROCESSACTORS = {
+ };
+
+ const JSWINDOWACTORS = {
++  FullPageCapturePopup: {
++    child: {
++      esModuleURI: "resource:///actors/FullPageCapturePopupChild.sys.mjs",
++      events: {
++        DOMContentLoaded: { capture: true },
++      },
++    },
++    messageManagerGroups: ["browsers"],
++  },
+   LoadURIDelegate: {
+     parent: {
+       esModuleURI: "resource:///actors/LoadURIDelegateParent.sys.mjs",

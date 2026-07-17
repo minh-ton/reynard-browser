@@ -9,6 +9,7 @@ import UIKit
 
 final class SettingsViewController: SettingsTableViewController {
     enum Section: Int, CaseIterable {
+        case defaultBrowser
         case updates
         case jit
         case general
@@ -17,6 +18,8 @@ final class SettingsViewController: SettingsTableViewController {
         
         var text: SettingsSectionText {
             switch self {
+            case .defaultBrowser:
+                return SettingsSectionText()
             case .updates:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Update Available", comment: ""))
             case .jit:
@@ -31,6 +34,7 @@ final class SettingsViewController: SettingsTableViewController {
         }
     }
     
+    private let defaultBrowserSection = DefaultBrowserSettingsSection()
     private let updatesSection = UpdatesSettingsSection()
     private let jitSection = JITSettingsSection()
     private let generalSection = GeneralSettingsSection()
@@ -92,6 +96,8 @@ final class SettingsViewController: SettingsTableViewController {
         }
         
         switch displayedSections[section] {
+        case .defaultBrowser:
+            return defaultBrowserSection.rowCount
         case .updates:
             return updatesSection.rowCount(allowUpdate: allowUpdate)
         case .jit:
@@ -111,6 +117,8 @@ final class SettingsViewController: SettingsTableViewController {
         }
         
         switch displayedSections[indexPath.section] {
+        case .defaultBrowser:
+            return defaultBrowserSection.cell(at: indexPath.row)
         case .updates:
             return updatesSection.cell(
                 at: indexPath.row,
@@ -137,6 +145,8 @@ final class SettingsViewController: SettingsTableViewController {
         }
         
         switch displayedSections[indexPath.section] {
+        case .defaultBrowser:
+            defaultBrowserSection.selectRow(at: indexPath.row)
         case .updates:
             updatesSection.selectRow(at: indexPath.row, allowUpdate: allowUpdate, from: self)
         case .jit:

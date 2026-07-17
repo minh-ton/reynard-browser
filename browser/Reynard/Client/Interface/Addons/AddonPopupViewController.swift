@@ -11,16 +11,14 @@ import UIKit
 final class AddonPopupViewController: UIViewController, ContentDelegate, NavigationDelegate {
     private enum UX {
         static let maxSheetWidth: CGFloat = 430
-        static let mediumHeightMultiplier: CGFloat = 0.7
-        static let sheetCornerRadius: CGFloat = 16
-        static let closeButtonTopInset: CGFloat = 8
+        static let portraitSheetHeight: CGFloat = 430
+        static let sheetCornerRadius: CGFloat = 20
+        static let closeButtonTopInset: CGFloat = 12
         static let closeButtonTrailingInset: CGFloat = 12
-        static let closeButtonSize: CGFloat = 30
-        static let geckoViewTopSpacing: CGFloat = 8
-        static let shadowOpacity: Float = 0.18
-        static let shadowRadius: CGFloat = 12
-        static let shadowOffset = CGSize(width: 0, height: -4)
-        static let borderWidth: CGFloat = 0.5
+        static let closeButtonSize: CGFloat = 36
+        static let shadowOpacity: Float = 0.22
+        static let shadowRadius: CGFloat = 18
+        static let shadowOffset = CGSize(width: 0, height: -6)
     }
     
     private let url: String
@@ -68,6 +66,12 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(beginRegionSelection),
+            name: Notification.Name("GeckoView.WebExtension.BeginRegionSelection"),
+            object: nil
+        )
         configureView()
         loadPopup()
     }
@@ -81,7 +85,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         closeSessionIfNeeded()
         didDismiss()
     }
-    
+
     // MARK: - Setup
     
     private func configureSession() {
@@ -95,19 +99,22 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     private func configureView() {
         view.backgroundColor = .clear
         
+        let backdropControl = makeBackdropControl()
         let containerView = makeContainerView()
         let sheetView = makeSheetView()
         let closeButton = makeCloseButton()
         
+        view.addSubview(backdropControl)
         view.addSubview(containerView)
         containerView.addSubview(sheetView)
-        sheetView.addSubview(closeButton)
         sheetView.addSubview(geckoView)
+        sheetView.addSubview(closeButton)
         
+        constrainBackdropControl(backdropControl)
         constrainContainerView(containerView)
         constrainSheetView(sheetView, in: containerView)
         constrainCloseButton(closeButton, in: sheetView)
-        constrainGeckoView(in: sheetView, below: closeButton)
+        constrainGeckoView(in: sheetView)
     }
     
     private func loadPopup() {
@@ -117,6 +124,14 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     }
     
     // MARK: - View Construction
+
+    private func makeBackdropControl() -> UIControl {
+        let control = UIControl()
+        control.translatesAutoresizingMaskIntoConstraints = false
+        control.backgroundColor = UIColor.black.withAlphaComponent(0.28)
+        control.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        return control
+    }
     
     private func makeContainerView() -> UIView {
         let view = UIView()
@@ -128,8 +143,6 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         view.layer.shadowOpacity = UX.shadowOpacity
         view.layer.shadowRadius = UX.shadowRadius
         view.layer.shadowOffset = UX.shadowOffset
-        view.layer.borderWidth = UX.borderWidth
-        view.layer.borderColor = UIColor.separator.cgColor
         return view
     }
     
@@ -145,14 +158,27 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     
     private func makeCloseButton() -> UIButton {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "reynard.xmark"), for: .normal)
+        let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+        button.setImage(UIImage(systemName: "xmark", withConfiguration: symbolConfiguration), for: .normal)
         button.tintColor = .label
+        button.backgroundColor = .secondarySystemBackground
+        button.layer.cornerRadius = UX.closeButtonSize / 2
+        button.accessibilityLabel = NSLocalizedString("Close", comment: "")
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         return button
     }
     
     // MARK: - Constraints
+
+    private func constrainBackdropControl(_ backdropControl: UIControl) {
+        NSLayoutConstraint.activate([
+            backdropControl.topAnchor.constraint(equalTo: view.topAnchor),
+            backdropControl.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backdropControl.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backdropControl.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
     
     private func constrainContainerView(_ containerView: UIView) {
         NSLayoutConstraint.activate([
@@ -163,16 +189,16 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
             containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        let mediumHeight = containerView.heightAnchor.constraint(
-            equalTo: view.heightAnchor,
-            multiplier: UX.mediumHeightMultiplier
-        )
+        let portraitHeight = containerView.heightAnchor.constraint(equalToConstant: UX.portraitSheetHeight)
+        portraitHeight.priority = .defaultHigh
+        let maximumHeight = containerView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor)
         let largeHeight = containerView.heightAnchor.constraint(equalTo: view.heightAnchor)
         
         if traitCollection.horizontalSizeClass == .compact && traitCollection.verticalSizeClass == .compact {
             largeHeight.isActive = true
         } else {
-            mediumHeight.isActive = true
+            portraitHeight.isActive = true
+            maximumHeight.isActive = true
         }
     }
     
@@ -194,21 +220,26 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         ])
     }
     
-    private func constrainGeckoView(in sheetView: UIView, below closeButton: UIButton) {
+    private func constrainGeckoView(in sheetView: UIView) {
         geckoView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            geckoView.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: UX.geckoViewTopSpacing),
+            geckoView.topAnchor.constraint(equalTo: sheetView.topAnchor),
             geckoView.leadingAnchor.constraint(equalTo: sheetView.leadingAnchor),
             geckoView.trailingAnchor.constraint(equalTo: sheetView.trailingAnchor),
             geckoView.bottomAnchor.constraint(equalTo: sheetView.bottomAnchor)
         ])
     }
-    
+
     // MARK: - Actions & Delegates
     
     @objc private func closeTapped() {
         onCloseRequest(session: session)
+    }
+
+    @objc private func beginRegionSelection() {
+        closeSessionIfNeeded()
+        dismiss(animated: true)
     }
     
     func onCloseRequest(session: GeckoSession) {
@@ -232,7 +263,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? {
         return createSession(uri, windowId)
     }
-    
+
     private func closeSessionIfNeeded() {
         guard !hasClosedSession else {
             return

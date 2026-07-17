@@ -10,10 +10,13 @@ import UIKit
 protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar)
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
-    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
-    func addressBarDidRequestPageZoom(_ addressBar: AddressBar)
+    func addressBarDidRequestAddonList(_ addressBar: AddressBar)
+    func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int?
+    func addressBarMaximumPageZoomLevel(_ addressBar: AddressBar) -> Int
+    func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
+    func addressBarDidRequestSettings(_ addressBar: AddressBar)
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
     func addressBarShareableURL(_ addressBar: AddressBar) -> URL?
 }
@@ -77,6 +80,7 @@ final class AddressBar: UIView {
     private struct RenderModel {
         let content: ContentState
         let leadingButton: LeadingButtonState
+        let showsAddonButton: Bool
         let trailingButton: TrailingButtonState
     }
     
@@ -98,16 +102,20 @@ final class AddressBar: UIView {
     private var canShowBarMenu = false
     
     private var preserveAutocompleteAfterResign = false
-    private var addonsMenu: UIMenu?
+    private var pageMenuItems: [AddressBarMenu.Item] = []
+    private weak var pageMenuOverlay: AddressBarPageMenuView?
+    private var pageMenuIndicatesUpdate = false
     
     private var lastEditingText = ""
     private var lastEditWasDelete = false
     
     private var textLeadingToButtonConstraint: NSLayoutConstraint!
+    private var textLeadingToAddonButtonConstraint: NSLayoutConstraint!
     private var textLeadingToBackgroundConstraint: NSLayoutConstraint!
     private var textTrailingToButtonConstraint: NSLayoutConstraint!
     private var textTrailingToBackgroundConstraint: NSLayoutConstraint!
     private var labelLeadingToButtonConstraint: NSLayoutConstraint!
+    private var labelLeadingToAddonButtonConstraint: NSLayoutConstraint!
     private var labelLeadingToBackgroundConstraint: NSLayoutConstraint!
     private var labelTrailingToButtonConstraint: NSLayoutConstraint!
     private var labelTrailingToBackgroundConstraint: NSLayoutConstraint!
@@ -143,6 +151,29 @@ final class AddressBar: UIView {
         button.isUserInteractionEnabled = false
         return button
     }()
+
+    private let pageMenuUpdateBadge: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .systemRed
+        view.layer.cornerRadius = 4
+        view.isHidden = true
+        view.isAccessibilityElement = false
+        return view
+    }()
+
+    private let addonButton: AddressBarButton = {
+        let button = AddressBarButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.tintColor = .label
+        button.setImage(UIImage(named: "reynard.puzzlepiece.extension"), for: .normal)
+        button.alpha = 1
+        button.adjustsImageWhenHighlighted = false
+        button.accessibilityLabel = NSLocalizedString("Add-ons", comment: "")
+        button.accessibilityHint = NSLocalizedString("Shows installed add-ons", comment: "")
+        button.isHidden = true
+        return button
+    }()
     
     private let trailingButton: AddressBarButton = {
         let button = AddressBarButton(type: .system)
@@ -152,7 +183,7 @@ final class AddressBar: UIView {
         button.isUserInteractionEnabled = false
         return button
     }()
-    
+
     private let textField: AddressBarTextField = {
         let field = AddressBarTextField()
         field.translatesAutoresizingMaskIntoConstraints = false
@@ -290,17 +321,12 @@ final class AddressBar: UIView {
     }
     
     func updateMenu(url: String?, usesDesktopWebsite: Bool?) {
-        addonsMenu = AddressBarMenu.makeMenu(
+        pageMenuItems = AddressBarMenu.makeItems(
             selectedURL: url,
             usesDesktopWebsite: usesDesktopWebsite,
-            addonItems: delegate?.addressBarAddonItems(self) ?? [],
-            onAddonSelected: { [weak self] item in
+            onShowAddons: { [weak self] in
                 guard let self else { return }
-                self.delegate?.addressBar(self, didSelectAddon: item)
-            },
-            onPageZoom: { [weak self] in
-                guard let self else { return }
-                self.delegate?.addressBarDidRequestPageZoom(self)
+                self.delegate?.addressBarDidRequestAddonList(self)
             },
             onChangeWebsiteMode: { [weak self] in
                 guard let self else { return }
@@ -310,11 +336,20 @@ final class AddressBar: UIView {
                 guard let self else { return }
                 self.delegate?.addressBarDidRequestWebsiteSettings(self)
             },
+            onSettings: { [weak self] in
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestSettings(self)
+            },
             onBookmark: { [weak self] favorites in
                 guard let self else { return }
                 self.delegate?.addressBar(self, didRequestBookmarkInFavorites: favorites)
             }
         )
+        applyState()
+    }
+
+    func setPageMenuIndicatesUpdate(_ hasUpdate: Bool) {
+        pageMenuIndicatesUpdate = hasUpdate
         applyState()
     }
     
@@ -432,7 +467,25 @@ final class AddressBar: UIView {
     }
     
     func performAfterMenuDismissal(_ action: @escaping () -> Void) {
-        leadingButton.performAfterMenuDismissal(action)
+        if let pageMenuOverlay {
+            pageMenuOverlay.dismiss(animated: true, completion: action)
+        } else {
+            action()
+        }
+    }
+
+    func invalidateMenuPresentation() {
+        pageMenuOverlay?.dismiss(animated: false)
+        applyState()
+    }
+
+    func currentPageZoomLevel() -> Int? {
+        delegate?.addressBarCurrentPageZoomLevel(self)
+    }
+
+    func maximumPageZoomLevel() -> Int {
+        return delegate?.addressBarMaximumPageZoomLevel(self)
+            ?? PageZoomLevels.all.last!
     }
     
     // MARK: - Tab Transitions
@@ -473,6 +526,8 @@ final class AddressBar: UIView {
         addSubview(dismissButton)
         addressBarBackground.addSubview(addressBarContent)
         addressBarContent.addSubview(leadingButton)
+        addressBarContent.addSubview(pageMenuUpdateBadge)
+        addressBarContent.addSubview(addonButton)
         addressBarContent.addSubview(trailingButton)
         addressBarContent.addSubview(textField)
         addressBarContent.addSubview(autocompleteButton)
@@ -512,7 +567,17 @@ final class AddressBar: UIView {
             leadingButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
             leadingButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
             leadingButton.heightAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
-            
+
+            pageMenuUpdateBadge.widthAnchor.constraint(equalToConstant: 8),
+            pageMenuUpdateBadge.heightAnchor.constraint(equalToConstant: 8),
+            pageMenuUpdateBadge.topAnchor.constraint(equalTo: leadingButton.topAnchor, constant: -2),
+            pageMenuUpdateBadge.trailingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: 2),
+
+            addonButton.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing),
+            addonButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
+            addonButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
+            addonButton.heightAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
+
             trailingButton.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset),
             trailingButton.centerYAnchor.constraint(equalTo: addressBarContent.centerYAnchor),
             trailingButton.widthAnchor.constraint(equalToConstant: UX.addressBarButtonSize),
@@ -541,10 +606,12 @@ final class AddressBar: UIView {
         ])
         
         textLeadingToButtonConstraint = textField.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
+        textLeadingToAddonButtonConstraint = textField.leadingAnchor.constraint(equalTo: addonButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         textLeadingToBackgroundConstraint = textField.leadingAnchor.constraint(equalTo: addressBarContent.leadingAnchor, constant: UX.addressBarContentHorizontalInset)
         textTrailingToButtonConstraint = textField.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         textTrailingToBackgroundConstraint = textField.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset)
         labelLeadingToButtonConstraint = addressLabel.leadingAnchor.constraint(equalTo: leadingButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
+        labelLeadingToAddonButtonConstraint = addressLabel.leadingAnchor.constraint(equalTo: addonButton.trailingAnchor, constant: UX.addressBarButtonToTextSpacing)
         labelLeadingToBackgroundConstraint = addressLabel.leadingAnchor.constraint(equalTo: addressBarContent.leadingAnchor, constant: UX.addressBarContentHorizontalInset)
         labelTrailingToButtonConstraint = addressLabel.trailingAnchor.constraint(equalTo: trailingButton.leadingAnchor, constant: -UX.addressBarButtonToTextSpacing)
         labelTrailingToBackgroundConstraint = addressLabel.trailingAnchor.constraint(equalTo: addressBarContent.trailingAnchor, constant: -UX.addressBarContentHorizontalInset)
@@ -557,6 +624,8 @@ final class AddressBar: UIView {
         addGestureRecognizer(tapGesture)
         addressBarContent.addInteraction(UIContextMenuInteraction(delegate: self))
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
+        leadingButton.addTarget(self, action: #selector(handleLeadingButtonTap), for: .touchUpInside)
+        addonButton.addTarget(self, action: #selector(handleAddonButtonTap), for: .touchUpInside)
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
         dismissButton.addTarget(self, action: #selector(handleDismissButtonTap), for: .touchUpInside)
@@ -567,6 +636,12 @@ final class AddressBar: UIView {
             self,
             selector: #selector(showFullWebsiteAddressDidChange),
             name: .showFullWebsiteAddressDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(addonAddressBarButtonDidChange),
+            name: .addonAddressBarButtonDidChange,
             object: nil
         )
     }
@@ -595,6 +670,7 @@ final class AddressBar: UIView {
         return RenderModel(
             content: content,
             leadingButton: resolveLeadingButtonState(for: content),
+            showsAddonButton: resolveShowsAddonButton(for: content),
             trailingButton: resolveTrailingButtonState(for: content)
         )
     }
@@ -623,6 +699,16 @@ final class AddressBar: UIView {
             return .hidden
         }
     }
+
+    private func resolveShowsAddonButton(for content: ContentState) -> Bool {
+        guard Prefs.AddonSettings.showsAddressBarButton,
+              editingState == .inactive,
+              case .idle = loadingState,
+              case .page = content else {
+            return false
+        }
+        return canShowBarMenu
+    }
     
     private func resolveTrailingButtonState(for content: ContentState) -> TrailingButtonState {
         guard editingState == .inactive else { return .hidden }
@@ -634,26 +720,31 @@ final class AddressBar: UIView {
     private func applyRenderModel(_ model: RenderModel) {
         applyContentState(model.content)
         applyLeadingButtonState(model.leadingButton)
+        addonButton.isHidden = !model.showsAddonButton
+        addonButton.isUserInteractionEnabled = model.showsAddonButton
         applyTrailingButtonState(model.trailingButton)
         
         let showsLeadingButton = model.leadingButton != .hidden
+        let showsAddonButton = model.showsAddonButton
         let showsTrailingButton = model.trailingButton != .hidden
         
         NSLayoutConstraint.deactivate([
             textLeadingToButtonConstraint,
+            textLeadingToAddonButtonConstraint,
             textLeadingToBackgroundConstraint,
             textTrailingToButtonConstraint,
             textTrailingToBackgroundConstraint,
             labelLeadingToButtonConstraint,
+            labelLeadingToAddonButtonConstraint,
             labelLeadingToBackgroundConstraint,
             labelTrailingToButtonConstraint,
             labelTrailingToBackgroundConstraint,
         ])
         
         NSLayoutConstraint.activate([
-            showsLeadingButton ? textLeadingToButtonConstraint : textLeadingToBackgroundConstraint,
+            showsAddonButton ? textLeadingToAddonButtonConstraint : (showsLeadingButton ? textLeadingToButtonConstraint : textLeadingToBackgroundConstraint),
             showsTrailingButton ? textTrailingToButtonConstraint : textTrailingToBackgroundConstraint,
-            showsLeadingButton ? labelLeadingToButtonConstraint : labelLeadingToBackgroundConstraint,
+            showsAddonButton ? labelLeadingToAddonButtonConstraint : (showsLeadingButton ? labelLeadingToButtonConstraint : labelLeadingToBackgroundConstraint),
             showsTrailingButton ? labelTrailingToButtonConstraint : labelTrailingToBackgroundConstraint,
         ])
     }
@@ -672,6 +763,11 @@ final class AddressBar: UIView {
     }
     
     private func applyLeadingButtonState(_ state: LeadingButtonState) {
+        let showsUpdate = state == .menu && pageMenuIndicatesUpdate
+        pageMenuUpdateBadge.isHidden = !showsUpdate
+        leadingButton.accessibilityValue = showsUpdate
+            ? NSLocalizedString("Update available", comment: "")
+            : nil
         guard state != .hidden else {
             leadingButton.isHidden = true
             leadingButton.setImage(nil, for: .normal)
@@ -699,10 +795,10 @@ final class AddressBar: UIView {
         
         leadingButton.tintColor = .label
         leadingButton.setImage(UIImage(named: "reynard.list.bullet.below.rectangle"), for: .normal)
-        leadingButton.setMenuPreservingPresentation(addonsMenu)
-        leadingButton.isUserInteractionEnabled = addonsMenu != nil
+        leadingButton.setMenuPreservingPresentation(nil)
+        leadingButton.isUserInteractionEnabled = !pageMenuItems.isEmpty
     }
-    
+
     private func applyTrailingButtonState(_ state: TrailingButtonState) {
         let visible = state != .hidden
         trailingButton.isHidden = !visible
@@ -776,6 +872,11 @@ final class AddressBar: UIView {
         }
         applyState()
     }
+
+    @objc
+    private func addonAddressBarButtonDidChange() {
+        applyState()
+    }
     
     // MARK: - Actions
     
@@ -808,7 +909,36 @@ final class AddressBar: UIView {
     private func handleTrailingButtonTap() {
         delegate?.addressBarDidRequestReloadOrStop(self)
     }
-    
+
+    @objc
+    private func handleLeadingButtonTap() {
+        guard let window,
+              !pageMenuItems.isEmpty,
+              pageMenuOverlay == nil,
+              let level = delegate?.addressBarCurrentPageZoomLevel(self) else {
+            return
+        }
+        UISelectionFeedbackGenerator().selectionChanged()
+        let overlay = AddressBarPageMenuView(
+            zoomLevel: level,
+            maximumZoomLevel: delegate?.addressBarMaximumPageZoomLevel(self)
+                ?? PageZoomLevels.all.last!,
+            items: pageMenuItems
+        ) { [weak self] level in
+            guard let self else { return }
+            self.delegate?.addressBar(self, didRequestPageZoomLevel: level)
+        }
+        pageMenuOverlay = overlay
+        let anchorRect = leadingButton.convert(leadingButton.bounds, to: window)
+        overlay.present(in: window, anchorRect: anchorRect)
+    }
+
+    @objc
+    private func handleAddonButtonTap() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        delegate?.addressBarDidRequestAddonList(self)
+    }
+
     @objc
     private func handleDismissButtonTap() {
         searchDelegate?.addressBarDidTapDismiss(self)
@@ -834,7 +964,7 @@ final class AddressBar: UIView {
             selectAllText()
         }
     }
-    
+
     // MARK: - Autocomplete Presentation
     
     private func commitAutocompleteForEditing() {
@@ -959,7 +1089,7 @@ extension AddressBar: UIContextMenuInteractionDelegate {
               let url = delegate?.addressBarShareableURL(self) else {
             return nil
         }
-        
+
         return UIContextMenuConfiguration(identifier: url as NSURL, previewProvider: nil) { _ in
             UIMenu(title: "", children: [
                 UIAction(title: NSLocalizedString("Copy URL", comment: ""), image: UIImage(named: "reynard.document.on.document")) { _ in
@@ -1072,7 +1202,11 @@ extension AddressBar: UIGestureRecognizerDelegate {
         if touch.view?.isDescendant(of: leadingButton) == true {
             return false
         }
-        
+
+        if touch.view?.isDescendant(of: addonButton) == true {
+            return false
+        }
+
         if touch.view?.isDescendant(of: trailingButton) == true {
             return false
         }

@@ -54,8 +54,13 @@ final class BrowserChrome: UIView {
     var onForward: (() -> Void)?
     var onShare: (() -> Void)?
     var onLibrary: (() -> Void)?
+    var onBookmarks: (() -> Void)?
+    var onHistory: (() -> Void)?
     var onDownloads: (() -> Void)?
+    var onSettings: (() -> Void)?
     var onNewTab: (() -> Void)?
+    var onCloseTab: (() -> Void)?
+    var onReload: (() -> Void)?
     var onTabOverview: (() -> Void)?
     var onOverlayDismiss: (() -> Void)?
     var onPageZoomOut: (() -> Void)?
@@ -223,13 +228,9 @@ final class BrowserChrome: UIView {
     func setPageZoomLevel(_ level: Int) {
         actionBar.setPageZoomLevel(level)
     }
-    
-    func updatePageZoomLevel(_ level: Int) {
-        guard !actionBar.isHidden,
-              actionBar.item == .pageZoom else {
-            return
-        }
-        
+
+    func syncPageZoomControls(level: Int, maximumLevel: Int) {
+        actionBar.setMaximumPageZoomLevel(maximumLevel)
         actionBar.setPageZoomLevel(level)
     }
     
@@ -390,9 +391,15 @@ final class BrowserChrome: UIView {
     }
 
     func resignAddressBarFirstResponder() { _ = addressBar.resignFirstResponder() }
+    @discardableResult
+    func focusAddressBar() -> Bool { return addressBar.becomeFirstResponder() }
     
     func performAfterAddressBarMenuDismissal(_ action: @escaping () -> Void) {
         addressBar.performAfterMenuDismissal(action)
+    }
+
+    func invalidateAddressBarMenuPresentation() {
+        addressBar.invalidateMenuPresentation()
     }
     
     func animateAutomaticNewTabTransition(to tab: Tab, completion: @escaping () -> Void) {
@@ -416,7 +423,7 @@ final class BrowserChrome: UIView {
     
     func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
         topToolbar.setMenuButtonIndicatesUpdate(hasUpdate)
-        bottomToolbar.setMenuButtonIndicatesUpdate(hasUpdate)
+        addressBar.setPageMenuIndicatesUpdate(hasUpdate)
     }
     
     func syncSidebarButton(splitViewController: UISplitViewController?) {
@@ -438,9 +445,28 @@ final class BrowserChrome: UIView {
         bottomToolbar.onBack = { [weak self] in self?.onBack?() }
         bottomToolbar.onForward = { [weak self] in self?.onForward?() }
         bottomToolbar.onShare = { [weak self] in self?.onShare?() }
-        bottomToolbar.onLibrary = { [weak self] in self?.onLibrary?() }
+        bottomToolbar.onBookmarks = { [weak self] in self?.onBookmarks?() }
+        bottomToolbar.onHistory = { [weak self] in self?.onHistory?() }
         bottomToolbar.onDownloads = { [weak self] in self?.onDownloads?() }
+        bottomToolbar.onSettings = { [weak self] in self?.onSettings?() }
         bottomToolbar.onTabOverview = { [weak self] in self?.onTabOverview?() }
+        bottomToolbar.onReload = { [weak self] in self?.onReload?() }
+        bottomToolbar.onPageZoom = { [weak self] in
+            guard let self else { return }
+            if !self.actionBar.isHidden, self.actionBar.item == .pageZoom {
+                self.dismissActionBar(animated: true)
+                return
+            }
+            if let level = self.addressBar.currentPageZoomLevel() {
+                self.syncPageZoomControls(
+                    level: level,
+                    maximumLevel: self.addressBar.maximumPageZoomLevel()
+                )
+            }
+            self.showActionBar(.pageZoom, animated: true)
+        }
+        bottomToolbar.onNewTab = { [weak self] in self?.onNewTab?() }
+        bottomToolbar.onCloseTab = { [weak self] in self?.onCloseTab?() }
         
         actionBar.onPageZoomOut = { [weak self] in self?.onPageZoomOut?() }
         actionBar.onPageZoomIn = { [weak self] in self?.onPageZoomIn?() }

@@ -325,8 +325,7 @@ private func allowedPairingDocumentTypeIdentifiers() -> [String] {
 
 private func installPairingFile(from downloadLocation: URL) throws {
     let fileManager = FileManager.default
-    let destinationURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("pairingFile.plist", isDirectory: false)
+    let destinationURL = ReynardDirectories.shared.pairingFile
     try fileManager.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
     
     let normalizedSourceURL = downloadLocation.standardizedFileURL

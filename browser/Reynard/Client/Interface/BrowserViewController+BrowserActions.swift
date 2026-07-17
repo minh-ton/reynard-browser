@@ -52,18 +52,79 @@ extension BrowserViewController {
         present(activityController, animated: true)
     }
     
-    func createNewTab() {
+    func createNewTab(intent: NewTabCreationIntent = .userInitiated) {
         dismissAddressBarEditingAndOverlays()
         
         if tabOverview.isPresented {
             tabOverview.prepareNextTabChangesWithoutAnimation()
-            createTabFromOverview(mode: tabOverview.mode.tabMode)
+            createTabFromOverview(mode: tabOverview.mode.tabMode, intent: intent)
         } else {
             homepageOverlayCoordinator.prepareHomepageForNewTab(mode: tabManager.selectedTabMode)
             let createdIndex = tabManager.createTab(selecting: true)
             applyNewTabDisplayOption(toTabAt: createdIndex)
             tabBar.setPendingExpansion(at: createdIndex)
             setTabOverviewVisible(false, animated: true)
+            if intent.automaticallyFocusesAddressBar {
+                scheduleAutomaticKeyboardFocusForNewTab(
+                    tabManager.activeTabs[safe: createdIndex]
+                )
+            } else {
+                cancelAutomaticKeyboardFocusForNewTab()
+            }
         }
+    }
+
+    func scheduleAutomaticKeyboardFocusForNewTab(_ tab: Tab?) {
+        guard Prefs.NewTabSettings.automaticallyOpensKeyboard,
+              Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
+              let tab else {
+            cancelAutomaticKeyboardFocusForNewTab()
+            return
+        }
+
+        pendingNewTabKeyboardFocusTabID = tab.id
+        isPendingNewTabKeyboardFocusEventDispatchComplete = false
+        isPendingNewTabContentReady = tab.state.hasFirstComposite
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.pendingNewTabKeyboardFocusTabID == tab.id else {
+                return
+            }
+            self.isPendingNewTabKeyboardFocusEventDispatchComplete = true
+            self.fulfillPendingAutomaticKeyboardFocusIfPossible()
+        }
+    }
+
+    func fulfillPendingAutomaticKeyboardFocusIfPossible() {
+        guard let requestedTabID = pendingNewTabKeyboardFocusTabID else {
+            return
+        }
+        let context = NewTabKeyboardFocusPolicy.Context(
+            requestedTabID: requestedTabID,
+            selectedTabID: tabManager.selectedTab?.id,
+            isEnabled: Prefs.NewTabSettings.automaticallyOpensKeyboard,
+            displayOptionSupportsFocus: Prefs.NewTabSettings.newTabDisplayOption.supportsAutomaticKeyboardFocus,
+            isViewVisible: viewIfLoaded?.window != nil,
+            isTabOverviewPresented: tabOverview.isPresented,
+            isTransitionRunning: tabOverview.isTransitionRunning,
+            isEventDispatchComplete: isPendingNewTabKeyboardFocusEventDispatchComplete,
+            isContentReady: isPendingNewTabContentReady
+        )
+        if NewTabKeyboardFocusPolicy.shouldCancel(context) {
+            cancelAutomaticKeyboardFocusForNewTab()
+            return
+        }
+        guard NewTabKeyboardFocusPolicy.shouldFulfill(context) else {
+            return
+        }
+        if browserChrome.focusAddressBar() {
+            pendingNewTabKeyboardFocusTabID = nil
+        }
+    }
+
+    func cancelAutomaticKeyboardFocusForNewTab() {
+        pendingNewTabKeyboardFocusTabID = nil
+        isPendingNewTabKeyboardFocusEventDispatchComplete = false
+        isPendingNewTabContentReady = false
     }
 }

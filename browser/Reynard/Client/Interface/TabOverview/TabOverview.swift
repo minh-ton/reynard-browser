@@ -37,6 +37,7 @@ protocol TabOverviewPresentationContext: AnyObject {
     func setSearchFocused(_ focused: Bool, animated: Bool)
     func endEditing()
     func updateLayout(animated: Bool, duration: TimeInterval)
+    func tabOverviewPresentationDidFinishTransition()
 }
 
 final class TabOverview: UIView {

@@ -41,7 +41,7 @@ extension BrowserViewController: TabManagerDelegate {
             isLoading: selectedTab.state.loadingState.isLoading
         )
         refreshAddressBar()
-        browserChrome.updatePageZoomLevel(selectedTab.session.settings.pageZoom.level)
+        syncSelectedPageZoomControls()
         updateNavigationButtons()
         
         contentView.setSession(selectedTab.session)
@@ -63,6 +63,14 @@ extension BrowserViewController: TabManagerDelegate {
     
     func tabManager(_ tabManager: TabManager, didReplaceSelectedSession previousSession: GeckoSession, with replacementSession: GeckoSession) {
         addonCoordinator.handleSelectedTabSessionReplacement(from: previousSession, to: replacementSession)
+    }
+
+    func tabManager(_ tabManager: TabManager, didFirstCompositeFor tabID: UUID) {
+        guard pendingNewTabKeyboardFocusTabID == tabID else {
+            return
+        }
+        isPendingNewTabContentReady = true
+        fulfillPendingAutomaticKeyboardFocusIfPossible()
     }
     
     func tabManager(_ tabManager: TabManager, captureHistoryThumbnailForTabAt index: Int, mode: TabMode, url: String) {
@@ -113,10 +121,9 @@ extension BrowserViewController: TabManagerDelegate {
             
         case .location:
             if index == tabManager.selectedTabIndex {
-                let tab = tabManager.activeTabs[index]
                 contentView.noteHistoryLocationChange()
                 refreshAddressBar()
-                browserChrome.updatePageZoomLevel(tab.session.settings.pageZoom.level)
+                syncSelectedPageZoomControls()
                 updateNavigationButtons()
                 homepageOverlayCoordinator.updatePresentation(animated: true)
             }

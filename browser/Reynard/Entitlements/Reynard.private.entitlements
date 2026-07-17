@@ -37,7 +37,6 @@
         <string>com.apple.nsurlstorage-cache</string>
     </array>
 
-	<!-- I'm not sure if this will work, but anyways -->
 	<key>com.apple.developer.web-browser</key>
 	<true/>
 </dict>

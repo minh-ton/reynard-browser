@@ -162,7 +162,7 @@ final class FilePicker: NSObject {
     // MARK: - Helpers
     
     static func stagingDirectoryURL(promptId: String) -> URL {
-        FileManager.default.temporaryDirectory
+        ReynardDirectories.shared.temporary
             .appendingPathComponent("GeckoFilePicker", isDirectory: true)
             .appendingPathComponent(promptId, isDirectory: true)
     }

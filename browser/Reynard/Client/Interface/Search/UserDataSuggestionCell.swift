@@ -19,6 +19,7 @@ final class UserDataSuggestionCell: UITableViewCell {
     static let reuseIdentifier = "UserDataSuggestionCell"
     
     private static let faviconStore = FaviconStore.shared
+    @MainActor private static let bookmarkIconProvider = BookmarkIconProvider.shared
     private static let relativeDateFormatter = RelativeDateTimeFormatter()
     
     private let sourceIconView: UIImageView = {
@@ -116,7 +117,7 @@ final class UserDataSuggestionCell: UITableViewCell {
             return
         }
         
-        resolveFavicon(for: result.url)
+        resolveIcon(for: result)
     }
     
     func setFilledBackgroundVisible(_ visible: Bool) {
@@ -163,7 +164,33 @@ final class UserDataSuggestionCell: UITableViewCell {
     }
     
     // MARK: - Favicon
-    
+
+    private func resolveIcon(for result: UserDataSearchResult) {
+        if result.source == .bookmark, let bookmarkGUID = result.bookmarkGUID {
+            let cachedIcon = Self.bookmarkIconProvider.cachedIcon(
+                bookmarkGUID: bookmarkGUID,
+                url: result.url
+            )
+            sourceIconView.image = cachedIcon.image
+            sourceIconView.tintColor = cachedIcon.tintColor
+            faviconTask = Task { [weak self] in
+                let icon = await Self.bookmarkIconProvider.icon(
+                    bookmarkGUID: bookmarkGUID,
+                    url: result.url
+                )
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self?.representedURL == result.url else { return }
+                    self?.sourceIconView.image = icon.image
+                    self?.sourceIconView.tintColor = icon.tintColor
+                }
+            }
+            return
+        }
+
+        resolveFavicon(for: result.url)
+    }
+
     private func resolveFavicon(for url: URL) {
         if let cachedImage = Self.faviconStore.cachedFavicon(for: url) {
             sourceIconView.image = cachedImage

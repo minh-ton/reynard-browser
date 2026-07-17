@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import QuickLook
 
 final class DownloadsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIGestureRecognizerDelegate {
     private enum UX {
@@ -79,6 +80,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     private var appActiveObserver: NSObjectProtocol?
     private var isSwipeEditing = false
     private var query = ""
+    private var imagePreviewDataSource: DownloadImagePreviewDataSource?
     
     // MARK: - Lifecycle
     
@@ -274,11 +276,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     }
     
     private func openDownloadsFolder() {
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return
-        }
-        
-        let downloadsURL = documentsURL.appendingPathComponent("Downloads", isDirectory: true)
+        let downloadsURL = ReynardDirectories.shared.downloads
         let encodedPath = downloadsURL.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
         guard let filesURL = URL(string: "shareddocuments://\(encodedPath)") else {
             return
@@ -503,11 +501,20 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         
         tableView.deselectRow(at: indexPath, animated: true)
         
-        guard item.state == .completed, item.fileExists else {
+        guard item.state == .completed else {
+            return
+        }
+        guard item.fileExists else {
+            AlertPresenter.show(
+                title: nil,
+                message: NSLocalizedString("This downloaded file is no longer available.", comment: "")
+            )
             return
         }
         
-        self.shareDownload(item, from: indexPath)
+        if !presentImagePreviewIfSupported(item) {
+            shareDownload(item, from: indexPath)
+        }
     }
     
     func tableView(_ tableView: UITableView, willBeginEditingRowAt indexPath: IndexPath) {
@@ -540,7 +547,62 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
     }
     
     // MARK: - Item Actions
-    
+
+    private func presentImagePreviewIfSupported(_ item: DownloadItemSnapshot) -> Bool {
+        guard let fileURL = item.fileURL,
+              DownloadImageTypeDetector.isImage(fileName: item.fileName, mimeType: item.mimeType) else {
+            return false
+        }
+
+        if !DownloadImageTypeDetector.prefersSystemPreview(
+            fileName: item.fileName,
+            mimeType: item.mimeType
+        ) {
+            let imageController = DownloadImageViewController(fileURL: fileURL, fileName: item.fileName)
+            if let navigationController {
+                navigationController.pushViewController(imageController, animated: true)
+            } else {
+                imageController.navigationItem.leftBarButtonItem = UIBarButtonItem(
+                    barButtonSystemItem: .done,
+                    target: self,
+                    action: #selector(dismissImagePreview)
+                )
+                let imageNavigationController = UINavigationController(rootViewController: imageController)
+                imageNavigationController.modalPresentationStyle = .fullScreen
+                present(imageNavigationController, animated: true)
+            }
+            return true
+        }
+
+        let previewItem = DownloadImagePreviewItem(fileURL: fileURL, title: item.fileName)
+        guard QLPreviewController.canPreview(previewItem) else {
+            return false
+        }
+
+        let dataSource = DownloadImagePreviewDataSource(item: previewItem)
+        let previewController = QLPreviewController()
+        previewController.dataSource = dataSource
+        imagePreviewDataSource = dataSource
+
+        if let navigationController {
+            navigationController.pushViewController(previewController, animated: true)
+        } else {
+            previewController.navigationItem.leftBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .done,
+                target: self,
+                action: #selector(dismissImagePreview)
+            )
+            let previewNavigationController = UINavigationController(rootViewController: previewController)
+            previewNavigationController.modalPresentationStyle = .fullScreen
+            present(previewNavigationController, animated: true)
+        }
+        return true
+    }
+
+    @objc private func dismissImagePreview() {
+        dismiss(animated: true)
+    }
+
     private func confirmCancelDownload(
         for item: DownloadItemSnapshot,
         completion: @escaping (Bool) -> Void

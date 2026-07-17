@@ -57,18 +57,86 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             )
         }
     }
-    
-    func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem) {
-        addonCoordinator.activateMenuItem(item)
-    }
-    
-    func addressBarDidRequestPageZoom(_ addressBar: AddressBar) {
-        guard let selectedTab = tabManager.selectedTab else {
-            return
+
+    func addressBarDidRequestAddonList(_ addressBar: AddressBar) {
+        browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
+            guard let self else { return }
+            let controller = AddonQuickListViewController(
+                itemProvider: { [weak self] in
+                    guard let self else { return [] }
+                    return self.addressBarAddonItems(addressBar)
+                },
+                onSelect: { [weak self] item, listController in
+                    listController.dismiss(animated: true) {
+                        self?.addonCoordinator.activateMenuItem(item)
+                    }
+                },
+                onUninstall: { [weak self] addon in
+                    self?.confirmAddonUninstall(addon)
+                },
+                onDiscover: { [weak self] listController in
+                    LibrarySharedUtils.openLinkInBrowser(
+                        "https://addons.mozilla.org/android/",
+                        from: listController
+                    )
+                    self?.refreshAddressBar()
+                },
+                onInstallFromFile: { [weak self] packageURL in
+                    guard let self else {
+                        throw CancellationError()
+                    }
+                    let stagedURL = try await self.addonPackageStagingService.stage(
+                        packageURL: packageURL
+                    )
+                    do {
+                        _ = try await AddonRuntime.shared.install(url: stagedURL.absoluteString)
+                        _ = try await AddonRuntime.shared.list()
+                    } catch {
+                        let installationError = error
+                        do {
+                            try await self.addonPackageStagingService.remove(stagedURL)
+                        } catch {
+                            AddonPackageStagingLog.error("Unable to remove a failed staged package", error: error)
+                        }
+                        throw installationError
+                    }
+                    do {
+                        try await self.addonPackageStagingService.remove(stagedURL)
+                    } catch {
+                        AddonPackageStagingLog.error("Unable to remove a staged add-on package", error: error)
+                    }
+                },
+                onUpdateAll: { [weak self] in
+                    guard let self else {
+                        return AddonUpdateBatchResult(updatedCount: 0, noUpdateCount: 0, pendingApprovalCount: 0, failedCount: 0)
+                    }
+                    let coordinator = self.addonCoordinator.updateCoordinator
+                    if coordinator.hasPendingApprovals {
+                        return await coordinator.completePendingUpdates { _, _ in }
+                    }
+                    return await coordinator.updateAllAddons { _, _ in }
+                }
+            )
+            let navigationController = UINavigationController(rootViewController: controller)
+            navigationController.modalPresentationStyle = .pageSheet
+            if #available(iOS 15.0, *) {
+                navigationController.sheetPresentationController?.detents = [.medium(), .large()]
+                navigationController.sheetPresentationController?.prefersGrabberVisible = true
+            }
+            self.present(navigationController, animated: true)
         }
-        
-        browserChrome.setPageZoomLevel(selectedTab.session.settings.pageZoom.level)
-        browserChrome.showActionBar(.pageZoom, animated: true)
+    }
+
+    func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int? {
+        return tabManager.selectedTab?.session.settings.pageZoom.level
+    }
+
+    func addressBarMaximumPageZoomLevel(_ addressBar: AddressBar) -> Int {
+        return maximumSafePageZoomLevel()
+    }
+
+    func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int) {
+        setSelectedPageZoomLevel(level)
     }
     
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar) {
@@ -81,6 +149,12 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
         presentWebsiteSettings()
+    }
+
+    func addressBarDidRequestSettings(_ addressBar: AddressBar) {
+        browserChrome.performAfterAddressBarMenuDismissal { [weak self] in
+            self?.presentLibrary(initialSection: .settings)
+        }
     }
     
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool) {
@@ -152,7 +226,6 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
            let previewImage = homepageOverlayCoordinator.previewImage(for: tab, size: contentView.bounds.size) {
             tabManager.updateThumbnail(previewImage, forTabAt: index, mode: mode)
         }
-
         return index
     }
 
@@ -198,24 +271,119 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func setSelectedPageZoomToNextLevel() {
         setSelectedPageZoomLevel(browserChrome.nextPageZoomLevel())
     }
+
+    func maximumSafePageZoomLevel() -> Int {
+        return PageZoomViewportPolicy.maximumLevel(
+            viewportWidth: Double(contentView.bounds.width),
+            minimumLayoutWidth: tabManager.selectedTab?
+                .session.settings.pageZoom.minimumLayoutWidth
+        )
+    }
+
+    func syncSelectedPageZoomControls() {
+        guard let selectedTab = tabManager.selectedTab else {
+            return
+        }
+
+        browserChrome.syncPageZoomControls(
+            level: selectedTab.session.settings.pageZoom.level,
+            maximumLevel: maximumSafePageZoomLevel()
+        )
+    }
     
     func setSelectedPageZoomLevel(_ level: Int) {
         guard let selectedTab = tabManager.selectedTab,
               let url = selectedTab.url else {
             return
         }
-        
-        browserChrome.setPageZoomLevel(level)
-        sessionManager.setPageZoom(level, of: selectedTab.session, for: url, tabID: selectedTab.id)
+        let effectiveLevel = PageZoomViewportPolicy.effectiveLevel(
+            requestedLevel: level,
+            viewportWidth: Double(contentView.bounds.width),
+            minimumLayoutWidth: selectedTab.session.settings.pageZoom.minimumLayoutWidth
+        )
+
+        browserChrome.setPageZoomLevel(effectiveLevel)
+        sessionManager.setPageZoom(
+            effectiveLevel,
+            of: selectedTab.session,
+            for: url,
+            tabID: selectedTab.id
+        )
     }
     
     // MARK: - Website Actions
+
+    private func confirmAddonUninstall(_ addon: Addon) {
+        let addonName = addon.metaData.name ?? addon.id
+        AlertPresenter.show(
+            title: String(
+                format: NSLocalizedString("Uninstall %@?", comment: "Add-on name"),
+                addonName
+            ),
+            message: nil,
+            buttons: [
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Cancel", comment: ""),
+                    style: .cancel
+                ),
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Uninstall", comment: ""),
+                    style: .destructive
+                ) { [weak self] in
+                    Task { [weak self] in
+                        do {
+                            try await AddonRuntime.shared.uninstall(addon)
+                            let installedAddons = try await AddonRuntime.shared.list()
+                            guard !installedAddons.contains(where: { $0.id == addon.id }) else {
+                                throw NSError(
+                                    domain: "com.minh-ton.Reynard.AddonUninstall",
+                                    code: 1,
+                                    userInfo: [NSLocalizedDescriptionKey: "Gecko still reports this add-on as installed."]
+                                )
+                            }
+                            await MainActor.run {
+                                self?.refreshAddressBar()
+                                self?.browserChrome.invalidateAddressBarMenuPresentation()
+                            }
+                        } catch {
+                            await MainActor.run {
+                                AlertPresenter.show(
+                                    title: NSLocalizedString(
+                                        "Failed to uninstall add-on",
+                                        comment: ""
+                                    ),
+                                    message: "\(error)"
+                                )
+                            }
+                        }
+                    }
+                },
+            ]
+        )
+    }
     
     private func presentWebsiteSettings() {
         guard let selectedTab = tabManager.selectedTab,
               let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
               let url = URL(string: urlString),
-              let settingsController = SiteSettingsViewController(url: url, session: selectedTab.session) else {
+              let settingsController = SiteSettingsViewController(
+                url: url,
+                session: selectedTab.session,
+                onWebsiteModeChanged: { [weak self] mode in
+                    guard let self else { return }
+                    if self.tabManager.setPersistentWebsiteMode(mode, forSelectedTabWithID: selectedTab.id) {
+                        self.refreshAddressBar()
+                    }
+                },
+                onWebsiteSettingsReset: { [weak self] in
+                    guard let self else { return }
+                    if self.tabManager.resetWebsiteSettings(
+                        forSelectedTabWithID: selectedTab.id
+                    ) {
+                        self.refreshAddressBar()
+                    }
+                }
+              ) else {
             return
         }
         

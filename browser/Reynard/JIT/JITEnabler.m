@@ -9,6 +9,7 @@
 #import "JITErrors.h"
 #import "JITSupport.h"
 #import "JITUtils.h"
+#import "Reynard-Swift.h"
 #import "Utils.h"
 #include <sys/stat.h>
 #include <errno.h>
@@ -64,7 +65,7 @@
         if (result != 0 && result != EACCES && result != ENOENT && result != ENOEXEC && result != 126 && result != 127) {
             // keep existing behavior for non-permission failures
         } else if (result == EACCES || result == ENOENT || result == ENOEXEC || result == 126 || result == 127) {
-            NSString *tempPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"ptrace_jit"];
+            NSString *tempPath = ReynardDirectoriesBridge.jitTemporaryPath;
             NSError *copyError = nil;
             [[NSFileManager defaultManager] removeItemAtPath:tempPath error:nil];
             if ([[NSFileManager defaultManager] copyItemAtPath:helperPath toPath:tempPath error:&copyError]) {

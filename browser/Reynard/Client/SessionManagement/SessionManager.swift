@@ -150,6 +150,14 @@ final class SessionManager {
     func toggleWebsiteMode(for url: String, tabID: UUID) -> WebsiteModeAction? {
         return sessionSettings.websiteMode.toggleWebsiteMode(for: url, tabID: tabID)
     }
+
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, for url: String, tabID: UUID) -> WebsiteModeAction? {
+        return sessionSettings.websiteMode.setPersistentWebsiteMode(mode, for: url, tabID: tabID)
+    }
+
+    func resetPersistentWebsiteMode(for url: String, tabID: UUID) -> WebsiteModeReset? {
+        return sessionSettings.websiteMode.resetPersistentWebsiteMode(for: url, tabID: tabID)
+    }
     
     func needsSettingsUpdate(
         to session: GeckoSession,
@@ -167,8 +175,11 @@ final class SessionManager {
     
     // MARK: - Navigation
     
-    func restoreNavigation(for tabID: UUID) -> NavigationAvailability {
-        return history.restoreState(for: tabID)
+    func restoreNavigation(for tabID: UUID, isPrivate: Bool = false) -> NavigationAvailability {
+        return history.restoreState(
+            for: tabID,
+            storageMode: isPrivate ? .memoryOnly : .persistent
+        )
     }
     
     func navigationAvailability(

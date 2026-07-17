@@ -1,6 +1,64 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Bookmark Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bookmark Icon" } } }
+    },
+    "Blue" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Blue" } } }
+    },
+    "Choose a smaller image and try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a smaller image and try again." } } }
+    },
+    "Choose a valid image and try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a valid image and try again." } } }
+    },
+    "Choose Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Color" } } }
+    },
+    "Choose Photo" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Photo" } } }
+    },
+    "Choose Symbol & Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Symbol & Color" } } }
+    },
+    "Crop Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Crop Icon" } } }
+    },
+    "Edit Bookmark Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit Bookmark Icon" } } }
+    },
+    "Green" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Green" } } }
+    },
+    "Orange" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Orange" } } }
+    },
+    "Purple" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Purple" } } }
+    },
+    "Red" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Red" } } }
+    },
+    "Restore Website Icon" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore Website Icon" } } }
+    },
+    "Symbol & Color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Symbol & Color" } } }
+    },
+    "Unable to Save Bookmark" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to Save Bookmark" } } }
+    },
+    "Unable to Use Image" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to Use Image" } } }
+    },
+    "Use" : {
+      "comment" : "Use the cropped bookmark icon",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Use" } } }
+    },
+    "Your bookmark was not changed. Please try again." : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your bookmark was not changed. Please try again." } } }
+    },
     " of %@" : {
       "comment" : "Total file size",
       "localizations" : {
@@ -163,6 +221,266 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@/sec"
+          }
+        }
+      }
+    },
+    "%lld add-ons need permission." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-on needs permission."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-ons need permission."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld add-ons updated." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-on updated."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld add-ons updated."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld updates failed." : {
+      "comment" : "Update count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld update failed."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld updates failed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "Capture" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture"
+          }
+        }
+      }
+    },
+    "Display add-ons button in the URL bar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display add-ons button in the URL bar."
+          }
+        }
+      }
+    },
+    "Double tap to open. Swipe up or down for available actions." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double tap to open. Swipe up or down for available actions."
+          }
+        }
+      }
+    },
+    "Drag a region, then extend with the blue handle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag a region, then extend with the blue handle"
+          }
+        }
+      }
+    },
+    "Drag to select an area" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to select an area"
+          }
+        }
+      }
+    },
+    "Failed to uninstall add-on" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to uninstall add-on"
+          }
+        }
+      }
+    },
+    "Forward" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forward"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "Reload" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reload"
+          }
+        }
+      }
+    },
+    "Redraw" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redraw"
+          }
+        }
+      }
+    },
+    "Shows installed add-ons" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows installed add-ons"
+          }
+        }
+      }
+    },
+    "Sidebar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sidebar"
+          }
+        }
+      }
+    },
+    "The image was unloaded to free memory." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The image was unloaded to free memory."
+          }
+        }
+      }
+    },
+    "Touch and hold to close the current tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold to close the current tab"
+          }
+        }
+      }
+    },
+    "Touch and hold to open a new tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold to open a new tab"
+          }
+        }
+      }
+    },
+    "Uninstall" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uninstall"
+          }
+        }
+      }
+    },
+    "Uninstall %@?" : {
+      "comment" : "Add-on name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uninstall %@?"
+          }
+        }
+      }
+    },
+    "Update available" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update available"
           }
         }
       }
@@ -780,6 +1098,17 @@
         }
       }
     },
+    "Are you sure you want to upload all files from \"%@\"? Only do this if you trust the site." : {
+      "comment" : "Uploaded folder name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to upload all files from \"%@\"? Only do this if you trust the site."
+          }
+        }
+      }
+    },
     "Are you sure you want to upload all files? Only do this if you trust the site." : {
       "localizations" : {
         "en" : {
@@ -849,6 +1178,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Block Audio Only"
+          }
+        }
+      }
+    },
+    "Automatic recovery couldn’t finish. Your recovery files were kept." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic recovery couldn’t finish. Your recovery files were kept."
+          }
+        }
+      }
+    },
+    "Backup export cancelled. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup export cancelled. Close and reopen Reynard."
           }
         }
       }
@@ -1001,6 +1350,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose Folder"
+          }
+        }
+      }
+    },
+    "Choose where to save your Reynard backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose where to save your Reynard backup."
           }
         }
       }
@@ -1967,6 +2326,16 @@
         }
       }
     },
+    "Library" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library"
+          }
+        }
+      }
+    },
     "Links" : {
       "localizations" : {
         "en" : {
@@ -2043,6 +2412,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Microphone"
+          }
+        }
+      }
+    },
+    "Motion & Orientation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion & Orientation"
           }
         }
       }
@@ -2516,6 +2895,16 @@
         }
       }
     },
+    "Preparing your Reynard data…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing your Reynard data…"
+          }
+        }
+      }
+    },
     "Previous 7 Days" : {
       "localizations" : {
         "en" : {
@@ -2778,6 +3167,46 @@
         }
       }
     },
+    "Reynard backup saved. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard backup saved. Close and reopen Reynard."
+          }
+        }
+      }
+    },
+    "Reynard couldn’t finish the data transfer. Close and reopen Reynard to try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard couldn’t finish the data transfer. Close and reopen Reynard to try again."
+          }
+        }
+      }
+    },
+    "Reynard couldn’t prepare this backup for restore." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard couldn’t prepare this backup for restore."
+          }
+        }
+      }
+    },
+    "Reynard data restored. Close and reopen Reynard." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard data restored. Close and reopen Reynard."
+          }
+        }
+      }
+    },
     "Reynard won’t remember any of your browsing history or cookies. However, downloads and new bookmarks will be saved." : {
       "localizations" : {
         "en" : {
@@ -2934,6 +3363,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select Options"
+          }
+        }
+      }
+    },
+    "Set as Default Browser" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set as Default Browser"
           }
         }
       }
@@ -3231,6 +3670,26 @@
         }
       }
     },
+    "The restore failed. Your previous Reynard data was restored." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The restore failed. Your previous Reynard data was restored."
+          }
+        }
+      }
+    },
+    "There isn’t enough free space to restore this backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There isn’t enough free space to restore this backup."
+          }
+        }
+      }
+    },
     "This add-on" : {
       "localizations" : {
         "en" : {
@@ -3277,6 +3736,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This build does not support in-app updates. Visit the project's Releases page to download the latest version of the app."
+          }
+        }
+      }
+    },
+    "This backup version isn’t supported." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup version isn’t supported."
+          }
+        }
+      }
+    },
+    "This Reynard backup is damaged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Reynard backup is damaged."
+          }
+        }
+      }
+    },
+    "This Reynard backup is invalid or unsafe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Reynard backup is invalid or unsafe."
           }
         }
       }
@@ -3715,6 +4204,516 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Your browsing history appears here"
+          }
+        }
+      }
+    },
+    "Available Items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available Items"
+          }
+        }
+      }
+    },
+    "Behavior" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Behavior"
+          }
+        }
+      }
+    },
+    "Button Shortcuts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Button Shortcuts"
+          }
+        }
+      }
+    },
+    "Checking for Updates…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking for Updates…"
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "Close Tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close Tab"
+          }
+        }
+      }
+    },
+    "Customize Toolbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Customize Toolbar"
+          }
+        }
+      }
+    },
+    "Enabled Items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enabled Items"
+          }
+        }
+      }
+    },
+    "Feedback" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feedback"
+          }
+        }
+      }
+    },
+    "Hold to close the current tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold to close the current tab"
+          }
+        }
+      }
+    },
+    "Hold to open a new tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold to open a new tab"
+          }
+        }
+      }
+    },
+    "Loading Add-on" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading Add-on"
+          }
+        }
+      }
+    },
+    "No add-ons are available for this page." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No add-ons are available for this page."
+          }
+        }
+      }
+    },
+    "Open Keyboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Keyboard"
+          }
+        }
+      }
+    },
+    "Open Links in Apps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Links in Apps"
+          }
+        }
+      }
+    },
+    "Open in\nFiles" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open in\nFiles"
+          }
+        }
+      }
+    },
+    "Reset Page Zoom" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Page Zoom"
+          }
+        }
+      }
+    },
+    "Reset to Original" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset to Original"
+          }
+        }
+      }
+    },
+    "Show Add-ons Button" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Add-ons Button"
+          }
+        }
+      }
+    },
+    "Toolbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toolbar"
+          }
+        }
+      }
+    },
+    "Toolbar Button Haptics" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toolbar Button Haptics"
+          }
+        }
+      }
+    },
+    "This downloaded file is no longer available." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This downloaded file is no longer available."
+          }
+        }
+      }
+    },
+    "This image is no longer available." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is no longer available."
+          }
+        }
+      }
+    },
+    "This image is too large to display safely." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is too large to display safely."
+          }
+        }
+      }
+    },
+    "This image is unsupported or damaged." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image is unsupported or damaged."
+          }
+        }
+      }
+    },
+    "Unable to display this image." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to display this image."
+          }
+        }
+      }
+    },
+    "Website" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website"
+          }
+        }
+      }
+    },
+    "When an installed app supports the link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When an installed app supports the link"
+          }
+        }
+      }
+    },
+    "When long-pressing links" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When long-pressing links"
+          }
+        }
+      }
+    },
+    "A Reynard data action is already pending." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Reynard data action is already pending."
+          }
+        }
+      }
+    },
+    "A Reynard data action is waiting. Close and reopen Reynard to continue." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Reynard data action is waiting. Close and reopen Reynard to continue."
+          }
+        }
+      }
+    },
+    "Choose a Reynard backup to restore on the next launch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a Reynard backup to restore on the next launch."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to finish the waiting data action first." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to finish the waiting data action first."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to prepare the backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to prepare the backup."
+          }
+        }
+      }
+    },
+    "Close and reopen Reynard to restore the selected backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close and reopen Reynard to restore the selected backup."
+          }
+        }
+      }
+    },
+    "Copying and checking the selected backup…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copying and checking the selected backup…"
+          }
+        }
+      }
+    },
+    "Couldn’t Prepare Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Prepare Import"
+          }
+        }
+      }
+    },
+    "Data Action Already Pending" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Action Already Pending"
+          }
+        }
+      }
+    },
+    "Export Reynard Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Reynard Data"
+          }
+        }
+      }
+    },
+    "Export" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export"
+          }
+        }
+      }
+    },
+    "Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import"
+          }
+        }
+      }
+    },
+    "Import/Backup Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import/Backup Data"
+          }
+        }
+      }
+    },
+    "Prepare Backup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare Backup"
+          }
+        }
+      }
+    },
+    "Prepares a backup on the next launch." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepares a backup on the next launch."
+          }
+        }
+      }
+    },
+    "Preparing Import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing Import"
+          }
+        }
+      }
+    },
+    "Ready for Next Launch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready for Next Launch"
+          }
+        }
+      }
+    },
+    "Reynard closes the browser engine during export and restore so your backup stays consistent." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard closes the browser engine during export and restore so your backup stays consistent."
+          }
+        }
+      }
+    },
+    "Reynard must reopen without the browser engine to make a consistent backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reynard must reopen without the browser engine to make a consistent backup."
+          }
+        }
+      }
+    },
+    "The selected file is not a valid Reynard backup." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The selected file is not a valid Reynard backup."
+          }
+        }
+      }
+    },
+    "Zoom In" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom In"
+          }
+        }
+      }
+    },
+    "Zoom Out" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom Out"
           }
         }
       }

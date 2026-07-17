@@ -33,6 +33,10 @@ final class TabManagerImplementation: NSObject, TabManager {
     private let permissionCoordinator = PermissionCoordinator(
         promptPresenter: PermissionPromptPresenter()
     )
+    private lazy var externalAppLinkRouter = ExternalAppLinkRouter(
+        isAutomaticRoutingEnabled: { Prefs.BrowsingSettings.openLinksInApps },
+        open: Self.openExternalApplication
+    )
     private let systemMediaSession = SystemMediaSession()
     
     private weak var delegate: TabManagerDelegate?
@@ -150,6 +154,13 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func applyNavigationState(to tab: Tab) {
+        if tab.isPrivate {
+            tab.state.navigationState = NavigationAvailability(
+                canGoBack: tab.state.sessionNavigationAvailability.canGoBack,
+                canGoForward: tab.state.sessionNavigationAvailability.canGoForward
+            )
+            return
+        }
         tab.state.navigationState = sessionManager.navigationAvailability(
             for: tab.id,
             sessionState: tab.state.sessionNavigationAvailability
@@ -157,6 +168,10 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     private func recordNavigation(_ url: String, for tab: Tab) {
+        if tab.isPrivate {
+            applyNavigationState(to: tab)
+            return
+        }
         tab.state.navigationState = sessionManager.recordNavigation(
             to: url,
             for: tab.id,
@@ -361,7 +376,10 @@ final class TabManagerImplementation: NSObject, TabManager {
                 isPrivate: true
             )
             tab.state.restoreState = restoredURL(from: snapshot.url).map(TabRestoreState.pending) ?? .none
-            tab.state.navigationState = sessionManager.restoreNavigation(for: tab.id)
+            tab.state.navigationState = sessionManager.restoreNavigation(
+                for: tab.id,
+                isPrivate: true
+            )
             return tab
         }
         
@@ -730,11 +748,20 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func goBack() {
-        guard let tab = selectedTab,
-              let transition = sessionManager.goBack(
-                for: tab.id,
-                sessionState: tab.state.sessionNavigationAvailability
-              ) else {
+        guard let tab = selectedTab else {
+            return
+        }
+        if tab.isPrivate {
+            guard tab.state.sessionNavigationAvailability.canGoBack else {
+                return
+            }
+            tab.session.goBack()
+            return
+        }
+        guard let transition = sessionManager.goBack(
+            for: tab.id,
+            sessionState: tab.state.sessionNavigationAvailability
+        ) else {
             return
         }
         
@@ -749,11 +776,20 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func goForward() {
-        guard let tab = selectedTab,
-              let transition = sessionManager.goForward(
-                for: tab.id,
-                sessionState: tab.state.sessionNavigationAvailability
-              ) else {
+        guard let tab = selectedTab else {
+            return
+        }
+        if tab.isPrivate {
+            guard tab.state.sessionNavigationAvailability.canGoForward else {
+                return
+            }
+            tab.session.goForward()
+            return
+        }
+        guard let transition = sessionManager.goForward(
+            for: tab.id,
+            sessionState: tab.state.sessionNavigationAvailability
+        ) else {
             return
         }
         
@@ -824,10 +860,16 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func updateHistoryThumbnail(_ image: UIImage?, for tab: Tab, url: String) {
+        guard !tab.isPrivate else {
+            return
+        }
         sessionManager.updateCurrentHistoryThumbnail(image, for: tab.id, matching: url)
     }
-    
+
     func navigationPreviewImages(for tab: Tab) -> NavigationPreviewImages {
+        guard !tab.isPrivate else {
+            return NavigationPreviewImages(backImage: nil, forwardImage: nil)
+        }
         return sessionManager.navigationPreviewImages(for: tab.id)
     }
     
@@ -926,7 +968,14 @@ extension TabManagerImplementation: ContentDelegate {
         removeTab(at: location.index, mode: location.mode)
     }
     
-    func onFirstComposite(session: GeckoSession) {}
+    func onFirstComposite(session: GeckoSession) {
+        guard let location = tabLocation(for: session) else {
+            return
+        }
+        let tab = tabs(for: location.mode)[location.index]
+        tab.state.hasFirstComposite = true
+        delegate?.tabManager(self, didFirstCompositeFor: tab.id)
+    }
     
     func onFirstContentfulPaint(session: GeckoSession) {}
     
@@ -982,7 +1031,12 @@ extension TabManagerImplementation: ContentDelegate {
 }
 
 extension TabManagerImplementation: NavigationDelegate {
-    func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission]) {
+    func onLocationChange(
+        session: GeckoSession,
+        url: String?,
+        permissions: [ContentPermission],
+        hasUserGesture: Bool
+    ) {
         guard let location = tabLocation(for: session) else {
             return
         }
@@ -1025,11 +1079,13 @@ extension TabManagerImplementation: NavigationDelegate {
         }
         tab.state.displayState = .committed
         tab.favicon = nil
+
         notifyUpdate(at: location.index, mode: location.mode, reason: .location)
         scheduleFaviconUpdate(forTabAt: location.index, mode: location.mode)
         persistState()
         
     }
+
     
     func onCanGoBack(session: GeckoSession, canGoBack: Bool) {
         guard let location = tabLocation(for: session) else {
@@ -1060,11 +1116,68 @@ extension TabManagerImplementation: NavigationDelegate {
     }
     
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
-        return .allow
+        let disposition = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
+            uri: request.uri,
+            triggerUri: request.triggerUri,
+            source: .navigation,
+            hasUserGesture: request.hasUserGesture,
+            isRedirect: request.isRedirect
+        ))
+        return disposition == .opened ? .deny : .allow
     }
     
     func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny {
         return .allow
+    }
+
+    func onLinkActivated(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String,
+        isDefaultPrevented: Bool
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            _ = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
+                uri: uri,
+                triggerUri: triggerUri,
+                source: .trustedLink,
+                hasUserGesture: true,
+                isDefaultPrevented: isDefaultPrevented
+            ))
+        }
+    }
+
+    func onExternalProtocolRequest(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String?,
+        hasUserGesture: Bool
+    ) async -> Bool {
+        let disposition = await externalAppLinkRouter.handle(ExternalAppLinkRequest(
+            uri: uri,
+            triggerUri: triggerUri,
+            source: .externalProtocol,
+            hasUserGesture: hasUserGesture
+        ))
+        return disposition == .opened || disposition == .handled
+    }
+
+    @MainActor
+    private static func openExternalApplication(_ attempt: ExternalAppLinkAttempt) async -> Bool {
+        let options: [UIApplication.OpenExternalURLOptionsKey: Any]
+        switch attempt.mode {
+        case .universalLink:
+            options = [.universalLinksOnly: true]
+        case .externalScheme:
+            options = [:]
+        }
+
+        return await withCheckedContinuation { continuation in
+            UIApplication.shared.open(attempt.url, options: options) { opened in
+                continuation.resume(returning: opened)
+            }
+        }
     }
     
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? {

@@ -29,6 +29,9 @@ final class BrowserViewController: UIViewController {
         sessionManager: sessionManager
     )
     private var preFullscreenOrientation: UIInterfaceOrientation?
+    var pendingNewTabKeyboardFocusTabID: UUID?
+    var isPendingNewTabKeyboardFocusEventDispatchComplete = false
+    var isPendingNewTabContentReady = false
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
     private(set) var browserLayout = BrowserLayout.initial(
@@ -41,6 +44,27 @@ final class BrowserViewController: UIViewController {
     let tabOverview = TabOverview()
     let contentView = ContentView()
     lazy var browserChrome = BrowserChrome()
+    let addonPopupLoadingIndicator = UIActivityIndicatorView(style: .large)
+    var addonPopupLoadingTimeoutWorkItem: DispatchWorkItem?
+    lazy var addonPopupLoadingView: UIView = {
+        let loadingView = UIView()
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.94)
+        loadingView.layer.cornerRadius = 16
+        loadingView.layer.shadowColor = UIColor.black.cgColor
+        loadingView.layer.shadowOpacity = 0.18
+        loadingView.layer.shadowRadius = 10
+        loadingView.layer.shadowOffset = CGSize(width: 0, height: 4)
+        loadingView.accessibilityLabel = NSLocalizedString("Loading Add-on", comment: "")
+
+        addonPopupLoadingIndicator.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.addSubview(addonPopupLoadingIndicator)
+        NSLayoutConstraint.activate([
+            addonPopupLoadingIndicator.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            addonPopupLoadingIndicator.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor)
+        ])
+        return loadingView
+    }()
     
     lazy var overlayCoordinator = OverlayCoordinator(host: self)
     lazy var homepageOverlayCoordinator = HomepageOverlayCoordinator(
@@ -53,6 +77,7 @@ final class BrowserViewController: UIViewController {
     )
     lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self, sessionManager: sessionManager)
     lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
+    let addonPackageStagingService = AddonPackageStagingService.shared
     lazy var sidebarCoordinator = SidebarCoordinator(
         host: self,
         canHostSidebar: allowsSidebarHosting
@@ -156,6 +181,7 @@ final class BrowserViewController: UIViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        cancelAutomaticKeyboardFocusForNewTab()
         performContentLifecycle {
             view.endEditing(true)
         }
@@ -168,11 +194,13 @@ final class BrowserViewController: UIViewController {
             browserChrome.syncSidebarButton(splitViewController: splitViewController)
             downloadsCoordinator.syncToolbarButtonState()
             updateBrowserLayout(animated: false)
+            fulfillPendingAutomaticKeyboardFocusIfPossible()
         }
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        syncSelectedPageZoomControls()
         invalidateNavigationThumbnailsIfNeeded()
     }
     
@@ -280,11 +308,32 @@ final class BrowserViewController: UIViewController {
         browserChrome.onLibrary = { [weak self] in
             self?.presentLibrary()
         }
+        browserChrome.onBookmarks = { [weak self] in
+            self?.presentLibrary(initialSection: .bookmarks)
+        }
+        browserChrome.onHistory = { [weak self] in
+            self?.presentLibrary(initialSection: .history)
+        }
         browserChrome.onDownloads = { [weak self] in
             self?.presentLibrary(initialSection: .downloads)
         }
+        browserChrome.onSettings = { [weak self] in
+            self?.presentLibrary(initialSection: .settings)
+        }
         browserChrome.onNewTab = { [weak self] in
             self?.createNewTab()
+        }
+        browserChrome.onCloseTab = { [weak self] in
+            guard let self, self.tabManager.selectedTabIndex >= 0 else {
+                return
+            }
+            self.closeTab(at: self.tabManager.selectedTabIndex, mode: self.tabManager.selectedTabMode)
+            if self.tabManager.selectedTab == nil {
+                self.createNewTab(intent: .lastTabReplacement)
+            }
+        }
+        browserChrome.onReload = { [weak self] in
+            self?.tabManager.selectedTab?.session.reload()
         }
         browserChrome.onTabOverview = { [weak self] in
             self?.setTabOverviewVisible(true, animated: true)

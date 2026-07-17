@@ -45,6 +45,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
+        case deviceSensors
         
         var title: String {
             switch self {
@@ -62,6 +63,8 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return NSLocalizedString("Apps and Services", comment: "")
             case .localNetworkAccess:
                 return NSLocalizedString("Local Network", comment: "")
+            case .deviceSensors:
+                return NSLocalizedString("Motion & Orientation", comment: "")
             }
         }
         
@@ -81,6 +84,8 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return .localDeviceAccess
             case .localNetworkAccess:
                 return .localNetworkAccess
+            case .deviceSensors:
+                return .deviceSensors
             }
         }
     }
@@ -89,6 +94,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         .camera,
         .microphone,
         .location,
+        .deviceSensors,
     ]
     private let advancedPermissionOptions: [Row] = [
         .persistentStorage,

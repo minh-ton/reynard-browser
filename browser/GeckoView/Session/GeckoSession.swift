@@ -28,10 +28,14 @@ public class GeckoSession {
     public let isPrivateMode: Bool
     lazy var addonSessionListener = AddonSessionListener(session: self)
     public private(set) var settings: GeckoSessionSettings
+    private var requestedSettings: GeckoSessionSettings
+    private var viewportWidth: Double?
     
     // MARK: - Delegates
     
-    public func updateSettings(_ settings: GeckoSessionSettings) {
+    public func updateSettings(_ requestedSettings: GeckoSessionSettings) {
+        self.requestedSettings = requestedSettings
+        let settings = effectiveSettings(for: requestedSettings)
         self.settings = settings
         GeckoRuntime.setLocale(acceptLanguages: settings.language.acceptLanguages)
         
@@ -126,7 +130,8 @@ public class GeckoSession {
         isPrivateMode: Bool = false,
         isAddonPopup: Bool = false
     ) {
-        self.settings = settings
+        requestedSettings = settings
+        self.settings = Self.effectiveSettings(for: settings, viewportWidth: nil)
         self.isPrivateMode = isPrivateMode
         self.isAddonPopup = isAddonPopup
         
@@ -190,7 +195,42 @@ public class GeckoSession {
     public var engineView: UIView? {
         return window?.view()
     }
-    
+
+    public func updateViewportWidth(_ width: CGFloat) {
+        let width = Double(width)
+        guard width.isFinite,
+              width > 0,
+              viewportWidth.map({ abs($0 - width) >= 0.5 }) ?? true else {
+            return
+        }
+
+        viewportWidth = width
+        updateSettings(requestedSettings)
+    }
+
+    private func effectiveSettings(for settings: GeckoSessionSettings) -> GeckoSessionSettings {
+        return Self.effectiveSettings(for: settings, viewportWidth: viewportWidth)
+    }
+
+    private static func effectiveSettings(
+        for settings: GeckoSessionSettings,
+        viewportWidth: Double?
+    ) -> GeckoSessionSettings {
+        let level = PageZoomViewportPolicy.effectiveLevel(
+            requestedLevel: settings.pageZoom.level,
+            viewportWidth: viewportWidth,
+            minimumLayoutWidth: settings.pageZoom.minimumLayoutWidth
+        )
+        return GeckoSessionSettings(
+            websiteMode: settings.websiteMode,
+            pageZoom: PageZoomSetting(
+                level: level,
+                minimumLayoutWidth: settings.pageZoom.minimumLayoutWidth
+            ),
+            language: settings.language
+        )
+    }
+
     public func close() {
         contentDelegate = nil
         navigationDelegate = nil

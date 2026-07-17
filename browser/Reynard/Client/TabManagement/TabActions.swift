@@ -119,9 +119,52 @@ extension TabManagerImplementation {
             return false
         }
         
+        applyWebsiteModeAction(navigationAction, to: tab, currentURL: url)
+        return true
+    }
+
+    @discardableResult
+    func setPersistentWebsiteMode(_ mode: SiteWebsiteMode, forSelectedTabWithID tabID: UUID) -> Bool {
+        guard let tab = selectedTab,
+              tab.id == tabID,
+              let url = tab.url,
+              let navigationAction = sessionManager.setPersistentWebsiteMode(
+                mode,
+                for: url,
+                tabID: tab.id
+              ) else {
+            return false
+        }
+
+        applyWebsiteModeAction(navigationAction, to: tab, currentURL: url)
+        return true
+    }
+
+    @discardableResult
+    func resetWebsiteSettings(forSelectedTabWithID tabID: UUID) -> Bool {
+        guard let tab = selectedTab,
+              tab.id == tabID,
+              let url = tab.url,
+              let reset = sessionManager.resetPersistentWebsiteMode(
+                for: url,
+                tabID: tab.id
+              ) else {
+            return false
+        }
+        if let navigationAction = reset.navigationAction {
+            applyWebsiteModeAction(navigationAction, to: tab, currentURL: url)
+        }
+        return true
+    }
+
+    private func applyWebsiteModeAction(
+        _ navigationAction: WebsiteModeAction,
+        to tab: Tab,
+        currentURL: String
+    ) {
         switch navigationAction {
         case .reload:
-            sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
+            sessionManager.updateSettings(of: tab.session, for: currentURL, tabID: tab.id)
             tab.session.reload()
         case let .load(overrideURL):
             tab.state.displayState = .pending(overrideURL)
@@ -129,6 +172,5 @@ extension TabManagerImplementation {
             sessionManager.updateSettings(of: tab.session, for: overrideURL, tabID: tab.id)
             tab.session.load(overrideURL, flags: GeckoSessionLoadFlags.replaceHistory)
         }
-        return true
     }
 }

@@ -63,6 +63,10 @@ final class ActionBar: UIView {
     func setPageZoomLevel(_ level: Int) {
         pageZoomActionBar.setZoomLevel(level)
     }
+
+    func setMaximumPageZoomLevel(_ level: Int) {
+        pageZoomActionBar.setMaximumZoomLevel(level)
+    }
     
     func nextPageZoomLevel() -> Int {
         return pageZoomActionBar.nextZoomLevel()

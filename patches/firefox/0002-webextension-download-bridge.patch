@@ -1,0 +1,156 @@
+diff --git a/mobile/shared/components/extensions/ext-downloads.js b/mobile/shared/components/extensions/ext-downloads.js
+index 62f446ef4d21..713971af0d5f 100644
+--- a/mobile/shared/components/extensions/ext-downloads.js
++++ b/mobile/shared/components/extensions/ext-downloads.js
+@@ -7,6 +7,9 @@
+ ChromeUtils.defineESModuleGetters(this, {
+   DownloadPaths: "resource://gre/modules/DownloadPaths.sys.mjs",
+   DownloadTracker: "resource://gre/modules/GeckoViewWebExtension.sys.mjs",
++  NetUtil: "resource://gre/modules/NetUtil.sys.mjs",
++  WebExtensionCompat:
++    "resource://gre/modules/WebExtensionCompat.sys.mjs",
+ });
+
+ var { ignoreEvent } = ExtensionCommon;
+@@ -77,6 +80,61 @@ const INTERRUPT_REASON_MAP = new Map([
+   [24, "CRASH"],
+ ]);
+
++async function stageBlobDownload(url, filename, principal) {
++  let stagedFile;
++  try {
++    return await new Promise((resolve, reject) => {
++      NetUtil.asyncFetch(
++        {
++          uri: url,
++          loadingPrincipal: principal,
++          securityFlags:
++            Ci.nsILoadInfo.SEC_REQUIRE_SAME_ORIGIN_INHERITS_SEC_CONTEXT,
++          contentPolicyType: Ci.nsIContentPolicy.TYPE_OTHER,
++        },
++        (input, status, request) => {
++          if (!Components.isSuccessCode(status)) {
++            reject(Components.Exception("Unable to read blob download", status));
++            return;
++          }
++
++          let mimeType = "";
++          try {
++            mimeType = request.QueryInterface(Ci.nsIChannel).contentType;
++          } catch (_) {}
++
++          const requestedExtension = filename?.split(".").pop() ?? "";
++          const fileExtension = /^[a-z0-9]{1,10}$/i.test(requestedExtension)
++            ? requestedExtension.toLowerCase()
++            : "bin";
++          stagedFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
++          stagedFile.append(`reynard-webextension.${fileExtension}`);
++          stagedFile.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, 0o600);
++
++          const output = Cc[
++            "@mozilla.org/network/file-output-stream;1"
++          ].createInstance(Ci.nsIFileOutputStream);
++          output.init(stagedFile, 0x02 | 0x08 | 0x20, 0o600, 0);
++          NetUtil.asyncCopy(input, output, copyStatus => {
++            if (!Components.isSuccessCode(copyStatus)) {
++              reject(
++                Components.Exception("Unable to stage blob download", copyStatus)
++              );
++              return;
++            }
++            resolve({ localFilePath: stagedFile.path, mimeType });
++          });
++        }
++      );
++    });
++  } catch (error) {
++    if (stagedFile?.exists()) {
++      stagedFile.remove(false);
++    }
++    throw error;
++  }
++}
++
+ // TODO Bug 1247794: make id and extension info persistent
+ class DownloadItem {
+   /**
+@@ -167,9 +225,19 @@ this.downloads = class extends ExtensionAPIPersistent {
+
+   getAPI(context) {
+     const { extension } = context;
++    const compatibility = WebExtensionCompat.forExtension(extension);
+     return {
+       downloads: {
+-        download(options) {
++        async download(options) {
++          const compatibilityResult =
++            await compatibility?.beforeDownload(
++              extension,
++              options,
++              EventDispatcher.instance
++            );
++          if (compatibilityResult != null) {
++            return compatibilityResult;
++          }
+           // the validation checks should be kept in sync with the toolkit implementation
+           let { filename } = options;
+           if (filename != null) {
+@@ -237,16 +305,48 @@ this.downloads = class extends ExtensionAPIPersistent {
+             }
+           }
+
+-          return EventDispatcher.instance
+-            .sendRequestForResult(REQUEST_DOWNLOAD_MESSAGE, {
+-              options,
+-              extensionId: extension.id,
+-            })
+-            .then(value => {
+-              const downloadItem = new DownloadItem(value, options, extension);
+-              DownloadTracker.addDownloadItem(downloadItem);
+-              return downloadItem.id;
+-            });
++          if (options.url.startsWith("blob:")) {
++            const staged = await stageBlobDownload(
++              options.url,
++              options.filename,
++              extension.principal
++            );
++            options = {
++              ...options,
++              url: "https://reynard.invalid/webextension-download",
++              ...staged,
++            };
++          }
++
++          try {
++            const stagedCompatibilityResult =
++              await compatibility?.handleStagedDownload(
++                extension,
++                options,
++                EventDispatcher.instance
++              );
++            if (stagedCompatibilityResult != null) {
++              return stagedCompatibilityResult;
++            }
++
++            const value = await EventDispatcher.instance.sendRequestForResult(
++              REQUEST_DOWNLOAD_MESSAGE,
++              {
++                options,
++                extensionId: extension.id,
++              }
++            );
++            const downloadItem = new DownloadItem(value, options, extension);
++            DownloadTracker.addDownloadItem(downloadItem);
++            return downloadItem.id;
++          } catch (error) {
++            if (options.localFilePath) {
++              await IOUtils.remove(options.localFilePath, {
++                ignoreAbsent: true,
++              });
++            }
++            throw error;
++          }
+         },
+
+         removeFile() {

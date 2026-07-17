@@ -13,6 +13,7 @@ final class SiteSettingsViewController: UITableViewController {
     
     private enum Section {
         case availability
+        case website
         case media
         case permissions
         case resetAction
@@ -27,6 +28,7 @@ final class SiteSettingsViewController: UITableViewController {
         case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
+        case deviceSensors
         
         var title: String {
             switch self {
@@ -44,6 +46,8 @@ final class SiteSettingsViewController: UITableViewController {
                 return NSLocalizedString("Device Apps and Services", comment: "")
             case .localNetworkAccess:
                 return NSLocalizedString("Local Network Devices", comment: "")
+            case .deviceSensors:
+                return NSLocalizedString("Motion & Orientation", comment: "")
             case .autoplay:
                 return NSLocalizedString("Autoplay", comment: "")
             }
@@ -65,6 +69,8 @@ final class SiteSettingsViewController: UITableViewController {
                 return .localDeviceAccess
             case .localNetworkAccess:
                 return .localNetworkAccess
+            case .deviceSensors:
+                return .deviceSensors
             case .autoplay:
                 return .autoplay
             }
@@ -83,10 +89,14 @@ final class SiteSettingsViewController: UITableViewController {
         .camera,
         .microphone,
         .location,
+        .deviceSensors,
     ]
     private let host: String
+    private let url: URL
     private let origin: String
     private let session: GeckoSession
+    private let onWebsiteModeChanged: (SiteWebsiteMode) -> Void
+    private let onWebsiteSettingsReset: () -> Void
     private var loadState: LoadingState = .loading
     private var loadedGeckoPermissions: [ContentPermission] = []
     
@@ -97,21 +107,30 @@ final class SiteSettingsViewController: UITableViewController {
             sections.append(.availability)
         }
         
+        sections.append(.website)
         sections.append(.media)
         sections.append(.permissions)
         sections.append(.resetAction)
         return sections
     }
     
-    init?(url: URL, session: GeckoSession) {
+    init?(
+        url: URL,
+        session: GeckoSession,
+        onWebsiteModeChanged: @escaping (SiteWebsiteMode) -> Void = { _ in },
+        onWebsiteSettingsReset: @escaping () -> Void = {}
+    ) {
         guard let host = URLUtils.normalizedHost(url.host),
               let origin = URLUtils.httpOriginString(for: url) else {
             return nil
         }
         
         self.host = host
+        self.url = url
         self.origin = origin
         self.session = session
+        self.onWebsiteModeChanged = onWebsiteModeChanged
+        self.onWebsiteSettingsReset = onWebsiteSettingsReset
         super.init(style: .insetGrouped)
         title = String(format: NSLocalizedString("Settings for %@", comment: "Website host"), host)
     }
@@ -140,6 +159,8 @@ final class SiteSettingsViewController: UITableViewController {
         switch visibleSections[section] {
         case .availability:
             return 2
+        case .website:
+            return 1
         case .media:
             return loadState == .loaded ? mediaRows.count : 0
         case .permissions:
@@ -157,6 +178,8 @@ final class SiteSettingsViewController: UITableViewController {
         switch visibleSections[section] {
         case .availability:
             return nil
+        case .website:
+            return NSLocalizedString("Website", comment: "")
         case .media:
             return NSLocalizedString("Media", comment: "")
         case .permissions:
@@ -177,6 +200,8 @@ final class SiteSettingsViewController: UITableViewController {
         switch visibleSections[indexPath.section] {
         case .availability:
             return availabilityCell(at: indexPath)
+        case .website:
+            return websiteModeCell()
         case .media:
             return permissionCell(at: indexPath)
         case .permissions:
@@ -194,6 +219,8 @@ final class SiteSettingsViewController: UITableViewController {
         switch visibleSections[indexPath.section] {
         case .availability:
             handleAvailabilitySelection(at: indexPath)
+        case .website:
+            break
         case .media:
             handlePermissionSelection(at: indexPath)
         case .permissions:
@@ -221,6 +248,20 @@ final class SiteSettingsViewController: UITableViewController {
         cell.textLabel?.text = NSLocalizedString("Open Settings", comment: "")
         cell.textLabel?.textColor = view.tintColor
         cell.accessoryType = .none
+        return cell
+    }
+
+    private func websiteModeCell() -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        cell.textLabel?.text = NSLocalizedString("Request Desktop Website", comment: "")
+        cell.selectionStyle = .none
+
+        let websiteMode = SiteSettingsStore.shared.settings(for: url)?.websiteMode
+        let toggle = UISwitch()
+        toggle.isOn = websiteMode.map { $0 == .desktop }
+            ?? Prefs.BrowsingSettings.requestDesktopWebsite
+        toggle.addTarget(self, action: #selector(websiteModeSwitchChanged(_:)), for: .valueChanged)
+        cell.accessoryView = toggle
         return cell
     }
     
@@ -283,7 +324,7 @@ final class SiteSettingsViewController: UITableViewController {
             return mediaRows[safe: indexPath.row]
         case .permissions:
             return permissionRows[safe: indexPath.row]
-        case .availability, .resetAction:
+        case .availability, .website, .resetAction:
             return nil
         }
     }
@@ -325,6 +366,12 @@ final class SiteSettingsViewController: UITableViewController {
     
     @objc private func dismissModal() {
         dismiss(animated: true)
+    }
+
+    @objc private func websiteModeSwitchChanged(_ sender: UISwitch) {
+        let mode: SiteWebsiteMode = sender.isOn ? .desktop : .mobile
+        UISelectionFeedbackGenerator().selectionChanged()
+        onWebsiteModeChanged(mode)
     }
     
     // MARK: - Permissions
@@ -445,6 +492,7 @@ final class SiteSettingsViewController: UITableViewController {
             SitePermissionStore.shared.removeAction(for: permission, host: host, session: session)
         }
         loadedGeckoPermissions = []
+        onWebsiteSettingsReset()
         tableView.reloadData()
     }
     

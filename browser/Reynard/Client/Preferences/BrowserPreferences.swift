@@ -12,8 +12,10 @@ typealias Prefs = BrowserPreferences
 
 final class BrowserPreferences {
     static var shared = BrowserPreferences()
+    static let openLinksInAppsBridgeKey = "Reynard.Browsing.openLinksInApps"
     
     let profile: String
+    private(set) var registeredDefaults: [String: Any] = [:]
     
     init(profile: String = "default") {
         self.profile = profile
@@ -23,6 +25,10 @@ final class BrowserPreferences {
     // Possible future work
     static func useProfile(_ name: String) {
         shared = BrowserPreferences(profile: name)
+        UserDefaults.standard.set(
+            BrowsingSettings.openLinksInApps,
+            forKey: openLinksInAppsBridgeKey
+        )
     }
     
     func key(_ setting: String, _ name: String) -> String {
@@ -30,13 +36,14 @@ final class BrowserPreferences {
     }
     
     func registerDefaults() {
+        migrateToolbarSettingsIfNeeded()
         let donationRecommendationShowTimeKey = key("HomepageSettings", "donationRecommendationShowTime")
         if UserDefaults.standard.object(forKey: donationRecommendationShowTimeKey) == nil {
             let delay = TimeInterval.random(in: (3 * 86_400)...(5 * 86_400))
             UserDefaults.standard.set(Date().addingTimeInterval(delay).timeIntervalSince1970, forKey: donationRecommendationShowTimeKey)
         }
         
-        UserDefaults.standard.register(defaults: [
+        registeredDefaults = [
             // Search
             key("SearchSettings", "searchEngine"): SearchEngine.google.rawValue,
             key("SearchSettings", "customSearchTemplate"): "",
@@ -58,10 +65,12 @@ final class BrowserPreferences {
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
             key("BrowsingSettings", "showLinkPreviews"): true,
             key("BrowsingSettings", "showImagePreviews"): true,
+            key("BrowsingSettings", "openLinksInApps"): true,
             
             // New Tab
             key("NewTabSettings", "newTabDisplayOption"): NewTabDisplayOption.homepage.rawValue,
             key("NewTabSettings", "customNewTabURL"): "",
+            key("NewTabSettings", "automaticallyOpensKeyboard"): false,
             
             // Homepage
             key("HomepageSettings", "openingScreen"): HomepageOpeningScreen.homepage.rawValue,
@@ -81,6 +90,10 @@ final class BrowserPreferences {
             key("AppearanceSettings", "showsFullWebsiteAddress"): false,
             key("AppearanceSettings", "showsLandscapeTabBar"): true,
             key("AppearanceSettings", "defaultPageZoomLevel"): PageZoomLevels.defaultLevel,
+            key("ToolbarSettings", "bottomToolbarActions"): BottomToolbarAction.defaultActions.map(\.rawValue),
+            key("ToolbarSettings", "toolbarButtonHapticsEnabled"): true,
+            key("ToolbarSettings", "closeTabLongPressOpensNewTab"): true,
+            key("ToolbarSettings", "newTabLongPressClosesTab"): false,
             
             // Languages
             key("LanguageSettings", "websiteLanguages"): (try? JSONEncoder().encode(WebsiteLanguageCatalog.defaultLanguageCodes())) ?? Data(),
@@ -90,6 +103,7 @@ final class BrowserPreferences {
             key("BookmarkSettings", "sortOrders"): BookmarkSortOrder.none.rawValue,
             
             // Add-ons
+            key("AddonSettings", "showsAddressBarButton"): true,
             key("AddonSettings", "lastGlobalCheckAt"): "",
             key("AddonSettings", "pendingApprovalAddonIDs"): Data(),
             
@@ -102,6 +116,7 @@ final class BrowserPreferences {
             key("SitePermissionSettings", "defaultCrossOriginStorageAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalDeviceAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalNetworkAccessPermission"): SitePermissionAction.askToAllow.rawValue,
+            key("SitePermissionSettings", "defaultDeviceSensorsPermission"): SitePermissionAction.askToAllow.rawValue,
             
             // Clear Browsing Data
             key("ClearBrowsingData", "clearsBrowsingHistory"): true,
@@ -110,7 +125,31 @@ final class BrowserPreferences {
             key("ClearBrowsingData", "clearsDownloadedFiles"): false,
             key("ClearBrowsingData", "clearsSitePermissions"): true,
             key("ClearBrowsingData", "clearsOpenedTabs"): true,
-        ])
+        ]
+        UserDefaults.standard.register(defaults: registeredDefaults)
+        UserDefaults.standard.set(
+            UserDefaults.standard.bool(
+                forKey: key("BrowsingSettings", "openLinksInApps")
+            ),
+            forKey: Self.openLinksInAppsBridgeKey
+        )
+    }
+
+    private func migrateToolbarSettingsIfNeeded() {
+        let defaults = UserDefaults.standard
+        for name in [
+            "bottomToolbarActions",
+            "toolbarButtonHapticsEnabled",
+            "closeTabLongPressOpensNewTab",
+            "newTabLongPressClosesTab",
+        ] {
+            let destinationKey = key("ToolbarSettings", name)
+            guard defaults.object(forKey: destinationKey) == nil,
+                  let existingValue = defaults.object(forKey: key("AppearanceSettings", name)) else {
+                continue
+            }
+            defaults.set(existingValue, forKey: destinationKey)
+        }
     }
     
     func bool(forSetting setting: String, key name: String) -> Bool {
@@ -123,6 +162,10 @@ final class BrowserPreferences {
     
     func data(forSetting setting: String, key name: String) -> Data? {
         UserDefaults.standard.data(forKey: key(setting, name))
+    }
+
+    func stringArray(forSetting setting: String, key name: String) -> [String]? {
+        UserDefaults.standard.stringArray(forKey: key(setting, name))
     }
     
     func double(forSetting setting: String, key name: String) -> Double {
@@ -142,6 +185,10 @@ final class BrowserPreferences {
     }
     
     func set(_ value: Data?, forSetting setting: String, key name: String) {
+        UserDefaults.standard.set(value, forKey: key(setting, name))
+    }
+
+    func set(_ value: [String], forSetting setting: String, key name: String) {
         UserDefaults.standard.set(value, forKey: key(setting, name))
     }
     
@@ -258,6 +305,19 @@ final class BrowserPreferences {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "showImagePreviews")
             }
         }
+
+        static var openLinksInApps: Bool {
+            get {
+                return prefs.bool(forSetting: "BrowsingSettings", key: "openLinksInApps")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "openLinksInApps")
+                UserDefaults.standard.set(
+                    newValue,
+                    forKey: BrowserPreferences.openLinksInAppsBridgeKey
+                )
+            }
+        }
     }
     
     // MARK: - Clear Browsing Data
@@ -336,6 +396,15 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forSetting: "NewTabSettings", key: "customNewTabURL")
+            }
+        }
+
+        static var automaticallyOpensKeyboard: Bool {
+            get {
+                return prefs.bool(forSetting: "NewTabSettings", key: "automaticallyOpensKeyboard")
+            }
+            set {
+                prefs.set(newValue, forSetting: "NewTabSettings", key: "automaticallyOpensKeyboard")
             }
         }
     }
@@ -564,6 +633,20 @@ final class BrowserPreferences {
                 prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultLocalNetworkAccessPermission")
             }
         }
+
+        static var defaultDeviceSensorsPermission: SitePermissionAction {
+            get {
+                let rawValue = prefs.string(forSetting: "SitePermissionSettings", key: "defaultDeviceSensorsPermission")
+                guard let rawValue,
+                      let action = SitePermissionAction(rawValue: rawValue) else {
+                    return .askToAllow
+                }
+                return action
+            }
+            set {
+                prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultDeviceSensorsPermission")
+            }
+        }
     }
     
     // MARK: - Compatibility
@@ -647,13 +730,66 @@ final class BrowserPreferences {
                 prefs.set(newValue, forSetting: "AppearanceSettings", key: "defaultPageZoomLevel")
             }
         }
+
+    }
+
+    // MARK: - Toolbar
+    struct ToolbarSettings {
+        static var bottomToolbarActions: [BottomToolbarAction] {
+            get {
+                let rawValues = prefs.stringArray(
+                    forSetting: "ToolbarSettings",
+                    key: "bottomToolbarActions"
+                ) ?? BottomToolbarAction.defaultActions.map(\.rawValue)
+                let actions = rawValues.compactMap { rawValue in
+                    rawValue == "library" ? BottomToolbarAction.bookmarks : BottomToolbarAction(rawValue: rawValue)
+                }
+                return BottomToolbarAction.normalized(actions)
+            }
+            set {
+                prefs.set(
+                    BottomToolbarAction.normalized(newValue).map(\.rawValue),
+                    forSetting: "ToolbarSettings",
+                    key: "bottomToolbarActions"
+                )
+                NotificationCenter.default.post(name: .bottomToolbarActionsDidChange, object: nil)
+            }
+        }
+
+        static var toolbarButtonHapticsEnabled: Bool {
+            get {
+                prefs.bool(forSetting: "ToolbarSettings", key: "toolbarButtonHapticsEnabled")
+            }
+            set {
+                prefs.set(newValue, forSetting: "ToolbarSettings", key: "toolbarButtonHapticsEnabled")
+            }
+        }
+
+        static var closeTabLongPressOpensNewTab: Bool {
+            get {
+                prefs.bool(forSetting: "ToolbarSettings", key: "closeTabLongPressOpensNewTab")
+            }
+            set {
+                prefs.set(newValue, forSetting: "ToolbarSettings", key: "closeTabLongPressOpensNewTab")
+                NotificationCenter.default.post(name: .bottomToolbarShortcutsDidChange, object: nil)
+            }
+        }
+
+        static var newTabLongPressClosesTab: Bool {
+            get {
+                prefs.bool(forSetting: "ToolbarSettings", key: "newTabLongPressClosesTab")
+            }
+            set {
+                prefs.set(newValue, forSetting: "ToolbarSettings", key: "newTabLongPressClosesTab")
+                NotificationCenter.default.post(name: .bottomToolbarShortcutsDidChange, object: nil)
+            }
+        }
     }
     
     // MARK: - JIT
     struct JITSettings {
         static var hasPairingFile: Bool {
-            FileManager.default.fileExists(atPath: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("pairingFile.plist", isDirectory: false).path)
+            FileManager.default.fileExists(atPath: ReynardDirectories.shared.pairingFile.path)
         }
         
         static var isJITEnabled: Bool {
@@ -711,6 +847,16 @@ final class BrowserPreferences {
     
     // MARK: - Add-ons
     struct AddonSettings {
+        static var showsAddressBarButton: Bool {
+            get {
+                prefs.bool(forSetting: "AddonSettings", key: "showsAddressBarButton")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AddonSettings", key: "showsAddressBarButton")
+                NotificationCenter.default.post(name: .addonAddressBarButtonDidChange, object: nil)
+            }
+        }
+
         static var lastGlobalCheckAt: Date? {
             get {
                 guard let value = prefs.string(forSetting: "AddonSettings", key: "lastGlobalCheckAt"),

@@ -23,6 +23,11 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     }
     
     func selectTab(at index: Int, mode: TabMode) {
+        let targetTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+        if let pendingTabID = pendingNewTabKeyboardFocusTabID,
+           targetTabs[safe: index]?.id != pendingTabID {
+            cancelAutomaticKeyboardFocusForNewTab()
+        }
         if mode == tabManager.selectedTabMode,
            index != tabManager.selectedTabIndex {
             if tabOverview.isPresented || tabOverview.isTransitionRunning {
@@ -46,7 +51,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             tabOverview.prepareNextTabChangesWithoutAnimation()
             tabManager.removeTab(at: index, mode: mode)
             tabOverview.prepareNextTabChangesWithoutAnimation()
-            createTabFromOverview(mode: .regular)
+            createTabFromOverview(mode: .regular, intent: .lastTabReplacement)
             return
         }
         
@@ -109,6 +114,10 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     
     func updateLayout(animated: Bool, duration: TimeInterval) {
         updateBrowserLayout(animated: animated, duration: duration)
+    }
+
+    func tabOverviewPresentationDidFinishTransition() {
+        fulfillPendingAutomaticKeyboardFocusIfPossible()
     }
     
     func setTabOverviewVisible(_ visible: Bool, animated: Bool) {
@@ -184,20 +193,26 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
         }
         tabManager.removeAllTabs(mode: .regular)
         tabOverview.prepareNextTabChangesWithoutAnimation()
-        createTabFromOverview(mode: .regular)
+        createTabFromOverview(mode: .regular, intent: .lastTabReplacement)
     }
     
-    func createTabFromOverview(mode: TabMode) {
+    func createTabFromOverview(
+        mode: TabMode,
+        intent: NewTabCreationIntent = .userInitiated
+    ) {
+        if !intent.automaticallyFocusesAddressBar {
+            cancelAutomaticKeyboardFocusForNewTab()
+        }
         homepageOverlayCoordinator.prepareHomepageForNewTab(mode: mode)
         let createdIndex = tabManager.createTab(
             selecting: true,
             target: .end,
             mode: mode
         )
+        let createdTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
         
         switch Prefs.NewTabSettings.newTabDisplayOption {
         case .homepage, .blankPage:
-            let createdTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
             let createdTabID = createdTabs[createdIndex].id
             
             captureThumbnail(forTabAt: createdIndex, mode: mode) { [weak self] previewImage in
@@ -210,6 +225,11 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
                 self.scrollTabOverviewToTab(at: createdIndex)
                 self.tabBar.setPendingExpansion(at: createdIndex)
                 self.setTabOverviewVisible(false, animated: true)
+                if intent.automaticallyFocusesAddressBar {
+                    self.scheduleAutomaticKeyboardFocusForNewTab(
+                        (mode == .private ? self.tabManager.privateTabs : self.tabManager.regularTabs)[safe: createdIndex]
+                    )
+                }
             }
         case .customURL:
             applyNewTabDisplayOption(toTabAt: createdIndex)

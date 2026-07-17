@@ -119,6 +119,8 @@ enum SiteSettingsUtils {
             return Prefs.SitePermissionSettings.defaultLocalDeviceAccessPermission
         case .localNetworkAccess:
             return Prefs.SitePermissionSettings.defaultLocalNetworkAccessPermission
+        case .deviceSensors:
+            return Prefs.SitePermissionSettings.defaultDeviceSensorsPermission
         case .notification:
             return .askToAllow
         case .mediaKeySystemAccess:
@@ -144,6 +146,8 @@ enum SiteSettingsUtils {
             Prefs.SitePermissionSettings.defaultLocalDeviceAccessPermission = action
         case .localNetworkAccess:
             Prefs.SitePermissionSettings.defaultLocalNetworkAccessPermission = action
+        case .deviceSensors:
+            Prefs.SitePermissionSettings.defaultDeviceSensorsPermission = action
         case .notification:
             return
         case .mediaKeySystemAccess:
@@ -202,6 +206,7 @@ enum SiteSettingsUtils {
             .crossOriginStorageAccess,
             .localDeviceAccess,
             .localNetworkAccess,
+            .deviceSensors,
         ]
         let actions: [SitePermissionAction] = [
             .allowed,

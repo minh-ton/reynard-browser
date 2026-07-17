@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import GeckoView
 
 enum PageZoomLevels {
-    static let defaultLevel = 100
-    static let all = [50, 75, 90, 100, 110, 125, 150, 175, 200, 250, 300]
+    static let defaultLevel = PageZoomViewportPolicy.defaultLevel
+    static let all = PageZoomViewportPolicy.supportedLevels
     
     static func displayText(for level: Int) -> String {
         return "\(level)%"

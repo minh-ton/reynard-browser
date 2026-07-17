@@ -1,0 +1,43 @@
+name: Reynard Verification
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  focused-regressions:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout complete source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install verification tools
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Select Xcode 26.2
+        shell: bash
+        run: |
+          for candidate in /Applications/Xcode_26.2.app /Applications/Xcode_26.2.0.app; do
+            if [[ -x "$candidate/Contents/Developer/usr/bin/xcodebuild" ]]; then
+              echo "REYNARD_XCODE_APP=$candidate" >> "$GITHUB_ENV"
+              DEVELOPER_DIR="$candidate/Contents/Developer" xcodebuild -version
+              exit 0
+            fi
+          done
+          echo "Xcode 26.2 is unavailable on this runner." >&2
+          exit 1
+
+      - name: Run focused regression verification
+        env:
+          REYNARD_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: ./tools/tests/verify-reynard-cleanup.sh
+
+      - name: Validate Xcode project
+        run: |
+          . ./tools/xcode/use-xcode-26.2.sh
+          xcodebuild -list -project browser/Reynard.xcodeproj

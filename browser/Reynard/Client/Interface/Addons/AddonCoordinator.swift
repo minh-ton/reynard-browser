@@ -20,6 +20,7 @@ protocol AddonCoordinatorDataSource: AnyObject {
 protocol AddonCoordinatorDelegate: AnyObject {
     func refreshAddonChrome(_ coordinator: AddonCoordinator)
     func performAfterAddonMenuDismissal(_ coordinator: AddonCoordinator, work: @escaping () -> Void)
+    func setAddonPopupLoading(_ coordinator: AddonCoordinator, isLoading: Bool)
     func presentAddonViewController(_ coordinator: AddonCoordinator, _ viewController: UIViewController)
     func presentAddonAlert(_ coordinator: AddonCoordinator, title: String?, message: String)
     func dismissAddonModal(_ coordinator: AddonCoordinator, completion: (() -> Void)?) -> Bool
@@ -50,6 +51,9 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.Reynard.AddonCoordinator.IconLoadingQueue", qos: .utility)
     private var loadingIconIDs = Set<String>()
     private var pendingAddonDownloadPaths = Set<String>()
+    private var failedIconIDs = Set<String>()
+    private var pendingIconRefreshWorkItem: DispatchWorkItem?
+    private var nextDownloadID = 0
     let updateCoordinator: AddonUpdateCoordinator
     
     init(
@@ -156,8 +160,9 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         guard let session = dataSource?.selectedAddonSession else {
             return []
         }
-        
-        return menuAddons.flatMap { addon in
+
+        let addons = menuAddons
+        let items = addons.flatMap { addon in
             visibleActions(for: addon, session: session).map { action in
                 AddonMenuItem(
                     addon: addon,
@@ -166,6 +171,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
                 )
             }
         }
+        return items
     }
     
     func visibleActions(for addon: Addon, session: GeckoSession) -> [AddonAction] {
@@ -193,13 +199,17 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
             guard let self else {
                 return
             }
+            self.delegate?.setAddonPopupLoading(self, isLoading: true)
             
             do {
                 if let url = try await AddonRuntime.shared.clickAction(kind: item.action.kind, addon: item.addon),
                    !url.isEmpty {
                     self.presentPopupAfterMenuDismissal(url: url)
+                } else {
+                    self.delegate?.setAddonPopupLoading(self, isLoading: false)
                 }
             } catch {
+                self.delegate?.setAddonPopupLoading(self, isLoading: false)
                 self.delegate?.presentAddonAlert(self, title: nil, message: "\(error)")
             }
         }
@@ -212,12 +222,35 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         if addon.metaData.enabled == false || AddonRuntime.shared.installedAddons.contains(where: { $0.id == addon.id }) == false {
             clearCachedActions(for: addon.id)
         }
+        NotificationCenter.default.post(
+            name: .addonRuntimeDidChange,
+            object: controller,
+            userInfo: ["addonID": addon.id]
+        )
         delegate?.refreshAddonChrome(self)
     }
     
     func addonController(_ controller: AddonRuntime, didFailInstall failure: AddonInstallFailure) {
         _ = controller
         _ = failure
+    }
+
+    func addonController(_ controller: AddonRuntime, download request: AddonDownloadRequest) -> AddonDownloadResult? {
+        guard let imported = DownloadStore.shared.importCompletedDownload(
+            from: request.sourceURL,
+            sourceURL: request.sourceURL,
+            suggestedFileName: request.suggestedFileName,
+            mimeType: request.mimeType
+        ) else {
+            return nil
+        }
+        nextDownloadID += 1
+        return AddonDownloadResult(
+            id: nextDownloadID,
+            fileName: imported.fileURL.lastPathComponent,
+            mimeType: imported.mimeType,
+            fileSize: imported.fileSize
+        )
     }
     
     @MainActor
@@ -471,9 +504,16 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     private func prefetchIconIfNeeded(for addon: Addon) {
         let cacheKey = addon.id as NSString
-        guard iconCache.object(forKey: cacheKey) == nil,
-              loadingIconIDs.contains(addon.id) == false,
-              addon.metaData.iconURL != nil else {
+        if iconCache.object(forKey: cacheKey) != nil {
+            return
+        }
+        if loadingIconIDs.contains(addon.id) {
+            return
+        }
+        if failedIconIDs.contains(addon.id) {
+            return
+        }
+        guard addon.metaData.iconURL != nil else {
             return
         }
         
@@ -491,21 +531,37 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
                 self.loadingIconIDs.remove(addon.id)
                 if let image {
                     self.iconCache.setObject(image, forKey: cacheKey)
+                } else {
+                    self.failedIconIDs.insert(addon.id)
                 }
-                self.delegate?.refreshAddonChrome(self)
+                if image != nil {
+                    self.scheduleIconRefresh()
+                }
             }
         }
+    }
+
+    private func scheduleIconRefresh() {
+        pendingIconRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else {
+                return
+            }
+            self.pendingIconRefreshWorkItem = nil
+            self.delegate?.refreshAddonChrome(self)
+        }
+        pendingIconRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
     }
     
     func prepareMenuIcons() {
         guard let session = dataSource?.selectedAddonSession else {
             return
         }
-        
-        menuAddons
-            .filter { addon in
+
+        let candidates = menuAddons.filter { addon in
                 visibleActions(for: addon, session: session).isEmpty == false
             }
-            .forEach { prefetchIconIfNeeded(for: $0) }
+        candidates.forEach { prefetchIconIfNeeded(for: $0) }
     }
 }

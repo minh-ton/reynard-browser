@@ -13,5 +13,6 @@ xcuserdata/
 AGENTS.md
 
 # Build artifacts
+.build/
 dist/
 browser/Reynard/JIT/RPPairing/libidevice_ffi.a

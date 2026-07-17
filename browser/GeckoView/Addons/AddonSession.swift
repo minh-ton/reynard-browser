@@ -45,6 +45,7 @@ final class AddonSessionListener: GeckoEventListenerInternal {
         "GeckoView:WebExtension:NewTab",
         "GeckoView:WebExtension:UpdateTab",
         "GeckoView:WebExtension:CloseTab",
+        "GeckoView:WebExtension:CaptureVisibleTab",
     ]
     
     @MainActor

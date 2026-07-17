@@ -10,14 +10,13 @@ import UIKit
 final class ToolbarButton: UIButton {
     private enum UX {
         static let toolbarButtonCornerRadius: CGFloat = 10
-        static let downloadButtonSideLength: CGFloat = 44
         static let downloadIconSize: CGFloat = 24
         static let downloadIconVerticalOffset: CGFloat = -1
         static let downloadProgressTrackWidth: CGFloat = 18
         static let downloadProgressTrackHeight: CGFloat = 2.5
         static let downloadProgressTrackBottomInset: CGFloat = 1
         static let downloadProgressTrackCornerRadius: CGFloat = 1.25
-        static let standardButtonSideLength: CGFloat = 30
+        static let standardButtonSideLength = BottomToolbarLayoutPolicy.minimumTargetSize
         static let standardSymbolPointSize: CGFloat = 20
         static let newTabSymbolPointSize: CGFloat = 20
         static let downloadSymbolPointSize: CGFloat = 17
@@ -28,9 +27,15 @@ final class ToolbarButton: UIButton {
         case forward
         case share
         case library
+        case bookmarks
+        case history
+        case settings
         case tabOverview
         case download
         case newTab
+        case closeTab
+        case reload
+        case pageZoom
         case sidebar
     }
     
@@ -83,10 +88,7 @@ final class ToolbarButton: UIButton {
     }
     
     override var intrinsicContentSize: CGSize {
-        let sideLength = toolbarButtonType == .download
-        ? UX.downloadButtonSideLength
-        : UX.standardButtonSideLength
-        return CGSize(width: sideLength, height: sideLength)
+        return CGSize(width: UX.standardButtonSideLength, height: UX.standardButtonSideLength)
     }
     
     // MARK: - Updates
@@ -122,6 +124,7 @@ final class ToolbarButton: UIButton {
         tintColor = .label
         layer.cornerRadius = UX.toolbarButtonCornerRadius
         layer.cornerCurve = .continuous
+        accessibilityLabel = buttonTitle
     }
     
     private func configureImage() {
@@ -139,7 +142,15 @@ final class ToolbarButton: UIButton {
     }
     
     private func configureTarget(_ target: AnyObject, action: Selector) {
+        addTarget(self, action: #selector(playTapHaptic), for: .touchUpInside)
         addTarget(target, action: action, for: .touchUpInside)
+    }
+
+    @objc private func playTapHaptic() {
+        guard Prefs.ToolbarSettings.toolbarButtonHapticsEnabled else {
+            return
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
     
     private func configureDownloadViewsIfNeeded() {
@@ -151,8 +162,8 @@ final class ToolbarButton: UIButton {
         clipsToBounds = false
         contentHorizontalAlignment = .center
         contentVerticalAlignment = .center
-        setContentHuggingPriority(.required, for: .horizontal)
-        setContentCompressionResistancePriority(.required, for: .horizontal)
+        let configuration = UIImage.SymbolConfiguration(pointSize: UX.downloadSymbolPointSize, weight: .regular)
+        downloadIconView.image = UIImage(named: "reynard.arrow.down.circle", in: .main, with: configuration)
         downloadIconView.isHidden = false
         addSubview(downloadIconView)
         addSubview(downloadProgressTrackView)
@@ -184,10 +195,35 @@ final class ToolbarButton: UIButton {
         case .forward: return "reynard.chevron.forward"
         case .share: return "reynard.square.and.arrow.up"
         case .library: return "reynard.ellipsis.circle"
+        case .bookmarks: return "reynard.book"
+        case .history: return "reynard.clock"
+        case .settings: return "reynard.gearshape"
         case .tabOverview: return "reynard.square.on.square"
         case .download: return "reynard.arrow.down.circle"
         case .newTab: return "reynard.plus"
+        case .closeTab: return "reynard.xmark"
+        case .reload: return "reynard.arrow.clockwise"
+        case .pageZoom: return "reynard.textformat.size"
         case .sidebar: return "reynard.sidebar.left"
+        }
+    }
+
+    private var buttonTitle: String {
+        switch toolbarButtonType {
+        case .back: return NSLocalizedString("Back", comment: "")
+        case .forward: return NSLocalizedString("Forward", comment: "")
+        case .share: return NSLocalizedString("Share", comment: "")
+        case .library: return NSLocalizedString("Library", comment: "")
+        case .bookmarks: return NSLocalizedString("Bookmarks", comment: "")
+        case .history: return NSLocalizedString("History", comment: "")
+        case .settings: return NSLocalizedString("Settings", comment: "")
+        case .tabOverview: return NSLocalizedString("Tabs", comment: "")
+        case .download: return NSLocalizedString("Downloads", comment: "")
+        case .newTab: return NSLocalizedString("New Tab", comment: "")
+        case .closeTab: return NSLocalizedString("Close Tab", comment: "")
+        case .reload: return NSLocalizedString("Reload", comment: "")
+        case .pageZoom: return NSLocalizedString("Page Zoom", comment: "")
+        case .sidebar: return NSLocalizedString("Sidebar", comment: "")
         }
     }
     

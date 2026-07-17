@@ -9,4 +9,13 @@ enum NewTabDisplayOption: String {
     case homepage
     case blankPage
     case customURL
+
+    var supportsAutomaticKeyboardFocus: Bool {
+        switch self {
+        case .homepage, .blankPage:
+            return true
+        case .customURL:
+            return false
+        }
+    }
 }

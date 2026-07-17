@@ -14,6 +14,32 @@ public struct AddonInstallFailure: Error {
     public let extensionVersion: String?
 }
 
+public struct AddonDownloadRequest {
+    public let sourceURL: URL
+    public let suggestedFileName: String?
+    public let mimeType: String?
+
+    public init(sourceURL: URL, suggestedFileName: String?, mimeType: String?) {
+        self.sourceURL = sourceURL
+        self.suggestedFileName = suggestedFileName
+        self.mimeType = mimeType
+    }
+}
+
+public struct AddonDownloadResult {
+    public let id: Int
+    public let fileName: String
+    public let mimeType: String?
+    public let fileSize: Int64
+
+    public init(id: Int, fileName: String, mimeType: String?, fileSize: Int64) {
+        self.id = id
+        self.fileName = fileName
+        self.mimeType = mimeType
+        self.fileSize = fileSize
+    }
+}
+
 public protocol AddonEmbedderDelegate: AnyObject {
     func addonController(_ controller: AddonRuntime, didUpdate addon: Addon)
     func addonController(_ controller: AddonRuntime, didFailInstall failure: AddonInstallFailure)
@@ -25,6 +51,7 @@ public protocol AddonEmbedderDelegate: AnyObject {
     func addonController(_ controller: AddonRuntime, createNewTabFor addon: Addon, details: AddonCreateTabDetails, newSessionID: String) -> Bool
     func addonController(_ controller: AddonRuntime, updateTab session: GeckoSession, for addon: Addon, details: AddonUpdateTabDetails) -> AllowOrDeny
     func addonController(_ controller: AddonRuntime, closeTab session: GeckoSession, for addon: Addon) -> AllowOrDeny
+    func addonController(_ controller: AddonRuntime, download request: AddonDownloadRequest) -> AddonDownloadResult?
 }
 
 public extension AddonEmbedderDelegate {
@@ -38,4 +65,5 @@ public extension AddonEmbedderDelegate {
     func addonController(_ controller: AddonRuntime, createNewTabFor addon: Addon, details: AddonCreateTabDetails, newSessionID: String) -> Bool { false }
     func addonController(_ controller: AddonRuntime, updateTab session: GeckoSession, for addon: Addon, details: AddonUpdateTabDetails) -> AllowOrDeny { .deny }
     func addonController(_ controller: AddonRuntime, closeTab session: GeckoSession, for addon: Addon) -> AllowOrDeny { .deny }
+    func addonController(_ controller: AddonRuntime, download request: AddonDownloadRequest) -> AddonDownloadResult? { nil }
 }

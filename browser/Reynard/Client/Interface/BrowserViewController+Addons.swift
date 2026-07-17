@@ -40,12 +40,46 @@ extension BrowserViewController: AddonCoordinatorDataSource, AddonCoordinatorDel
     func performAfterAddonMenuDismissal(_ coordinator: AddonCoordinator, work: @escaping () -> Void) {
         browserChrome.performAfterAddressBarMenuDismissal(work)
     }
+
+    func setAddonPopupLoading(_ coordinator: AddonCoordinator, isLoading: Bool) {
+        if isLoading {
+            guard addonPopupLoadingView.superview == nil else { return }
+            view.addSubview(addonPopupLoadingView)
+            NSLayoutConstraint.activate([
+                addonPopupLoadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                addonPopupLoadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                addonPopupLoadingView.widthAnchor.constraint(equalToConstant: 72),
+                addonPopupLoadingView.heightAnchor.constraint(equalToConstant: 72)
+            ])
+            addonPopupLoadingIndicator.startAnimating()
+            addonPopupLoadingView.alpha = 0
+            UIView.animate(withDuration: 0.15) {
+                self.addonPopupLoadingView.alpha = 1
+            }
+            addonPopupLoadingTimeoutWorkItem?.cancel()
+            let timeout = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.setAddonPopupLoading(coordinator, isLoading: false)
+            }
+            addonPopupLoadingTimeoutWorkItem = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeout)
+        } else {
+            addonPopupLoadingTimeoutWorkItem?.cancel()
+            addonPopupLoadingTimeoutWorkItem = nil
+            addonPopupLoadingIndicator.stopAnimating()
+            addonPopupLoadingView.removeFromSuperview()
+        }
+    }
     
     func presentAddonViewController(_ coordinator: AddonCoordinator, _ viewController: UIViewController) {
-        UIApplication.shared.topViewController(from: self).present(viewController, animated: true)
+        UIApplication.shared.topViewController(from: self).present(viewController, animated: true) { [weak self] in
+            guard let self else { return }
+            self.setAddonPopupLoading(coordinator, isLoading: false)
+        }
     }
     
     func presentAddonAlert(_ coordinator: AddonCoordinator, title: String?, message: String) {
+        setAddonPopupLoading(coordinator, isLoading: false)
         AlertPresenter.show(title: title, message: message)
     }
     

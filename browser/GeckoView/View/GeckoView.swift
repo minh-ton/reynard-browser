@@ -21,6 +21,11 @@ public class GeckoView: UIView {
             embedSessionView()
         }
     }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        session?.updateViewportWidth(bounds.width)
+    }
     
     private func embedSessionView() {
         subviews.forEach { $0.removeFromSuperview() }
@@ -55,5 +60,6 @@ public class GeckoView: UIView {
         
         setNeedsLayout()
         layoutIfNeeded()
+        session.updateViewportWidth(bounds.width)
     }
 }

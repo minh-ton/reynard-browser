@@ -53,6 +53,12 @@ final class DownloadStore: NSObject {
         let fileName: String
         fileprivate let startHandler: () -> Void
     }
+
+    struct CompletedDownloadImport {
+        let fileURL: URL
+        let mimeType: String?
+        let fileSize: Int64
+    }
     
     private struct StorageURLs {
         let downloadsDirectoryURL: URL
@@ -171,17 +177,9 @@ final class DownloadStore: NSObject {
     
     override init() {
         self.fileManager = .default
-        
-        guard let documentsDirectoryURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            fatalError("Documents directory is unavailable")
-        }
-        
-        guard let applicationSupportDirectoryURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            fatalError("Application Support directory is unavailable")
-        }
-        
-        let downloadsDirectoryURL = documentsDirectoryURL.appendingPathComponent("Downloads", isDirectory: true)
-        let appDataDirectoryURL = applicationSupportDirectoryURL.appendingPathComponent("AppData", isDirectory: true)
+        let directories = ReynardDirectories.shared
+        let downloadsDirectoryURL = directories.downloads
+        let appDataDirectoryURL = directories.appData
         let manifestFileURL = appDataDirectoryURL.appendingPathComponent("DownloadStore", isDirectory: false)
         self.storage = StorageURLs(
             downloadsDirectoryURL: downloadsDirectoryURL,
@@ -256,7 +254,53 @@ final class DownloadStore: NSObject {
     func start(_ download: PendingDownload) {
         download.startHandler()
     }
-    
+
+    func importCompletedDownload(
+        from sourceFileURL: URL,
+        sourceURL: URL,
+        suggestedFileName: String?,
+        mimeType: String?
+    ) -> CompletedDownloadImport? {
+        stateQueue.sync {
+            prepareStorageLocked()
+
+            let fileName = resolvedFileName(
+                suggestedFileName: suggestedFileName,
+                sourceURL: sourceURL,
+                mimeType: mimeType
+            )
+            let destinationURL = makeUniqueDestinationURLLocked(for: fileName)
+            guard importFileLocked(from: sourceFileURL, to: destinationURL) else {
+                return nil
+            }
+
+            let fileSize = resolvedFileSize(at: destinationURL) ?? 0
+            persistedDownloads.insert(
+                PersistedDownloadEntry(
+                    id: UUID(),
+                    fileName: destinationURL.lastPathComponent,
+                    relativePath: destinationURL.lastPathComponent,
+                    sourceURLString: sourceURL.absoluteString,
+                    originalURLString: nil,
+                    mimeType: mimeType,
+                    fileSize: fileSize,
+                    addedAt: Date()
+                ),
+                at: 0
+            )
+            savePersistedDownloadsLocked()
+            hasUnviewedCompletedDownloads = true
+            postDidStartDownload()
+            postDidChange()
+
+            return CompletedDownloadImport(
+                fileURL: destinationURL,
+                mimeType: mimeType,
+                fileSize: fileSize
+            )
+        }
+    }
+
     func updateCapturedDownload(localFilePath: String, bytesReceived: Int64) -> Bool {
         return stateQueue.sync {
             guard let active = capturedDownloads[localFilePath] else {

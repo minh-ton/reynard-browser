@@ -6,16 +6,26 @@
 //
 
 import Foundation
-import UIKit
 
 final class NavigationHistory {
     private let store: NavigationHistoryStore
+    private let persistencePolicy: NavigationPersistencePolicy
     
-    init(store: NavigationHistoryStore = .shared) {
+    init(
+        store: NavigationHistoryStore = .shared,
+        persistencePolicy: NavigationPersistencePolicy = NavigationPersistencePolicy()
+    ) {
         self.store = store
+        self.persistencePolicy = persistencePolicy
     }
     
-    func restoreState(for tabID: UUID) -> NavigationAvailability {
+    func restoreState(
+        for tabID: UUID,
+        storageMode: NavigationHistoryStorageMode = .persistent
+    ) -> NavigationAvailability {
+        guard storageMode == .persistent else {
+            return NavigationAvailability(canGoBack: false, canGoForward: false)
+        }
         let snapshot = store.currentSnapshot(for: tabID)
         if snapshot.canGoBack || snapshot.canGoForward {
             _ = store.setUsesPersistedHistory(true, for: tabID)
@@ -43,14 +53,14 @@ final class NavigationHistory {
     func record(
         to url: String,
         for tabID: UUID,
-        sessionState: SessionNavigationAvailability
+        sessionState: SessionNavigationAvailability,
+        storageMode: NavigationHistoryStorageMode = .persistent
     ) -> NavigationAvailability {
-        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedURL.isEmpty,
-              trimmedURL.lowercased() != "about:blank" else {
+        guard storageMode == .persistent,
+              let persistableURL = persistencePolicy.persistableURL(from: url) else {
             return availability(for: tabID, sessionState: sessionState)
         }
-        _ = store.recordNavigation(to: trimmedURL, for: tabID)
+        _ = store.recordNavigation(to: persistableURL, for: tabID)
         return availability(for: tabID, sessionState: sessionState)
     }
     
@@ -105,7 +115,7 @@ final class NavigationHistory {
         return availability(for: tabID, sessionState: .unavailable)
     }
     
-    func updateCurrentHistoryThumbnail(_ image: UIImage?, for tabID: UUID, matching url: String) {
+    func updateCurrentHistoryThumbnail(_ image: NavigationPreviewImage?, for tabID: UUID, matching url: String) {
         store.updateCurrentHistoryThumbnail(image, for: tabID, matching: url)
     }
     

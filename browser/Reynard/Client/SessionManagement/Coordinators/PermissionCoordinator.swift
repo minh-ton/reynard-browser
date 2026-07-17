@@ -7,6 +7,7 @@
 
 import Foundation
 import GeckoView
+import os
 
 protocol PermissionPromptPresenting {
     @MainActor
@@ -19,6 +20,7 @@ protocol PermissionPromptPresenting {
 }
 
 final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
+    private static let log = OSLog(subsystem: "com.minh-ton.Reynard", category: "SitePermissions")
     private let permissionStore: SitePermissionStore
     private let promptPresenter: PermissionPromptPresenting
     
@@ -45,7 +47,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
                 continue
             }
             
-            let action = permissionStore.resolvedAction(for: permission, host: host, session: session)
+            let action = resolvedAction(for: permission, host: host, session: session)
             guard action != .askToAllow else {
                 continue
             }
@@ -73,23 +75,14 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
     
     @MainActor
     func permissionDelegate(decideContentPermission permission: ContentPermission, session: GeckoSession) async -> ContentPermission.Value {
-        if permission.permission == .deviceSensors,
-           let title = permission.alertTitle {
-            let allowed = await promptPresenter.request(
-                title: title,
-                message: permission.alertMessage,
-                cancelTitle: NSLocalizedString("Don’t Allow", comment: ""),
-                for: session
-            )
-            return allowed ? .allow : .deny
-        }
-        
         guard let sitePermission = SitePermission(contentPermission: permission),
-              let host = URLUtils.normalizedHost(fromRawURI: permission.uri) else {
+              let host = SitePermissionDecisionPolicy.normalizedHTTPHost(
+                fromRawURI: permission.uri
+              ) else {
             return .prompt
         }
         
-        let action = permissionStore.resolvedAction(for: sitePermission, host: host, session: session)
+        let action = resolvedAction(for: sitePermission, host: host, session: session)
         if sitePermission == .autoplay {
             applyPermission(action, to: sitePermission, permission: permission)
             return ContentPermission.Value(rawValue: action.autoplayValue) ?? .deny
@@ -99,12 +92,11 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
             return .prompt
         }
         
-        switch action {
-        case .blocked,
-                .allowed:
+        switch SitePermissionDecisionPolicy.decision(forStoredAction: action.rawValue) {
+        case .deny, .allow:
             applyPermission(action, to: sitePermission, permission: permission)
             return action.contentPermissionValue
-        case .askToAllow:
+        case .prompt:
             let allowed = await promptPresenter.request(
                 title: title,
                 message: permission.alertMessage,
@@ -112,7 +104,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
                 for: session
             )
             let action: SitePermissionAction = allowed ? .allowed : .blocked
-            permissionStore.scheduleActionUpdate(action, for: sitePermission, host: host, session: session)
+            persistAction(action, for: sitePermission, host: host, session: session)
             applyPermission(action, to: sitePermission, permission: permission)
             return action.contentPermissionValue
         }
@@ -125,11 +117,11 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
             return false
         }
         
-        if requestedPermissions.contains(where: { permissionStore.resolvedAction(for: $0, host: request.host, session: session) == .blocked }) {
+        if requestedPermissions.contains(where: { resolvedAction(for: $0, host: request.host, session: session) == .blocked }) {
             return false
         }
         
-        if requestedPermissions.allSatisfy({ permissionStore.resolvedAction(for: $0, host: request.host, session: session) == .allowed }) {
+        if requestedPermissions.allSatisfy({ resolvedAction(for: $0, host: request.host, session: session) == .allowed }) {
             return true
         }
         
@@ -145,7 +137,7 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
         )
         let action: SitePermissionAction = allowed ? .allowed : .blocked
         for permission in requestedPermissions {
-            permissionStore.scheduleActionUpdate(action, for: permission, host: request.host, session: session)
+            persistAction(action, for: permission, host: request.host, session: session)
             applyPermission(action, to: permission, uri: request.uri, privateMode: session.isPrivateMode)
         }
         
@@ -153,6 +145,43 @@ final class PermissionCoordinator: NSObject, PermissionEmbedderDelegate {
     }
     
     // MARK: - Permission Resolution
+
+    private func resolvedAction(
+        for permission: SitePermission,
+        host: String,
+        session: GeckoSession
+    ) -> SitePermissionAction {
+        let resolution = permissionStore.resolution(
+            for: permission,
+            host: host,
+            session: session
+        )
+        if resolution.source == .storageFailure {
+            os_log(
+                "Using the default permission because persisted permissions are unavailable",
+                log: Self.log,
+                type: .error
+            )
+        }
+        return resolution.action
+    }
+
+    private func persistAction(
+        _ action: SitePermissionAction,
+        for permission: SitePermission,
+        host: String,
+        session: GeckoSession
+    ) {
+        guard permissionStore.updateAction(
+            action,
+            for: permission,
+            host: host,
+            session: session
+        ) else {
+            os_log("Unable to persist a site permission decision", log: Self.log, type: .error)
+            return
+        }
+    }
     
     private func requestedPermissions(for request: MediaPermissionRequest) -> [SitePermission] {
         var permissions: [SitePermission] = []

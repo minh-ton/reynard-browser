@@ -15,6 +15,7 @@ public enum LoadRequestTarget {
 }
 
 public struct LoadRequest {
+    public let requestID: String?
     public let uri: String
     public let triggerUri: String?
     public let target: LoadRequestTarget
@@ -26,20 +27,54 @@ public struct LoadRequest {
 // MARK: - Navigation Delegate
 
 public protocol NavigationDelegate {
-    func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission])
+    func onLocationChange(
+        session: GeckoSession,
+        url: String?,
+        permissions: [ContentPermission],
+        hasUserGesture: Bool
+    )
     func onCanGoBack(session: GeckoSession, canGoBack: Bool)
     func onCanGoForward(session: GeckoSession, canGoForward: Bool)
     func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny
     func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny
+    func onLinkActivated(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String,
+        isDefaultPrevented: Bool
+    )
+    func onExternalProtocolRequest(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String?,
+        hasUserGesture: Bool
+    ) async -> Bool
     func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession?
 }
 
 extension NavigationDelegate {
-    public func onLocationChange(session: GeckoSession, url: String?, permissions: [ContentPermission]) {}
+    public func onLocationChange(
+        session: GeckoSession,
+        url: String?,
+        permissions: [ContentPermission],
+        hasUserGesture: Bool
+    ) {}
     public func onCanGoBack(session: GeckoSession, canGoBack: Bool) {}
     public func onCanGoForward(session: GeckoSession, canGoForward: Bool) {}
     public func onLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny { .allow }
     public func onSubframeLoadRequest(session: GeckoSession, request: LoadRequest) async -> AllowOrDeny { .allow }
+    public func onLinkActivated(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String,
+        isDefaultPrevented: Bool
+    ) {}
+    public func onExternalProtocolRequest(
+        session: GeckoSession,
+        uri: String,
+        triggerUri: String?,
+        hasUserGesture: Bool
+    ) async -> Bool { false }
     public func onNewSession(session: GeckoSession, uri: String, windowId: String) async -> GeckoSession? { nil }
 }
 
@@ -50,6 +85,8 @@ enum NavigationEvents: String, CaseIterable {
     case onNewSession = "GeckoView:OnNewSession"
     case onLoadError = "GeckoView:OnLoadError"
     case onLoadRequest = "GeckoView:OnLoadRequest"
+    case linkActivated = "GeckoView:LinkActivated"
+    case externalProtocol = "GeckoView:ExternalProtocol"
 }
 
 // MARK: - Navigation Handler
@@ -72,7 +109,8 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
                 delegate?.onLocationChange(
                     session: session,
                     url: message?["uri"] as? String,
-                    permissions: permissionPayloads?.map(ContentPermission.fromDictionary) ?? []
+                    permissions: permissionPayloads?.map(ContentPermission.fromDictionary) ?? [],
+                    hasUserGesture: message?["hasUserGesture"] as? Bool ?? false
                 )
             }
             
@@ -110,7 +148,31 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             
         case .onLoadError:
             return nil
-            
+
+        case .linkActivated:
+            guard let uri = message?["uri"] as? String,
+                  let triggerUri = message?["triggerUri"] as? String else {
+                return nil
+            }
+            delegate?.onLinkActivated(
+                session: session,
+                uri: uri,
+                triggerUri: triggerUri,
+                isDefaultPrevented: message?["defaultPrevented"] as? Bool ?? false
+            )
+            return nil
+
+        case .externalProtocol:
+            guard let uri = message?["uri"] as? String else {
+                return false
+            }
+            return await delegate?.onExternalProtocolRequest(
+                session: session,
+                uri: uri,
+                triggerUri: message?["triggerUri"] as? String,
+                hasUserGesture: message?["hasUserGesture"] as? Bool ?? false
+            ) ?? false
+
         case .onLoadRequest:
             guard let uri = message?["uri"] as? String else {
                 return true
@@ -130,6 +192,7 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             
             let isRedirectFlag = 0x800000
             let request = LoadRequest(
+                requestID: message?["requestId"] as? String,
                 uri: uri,
                 triggerUri: message?["triggerUri"] as? String,
                 target: convertTarget(targetValue),
@@ -142,9 +205,13 @@ func newNavigationHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             if isTopLevel {
                 // GeckoView expects this response to mean "handled by the app".
                 // Allow must therefore return false so Gecko continues the load itself.
-                return await delegate?.onLoadRequest(session: session, request: request) == .deny
+                let decision = await delegate?.onLoadRequest(session: session, request: request)
+                let handled = decision == .deny
+                return handled
             }
-            return await delegate?.onSubframeLoadRequest(session: session, request: request) == .deny
+            let decision = await delegate?.onSubframeLoadRequest(session: session, request: request)
+            let handled = decision == .deny
+            return handled
         }
     }
 }

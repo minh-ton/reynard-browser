@@ -152,8 +152,11 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
             return
         }
         
-        if displayedSections[indexPath.section].rows[indexPath.row] == .pageZoom {
+        switch displayedSections[indexPath.section].rows[indexPath.row] {
+        case .pageZoom:
             navigationController?.pushViewController(PageZoomPreferencesViewController(), animated: true)
+        default:
+            break
         }
     }
     

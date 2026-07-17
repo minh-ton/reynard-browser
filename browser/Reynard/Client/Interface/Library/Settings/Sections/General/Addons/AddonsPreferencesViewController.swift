@@ -17,12 +17,17 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }
     
     private enum Section {
+        case addressBar
         case installed
         case unsupported
         case more
         
         var text: SettingsSectionText {
             switch self {
+            case .addressBar:
+                return SettingsSectionText(
+                    headerTitle: NSLocalizedString("Address Bar", comment: "")
+                )
             case .installed:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Installed Add-ons", comment: ""))
             case .unsupported:
@@ -42,6 +47,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     private static let sharedIconCache = NSCache<NSString, UIImage>()
     private static var hasLoadedInstalledAddons = false
     
+    private let addonPackageStagingService: AddonPackageStagingService
     private let iconLoadingQueue = DispatchQueue(label: "com.minh-ton.Reynard.AddonsPreferencesViewController.IconLoadingQueue", qos: .utility)
     private var loadingIconIDs = Set<String>()
     private var installedAddons: [Addon] = []
@@ -51,6 +57,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     private var isLoadingAddons = false
     private var isInstallingAddonFromFile = false
     private var isCheckingForAddonUpdates = false
+    private var uninstallingAddonIDs = Set<String>()
     private let lastCheckedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -59,7 +66,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }()
     
     private var displayedSections: [Section] {
-        var sections: [Section] = [.installed]
+        var sections: [Section] = [.addressBar, .installed]
         if !unsupportedAddons.isEmpty {
             sections.append(.unsupported)
         }
@@ -92,7 +99,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     // MARK: - Lifecycle
     
-    init() {
+    init(addonPackageStagingService: AddonPackageStagingService = .shared) {
+        self.addonPackageStagingService = addonPackageStagingService
         super.init(style: .insetGrouped)
         title = NSLocalizedString("Add-ons", comment: "")
     }
@@ -104,6 +112,12 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         Self.sharedIconCache.countLimit = 64
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(addonRuntimeDidChange),
+            name: .addonRuntimeDidChange,
+            object: nil
+        )
         loadCachedAddons()
     }
     
@@ -118,6 +132,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         super.viewDidDisappear(animated)
         LibrarySharedUtils.resolvedBrowserViewController(from: self)?.addonCoordinator.updateCoordinator.setSettingsVisible(false)
     }
+
+    @objc private func addonRuntimeDidChange() {
+        loadCachedAddons()
+    }
     
     // MARK: - Table Data Source
     
@@ -131,6 +149,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         }
         
         switch displayedSections[section] {
+        case .addressBar:
+            return 1
         case .installed:
             return installedAddons.isEmpty ? 1 : installedAddons.count
         case .unsupported:
@@ -146,6 +166,16 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         }
         
         switch displayedSections[indexPath.section] {
+        case .addressBar:
+            let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+            cell.textLabel?.text = NSLocalizedString("Show Add-ons Button", comment: "")
+            cell.selectionStyle = .none
+            let toggle = UISwitch()
+            toggle.isOn = Prefs.AddonSettings.showsAddressBarButton
+            toggle.accessibilityLabel = NSLocalizedString("Show Add-ons Button", comment: "")
+            toggle.addTarget(self, action: #selector(showAddressBarButtonChanged(_:)), for: .valueChanged)
+            cell.accessoryView = toggle
+            return cell
         case .installed:
             if installedAddons.isEmpty {
                 let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
@@ -223,6 +253,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         }
         
         switch displayedSections[indexPath.section] {
+        case .addressBar:
+            return
         case .installed, .unsupported:
             guard let addon = addonForSelection(at: indexPath) else {
                 return
@@ -251,6 +283,27 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
         }
     }
+
+    override func tableView(
+        _ tableView: UITableView,
+        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard let addon = addonForSelection(at: indexPath),
+              !uninstallingAddonIDs.contains(addon.id) else {
+            return nil
+        }
+
+        let uninstallAction = UIContextualAction(
+            style: .destructive,
+            title: NSLocalizedString("Uninstall", comment: "")
+        ) { [weak self] _, _, completion in
+            completion(false)
+            self?.confirmUninstall(addon)
+        }
+        let configuration = UISwipeActionsConfiguration(actions: [uninstallAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
+    }
     
     override func sectionText(for section: Int) -> SettingsSectionText {
         guard displayedSections.indices.contains(section) else {
@@ -259,6 +312,14 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         
         let displayedSection = displayedSections[section]
         switch displayedSection {
+        case .addressBar:
+            return SettingsSectionText(
+                headerTitle: NSLocalizedString("Address Bar", comment: ""),
+                footerTitle: NSLocalizedString(
+                    "Display add-ons button in the URL bar.",
+                    comment: ""
+                )
+            )
         case .installed:
             return installedAddons.isEmpty ? SettingsSectionText() : displayedSection.text
         case .unsupported:
@@ -277,6 +338,10 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             return displayedSection.text
         }
+    }
+
+    @objc private func showAddressBarButtonChanged(_ sender: UISwitch) {
+        Prefs.AddonSettings.showsAddressBarButton = sender.isOn
     }
     
     // MARK: - Add-on Loading
@@ -339,8 +404,67 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 return nil
             }
             return unsupportedAddons[indexPath.row]
-        case .more:
+        case .addressBar, .more:
             return nil
+        }
+    }
+
+    // MARK: - Uninstallation
+
+    private func confirmUninstall(_ addon: Addon) {
+        let addonName = addon.metaData.name ?? addon.id
+        AlertPresenter.show(
+            title: String(
+                format: NSLocalizedString("Uninstall %@?", comment: "Add-on name"),
+                addonName
+            ),
+            message: nil,
+            buttons: [
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Cancel", comment: ""),
+                    style: .cancel
+                ),
+                AlertPresenter.Button(
+                    title: NSLocalizedString("Uninstall", comment: ""),
+                    style: .destructive
+                ) { [weak self] in
+                    self?.uninstall(addon)
+                },
+            ]
+        )
+    }
+
+    private func uninstall(_ addon: Addon) {
+        guard uninstallingAddonIDs.insert(addon.id).inserted else {
+            return
+        }
+        addonStatusTextByID[addon.id] = "Uninstalling..."
+        tableView.reloadData()
+
+        Task { [weak self] in
+            do {
+                try await AddonRuntime.shared.uninstall(addon)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.uninstallingAddonIDs.remove(addon.id)
+                    self.addonStatusTextByID.removeValue(forKey: addon.id)
+                    self.installedAddons.removeAll { $0.id == addon.id }
+                    self.unsupportedAddons.removeAll { $0.id == addon.id }
+                    Self.sharedIconCache.removeObject(forKey: addon.id as NSString)
+                    self.tableView.reloadData()
+                }
+            } catch {
+                await MainActor.run {
+                    guard let self else { return }
+                    self.uninstallingAddonIDs.remove(addon.id)
+                    self.addonStatusTextByID.removeValue(forKey: addon.id)
+                    self.tableView.reloadData()
+                    AlertPresenter.show(
+                        title: NSLocalizedString("Failed to uninstall add-on", comment: ""),
+                        message: "\(error)"
+                    )
+                }
+            }
         }
     }
     
@@ -383,9 +507,26 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             
             do {
-                let stagedPackageURL = try Self.stageAddonPackage(from: packageURL)
-                _ = try await AddonRuntime.shared.install(url: stagedPackageURL.absoluteString)
-                await self.loadRuntimeAddons()
+                let stagedPackageURL = try await self.addonPackageStagingService.stage(
+                    packageURL: packageURL
+                )
+                do {
+                    _ = try await AddonRuntime.shared.install(url: stagedPackageURL.absoluteString)
+                    await self.loadRuntimeAddons()
+                } catch {
+                    let installationError = error
+                    do {
+                        try await self.addonPackageStagingService.remove(stagedPackageURL)
+                    } catch {
+                        AddonPackageStagingLog.error("Unable to remove a failed staged package", error: error)
+                    }
+                    throw installationError
+                }
+                do {
+                    try await self.addonPackageStagingService.remove(stagedPackageURL)
+                } catch {
+                    AddonPackageStagingLog.error("Unable to remove a staged add-on package", error: error)
+                }
                 
                 await MainActor.run {
                     self.isInstallingAddonFromFile = false
@@ -406,30 +547,6 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                 }
             }
         }
-    }
-    
-    private static func stageAddonPackage(from packageURL: URL) throws -> URL {
-        let fileManager = FileManager.default
-        let stagingDirectoryURL = fileManager.temporaryDirectory.appendingPathComponent("Addons", isDirectory: true)
-        try fileManager.createDirectory(at: stagingDirectoryURL, withIntermediateDirectories: true)
-        
-        let destinationURL = stagingDirectoryURL
-            .appendingPathComponent(UUID().uuidString, isDirectory: false)
-            .appendingPathExtension("xpi")
-        
-        let hasSecurityScopedAccess = packageURL.startAccessingSecurityScopedResource()
-        defer {
-            if hasSecurityScopedAccess {
-                packageURL.stopAccessingSecurityScopedResource()
-            }
-        }
-        
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-        
-        try fileManager.copyItem(at: packageURL, to: destinationURL)
-        return destinationURL
     }
     
     // MARK: - Icons
