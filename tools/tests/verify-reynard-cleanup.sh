@@ -13,6 +13,8 @@ EXTERNAL_APP_ROUTER_TEST_BINARY="${TMPDIR:-/tmp}/reynard-external-app-link-route
 NAVIGATION_HISTORY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-navigation-history-tests"
 TOOLBAR_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-toolbar-layout-tests"
 PAGE_MENU_LAYOUT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-page-menu-layout-tests"
+PAGE_ZOOM_VIEWPORT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-page-zoom-viewport-tests"
+PAGE_ZOOM_COMPATIBILITY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-page-zoom-compatibility-tests"
 IMAGE_DECODE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-image-decode-tests"
 BOOKMARK_ICON_IMAGE_POLICY_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-icon-image-policy-tests"
 BOOKMARK_CUSTOM_ICON_STORE_TEST_BINARY="${TMPDIR:-/tmp}/reynard-bookmark-custom-icon-store-tests"
@@ -32,6 +34,21 @@ PENDING_IMPORT_PREFLIGHT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-pending-import-pre
 PREFERENCES_SNAPSHOT_TEST_BINARY="${TMPDIR:-/tmp}/reynard-preferences-snapshot-tests"
 MODULE_CACHE="${TMPDIR:-/tmp}/reynard-swift-module-cache"
 
+PAGE_ZOOM_ADDRESS_BAR="$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+AddressBar.swift"
+PAGE_ZOOM_TAB_MANAGER="$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController+TabManager.swift"
+PAGE_ZOOM_BROWSER_CONTROLLER="$ROOT_DIR/browser/Reynard/Client/Interface/BrowserViewController.swift"
+PAGE_ZOOM_BROWSER_CHROME="$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/BrowserChrome.swift"
+PAGE_ZOOM_CHROME_ADDRESS_BAR="$ROOT_DIR/browser/Reynard/Client/Interface/Chrome/AddressBar/AddressBar.swift"
+
+if ! rg -q 'func syncSelectedPageZoomControls\(\)' "$PAGE_ZOOM_ADDRESS_BAR" ||
+	! rg -q 'syncSelectedPageZoomControls\(\)' "$PAGE_ZOOM_BROWSER_CONTROLLER" ||
+	[ "$(rg -c 'syncSelectedPageZoomControls\(\)' "$PAGE_ZOOM_TAB_MANAGER" || true)" -lt 2 ] ||
+	! rg -q 'func maximumPageZoomLevel\(\)' "$PAGE_ZOOM_CHROME_ADDRESS_BAR" ||
+	! rg -q 'syncPageZoomControls\(' "$PAGE_ZOOM_BROWSER_CHROME"; then
+	echo "Page-zoom controls are not synchronized across layout, navigation, and tab changes." >&2
+	exit 1
+fi
+
 "$ROOT_DIR/tools/firefox/prepare-firefox.sh"
 
 if [ -z "${REYNARD_DIFF_BASE:-}" ]; then
@@ -44,6 +61,8 @@ node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/FullPageCaptureCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/WebExtensionCompat.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/actors/FullPageCapturePopupChild.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/actors/GeckoViewSettingsChild.sys.mjs"
+node --check "$FIREFOX_DIR/mobile/shared/modules/geckoview/GeckoViewSettings.sys.mjs"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-downloads.js"
 node --check "$FIREFOX_DIR/mobile/shared/components/extensions/ext-tabs.js"
 node --check "$FIREFOX_DIR/toolkit/components/extensions/child/ext-storage.js"
@@ -496,6 +515,23 @@ swiftc \
 	-o "$PAGE_MENU_LAYOUT_TEST_BINARY"
 "$PAGE_MENU_LAYOUT_TEST_BINARY"
 rm -f "$PAGE_MENU_LAYOUT_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/GeckoView/Session/PageZoomViewportPolicy.swift" \
+	"$SCRIPT_DIR/PageZoomViewportPolicyTests.swift" \
+	-o "$PAGE_ZOOM_VIEWPORT_TEST_BINARY"
+"$PAGE_ZOOM_VIEWPORT_TEST_BINARY"
+rm -f "$PAGE_ZOOM_VIEWPORT_TEST_BINARY"
+
+swiftc \
+	-module-cache-path "$MODULE_CACHE" \
+	"$ROOT_DIR/browser/Reynard/Client/SessionManagement/Settings/DomainMatcher.swift" \
+	"$ROOT_DIR/browser/Reynard/Client/SessionManagement/Settings/PageZoom/PageZoomCompatibilityPolicy.swift" \
+	"$SCRIPT_DIR/PageZoomCompatibilityPolicyTests.swift" \
+	-o "$PAGE_ZOOM_COMPATIBILITY_TEST_BINARY"
+"$PAGE_ZOOM_COMPATIBILITY_TEST_BINARY"
+rm -f "$PAGE_ZOOM_COMPATIBILITY_TEST_BINARY"
 
 swiftc \
 	-module-cache-path "$MODULE_CACHE" \

@@ -38,6 +38,7 @@ final class PageZoomActionBar: UIView {
     var onClose: (() -> Void)?
     
     private(set) var zoomLevel = Prefs.AppearanceSettings.defaultPageZoomLevel
+    private var maximumZoomLevel = PageZoomActionBar.zoomLevels.last!
     
     private let backgroundView: UIVisualEffectView = {
         let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
@@ -160,9 +161,22 @@ final class PageZoomActionBar: UIView {
     
     func setZoomLevel(_ level: Int) {
         zoomLevel = PageZoomActionBar.zoomLevels.contains(level) ? level : Prefs.AppearanceSettings.defaultPageZoomLevel
+        zoomLevel = min(zoomLevel, maximumZoomLevel)
+        updateControls()
+    }
+
+    func setMaximumZoomLevel(_ level: Int) {
+        maximumZoomLevel = PageZoomActionBar.zoomLevels.contains(level)
+            ? level
+            : PageZoomActionBar.zoomLevels.last!
+        zoomLevel = min(zoomLevel, maximumZoomLevel)
+        updateControls()
+    }
+
+    private func updateControls() {
         resetButton.setTitle(PageZoomLevels.displayText(for: zoomLevel), for: .normal)
         zoomOutButton.isEnabled = zoomLevel > PageZoomActionBar.zoomLevels.first!
-        zoomInButton.isEnabled = zoomLevel < PageZoomActionBar.zoomLevels.last!
+        zoomInButton.isEnabled = zoomLevel < maximumZoomLevel
         zoomOutButton.alpha = zoomOutButton.isEnabled ? 1 : UX.disabledAlpha
         zoomInButton.alpha = zoomInButton.isEnabled ? 1 : UX.disabledAlpha
     }
@@ -171,7 +185,9 @@ final class PageZoomActionBar: UIView {
         guard let index = PageZoomActionBar.zoomLevels.firstIndex(of: zoomLevel) else {
             return Prefs.AppearanceSettings.defaultPageZoomLevel
         }
-        return PageZoomActionBar.zoomLevels[min(index + 1, PageZoomActionBar.zoomLevels.count - 1)]
+        let maximumIndex = PageZoomActionBar.zoomLevels.firstIndex(of: maximumZoomLevel)
+            ?? PageZoomActionBar.zoomLevels.index(before: PageZoomActionBar.zoomLevels.endIndex)
+        return PageZoomActionBar.zoomLevels[min(index + 1, maximumIndex)]
     }
     
     func previousZoomLevel() -> Int {
@@ -198,7 +214,7 @@ final class PageZoomActionBar: UIView {
     @objc private func closeTapped() {
         onClose?()
     }
-    
+
     // MARK: - View Setup
     
     private func configureAppearance() {

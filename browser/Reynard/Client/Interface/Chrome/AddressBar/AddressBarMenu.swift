@@ -104,11 +104,16 @@ final class AddressBarPageMenuView: UIControl {
 
     init(
         zoomLevel: Int,
+        maximumZoomLevel: Int,
         items: [AddressBarMenu.Item],
         onZoomLevel: @escaping (Int) -> Void
     ) {
         self.items = items
-        zoomControl = AddressBarMenuZoomControl(level: zoomLevel, onLevel: onZoomLevel)
+        zoomControl = AddressBarMenuZoomControl(
+            level: zoomLevel,
+            maximumLevel: maximumZoomLevel,
+            onLevel: onZoomLevel
+        )
         super.init(frame: .zero)
         backgroundColor = UIColor.black.withAlphaComponent(0.08)
         addTarget(self, action: #selector(backgroundTapped), for: .touchUpInside)
@@ -272,14 +277,19 @@ final class AddressBarPageMenuView: UIControl {
 
 private final class AddressBarMenuZoomControl: UIView {
     private let levels = PageZoomLevels.all
+    private let maximumLevel: Int
     private var level: Int
     private let onLevel: (Int) -> Void
     private let decreaseButton = UIButton(type: .system)
     private let percentageButton = UIButton(type: .system)
     private let increaseButton = UIButton(type: .system)
 
-    init(level: Int, onLevel: @escaping (Int) -> Void) {
-        self.level = level
+    init(level: Int, maximumLevel: Int, onLevel: @escaping (Int) -> Void) {
+        let maximumLevel = PageZoomLevels.all.contains(maximumLevel)
+            ? maximumLevel
+            : PageZoomLevels.all.last!
+        self.maximumLevel = maximumLevel
+        self.level = min(level, maximumLevel)
         self.onLevel = onLevel
         super.init(frame: .zero)
         backgroundColor = .clear
@@ -353,7 +363,11 @@ private final class AddressBarMenuZoomControl: UIView {
     }
 
     @objc private func increaseTapped() {
-        guard let index = levels.firstIndex(of: level), index < levels.index(before: levels.endIndex) else { return }
+        guard let index = levels.firstIndex(of: level),
+              let maximumIndex = levels.firstIndex(of: maximumLevel),
+              index < maximumIndex else {
+            return
+        }
         setLevel(levels[levels.index(after: index)])
     }
 
@@ -362,10 +376,10 @@ private final class AddressBarMenuZoomControl: UIView {
     }
 
     private func setLevel(_ newLevel: Int) {
-        level = newLevel
+        level = min(newLevel, maximumLevel)
         updateControls()
         UISelectionFeedbackGenerator().selectionChanged()
-        onLevel(newLevel)
+        onLevel(level)
     }
 
     private func updateControls() {
@@ -374,7 +388,7 @@ private final class AddressBarMenuZoomControl: UIView {
         percentageButton.accessibilityValue = displayText
         if let index = levels.firstIndex(of: level) {
             decreaseButton.isEnabled = index > levels.startIndex
-            increaseButton.isEnabled = index < levels.index(before: levels.endIndex)
+            increaseButton.isEnabled = level < maximumLevel
         }
         decreaseButton.alpha = decreaseButton.isEnabled ? 1 : 0.32
         increaseButton.alpha = increaseButton.isEnabled ? 1 : 0.32

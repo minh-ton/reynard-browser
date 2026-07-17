@@ -131,6 +131,10 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         return tabManager.selectedTab?.session.settings.pageZoom.level
     }
 
+    func addressBarMaximumPageZoomLevel(_ addressBar: AddressBar) -> Int {
+        return maximumSafePageZoomLevel()
+    }
+
     func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int) {
         setSelectedPageZoomLevel(level)
     }
@@ -267,15 +271,44 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func setSelectedPageZoomToNextLevel() {
         setSelectedPageZoomLevel(browserChrome.nextPageZoomLevel())
     }
+
+    func maximumSafePageZoomLevel() -> Int {
+        return PageZoomViewportPolicy.maximumLevel(
+            viewportWidth: Double(contentView.bounds.width),
+            minimumLayoutWidth: tabManager.selectedTab?
+                .session.settings.pageZoom.minimumLayoutWidth
+        )
+    }
+
+    func syncSelectedPageZoomControls() {
+        guard let selectedTab = tabManager.selectedTab else {
+            return
+        }
+
+        browserChrome.syncPageZoomControls(
+            level: selectedTab.session.settings.pageZoom.level,
+            maximumLevel: maximumSafePageZoomLevel()
+        )
+    }
     
     func setSelectedPageZoomLevel(_ level: Int) {
         guard let selectedTab = tabManager.selectedTab,
               let url = selectedTab.url else {
             return
         }
-        
-        browserChrome.setPageZoomLevel(level)
-        sessionManager.setPageZoom(level, of: selectedTab.session, for: url, tabID: selectedTab.id)
+        let effectiveLevel = PageZoomViewportPolicy.effectiveLevel(
+            requestedLevel: level,
+            viewportWidth: Double(contentView.bounds.width),
+            minimumLayoutWidth: selectedTab.session.settings.pageZoom.minimumLayoutWidth
+        )
+
+        browserChrome.setPageZoomLevel(effectiveLevel)
+        sessionManager.setPageZoom(
+            effectiveLevel,
+            of: selectedTab.session,
+            for: url,
+            tabID: selectedTab.id
+        )
     }
     
     // MARK: - Website Actions

@@ -228,13 +228,9 @@ final class BrowserChrome: UIView {
     func setPageZoomLevel(_ level: Int) {
         actionBar.setPageZoomLevel(level)
     }
-    
-    func updatePageZoomLevel(_ level: Int) {
-        guard !actionBar.isHidden,
-              actionBar.item == .pageZoom else {
-            return
-        }
-        
+
+    func syncPageZoomControls(level: Int, maximumLevel: Int) {
+        actionBar.setMaximumPageZoomLevel(maximumLevel)
         actionBar.setPageZoomLevel(level)
     }
     
@@ -462,7 +458,10 @@ final class BrowserChrome: UIView {
                 return
             }
             if let level = self.addressBar.currentPageZoomLevel() {
-                self.actionBar.setPageZoomLevel(level)
+                self.syncPageZoomControls(
+                    level: level,
+                    maximumLevel: self.addressBar.maximumPageZoomLevel()
+                )
             }
             self.showActionBar(.pageZoom, animated: true)
         }

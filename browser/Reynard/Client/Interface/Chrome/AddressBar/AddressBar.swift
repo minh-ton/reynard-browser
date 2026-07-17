@@ -6,13 +6,13 @@
 //
 
 import UIKit
-import GeckoView
 
 protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar)
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
     func addressBarDidRequestAddonList(_ addressBar: AddressBar)
     func addressBarCurrentPageZoomLevel(_ addressBar: AddressBar) -> Int?
+    func addressBarMaximumPageZoomLevel(_ addressBar: AddressBar) -> Int
     func addressBar(_ addressBar: AddressBar, didRequestPageZoomLevel level: Int)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
@@ -482,6 +482,11 @@ final class AddressBar: UIView {
     func currentPageZoomLevel() -> Int? {
         delegate?.addressBarCurrentPageZoomLevel(self)
     }
+
+    func maximumPageZoomLevel() -> Int {
+        return delegate?.addressBarMaximumPageZoomLevel(self)
+            ?? PageZoomLevels.all.last!
+    }
     
     // MARK: - Tab Transitions
     
@@ -916,6 +921,8 @@ final class AddressBar: UIView {
         UISelectionFeedbackGenerator().selectionChanged()
         let overlay = AddressBarPageMenuView(
             zoomLevel: level,
+            maximumZoomLevel: delegate?.addressBarMaximumPageZoomLevel(self)
+                ?? PageZoomLevels.all.last!,
             items: pageMenuItems
         ) { [weak self] level in
             guard let self else { return }

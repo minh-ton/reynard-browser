@@ -29,13 +29,15 @@ public struct PageZoomSetting: Equatable {
     public static let `default` = PageZoomSetting(level: 100)
     
     public let level: Int
+    public let minimumLayoutWidth: Double?
     
     public var scale: CGFloat {
         return CGFloat(level) / 100
     }
     
-    public init(level: Int) {
+    public init(level: Int, minimumLayoutWidth: Double? = nil) {
         self.level = level
+        self.minimumLayoutWidth = minimumLayoutWidth
     }
 }
 

@@ -200,6 +200,7 @@ final class BrowserViewController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        syncSelectedPageZoomControls()
         invalidateNavigationThumbnailsIfNeeded()
     }
     
