@@ -18,6 +18,13 @@ public struct PromptResponse {
         return PromptResponse(geckoMessage: ["text": value])
     }
     
+    public static func auth(username: String, password: String) -> PromptResponse {
+        return PromptResponse(geckoMessage: [
+            "username": username,
+            "password": password
+        ])
+    }
+    
     public static func folderUpload(allowed: Bool) -> PromptResponse {
         return PromptResponse(geckoMessage: ["allow": allowed])
     }

@@ -36,6 +36,19 @@ func parsePromptRequest(_ data: [String: Any]) -> PromptRequest? {
             value: data["value"] as? String ?? ""
         ))
         
+    case "auth":
+        let options = data["options"] as? [String: Any] ?? [:]
+        return .auth(AuthPromptRequest(
+            id: promptID,
+            title: data["title"] as? String ?? "",
+            message: data["msg"] as? String ?? "",
+            mode: data["mode"] as? String ?? "auth",
+            uri: options["uri"] as? String ?? "",
+            level: options["level"] as? Int ?? 0,
+            username: options["username"] as? String ?? "",
+            password: options["password"] as? String ?? ""
+        ))
+        
     case "folderUpload":
         return .folderUpload(FolderUploadPromptRequest(
             id: promptID,

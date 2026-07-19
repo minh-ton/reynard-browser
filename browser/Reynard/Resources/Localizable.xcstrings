@@ -5347,6 +5347,16 @@
         }
       }
     },
+    "Password" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        }
+      }
+    },
     "Performance Recommendation" : {
       "localizations" : {
         "en" : {
@@ -6803,6 +6813,27 @@
         }
       }
     },
+    "Sign In" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
+          }
+        }
+      }
+    },
+    "Sign in to %@" : {
+      "comment" : "Authentication host",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to %@"
+          }
+        }
+      }
+    },
     "Since this is your first time enabling JIT, Reynard needs to download and mount the Developer Disk Image. This is required for JIT to work properly." : {
       "localizations" : {
         "en" : {
@@ -7829,6 +7860,16 @@
         }
       }
     },
+    "User Name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User Name"
+          }
+        }
+      }
+    },
     "Version" : {
       "localizations" : {
         "en" : {
@@ -8113,6 +8154,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的浏览历史记录将显示在这里"
+          }
+        }
+      }
+    },
+    "Your login information will be sent securely." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your login information will be sent securely."
+          }
+        }
+      }
+    },
+    "Your login information will not be sent securely." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your login information will not be sent securely."
           }
         }
       }
