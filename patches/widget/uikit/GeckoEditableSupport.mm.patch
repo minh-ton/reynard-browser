@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..c1c33a83de03
+index 000000000000..113c3907d1e7
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3842 @@
+@@ -0,0 +1,3849 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -2180,6 +2180,13 @@ index 000000000000..c1c33a83de03
 +- (id<UITextInputTokenizer>)tokenizer {
 +  return mEditable.mTokenizer;
 +}
++
++- (id)insertDictationResultPlaceholder {
++  return @"";
++}
++
++- (void)removeDictationResultPlaceholder:(id)aPlaceholder
++                        willInsertResult:(BOOL)aWillInsertResult {}
 +
 +- (UIView*)textInputView {
 +  return self;
