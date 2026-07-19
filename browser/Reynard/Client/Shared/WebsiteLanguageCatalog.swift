@@ -403,9 +403,6 @@ enum WebsiteLanguageCatalog {
     }
     
     static func defaultLanguageCodes() -> [String] {
-        let phoneLanguageCode = Locale.preferredLanguages.first.flatMap {
-            normalizedCode($0)
-        }
-        return sanitizedLanguageCodes([phoneLanguageCode, "en"].compactMap { $0 })
+        return sanitizedLanguageCodes(Locale.preferredLanguages + ["en"])
     }
 }
