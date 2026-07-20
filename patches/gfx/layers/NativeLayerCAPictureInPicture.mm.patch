@@ -1,9 +1,9 @@
 diff --git a/gfx/layers/NativeLayerCAPictureInPicture.mm b/gfx/layers/NativeLayerCAPictureInPicture.mm
 new file mode 100644
-index 000000000000..71175d915269
+index 000000000000..a29cd27a2cc3
 --- /dev/null
 +++ b/gfx/layers/NativeLayerCAPictureInPicture.mm
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,121 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -12,11 +12,8 @@ index 000000000000..71175d915269
 + * https://github.com/minh-ton/reynard-browser in Feb 2026. */
 +
 +#include "mozilla/layers/NativeLayerCA.h"
-+#include "mozilla/layers/NativeLayerCAPictureInPicture.h"
 +
 +#import <AVFoundation/AVFoundation.h>
-+
-+#include <utility>
 +
 +#include "nsThreadUtils.h"
 +
@@ -35,116 +32,43 @@ index 000000000000..71175d915269
 +         format == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange;
 +}
 +
-+/* static */ PictureInPictureCandidate PictureInPictureCandidate::Adopt(
-+    CALayer* aLayer, uint64_t aEnqueueCount, bool aFullscreen) {
-+  return PictureInPictureCandidate(aLayer, aEnqueueCount, aFullscreen);
++CALayer* NativeLayerRootCA::CopyPictureInPictureSource() {
++  MutexAutoLock lock(mMutex);
++  return [mPictureInPictureSourceLayer retain];
 +}
 +
-+PictureInPictureCandidate::PictureInPictureCandidate(CALayer* aLayer,
-+                                                     uint64_t aEnqueueCount,
-+                                                     bool aFullscreen)
-+    : mLayer(aLayer), mEnqueueCount(aEnqueueCount), mFullscreen(aFullscreen) {}
-+
-+PictureInPictureCandidate::PictureInPictureCandidate(
-+    const PictureInPictureCandidate& aOther)
-+    : mLayer([aOther.mLayer retain]),
-+      mEnqueueCount(aOther.mEnqueueCount),
-+      mFullscreen(aOther.mFullscreen) {}
-+
-+PictureInPictureCandidate::PictureInPictureCandidate(
-+    PictureInPictureCandidate&& aOther)
-+    : mLayer(std::exchange(aOther.mLayer, nullptr)),
-+      mEnqueueCount(aOther.mEnqueueCount),
-+      mFullscreen(aOther.mFullscreen) {}
-+
-+PictureInPictureCandidate& PictureInPictureCandidate::operator=(
-+    const PictureInPictureCandidate& aOther) {
-+  if (this != &aOther) {
-+    CALayer* layer = [aOther.mLayer retain];
-+    [mLayer release];
-+    mLayer = layer;
-+    mEnqueueCount = aOther.mEnqueueCount;
-+    mFullscreen = aOther.mFullscreen;
-+  }
-+  return *this;
-+}
-+
-+PictureInPictureCandidate& PictureInPictureCandidate::operator=(
-+    PictureInPictureCandidate&& aOther) {
-+  if (this != &aOther) {
-+    [mLayer release];
-+    mLayer = std::exchange(aOther.mLayer, nullptr);
-+    mEnqueueCount = aOther.mEnqueueCount;
-+    mFullscreen = aOther.mFullscreen;
-+  }
-+  return *this;
-+}
-+
-+PictureInPictureCandidate::~PictureInPictureCandidate() { [mLayer release]; }
-+
-+nsTArray<PictureInPictureCandidate>
-+NativeLayerRootCA::CopyPictureInPictureCandidates() {
-+  nsTArray<PictureInPictureCandidateData> candidateData;
-+  {
-+    MutexAutoLock lock(mMutex);
-+    CollectPictureInPictureCandidates(lock, candidateData);
-+    for (const auto& candidate : candidateData) {
-+      [candidate.mLayer retain];
-+    }
-+  }
-+
-+  nsTArray<PictureInPictureCandidate> candidates;
-+  candidates.SetCapacity(candidateData.Length());
-+  for (const auto& candidate : candidateData) {
-+    candidates.AppendElement(PictureInPictureCandidate::Adopt(
-+        candidate.mLayer, candidate.mEnqueueCount, candidate.mFullscreen));
-+  }
-+  return candidates;
-+}
-+
-+void NativeLayerRootCA::SetPictureInPictureLayerChangedCallback(
++void NativeLayerRootCA::SetPictureInPictureSourceChangedCallback(
 +    std::function<void()>&& aCallback) {
 +  MutexAutoLock lock(mMutex);
-+  mPictureInPictureLayerChangedCallback = std::move(aCallback);
++  mPictureInPictureSourceChangedCallback = std::move(aCallback);
 +}
 +
-+void NativeLayerRootCA::CollectPictureInPictureCandidates(
-+    const MutexAutoLock& aProofOfLock,
-+    nsTArray<PictureInPictureCandidateData>& aCandidates) {
-+  for (const auto& nativeLayer : mSublayers) {
-+    uint64_t enqueueCount = 0;
-+    if (CALayer* layer =
-+            nativeLayer->PictureInPictureCandidateLayer(&enqueueCount)) {
-+      aCandidates.AppendElement(PictureInPictureCandidateData{
-+          layer, enqueueCount, mWindowIsFullscreen});
-+    }
-+  }
-+}
-+
-+bool NativeLayerRootCA::UpdatePictureInPictureCandidates(
++CALayer* NativeLayerRootCA::FindPictureInPictureSource(
 +    const MutexAutoLock& aProofOfLock) {
-+  nsTArray<PictureInPictureCandidateData> candidates;
-+  CollectPictureInPictureCandidates(aProofOfLock, candidates);
-+
-+  bool identitiesMatch =
-+      candidates.Length() == mPictureInPictureCandidateLayers.Length();
-+  if (identitiesMatch) {
-+    for (const auto& candidate : candidates) {
-+      if (!mPictureInPictureCandidateLayers.Contains(candidate.mLayer)) {
-+        identitiesMatch = false;
-+        break;
++  if (!mWindowIsFullscreen) {
++    return nil;
++  }
++  CALayer* source = nil;
++  for (const auto& nativeLayer : mSublayers) {
++    if (CALayer* layer = nativeLayer->PictureInPictureSourceLayer()) {
++      if (source) {
++        return nil;
 +      }
++      source = layer;
 +    }
 +  }
-+  if (identitiesMatch) {
++  return source;
++}
++
++bool NativeLayerRootCA::UpdatePictureInPictureSource(
++    const MutexAutoLock& aProofOfLock) {
++  CALayer* sourceLayer = FindPictureInPictureSource(aProofOfLock);
++  if (sourceLayer == mPictureInPictureSourceLayer) {
 +    return false;
 +  }
-+
-+  mPictureInPictureCandidateLayers.Clear();
-+  mPictureInPictureCandidateLayers.SetCapacity(candidates.Length());
-+  for (const auto& candidate : candidates) {
-+    mPictureInPictureCandidateLayers.AppendElement(candidate.mLayer);
-+  }
++  [sourceLayer retain];
++  [mPictureInPictureSourceLayer release];
++  mPictureInPictureSourceLayer = sourceLayer;
 +  if (mPictureInPictureNotificationPending) {
 +    return false;
 +  }
@@ -152,16 +76,16 @@ index 000000000000..71175d915269
 +  return true;
 +}
 +
-+void NativeLayerRootCA::DispatchPictureInPictureLayerChanged() {
++void NativeLayerRootCA::DispatchPictureInPictureSourceChanged() {
 +  RefPtr<NativeLayerRootCA> self = this;
 +  NS_DispatchToMainThread(NS_NewRunnableFunction(
-+      "NativeLayerRootCA::DispatchPictureInPictureLayerChanged",
++      "NativeLayerRootCA::DispatchPictureInPictureSourceChanged",
 +      [self = std::move(self)]() {
 +        std::function<void()> callback;
 +        {
 +          MutexAutoLock lock(self->mMutex);
 +          self->mPictureInPictureNotificationPending = false;
-+          callback = self->mPictureInPictureLayerChangedCallback;
++          callback = self->mPictureInPictureSourceChangedCallback;
 +        }
 +        if (callback) {
 +          callback();
@@ -182,24 +106,21 @@ index 000000000000..71175d915269
 +  return surface && IsEligiblePictureInPictureSurface(surface);
 +}
 +
-+CALayer* NativeLayerCA::PictureInPictureCandidateLayer(
-+    uint64_t* aEnqueueCount) {
++CALayer* NativeLayerCA::PictureInPictureSourceLayer() {
 +  MutexAutoLock lock(mMutex);
 +  if (!IsVideo(lock) ||
 +      mOnscreenRepresentation.UnderlyingCALayer() == nullptr ||
 +      !IsPictureInPictureEligibleSurface(lock)) {
 +    return nil;
 +  }
-+  return mOnscreenRepresentation.PictureInPictureCandidateLayer(aEnqueueCount);
++  return mOnscreenRepresentation.PictureInPictureSourceLayer();
 +}
 +
-+CALayer* NativeLayerCARepresentation::PictureInPictureCandidateLayer(
-+    uint64_t* aEnqueueCount) {
++CALayer* NativeLayerCARepresentation::PictureInPictureSourceLayer() {
 +  if (!mWrappingCALayerHasExtent || mPictureInPictureFailureLatched ||
 +      ![mContentCALayer isKindOfClass:[AVSampleBufferDisplayLayer class]]) {
 +    return nil;
 +  }
-+  *aEnqueueCount = mSuccessfulVideoEnqueueCount;
 +  return mContentCALayer;
 +}
 +

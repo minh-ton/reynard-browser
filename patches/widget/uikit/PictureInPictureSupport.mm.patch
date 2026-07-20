@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/PictureInPictureSupport.mm b/widget/uikit/PictureInPictureSupport.mm
 new file mode 100644
-index 000000000000..d9417e62bdf7
+index 000000000000..90968c5f3a1e
 --- /dev/null
 +++ b/widget/uikit/PictureInPictureSupport.mm
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,54 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -18,7 +18,6 @@ index 000000000000..d9417e62bdf7
 +#include <utility>
 +
 +#include "mozilla/layers/NativeLayerCA.h"
-+#include "mozilla/layers/NativeLayerCAPictureInPicture.h"
 +#include "mozilla/widget/EventDispatcher.h"
 +#include "nsWindow.h"
 +
@@ -26,81 +25,9 @@ index 000000000000..d9417e62bdf7
 +using namespace mozilla::layers;
 +using namespace mozilla::widget;
 +
-+@interface GeckoViewPictureInPictureSnapshot () {
-+  AVSampleBufferDisplayLayer* _displayLayer;
-+  uint64_t _enqueueCount;
-+  BOOL _fullscreen;
-+}
-+- (instancetype)initWithDisplayLayer:(AVSampleBufferDisplayLayer*)displayLayer
-+                        enqueueCount:(uint64_t)enqueueCount
-+                          fullscreen:(BOOL)fullscreen;
-+@end
-+
-+@implementation GeckoViewPictureInPictureSnapshot
-+- (instancetype)initWithDisplayLayer:(AVSampleBufferDisplayLayer*)displayLayer
-+                        enqueueCount:(uint64_t)enqueueCount
-+                          fullscreen:(BOOL)fullscreen {
-+  self = [super init];
-+  if (self) {
-+    _displayLayer = [displayLayer retain];
-+    _enqueueCount = enqueueCount;
-+    _fullscreen = fullscreen;
-+  }
-+  return self;
-+}
-+
-+- (AVSampleBufferDisplayLayer*)displayLayer {
-+  return _displayLayer;
-+}
-+
-+- (uint64_t)enqueueCount {
-+  return _enqueueCount;
-+}
-+
-+- (BOOL)fullscreen {
-+  return _fullscreen;
-+}
-+
-+- (void)dealloc {
-+  [_displayLayer release];
-+  [super dealloc];
-+}
-+@end
-+
-+@interface GeckoViewPictureInPictureCandidateList () {
-+  NSArray<GeckoViewPictureInPictureSnapshot*>* _candidates;
-+}
-+- (instancetype)initWithCandidates:
-+    (NSArray<GeckoViewPictureInPictureSnapshot*>*)candidates;
-+@end
-+
-+@implementation GeckoViewPictureInPictureCandidateList
-+- (instancetype)initWithCandidates:
-+    (NSArray<GeckoViewPictureInPictureSnapshot*>*)candidates {
-+  self = [super init];
-+  if (self) {
-+    _candidates = [candidates retain];
-+  }
-+  return self;
-+}
-+
-+- (NSUInteger)count {
-+  return _candidates.count;
-+}
-+
-+- (GeckoViewPictureInPictureSnapshot*)candidateAtIndex:(NSUInteger)index {
-+  return [_candidates objectAtIndex:index];
-+}
-+
-+- (void)dealloc {
-+  [_candidates release];
-+  [super dealloc];
-+}
-+@end
-+
 +namespace mozilla::widget {
 +
-+void InstallPictureInPictureLayerObserver(nsWindow* aWindow) {
++void InstallPictureInPictureSourceObserver(nsWindow* aWindow) {
 +  NativeLayerRoot* nativeLayerRoot = aWindow->GetNativeLayerRoot();
 +  NativeLayerRootCA* root =
 +      nativeLayerRoot ? nativeLayerRoot->AsNativeLayerRootCA() : nullptr;
@@ -109,15 +36,14 @@ index 000000000000..d9417e62bdf7
 +    return;
 +  }
 +  RefPtr<EventDispatcher> dispatcher = eventDispatcher;
-+  root->SetPictureInPictureLayerChangedCallback(
++  root->SetPictureInPictureSourceChangedCallback(
 +      [dispatcher = std::move(dispatcher)]() {
 +        dispatcher->DispatchToEmbedder(
-+            u"GeckoView:PictureInPicture:LayerChanged"_ns);
++            u"GeckoView:PictureInPicture:SourceChanged"_ns);
 +      });
 +}
 +
-+GeckoViewPictureInPictureCandidateList* GetPictureInPictureCandidates(
-+    nsWindow* aWindow) {
++AVSampleBufferDisplayLayer* GetPictureInPictureDisplayLayer(nsWindow* aWindow) {
 +  if (!aWindow) {
 +    return nil;
 +  }
@@ -127,21 +53,8 @@ index 000000000000..d9417e62bdf7
 +  if (!root) {
 +    return nil;
 +  }
-+  nsTArray<PictureInPictureCandidate> nativeCandidates =
-+      root->CopyPictureInPictureCandidates();
-+  NSMutableArray<GeckoViewPictureInPictureSnapshot*>* candidates =
-+      [NSMutableArray arrayWithCapacity:nativeCandidates.Length()];
-+  for (const auto& nativeCandidate : nativeCandidates) {
-+    GeckoViewPictureInPictureSnapshot* candidate =
-+        [[[GeckoViewPictureInPictureSnapshot alloc]
-+            initWithDisplayLayer:(AVSampleBufferDisplayLayer*)
-+                                     nativeCandidate.Layer()
-+                    enqueueCount:nativeCandidate.EnqueueCount()
-+                      fullscreen:nativeCandidate.IsFullscreen()] autorelease];
-+    [candidates addObject:candidate];
-+  }
-+  return [[[GeckoViewPictureInPictureCandidateList alloc]
-+      initWithCandidates:candidates] autorelease];
++  return [(AVSampleBufferDisplayLayer*)root->CopyPictureInPictureSource()
++      autorelease];
 +}
 +
 +}  // namespace mozilla::widget

@@ -108,8 +108,8 @@ public class GeckoSession {
         get { pictureInPictureHandler.delegate }
         set { pictureInPictureHandler.delegate = newValue }
     }
-    public var pictureInPictureCandidates: [PictureInPictureCandidate] {
-        return pictureInPictureHandler.candidates
+    public var pictureInPictureDisplayLayer: AVSampleBufferDisplayLayer? {
+        return pictureInPictureHandler.displayLayer
     }
     
     // MARK: - Session Handlers

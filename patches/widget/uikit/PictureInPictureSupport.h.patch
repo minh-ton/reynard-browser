@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/PictureInPictureSupport.h b/widget/uikit/PictureInPictureSupport.h
 new file mode 100644
-index 000000000000..66eb810b9454
+index 000000000000..ea7fc34baab8
 --- /dev/null
 +++ b/widget/uikit/PictureInPictureSupport.h
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,22 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -20,9 +20,8 @@ index 000000000000..66eb810b9454
 +
 +namespace mozilla::widget {
 +
-+void InstallPictureInPictureLayerObserver(nsWindow* aWindow);
-+GeckoViewPictureInPictureCandidateList* GetPictureInPictureCandidates(
-+    nsWindow* aWindow);
++void InstallPictureInPictureSourceObserver(nsWindow* aWindow);
++AVSampleBufferDisplayLayer* GetPictureInPictureDisplayLayer(nsWindow* aWindow);
 +
 +}  // namespace mozilla::widget
 +

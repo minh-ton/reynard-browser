@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index ffb8da937efa..b64724063dc8 100644
+index ffb8da937efa..3b040f54cc87 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -26,6 +26,7 @@
@@ -549,7 +549,7 @@ index ffb8da937efa..b64724063dc8 100644
 +    return;
 +  }
 +
-+  mNativeLayerRoot->SetPictureInPictureLayerChangedCallback({});
++  mNativeLayerRoot->SetPictureInPictureSourceChangedCallback({});
 +  mNativeLayerRoot->SetLayers({});
 +  mNativeLayerRoot = nullptr;
 +}
@@ -882,8 +882,8 @@ index ffb8da937efa..b64724063dc8 100644
    }
  }
 +
-+- (GeckoViewPictureInPictureCandidateList*)pictureInPictureCandidates {
-+  return GetPictureInPictureCandidates(mWindow);
++- (AVSampleBufferDisplayLayer*)pictureInPictureDisplayLayer {
++  return GetPictureInPictureDisplayLayer(mWindow);
 +}
  @end
  
@@ -900,7 +900,7 @@ index ffb8da937efa..b64724063dc8 100644
    MOZ_ASSERT(window);
  
    window->SetIOSView(iosView.forget());
-+  InstallPictureInPictureLayerObserver(window);
++  InstallPictureInPictureSourceObserver(window);
  
    if (nsIWidgetListener* widgetListener = window->GetWidgetListener()) {
      nsCOMPtr<nsIAppWindow> appWindow(widgetListener->GetAppWindow());

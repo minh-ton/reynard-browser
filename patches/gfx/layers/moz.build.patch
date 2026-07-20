@@ -1,16 +1,8 @@
 diff --git a/gfx/layers/moz.build b/gfx/layers/moz.build
-index dcee9ad9e38a..c8ab81708e07 100644
+index dcee9ad9e38a..f681304fe7ea 100644
 --- a/gfx/layers/moz.build
 +++ b/gfx/layers/moz.build
-@@ -268,6 +268,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("cocoa", "uikit"):
-     EXPORTS.mozilla.layers += [
-         "GpuFenceMTLSharedEvent.h",
-         "NativeLayerCA.h",
-+        "NativeLayerCAPictureInPicture.h",
-         "NativeLayerMacSurfaceHandler.h",
-         "NativeLayerRemoteMac.h",
-         "NativeLayerRootRemoteMacChild.h",
-@@ -280,6 +281,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("cocoa", "uikit"):
+@@ -280,6 +280,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("cocoa", "uikit"):
      ]
      UNIFIED_SOURCES += [
          "NativeLayerCA.mm",

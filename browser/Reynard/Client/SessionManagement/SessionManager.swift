@@ -143,6 +143,10 @@ final class SessionManager {
         applicationStateObserver?.sessionManagerWillResignActive(self)
     }
     
+    func applicationDidBecomeActive() {
+        applicationStateObserver?.sessionManagerDidChangeApplicationState(self)
+    }
+    
     func close(_ session: GeckoSession) {
         performCleanup(for: session) { manager in
             manager.closeImmediately(session)

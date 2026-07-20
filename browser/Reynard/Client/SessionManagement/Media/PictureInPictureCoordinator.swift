@@ -25,50 +25,28 @@ protocol PictureInPictureCoordinatorDelegate: AnyObject {
 
 @available(iOS 15.0, *)
 final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating {
-    private struct Eligibility {
+    private struct EligibleSession {
         let session: GeckoSession
-        let candidates: [PictureInPictureCandidate]
-        let position: MediaSessionPositionState
+        let displayLayer: AVSampleBufferDisplayLayer
+        let positionState: MediaSessionPositionState
         let supportsSeeking: Bool
-    }
-    
-    private struct FrameObservation {
-        var enqueueCounts: [ObjectIdentifier: UInt64]
-        var advancingLayerID: ObjectIdentifier? = nil
-        var advancementCount = 0
     }
     
     private final class Presentation {
         let session: GeckoSession
         var displayLayer: AVSampleBufferDisplayLayer
-        var contentSource: AVPictureInPictureController.ContentSource
         let controller: AVPictureInPictureController
-        var invalidatedDuration: Double
-        var invalidatedPlaybackState: SystemMediaSession.PlaybackState
-        var pauseRequestID = 0
-        var isSeeking = false
-        var candidateCounters: [ObjectIdentifier: UInt64]
-        var nonAdvancingSampleCount = 0
-        weak var replacementLayer: AVSampleBufferDisplayLayer?
-        var replacementEnqueueCount: UInt64?
-        var missingLayerSampleCount = 0
+        var wasStopRequested = false
+        var pauseGeneration = 0
         
         init(
             session: GeckoSession,
             displayLayer: AVSampleBufferDisplayLayer,
-            contentSource: AVPictureInPictureController.ContentSource,
-            controller: AVPictureInPictureController,
-            duration: Double,
-            playbackState: SystemMediaSession.PlaybackState,
-            candidateCounters: [ObjectIdentifier: UInt64]
+            controller: AVPictureInPictureController
         ) {
             self.session = session
             self.displayLayer = displayLayer
-            self.contentSource = contentSource
             self.controller = controller
-            invalidatedDuration = duration
-            invalidatedPlaybackState = playbackState
-            self.candidateCounters = candidateCounters
         }
     }
     
@@ -77,7 +55,7 @@ final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating 
         case prepared(Presentation)
         case starting(Presentation)
         case active(Presentation)
-        case stopping(Presentation, requestedByCoordinator: Bool)
+        case stopping(Presentation)
         
         var presentation: Presentation? {
             switch self {
@@ -86,32 +64,10 @@ final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating 
             case let .prepared(presentation),
                 let .starting(presentation),
                 let .active(presentation),
-                let .stopping(presentation, _):
+                let .stopping(presentation):
                 return presentation
             }
         }
-        
-        var isIdle: Bool {
-            if case .idle = self {
-                return true
-            }
-            return false
-        }
-        
-        var isPrepared: Bool {
-            if case .prepared = self {
-                return true
-            }
-            return false
-        }
-        
-        var stopRequested: Bool {
-            if case let .stopping(_, requestedByCoordinator) = self {
-                return requestedByCoordinator
-            }
-            return false
-        }
-        
     }
     
     private weak var delegate: PictureInPictureCoordinatorDelegate?
@@ -119,10 +75,7 @@ final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating 
     private let sessionManager: SessionManager
     private var state = State.idle
     private weak var observedSession: GeckoSession?
-    private var awaitsLayerAfterForeground = false
-    private var frameObservation: FrameObservation?
-    private var pollingTimer: Timer?
-    private var activeMonitorTimer: Timer?
+    private var isAwaitingAutomaticStart = false
     
     init?(
         delegate: PictureInPictureCoordinatorDelegate,
@@ -142,13 +95,12 @@ final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating 
     }
     
     func selectedSessionDidChange() {
-        awaitsLayerAfterForeground = false
         if let presentation = state.presentation,
            mediaSession.selectedSnapshot?.session !== presentation.session {
-            requestTeardown()
+            stopPresentation()
         }
-        attachLayerObserverToSelectedSession()
-        reevaluate()
+        observeSelectedSession()
+        updatePresentation()
     }
     
     func navigationStarted(in session: GeckoSession) {
@@ -156,529 +108,241 @@ final class PictureInPictureCoordinator: NSObject, PictureInPictureCoordinating 
                 state.presentation?.session === session else {
             return
         }
-        awaitsLayerAfterForeground = false
-        resetPolling()
-        if state.presentation?.session === session {
-            requestTeardown()
-        }
+        stopPresentation()
     }
     
-    private func attachLayerObserverToSelectedSession() {
+    private func observeSelectedSession() {
+        let selectedSession = mediaSession.selectedSnapshot?.session
+        guard observedSession !== selectedSession else {
+            return
+        }
         observedSession?.pictureInPictureDelegate = nil
-        guard let session = mediaSession.selectedSnapshot?.session else {
-            observedSession = nil
-            return
-        }
-        observedSession = session
-        session.pictureInPictureDelegate = self
+        observedSession = selectedSession
+        observedSession?.pictureInPictureDelegate = self
     }
     
-    private func mediaStateChanged() {
-        let snapshot = mediaSession.selectedSnapshot
-        if snapshot?.playbackState != .playing {
-            awaitsLayerAfterForeground = false
-        }
-        if let presentation = state.presentation,
-           snapshot?.session === presentation.session,
-           snapshot?.playbackState == SystemMediaSession.PlaybackState.none {
-            requestTeardown()
-            return
-        }
-        synchronizePreparedPlaybackState()
-        if case .prepared = state,
-           snapshot?.playbackState != .playing {
-            requestTeardown()
-            return
-        }
-        reevaluate()
-    }
-    
-    private func foregroundStateChanged() {
-        guard sessionManager.isForeground else {
-            switch state {
-            case .idle:
-                let snapshot = mediaSession.selectedSnapshot
-                awaitsLayerAfterForeground =
-                snapshot?.playbackState == .playing &&
-                snapshot?.session.pictureInPictureCandidates.isEmpty == false
-            case .prepared, .starting:
-                awaitsLayerAfterForeground = true
-            case .active, .stopping:
-                awaitsLayerAfterForeground = false
-            }
-            resetPolling()
-            return
-        }
-        reevaluate()
-    }
-    
-    private func layerChanged() {
-        let selectedSnapshot = mediaSession.selectedSnapshot
-        if state.isIdle,
-           sessionManager.isForeground,
-           awaitsLayerAfterForeground,
-           selectedSnapshot?.session.pictureInPictureCandidates.isEmpty != false {
-            awaitsLayerAfterForeground = false
-        }
-        if case let .starting(presentation) = state,
-           !presentation.session.pictureInPictureCandidates.contains(where: {
-               $0.displayLayer === presentation.displayLayer
-           }) {
-            requestTeardown()
-            return
-        }
-        reevaluate()
-    }
-    
-    private func reevaluate(sampleFrames: Bool = false) {
-        guard sessionManager.isForeground else {
+    private func updatePresentation() {
+        let isPresentationActive =
+        state.presentation?.controller.isPictureInPictureActive == true
+        guard !isAwaitingAutomaticStart,
+              sessionManager.isForeground || isPresentationActive else {
             return
         }
         switch state {
         case .idle:
-            reevaluateIdle(sampleFrames: sampleFrames)
+            guard let eligibleSession = eligibleSession() else {
+                return
+            }
+            prepare(eligibleSession)
         case let .prepared(presentation):
-            monitorPrepared(presentation, sampleFrames: sampleFrames)
-        case .starting, .active, .stopping:
+            guard let snapshot = mediaSession.selectedSnapshot,
+                  snapshot.session === presentation.session,
+                  snapshot.playbackState == .playing,
+                  let displayLayer =
+                    presentation.session.pictureInPictureDisplayLayer else {
+                stopPresentation()
+                return
+            }
+            if displayLayer !== presentation.displayLayer {
+                guard let positionState = snapshot.positionState,
+                      isValid(positionState),
+                      synchronizeTimebase(of: displayLayer, with: positionState) else {
+                    stopPresentation()
+                    return
+                }
+                presentation.displayLayer = displayLayer
+                presentation.controller.contentSource =
+                AVPictureInPictureController.ContentSource(
+                    sampleBufferDisplayLayer: displayLayer,
+                    playbackDelegate: self
+                )
+            }
+            updatePlayback(of: presentation, with: snapshot)
+        case let .starting(presentation), let .active(presentation):
+            guard let snapshot = mediaSession.selectedSnapshot,
+                  snapshot.session === presentation.session,
+                  snapshot.playbackState != .none else {
+                stopPresentation()
+                return
+            }
+            updatePlayback(of: presentation, with: snapshot)
+        case .stopping:
             break
         }
     }
     
-    private func reevaluateIdle(sampleFrames: Bool) {
-        guard let eligibility = eligibility() else {
-            frameObservation = nil
-            if awaitsLayerAfterForeground,
-               mediaSession.selectedSnapshot?.playbackState == .playing {
-                startPollingIfNeeded()
-            } else {
-                resetPolling()
-            }
-            return
-        }
-        awaitsLayerAfterForeground = false
-        let enqueueCounts = candidateCounters(eligibility.candidates)
-        guard var observation = frameObservation,
-              candidateSetsMatch(observation.enqueueCounts, enqueueCounts) else {
-            frameObservation = FrameObservation(
-                enqueueCounts: enqueueCounts
-            )
-            startPollingIfNeeded()
-            return
-        }
-        
-        if sampleFrames {
-            let advancing = eligibility.candidates.filter {
-                $0.enqueueCount >
-                (observation.enqueueCounts[
-                    ObjectIdentifier($0.displayLayer)
-                ] ?? 0)
-            }
-            observation.enqueueCounts = enqueueCounts
-            if advancing.count == 1 {
-                let candidate = advancing[0]
-                let candidateID = ObjectIdentifier(candidate.displayLayer)
-                if observation.advancingLayerID == candidateID {
-                    observation.advancementCount += 1
-                } else {
-                    observation.advancingLayerID = candidateID
-                    observation.advancementCount = 1
-                }
-            } else {
-                observation.advancingLayerID = nil
-                observation.advancementCount = 0
-            }
-            frameObservation = observation
-        }
-        if observation.advancementCount >= 2,
-           let advancingLayerID = observation.advancingLayerID,
-           let candidate = eligibility.candidates.first(where: {
-               ObjectIdentifier($0.displayLayer) == advancingLayerID &&
-               $0.isFullscreen
-           }) {
-            prepare(candidate, eligibility: eligibility)
-            return
-        }
-        startPollingIfNeeded()
-    }
-    
-    private func eligibility() -> Eligibility? {
-        guard let media = mediaSession.selectedSnapshot,
-              media.playbackState == .playing,
-              let position = media.positionState,
-              position.duration.isFinite,
-              position.duration > 0,
-              position.position.isFinite,
-              position.position >= 0,
-              position.position <= position.duration,
-              position.playbackRate.isFinite,
-              position.playbackRate > 0 else {
+    private func eligibleSession() -> EligibleSession? {
+        guard let snapshot = mediaSession.selectedSnapshot,
+              snapshot.playbackState == .playing,
+              let displayLayer =
+                snapshot.session.pictureInPictureDisplayLayer,
+              let positionState = snapshot.positionState,
+              isValid(positionState) else {
             return nil
         }
-        let candidates = media.session.pictureInPictureCandidates
-        guard !candidates.isEmpty else {
-            return nil
-        }
-        return Eligibility(
-            session: media.session,
-            candidates: candidates,
-            position: position,
-            supportsSeeking: media.supportsSeeking
+        return EligibleSession(
+            session: snapshot.session,
+            displayLayer: displayLayer,
+            positionState: positionState,
+            supportsSeeking: snapshot.supportsSeeking
         )
     }
     
-    private func startPollingIfNeeded() {
-        guard pollingTimer == nil else {
-            return
-        }
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            autoreleasepool {
-                self?.reevaluate(sampleFrames: true)
-            }
-        }
-    }
-    
-    private func prepare(
-        _ candidate: PictureInPictureCandidate,
-        eligibility: Eligibility
-    ) {
-        frameObservation = nil
-        let verifiedCandidates = eligibility.session.pictureInPictureCandidates
+    private func prepare(_ eligibleSession: EligibleSession) {
         guard synchronizeTimebase(
-            of: candidate.displayLayer,
-            with: eligibility.position
+            of: eligibleSession.displayLayer,
+            with: eligibleSession.positionState
         ),
-              let verified = verifiedCandidates.first(where: {
-                  $0.displayLayer === candidate.displayLayer
-              }),
-              verified.isFullscreen,
-              verified.enqueueCount >= candidate.enqueueCount else {
-            reevaluate()
+              eligibleSession.session.pictureInPictureDisplayLayer ===
+                eligibleSession.displayLayer else {
             return
         }
-        
-        let source = AVPictureInPictureController.ContentSource(
-            sampleBufferDisplayLayer: candidate.displayLayer,
+        let contentSource = AVPictureInPictureController.ContentSource(
+            sampleBufferDisplayLayer: eligibleSession.displayLayer,
             playbackDelegate: self
         )
-        let controller = AVPictureInPictureController(contentSource: source)
+        let controller = AVPictureInPictureController(contentSource: contentSource)
         controller.delegate = self
-        controller.requiresLinearPlayback = !eligibility.supportsSeeking
+        controller.requiresLinearPlayback = !eligibleSession.supportsSeeking
         controller.canStartPictureInPictureAutomaticallyFromInline = true
-        
         state = .prepared(Presentation(
-            session: eligibility.session,
-            displayLayer: candidate.displayLayer,
-            contentSource: source,
-            controller: controller,
-            duration: eligibility.position.duration,
-            playbackState: .playing,
-            candidateCounters: candidateCounters(verifiedCandidates)
+            session: eligibleSession.session,
+            displayLayer: eligibleSession.displayLayer,
+            controller: controller
         ))
-        startPollingIfNeeded()
     }
     
-    private func monitorPrepared(
-        _ presentation: Presentation,
-        sampleFrames: Bool
+    private func updatePlayback(
+        of presentation: Presentation,
+        with snapshot: SystemMediaSession.Snapshot
     ) {
-        guard let eligibility = eligibility(),
-              eligibility.session === presentation.session,
-              eligibility.candidates.contains(where: {
-                  $0.displayLayer === presentation.displayLayer &&
-                  $0.isFullscreen
-              }) else {
-            requestTeardown()
-            return
+        if let positionState = snapshot.positionState, isValid(positionState) {
+            _ = synchronizeTimebase(
+                of: presentation.displayLayer,
+                with: positionState,
+                isPaused: snapshot.playbackState == .paused
+            )
         }
-        let enqueueCounts = candidateCounters(eligibility.candidates)
-        guard candidateSetsMatch(
-            presentation.candidateCounters,
-            enqueueCounts
-        ) else {
-            requestTeardown()
-            return
-        }
-        guard sampleFrames else {
-            startPollingIfNeeded()
-            return
-        }
-        
-        let advancing = eligibility.candidates.filter {
-            $0.enqueueCount >
-            (presentation.candidateCounters[ObjectIdentifier($0.displayLayer)] ?? 0)
-        }
-        presentation.candidateCounters = enqueueCounts
-        if advancing.count == 1,
-           advancing[0].displayLayer === presentation.displayLayer {
-            presentation.nonAdvancingSampleCount = 0
-        } else if advancing.isEmpty {
-            presentation.nonAdvancingSampleCount += 1
-            if presentation.nonAdvancingSampleCount >= 4 {
-                requestTeardown()
-                return
-            }
-        } else {
-            requestTeardown()
-            return
-        }
-        startPollingIfNeeded()
+        presentation.controller.requiresLinearPlayback =
+        !snapshot.supportsSeeking
+        presentation.controller.invalidatePlaybackState()
     }
     
-    private func candidateCounters(
-        _ candidates: [PictureInPictureCandidate]
-    ) -> [ObjectIdentifier: UInt64] {
-        return Dictionary(uniqueKeysWithValues: candidates.map {
-            (ObjectIdentifier($0.displayLayer), $0.enqueueCount)
-        })
-    }
-    
-    private func candidateSetsMatch(
-        _ first: [ObjectIdentifier: UInt64],
-        _ second: [ObjectIdentifier: UInt64]
-    ) -> Bool {
-        return first.count == second.count &&
-        second.keys.allSatisfy { first[$0] != nil }
-    }
-    
-    private func willResignActive() {
-        if case .idle = state {
-            reevaluate(sampleFrames: true)
-        }
-        guard case let .prepared(presentation) = state,
-              let eligibility = eligibility(),
-              eligibility.session === presentation.session,
-              eligibility.candidates.contains(where: {
-                  $0.displayLayer === presentation.displayLayer &&
-                  $0.isFullscreen
-              }) else {
-            if case .prepared = state {
-                requestTeardown()
-            }
-            return
-        }
-        let enqueueCounts = candidateCounters(eligibility.candidates)
-        guard candidateSetsMatch(
-            presentation.candidateCounters,
-            enqueueCounts
-        ) else {
-            requestTeardown()
-            return
-        }
-        
-        let advancing = eligibility.candidates.filter {
-            $0.enqueueCount >
-            (presentation.candidateCounters[ObjectIdentifier($0.displayLayer)] ?? 0)
-        }
-        guard !advancing.contains(where: {
-            $0.displayLayer !== presentation.displayLayer
-        }) else {
-            requestTeardown()
-            return
-        }
-        let selectedAdvanced = advancing.contains {
-            $0.displayLayer === presentation.displayLayer
-        }
-        guard presentation.nonAdvancingSampleCount < 4 else {
-            requestTeardown()
-            return
-        }
-        if selectedAdvanced {
-            presentation.nonAdvancingSampleCount = 0
-        }
-        presentation.candidateCounters = enqueueCounts
-    }
-    
-    private func synchronizePreparedPlaybackState() {
-        guard let presentation = state.presentation,
-              let snapshot = mediaSession.selectedSnapshot,
-              snapshot.session === presentation.session,
-              let position = snapshot.positionState else {
-            return
-        }
-        _ = synchronizeTimebase(
-            of: presentation.displayLayer,
-            with: position,
-            paused: snapshot.playbackState == .paused
-        )
-        let requiresLinearPlayback = !snapshot.supportsSeeking
-        let seekingAvailabilityChanged =
-        presentation.controller.requiresLinearPlayback != requiresLinearPlayback
-        if seekingAvailabilityChanged {
-            presentation.controller.requiresLinearPlayback = requiresLinearPlayback
-        }
-        if seekingAvailabilityChanged ||
-            presentation.invalidatedDuration != position.duration ||
-            presentation.invalidatedPlaybackState != snapshot.playbackState {
-            presentation.invalidatedDuration = position.duration
-            presentation.invalidatedPlaybackState = snapshot.playbackState
-            presentation.controller.invalidatePlaybackState()
-        }
+    private func isValid(_ positionState: MediaSessionPositionState) -> Bool {
+        return positionState.duration.isFinite &&
+        positionState.duration > 0 &&
+        positionState.position.isFinite &&
+        positionState.position >= 0 &&
+        positionState.position <= positionState.duration &&
+        positionState.playbackRate.isFinite &&
+        positionState.playbackRate > 0
     }
     
     private func synchronizeTimebase(
         of displayLayer: AVSampleBufferDisplayLayer,
-        with position: MediaSessionPositionState,
-        paused: Bool = false
-    ) -> Bool {
-        let rate = paused ? 0 : position.playbackRate
-        return synchronizeTimebase(
-            of: displayLayer,
-            position: position.position,
-            rate: rate
-        )
-    }
-    
-    private func synchronizeTimebase(
-        of displayLayer: AVSampleBufferDisplayLayer,
-        position: Double,
-        rate: Double
+        with positionState: MediaSessionPositionState,
+        isPaused: Bool = false
     ) -> Bool {
         guard let timebase = displayLayer.controlTimebase else {
             return false
         }
         guard CMTimebaseSetTime(
             timebase,
-            time: CMTime(seconds: position, preferredTimescale: 600)
+            time: CMTime(seconds: positionState.position, preferredTimescale: 600)
         ) == noErr else {
             return false
         }
-        return CMTimebaseSetRate(timebase, rate: rate) == noErr
+        return CMTimebaseSetRate(
+            timebase,
+            rate: isPaused ? 0 : positionState.playbackRate
+        ) == noErr
     }
     
-    private func resetPolling() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
-        frameObservation = nil
-    }
-    
-    private func startActiveMonitor() {
-        resetActiveMonitor()
-        activeMonitorTimer = Timer.scheduledTimer(
-            withTimeInterval: 0.25,
-            repeats: true
-        ) { [weak self] _ in
-            autoreleasepool {
-                self?.monitorActivePresentation()
-            }
-        }
-    }
-    
-    private func monitorActivePresentation() {
-        guard case let .active(presentation) = state else {
-            resetActiveMonitor()
-            return
-        }
-        let candidates = presentation.session.pictureInPictureCandidates
-        if candidates.contains(where: {
-            $0.displayLayer === presentation.displayLayer
-        }) {
-            presentation.replacementLayer = nil
-            presentation.replacementEnqueueCount = nil
-            presentation.missingLayerSampleCount = 0
-            return
-        }
-        presentation.missingLayerSampleCount += 1
-        guard presentation.missingLayerSampleCount < 4 else {
-            requestTeardown()
-            return
-        }
-        guard candidates.count == 1,
-              let candidate = candidates.first else {
-            presentation.replacementLayer = nil
-            presentation.replacementEnqueueCount = nil
-            return
-        }
-        guard presentation.replacementLayer === candidate.displayLayer,
-              let previousCount = presentation.replacementEnqueueCount else {
-            presentation.replacementLayer = candidate.displayLayer
-            presentation.replacementEnqueueCount = candidate.enqueueCount
-            return
-        }
-        presentation.replacementEnqueueCount = candidate.enqueueCount
-        guard candidate.enqueueCount > previousCount,
-              candidate.displayLayer.status == .rendering,
-              let snapshot = mediaSession.selectedSnapshot,
-              snapshot.session === presentation.session,
-              snapshot.playbackState == .playing,
-              let position = snapshot.positionState,
-              synchronizeTimebase(
-                of: candidate.displayLayer,
-                with: position
-              ) else {
-            return
-        }
-        let source = AVPictureInPictureController.ContentSource(
-            sampleBufferDisplayLayer: candidate.displayLayer,
-            playbackDelegate: self
-        )
-        presentation.displayLayer = candidate.displayLayer
-        presentation.contentSource = source
-        presentation.replacementLayer = nil
-        presentation.replacementEnqueueCount = nil
-        presentation.missingLayerSampleCount = 0
-        presentation.controller.contentSource = source
-    }
-    
-    private func resetActiveMonitor() {
-        activeMonitorTimer?.invalidate()
-        activeMonitorTimer = nil
-    }
-    
-    private func requestTeardown() {
+    private func stopPresentation() {
+        isAwaitingAutomaticStart = false
         switch state {
         case .idle:
             break
         case let .prepared(presentation):
-            state = .idle
-            release(presentation)
-            sessionManager.pictureInPicturePresentationDidEnd(presentation.session)
-            reevaluate()
+            finishPresentation(presentation)
         case let .starting(presentation), let .active(presentation):
-            state = .stopping(presentation, requestedByCoordinator: true)
-            resetPolling()
-            resetActiveMonitor()
+            presentation.wasStopRequested = true
+            state = .stopping(presentation)
             presentation.controller.stopPictureInPicture()
-        case .stopping:
-            break
+        case let .stopping(presentation):
+            presentation.wasStopRequested = true
         }
     }
     
-    private func terminalTeardown(for controller: AVPictureInPictureController) {
-        guard let presentation = state.presentation,
-              presentation.controller === controller else {
+    private func finishPresentation(
+        for controller: AVPictureInPictureController
+    ) {
+        guard let presentation = presentation(for: controller) else {
             return
         }
         if !sessionManager.isForeground {
             presentation.session.mediaSession.pause()
         }
-        state = .idle
-        release(presentation)
-        sessionManager.pictureInPicturePresentationDidEnd(presentation.session)
-        reevaluate()
+        finishPresentation(presentation)
+        DispatchQueue.main.async { [weak self] in
+            self?.updatePresentation()
+        }
     }
     
-    private func release(_ presentation: Presentation) {
-        resetPolling()
-        resetActiveMonitor()
+    private func finishPresentation(_ presentation: Presentation) {
         presentation.controller.delegate = nil
+        state = .idle
+        sessionManager.pictureInPicturePresentationDidEnd(
+            presentation.session
+        )
+    }
+    
+    private func presentation(
+        for controller: AVPictureInPictureController
+    ) -> Presentation? {
+        guard let presentation = state.presentation,
+              presentation.controller === controller else {
+            return nil
+        }
+        return presentation
     }
 }
 
 @available(iOS 15.0, *)
 extension PictureInPictureCoordinator: SystemMediaSessionObserver {
     func systemMediaSessionStateDidChange(_ mediaSession: SystemMediaSession) {
-        mediaStateChanged()
+        observeSelectedSession()
+        updatePresentation()
     }
 }
 
 @available(iOS 15.0, *)
 extension PictureInPictureCoordinator: SessionManagerApplicationStateObserver {
-    func sessionManagerDidChangeApplicationState(_ sessionManager: SessionManager) {
-        foregroundStateChanged()
+    func sessionManagerDidChangeApplicationState(
+        _ sessionManager: SessionManager
+    ) {
+        guard sessionManager.isForeground else {
+            return
+        }
+        if isAwaitingAutomaticStart {
+            isAwaitingAutomaticStart = false
+            if let presentation = state.presentation {
+                sessionManager.pictureInPicturePresentationDidEnd(
+                    presentation.session
+                )
+            }
+        }
+        updatePresentation()
     }
     
     func sessionManagerWillResignActive(_ sessionManager: SessionManager) {
-        willResignActive()
+        updatePresentation()
+        guard case let .prepared(presentation) = state,
+              presentation.controller.isPictureInPicturePossible else {
+            return
+        }
+        isAwaitingAutomaticStart = true
+        sessionManager.setPictureInPictureSession(presentation.session)
     }
 }
 
@@ -688,43 +352,41 @@ extension PictureInPictureCoordinator: SessionManagerPictureInPictureHandler {
         guard state.presentation?.session === session else {
             return false
         }
-        requestTeardown()
+        stopPresentation()
         return true
     }
 }
 
 @available(iOS 15.0, *)
 extension PictureInPictureCoordinator: PictureInPictureDelegate {
-    func onLayerChanged(session: GeckoSession) {
-        guard mediaSession.selectedSnapshot?.session === session else {
+    func onSourceChanged(session: GeckoSession) {
+        guard observedSession === session else {
             return
         }
-        layerChanged()
+        updatePresentation()
     }
 }
 
 @available(iOS 15.0, *)
-extension PictureInPictureCoordinator: AVPictureInPictureSampleBufferPlaybackDelegate {
+extension PictureInPictureCoordinator:
+    AVPictureInPictureSampleBufferPlaybackDelegate {
     func pictureInPictureController(
         _ pictureInPictureController: AVPictureInPictureController,
-        setPlaying playing: Bool
+        setPlaying isPlaying: Bool
     ) {
-        guard let presentation = state.presentation,
-              presentation.controller === pictureInPictureController else {
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ) else {
             return
         }
-        if playing {
-            presentation.pauseRequestID += 1
+        presentation.pauseGeneration += 1
+        if isPlaying {
             presentation.session.mediaSession.play()
         } else {
-            presentation.pauseRequestID += 1
-            let pauseRequestID = presentation.pauseRequestID
-            DispatchQueue.main.async { [weak self, weak presentation] in
-                guard let self,
-                      let presentation,
-                      state.presentation === presentation,
-                      presentation.pauseRequestID == pauseRequestID,
-                      !presentation.isSeeking else {
+            let pauseGeneration = presentation.pauseGeneration
+            DispatchQueue.main.async { [weak presentation] in
+                guard let presentation,
+                      presentation.pauseGeneration == pauseGeneration else {
                     return
                 }
                 presentation.session.mediaSession.pause()
@@ -735,21 +397,36 @@ extension PictureInPictureCoordinator: AVPictureInPictureSampleBufferPlaybackDel
     func pictureInPictureControllerTimeRangeForPlayback(
         _ pictureInPictureController: AVPictureInPictureController
     ) -> CMTimeRange {
-        guard let position = mediaSession.selectedSnapshot?.positionState,
-              position.duration.isFinite,
-              position.duration > 0 else {
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ),
+              let snapshot = mediaSession.selectedSnapshot,
+              snapshot.session === presentation.session,
+              let positionState = snapshot.positionState,
+              positionState.duration.isFinite,
+              positionState.duration > 0 else {
             return .invalid
         }
         return CMTimeRange(
             start: .zero,
-            duration: CMTime(seconds: position.duration, preferredTimescale: 600)
+            duration: CMTime(
+                seconds: positionState.duration,
+                preferredTimescale: 600
+            )
         )
     }
     
     func pictureInPictureControllerIsPlaybackPaused(
         _ pictureInPictureController: AVPictureInPictureController
     ) -> Bool {
-        return mediaSession.selectedSnapshot?.playbackState != .playing
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ),
+              let snapshot = mediaSession.selectedSnapshot,
+              snapshot.session === presentation.session else {
+            return true
+        }
+        return snapshot.playbackState != .playing
     }
     
     func pictureInPictureController(
@@ -762,49 +439,45 @@ extension PictureInPictureCoordinator: AVPictureInPictureSampleBufferPlaybackDel
         skipByInterval skipInterval: CMTime,
         completion completionHandler: @escaping () -> Void
     ) {
-        guard let presentation = state.presentation,
-              presentation.controller === pictureInPictureController,
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ),
               let snapshot = mediaSession.selectedSnapshot,
               snapshot.session === presentation.session,
               snapshot.supportsSeeking,
-              let position = snapshot.positionState,
-              position.duration.isFinite,
-              position.duration > 0,
+              let positionState = snapshot.positionState,
+              positionState.duration.isFinite,
+              positionState.duration > 0,
               let timebase = presentation.displayLayer.controlTimebase else {
             completionHandler()
             return
         }
-        let interval = CMTimeGetSeconds(skipInterval)
-        let currentTime = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
-        let currentRate = CMTimebaseGetRate(timebase)
-        guard interval.isFinite, currentTime.isFinite, currentRate.isFinite else {
+        let skipSeconds = CMTimeGetSeconds(skipInterval)
+        let currentSeconds = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
+        guard skipSeconds.isFinite, currentSeconds.isFinite else {
             completionHandler()
             return
         }
-        presentation.isSeeking = true
-        presentation.pauseRequestID += 1
-        let target = min(max(currentTime + interval, 0), position.duration)
-        if snapshot.features.contains(.seekTo) {
-            presentation.session.mediaSession.seekTo(time: target)
-        } else if interval > 0 {
-            presentation.session.mediaSession.seekForward(offset: interval)
-        } else if interval < 0 {
-            presentation.session.mediaSession.seekBackward(offset: -interval)
-        }
-        _ = synchronizeTimebase(
-            of: presentation.displayLayer,
-            position: target,
-            rate: currentRate
+        presentation.pauseGeneration += 1
+        let targetSeconds = min(
+            max(currentSeconds + skipSeconds, 0), positionState.duration
         )
-        completionHandler()
-        DispatchQueue.main.async { [weak self, weak presentation] in
-            guard let self,
-                  let presentation,
-                  state.presentation === presentation else {
-                return
-            }
-            presentation.isSeeking = false
+        if snapshot.features.contains(.seekTo) {
+            presentation.session.mediaSession.seekTo(time: targetSeconds)
+        } else if skipSeconds > 0 {
+            presentation.session.mediaSession.seekForward(offset: skipSeconds)
+        } else if skipSeconds < 0 {
+            presentation.session.mediaSession.seekBackward(offset: -skipSeconds)
         }
+        let playbackRate = snapshot.playbackState == .playing ?
+        positionState.playbackRate : 0
+        _ = CMTimebaseSetTime(
+            timebase,
+            time: CMTime(seconds: targetSeconds, preferredTimescale: 600)
+        )
+        _ = CMTimebaseSetRate(timebase, rate: playbackRate)
+        completionHandler()
+        presentation.pauseGeneration += 1
     }
 }
 
@@ -817,7 +490,7 @@ extension PictureInPictureCoordinator: AVPictureInPictureControllerDelegate {
               presentation.controller === pictureInPictureController else {
             return
         }
-        resetPolling()
+        isAwaitingAutomaticStart = false
         state = .starting(presentation)
         sessionManager.setPictureInPictureSession(presentation.session)
     }
@@ -829,48 +502,42 @@ extension PictureInPictureCoordinator: AVPictureInPictureControllerDelegate {
               presentation.controller === pictureInPictureController else {
             return
         }
-        awaitsLayerAfterForeground = false
         state = .active(presentation)
-        startActiveMonitor()
     }
     
     func pictureInPictureController(
         _ pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError error: Error
     ) {
-        terminalTeardown(for: pictureInPictureController)
+        NSLog("Failed to start Picture in Picture: \(error)")
+        finishPresentation(for: pictureInPictureController)
     }
     
     func pictureInPictureControllerWillStopPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
-        let presentation: Presentation
-        switch state {
-        case let .starting(current), let .active(current):
-            presentation = current
-        case .idle, .prepared, .stopping:
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ) else {
             return
         }
-        guard presentation.controller === pictureInPictureController else {
-            return
-        }
-        resetActiveMonitor()
-        state = .stopping(presentation, requestedByCoordinator: false)
+        state = .stopping(presentation)
     }
     
     func pictureInPictureControllerDidStopPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
-        terminalTeardown(for: pictureInPictureController)
+        finishPresentation(for: pictureInPictureController)
     }
     
     func pictureInPictureController(
         _ pictureInPictureController: AVPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
     ) {
-        guard !state.stopRequested,
-              let presentation = state.presentation,
-              presentation.controller === pictureInPictureController else {
+        guard let presentation = presentation(
+            for: pictureInPictureController
+        ),
+              !presentation.wasStopRequested else {
             completionHandler(false)
             return
         }
