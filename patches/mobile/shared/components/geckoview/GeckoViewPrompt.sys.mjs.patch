@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
-index 82622affebf2..421d01980b20 100644
+index 82622affebf2..14eec6b022c0 100644
 --- a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
 +++ b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
 @@ -73,6 +73,17 @@ export class PromptFactory {
@@ -82,7 +82,7 @@ index 82622affebf2..421d01980b20 100644
      const dismissPrompt = () => prompt.dismiss();
 -    // Some controls don't have UA widget (bug 888320)
 +
-+    // REYNARD: If the input has a UA widget (dateTimeBoxElement), notify it that the
++    // If the input has a UA widget (dateTimeBoxElement), notify it that the
 +    // picker is open. Otherwise (called from click before UA widget renders,
 +    // or for types without UA widgets) use a blur listener instead.
      {

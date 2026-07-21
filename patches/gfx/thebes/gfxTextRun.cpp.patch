@@ -1,12 +1,12 @@
 diff --git a/gfx/thebes/gfxTextRun.cpp b/gfx/thebes/gfxTextRun.cpp
-index 87d8573b002c..7cd5b22743db 100644
+index 87d8573b002c..10a5640c1fcd 100644
 --- a/gfx/thebes/gfxTextRun.cpp
 +++ b/gfx/thebes/gfxTextRun.cpp
 @@ -3150,6 +3150,11 @@ already_AddRefed<gfxFont> gfxFontGroup::FindFontForChar(
    // preceding character if possible. This is preferable to using the font
    // group because it avoids breaks in shaping within a cluster.
    if (aPrevMatchedFont && IsClusterExtender(aCh)) {
-+    // REYNARD: keep keycap clusters on a single font; if a combining mark
++    // Keep keycap clusters on a single font; if a combining mark
 +    // follows VS16, do not force a separate fallback font for the mark.
 +    if (aPrevCh == kVariationSelector16) {
 +      return do_AddRef(aPrevMatchedFont);
@@ -18,7 +18,7 @@ index 87d8573b002c..7cd5b22743db 100644
      }
    }
  
-+  // REYNARD: honor explicit emoji/text selectors even when the base codepoint
++  // Honor explicit emoji/text selectors even when the base codepoint
 +  // is categorized as TextOnly (e.g. keycap bases 0-9/#/*).
 +  if (presentation == FontPresentation::Any) {
 +    if (aNextCh == kVariationSelector16 || IsEmojiSkinToneModifier(aNextCh) ||
@@ -37,7 +37,7 @@ index 87d8573b002c..7cd5b22743db 100644
      // use the same font as the previous range if we can
      if (wasJoinCauser) {
 -      if (aPrevMatchedFont->HasCharacter(aCh)) {
-+      // REYNARD: for iOS system emoji fonts, cmap coverage checks can be
++      // For iOS system emoji fonts, cmap coverage checks can be
 +      // incomplete; preserve emoji ZWJ ligature runs by also accepting
 +      // color-glyph support as a continuation signal.
 +      if (aPrevMatchedFont->HasCharacter(aCh) ||

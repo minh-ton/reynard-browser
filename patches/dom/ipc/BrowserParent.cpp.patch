@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index ba640fdbc080..da41950791e5 100644
+index ba640fdbc080..db600335591f 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
 @@ -793,6 +793,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
@@ -8,7 +8,7 @@ index ba640fdbc080..da41950791e5 100644
      mRemoteLayerTreeOwner.EnsureLayersConnected(*aCompositorOptions);
 +
 +#if defined(MOZ_WIDGET_UIKIT)
-+    // REYNARD: After compositor recovery, invalidate the embedding subdocument
++    // After compositor recovery, invalidate the embedding subdocument
 +    // frame so the root WR bridge rebuilds its first display list with the
 +    // reattached remote tab.
 +    if (aCompositorOptions->isSome()) {
@@ -41,7 +41,7 @@ index ba640fdbc080..da41950791e5 100644
 +    mContentCache.AssignContent(aContentCache, widget, &aIMENotification);
 +    mContentCache.MaybeNotifyIME(widget, aIMENotification);
 +  } else {
-+    // REYNARD: During APZ scroll, BrowserParent temporarily loses IME focus.
++    // During APZ scroll, BrowserParent temporarily loses IME focus.
 +    // Still update the cache and notify the widget directly so that
 +    // UIKit gets updated caret/selection geometry during scrolling.
 +    mContentCache.AssignContent(aContentCache, widget);

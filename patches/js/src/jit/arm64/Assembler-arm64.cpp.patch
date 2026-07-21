@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/arm64/Assembler-arm64.cpp b/js/src/jit/arm64/Assembler-arm64.cpp
-index 460453cdd993..3385bd85d6d8 100644
+index 460453cdd993..a4b196133d9e 100644
 --- a/js/src/jit/arm64/Assembler-arm64.cpp
 +++ b/js/src/jit/arm64/Assembler-arm64.cpp
 @@ -13,9 +13,14 @@
@@ -17,13 +17,10 @@ index 460453cdd993..3385bd85d6d8 100644
  #include "gc/StoreBuffer-inl.h"
  
  using namespace js;
-@@ -23,6 +28,16 @@ using namespace js::jit;
+@@ -23,6 +28,13 @@ using namespace js::jit;
  
  using mozilla::DebugOnly;
  
-+// REYNARD: Late arm64 JIT patches can update instructions and literal pools
-+// through the writable alias while the executable mapping stays live. Refresh
-+// the executable view so subsequent indirect jumps see the patched targets.
 +static void FinalizeExecutablePatch(void* address, size_t size) {
 +  FlushICache(address, size);
 +#ifdef XP_IOS
@@ -34,7 +31,7 @@ index 460453cdd993..3385bd85d6d8 100644
  ABIArg ABIArgGenerator::next(MIRType type) {
    switch (type) {
      case MIRType::Int32:
-@@ -173,8 +188,11 @@ BufferOffset Assembler::emitExtendedJumpTable() {
+@@ -173,8 +185,11 @@ BufferOffset Assembler::emitExtendedJumpTable() {
  }
  
  void Assembler::executableCopy(uint8_t* buffer) {
@@ -47,7 +44,7 @@ index 460453cdd993..3385bd85d6d8 100644
  
    // Patch any relative jumps that target code outside the buffer.
    // The extended jump table may be used for distant jumps.
-@@ -183,16 +201,30 @@ void Assembler::executableCopy(uint8_t* buffer) {
+@@ -183,16 +198,30 @@ void Assembler::executableCopy(uint8_t* buffer) {
      MOZ_ASSERT(rp.target);
  
      Instruction* target = (Instruction*)rp.target;
@@ -86,20 +83,16 @@ index 460453cdd993..3385bd85d6d8 100644
        }
      } else {
        // Currently a two-instruction call, it should be possible to optimize
-@@ -200,6 +232,12 @@ void Assembler::executableCopy(uint8_t* buffer) {
+@@ -200,6 +229,8 @@ void Assembler::executableCopy(uint8_t* buffer) {
        // will work.
      }
    }
 +
-+  // REYNARD: On iOS, the initial executable copy and its pending jump fixups
-+  // happen through the writable alias. Refresh the executable mapping once the
-+  // whole buffer is finalized so hardcoded branches don't execute recycled
-+  // stale targets from a previous allocation.
 +  FinalizeExecutablePatch(buffer, bytesNeeded());
  }
  
  BufferOffset Assembler::immPool(ARMRegister dest, uint8_t* value,
-@@ -315,22 +353,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
+@@ -315,22 +346,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
  
  void Assembler::PatchWrite_NearCall(CodeLocationLabel start,
                                      CodeLocationLabel toCall) {
@@ -131,7 +124,7 @@ index 460453cdd993..3385bd85d6d8 100644
  }
  
  void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
-@@ -340,21 +383,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
+@@ -340,21 +376,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
  }
  
  void Assembler::ToggleToJmp(CodeLocationLabel inst_) {
@@ -163,15 +156,15 @@ index 460453cdd993..3385bd85d6d8 100644
    // bit 23 is reserved, and the simulator throws an assertion when this happens
    // It'll be messy to decode, but we can steal bit 30 or bit 31.
    MOZ_ASSERT(vixl::IsInt18(imm19));
-@@ -368,68 +414,80 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
+@@ -368,68 +407,81 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
    // 0:4 - Destination Register. Must be xzr.
  
    // From the above, there is a safe 19-bit contiguous region from 5:23.
 -  Emit(i, vixl::ThirtyTwoBits | vixl::AddSubImmediateFixed | vixl::SUB |
 -              Flags(vixl::SetFlags) | Rd(vixl::xzr) |
 -              (imm19 << vixl::Rn_offset));
-+  Emit(writable, vixl::ThirtyTwoBits | vixl::AddSubImmediateFixed |
-+                     vixl::SUB | Flags(vixl::SetFlags) | Rd(vixl::xzr) |
++  Emit(writable, vixl::ThirtyTwoBits | vixl::AddSubImmediateFixed | vixl::SUB |
++                     Flags(vixl::SetFlags) | Rd(vixl::xzr) |
 +                     (imm19 << vixl::Rn_offset));
 +  FinalizeExecutablePatch(executable, vixl::kInstructionSize);
  }
@@ -192,7 +185,8 @@ index 460453cdd993..3385bd85d6d8 100644
 -    first = first->InstructionAtOffset(vixl::kInstructionSize)->skipPool();
 +  if (executableFirst->IsStackPtrSync()) {
 +    executableFirst =
-+        executableFirst->InstructionAtOffset(vixl::kInstructionSize)->skipPool();
++        executableFirst->InstructionAtOffset(vixl::kInstructionSize)
++            ->skipPool();
    }
  
 -  load = const_cast<Instruction*>(first);
@@ -204,8 +198,8 @@ index 460453cdd993..3385bd85d6d8 100644
    // constant pool.
 -  call = const_cast<Instruction*>(
 -      load->InstructionAtOffset(vixl::kInstructionSize)->skipPool());
-+  const Instruction* executableCall = executableLoad->InstructionAtOffset(
-+      vixl::kInstructionSize)->skipPool();
++  const Instruction* executableCall =
++      executableLoad->InstructionAtOffset(vixl::kInstructionSize)->skipPool();
 +  call = WritableJitAllocationFromExecutable(
 +      const_cast<Instruction*>(executableCall));
  
@@ -255,20 +249,20 @@ index 460453cdd993..3385bd85d6d8 100644
  void Assembler::UpdateLoad64Value(Instruction* inst0, uint64_t value) {
    MOZ_ASSERT(inst0->IsLDR());
 -  uint64_t* literal = inst0->LiteralAddress<uint64_t*>();
-+  uint64_t* literal = WritableJitAllocationFromExecutable(
-+      inst0->LiteralAddress<uint64_t*>());
++  uint64_t* literal =
++      WritableJitAllocationFromExecutable(inst0->LiteralAddress<uint64_t*>());
    *literal = value;
 +  FinalizeExecutablePatch(inst0->LiteralAddress<void*>(), sizeof(uint64_t));
  }
  
  class RelocationIterator {
-@@ -534,7 +592,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
+@@ -534,7 +586,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
      // Refer to movePatchablePtr() for generation.
      MOZ_ASSERT(load->Mask(vixl::LoadLiteralMask) == vixl::LDR_x_lit);
  
 -    uintptr_t* literalAddr = load->LiteralAddress<uintptr_t*>();
-+    uintptr_t* literalAddr = WritableJitAllocationFromExecutable(
-+      load->LiteralAddress<uintptr_t*>());
++    uintptr_t* literalAddr =
++        WritableJitAllocationFromExecutable(load->LiteralAddress<uintptr_t*>());
      uintptr_t literal = *literalAddr;
  
      // Data relocations can be for Values or for raw pointers. If a Value is

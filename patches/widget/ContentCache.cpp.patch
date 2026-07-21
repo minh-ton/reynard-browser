@@ -1,5 +1,5 @@
 diff --git a/widget/ContentCache.cpp b/widget/ContentCache.cpp
-index 27cc3445f725..74c25df04db6 100644
+index 27cc3445f725..e73328dae21a 100644
 --- a/widget/ContentCache.cpp
 +++ b/widget/ContentCache.cpp
 @@ -39,6 +39,33 @@ static const char* GetNotificationName(const IMENotification* aNotification) {
@@ -42,7 +42,7 @@ index 27cc3445f725..74c25df04db6 100644
    // mCompositionStart.
 -  if (mTextRectArray.isSome()) {
 +
-+  // REYNARD: Commenting this to allow the neighborhood around the
++  // Commenting this to allow the neighborhood around the
 +  // selection to be stored for line boundary checks.
 +  /* if (mTextRectArray.isSome()) {
      if (NS_WARN_IF(mCompositionStart.isNothing())) {
@@ -75,7 +75,7 @@ index 27cc3445f725..74c25df04db6 100644
               this));
      return false;
    }
-+  // REYNARD: Keep the editor-rect cache tied to the editable-content state
++  // Keep the editor-rect cache tied to the editable-content state
 +  // returned by the content query so parent-side replies can preserve it.
 +  mEditorRectIsEditable = true;
    mEditorRect = queryEditorRectEvent.mReply->mRect;
@@ -86,7 +86,7 @@ index 27cc3445f725..74c25df04db6 100644
      mCompositionStart.reset();
      mTextRectArray.reset();
 +
-+    // REYNARD: Cache character rects for a neighborhood around a non-collapsed
++    // Cache character rects for a neighborhood around a non-collapsed
 +    // selection so the parent process can detect visual line boundaries during
 +    // handle dragging.
 +    static bool sInLineRectCache = false;

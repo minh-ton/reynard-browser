@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
-index 5cddcd90765c..997c3f82bc4a 100644
+index 5cddcd90765c..7f59628634c0 100644
 --- a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
 +++ b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
 @@ -55,6 +55,10 @@ export class FilePickerDelegate {
@@ -19,7 +19,7 @@ index 5cddcd90765c..997c3f82bc4a 100644
      this._msg.capture = this._capture;
 +    const actor = this._browsingContext.currentWindowGlobal?.getActor("GeckoViewPrompter");
 +
-+    // REYNARD: Get the file input rect
++    // Get the file input rect
 +    const fallbackRect = { left: 0, top: 0, width: 0, height: 0 };
 +    const rect = actor ? await actor.sendQuery("GetFileInputRect").catch(() => null) : null;
 +    this._msg.rect = rect ?? fallbackRect;

@@ -1,5 +1,5 @@
 diff --git a/xpfe/appshell/AppWindow.cpp b/xpfe/appshell/AppWindow.cpp
-index 8ce7a79d6f1d..5083fa73ff84 100644
+index 8ce7a79d6f1d..eb993ff6074f 100644
 --- a/xpfe/appshell/AppWindow.cpp
 +++ b/xpfe/appshell/AppWindow.cpp
 @@ -4,6 +4,7 @@
@@ -10,13 +10,11 @@ index 8ce7a79d6f1d..5083fa73ff84 100644
  
  // Local includes
  #include "AppWindow.h"
-@@ -218,7 +219,16 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
+@@ -218,7 +219,14 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
    LayoutDeviceIntRect r = mWindow->GetClientBounds();
    // Match the default background color of content. Previously important on
    // Windows, but no longer has any effect there.
 +#ifdef XP_IOS
-+  // REYNARD: Seed iOS chrome windows with the active system window color so
-+  // the embedded Gecko surface starts with the current trait-based background.
 +  mWindow->SetBackgroundColor(mozilla::LookAndFeel::Color(
 +      mozilla::LookAndFeel::ColorID::Window,
 +      mozilla::LookAndFeel::SystemColorScheme(),

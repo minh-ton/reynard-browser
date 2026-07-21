@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index ffb8da937efa..3b040f54cc87 100644
+index ffb8da937efa..0a2bdf2030cf 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -26,6 +26,7 @@
@@ -227,7 +227,7 @@ index ffb8da937efa..3b040f54cc87 100644
 -    [self sendMouseEvent:eMouseMove point:lp widget:mGeckoChild];
 -    [self sendMouseEvent:eMouseDown point:lp widget:mGeckoChild];
 -    [self sendMouseEvent:eMouseUp point:lp widget:mGeckoChild];
-+    // REYNARD: UIKit text interactions already handle taps that are placing or
++    // UIKit text interactions already handle taps that are placing or
 +    // adjusting the caret. Replaying the same tap as a Gecko click resets the
 +    // selection after UIKit has positioned it.
 +    if (mEditable.mTextInteractionInProgress) {
@@ -236,7 +236,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +
 +    BOOL wasFirstResponder = [self isFirstResponder];
 +
-+    // REYNARD: Save the caret offset before sending events to Gecko so we can
++    // Save the caret offset before sending events to Gecko so we can
 +    // detect whether the caret actually moved once Gecko responds.
 +    NSRange preSel = [self selectedRange];
 +    NSUInteger preOffset = (wasFirstResponder &&
@@ -244,7 +244,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +                               ? preSel.location
 +                               : NSNotFound;
 +
-+    // REYNARD: When re-tapping an already-focused editable field with a
++    // When re-tapping an already-focused editable field with a
 +    // collapsed caret, arm the pending caret-menu flag. Gecko processes mouse
 +    // events asynchronously, so we resolve the flag later:
 +    //   - If NOTIFY_IME_OF_POSITION_CHANGE arrives (caret moved),
@@ -287,7 +287,7 @@ index ffb8da937efa..3b040f54cc87 100644
 -  ALOG("[ChildView[%p] touchesBegan", self);
 +  [super touchesBegan:touches withEvent:event];
 +
-+  // REYNARD: Dismiss the caret callout on any touch-down so that scrolling or
++  // Dismiss the caret callout on any touch-down so that scrolling or
 +  // tap-to-reposition hides it immediately. Also cancel any pending
 +  // caret-menu resolution.
 +  if (mEditable.mCaretMenuActive) {
@@ -346,7 +346,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +    return;
 +  }
 +
-+  // REYNARD: Ensure a detached ChildView does not keep stale responder state
++  // Ensure a detached ChildView does not keep stale responder state
 +  // while we mirror activation on ChildView attach/detach transitions.
 +  if (![self window] && [self isFirstResponder]) {
 +    [self resignFirstResponder];
@@ -503,7 +503,7 @@ index ffb8da937efa..3b040f54cc87 100644
  }
  
 +void nsWindow::CloseNativeLayerRemoteParent(bool aWaitUntilClosed) {
-+  // REYNARD: Drop the remote actor's layer-root reference before we destroy
++  // Drop the remote actor's layer-root reference before we destroy
 +  // the UIKit view so the CA root cannot outlive its backing layer tree.
 +  RefPtr<NativeLayerRootRemoteMacParent> actor =
 +      std::move(mNativeLayerRootRemoteMacParent);
@@ -542,7 +542,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +}
 +
 +void nsWindow::DestroyNativeLayerRoot() {
-+  // REYNARD: Release the retained CA root while the ChildView still owns a
++  // Release the retained CA root while the ChildView still owns a
 +  // valid backing layer, so the root destructor does not run after UIKit
 +  // tears that layer tree down.
 +  if (!mNativeLayerRoot) {
@@ -591,15 +591,10 @@ index ffb8da937efa..3b040f54cc87 100644
    TearDownView();
  
    nsIWidget::OnDestroy();
-@@ -842,6 +922,17 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -842,6 +922,12 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  void nsWindow::Show(bool aState) {
    if (aState != mVisible) {
      mNativeView.hidden = aState ? NO : YES;
-+
-+    // REYNARD: UIKit key-window notifications only fire for the app window, so
-+    // tab swaps between ChildViews can miss WindowActivated/WindowDeactivated.
-+    // Mirror activation from visibility transitions to keep FocusManager's
-+    // active top-level window aligned with the selected Gecko session.
 +    if (aState && mNativeView.window.isKeyWindow) {
 +      NotifyWindowActivationState(true);
 +    } else {
@@ -609,13 +604,11 @@ index ffb8da937efa..3b040f54cc87 100644
      if (aState) {
        if (mParent) {
          [mParent->mNativeView bringSubviewToFront:mNativeView];
-@@ -852,6 +943,26 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -852,6 +938,24 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
 +void nsWindow::NotifyWindowActivationState(bool aActive) {
-+  // REYNARD: Keep both listener paths aligned so focus ownership tracks the
-+  // currently attached/visible ChildView across tab switches and process swaps.
 +  if (aActive) {
 +    if (mWidgetListener) {
 +      mWidgetListener->WindowActivated();
@@ -636,7 +629,7 @@ index ffb8da937efa..3b040f54cc87 100644
  void nsWindow::Move(const DesktopPoint& aPoint) {
    if (!mNativeView || (mBounds.x == aPoint.x && mBounds.y == aPoint.y)) {
      return;
-@@ -940,6 +1051,31 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -940,6 +1044,31 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    ReportSizeModeEvent(aMode);
  }
  
@@ -668,7 +661,7 @@ index ffb8da937efa..3b040f54cc87 100644
  void nsWindow::Invalidate(const LayoutDeviceIntRect& aRect) {
    if (!mNativeView || !mVisible) return;
  
-@@ -982,6 +1118,10 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -982,6 +1111,10 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  void nsWindow::ReportSizeEvent() {
    LayoutDeviceIntRect innerBounds = GetClientBounds();
  
@@ -679,7 +672,7 @@ index ffb8da937efa..3b040f54cc87 100644
    if (mWidgetListener) {
      mWidgetListener->WindowResized(this, innerBounds.Size());
    }
-@@ -1020,17 +1160,73 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1020,17 +1153,73 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  
    const bool changingEnabledState =
        aContext.IsInputAttributeChanged(mInputContext);
@@ -710,7 +703,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +         focusFromPointerInput);
 +
 +    if (aAction.mFocusChange == InputContextAction::LOST_FOCUS) {
-+      // REYNARD: Preserve first responder across keyboard-driven editable
++      // Preserve first responder across keyboard-driven editable
 +      // handoffs (e.g. OTP auto-advance) to keep the software keyboard stable.
 +      if (!focusFromKeyboardInput) {
 +        [mNativeView resignFirstResponder];
@@ -729,7 +722,7 @@ index ffb8da937efa..3b040f54cc87 100644
 +    return;
 +  }
 +
-+  // REYNARD: Prevent page-load autofocus from opening the software keyboard
++  // Prevent page-load autofocus from opening the software keyboard
 +  // unless focus is clearly user-driven.
 +  const bool shouldBecomeFirstResponder =
 +      hadFirstResponder || aAction.UserMightRequestOpenVKB() ||
@@ -741,22 +734,22 @@ index ffb8da937efa..3b040f54cc87 100644
 +      aContext.IsPasswordEditor() &&
 +      (aAction.mFocusChange == InputContextAction::GOT_FOCUS ||
 +       mNativeView->mEditable.mWaitingForPasswordAutofillFocus);
- 
--  if (aAction.UserMightRequestOpenVKB() || changingEnabledState) {
++
 +  if (shouldWaitForPasswordAutofillFocus) {
 +    mNativeView->mEditable.mWaitingForPasswordAutofillFocus = YES;
 +  } else if (shouldBecomeFirstResponder) {
 +    [mNativeView cancelResponderBlur];
 +    [mNativeView becomeFirstResponder];
 +  }
-+
+ 
+-  if (aAction.UserMightRequestOpenVKB() || changingEnabledState) {
 +  if ((aAction.UserMightRequestOpenVKB() || changingEnabledState) &&
 +      (hadFirstResponder || shouldBecomeFirstResponder) &&
 +      !shouldWaitForPasswordAutofillFocus) {
      // TODO(m_kato):
      // It is unnecessary to call reloadInputViews with changingEnabledState if
      // virtual keyboard is disappeared.
-@@ -1050,6 +1246,25 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1050,6 +1239,25 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return mInputContext;
  }
  
@@ -782,7 +775,7 @@ index ffb8da937efa..3b040f54cc87 100644
  widget::TextEventDispatcherListener*
  nsWindow::GetNativeTextEventDispatcherListener() {
    return mTextInputHandler;
-@@ -1110,6 +1325,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1110,6 +1318,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return [UIScreen mainScreen].scale;
  }
  
@@ -791,7 +784,7 @@ index ffb8da937efa..3b040f54cc87 100644
  int32_t nsWindow::RoundsWidgetCoordinatesTo() {
    if (BackingScaleFactor() == 2.0) {
      return 2;
-@@ -1121,6 +1338,85 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1121,6 +1331,85 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return mNativeLayerRoot;
  }
  
@@ -877,7 +870,7 @@ index ffb8da937efa..3b040f54cc87 100644
  void nsWindow::HandleMainThreadCATransaction() {
    // Trigger a synchronous OMTC composite. This will call NextSurface and
    // NotifySurfaceReady on the compositor thread to update mNativeLayerRoot's
-@@ -1260,6 +1556,10 @@ - (void)close {
+@@ -1260,6 +1549,10 @@ - (void)close {
      mOuterWindow = nullptr;
    }
  }
@@ -888,15 +881,7 @@ index ffb8da937efa..3b040f54cc87 100644
  @end
  
  id<GeckoViewWindow> GeckoViewOpenWindow(NSString* aId,
-@@ -1275,6 +1575,7 @@ - (void)close {
- 
-   nsAutoCString url;
-   nsresult rv = Preferences::GetCString("toolkit.defaultChromeURI", url);
-+
-   if (NS_FAILED(rv)) {
-     url = "chrome://geckoview/content/geckoview.xhtml"_ns;
-   }
-@@ -1302,6 +1603,7 @@ - (void)close {
+@@ -1302,6 +1595,7 @@ - (void)close {
    MOZ_ASSERT(window);
  
    window->SetIOSView(iosView.forget());

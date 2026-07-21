@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/Ion.cpp b/js/src/jit/Ion.cpp
-index f1f06b8397ad..61ace39039cd 100644
+index f1f06b8397ad..d8e39a4068d1 100644
 --- a/js/src/jit/Ion.cpp
 +++ b/js/src/jit/Ion.cpp
 @@ -46,6 +46,7 @@
@@ -10,14 +10,11 @@ index f1f06b8397ad..61ace39039cd 100644
  #include "jit/RangeAnalysis.h"
  #include "jit/ScalarReplacement.h"
  #include "jit/ScriptFromCalleeToken.h"
-@@ -153,7 +154,14 @@ bool JitRuntime::initialize(JSContext* cx) {
+@@ -153,7 +154,11 @@ bool JitRuntime::initialize(JSContext* cx) {
  
  bool JitRuntime::generateTrampolines(JSContext* cx) {
    TempAllocator temp(&cx->tempLifoAlloc());
 -  StackMacroAssembler masm(cx, temp);
-+  // REYNARD: Keep the trampoline assembler state off this stack frame so iOS
-+  // child-process codegen does not trip stack protector checks while emitting
-+  // the large trampoline bundle.
 +  auto masmStorage = MakeUnique<StackMacroAssembler>(cx, temp);
 +  if (!masmStorage) {
 +    return false;
@@ -26,7 +23,7 @@ index f1f06b8397ad..61ace39039cd 100644
    PerfSpewerRangeRecorder rangeRecorder(masm);
  
    Label bailoutTail;
-@@ -586,16 +594,21 @@ template JitCode* JitCode::New<NoGC>(JSContext* cx, uint8_t* code,
+@@ -586,16 +591,21 @@ template JitCode* JitCode::New<NoGC>(JSContext* cx, uint8_t* code,
  void JitCode::copyFrom(MacroAssembler& masm) {
    // Store the JitCode pointer in the JitCodeHeader so we can recover the
    // gcthing from relocation tables.

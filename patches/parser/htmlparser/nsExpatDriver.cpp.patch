@@ -1,5 +1,5 @@
 diff --git a/parser/htmlparser/nsExpatDriver.cpp b/parser/htmlparser/nsExpatDriver.cpp
-index 2e1253d56914..e1f9db60bbc1 100644
+index 2e1253d56914..39bf4811a499 100644
 --- a/parser/htmlparser/nsExpatDriver.cpp
 +++ b/parser/htmlparser/nsExpatDriver.cpp
 @@ -1449,7 +1449,8 @@ RLBoxExpatSandboxPool::CreateSandboxData(uint64_t aSize) {
@@ -7,7 +7,7 @@ index 2e1253d56914..e1f9db60bbc1 100644
    auto sandbox = mozilla::MakeUnique<rlbox_sandbox_expat>();
  
 -#ifdef MOZ_WASM_SANDBOXING_EXPAT
-+// REYNARD: Use NOOP sandbox for iOS
++// Use NOOP sandbox for iOS
 +#if defined(MOZ_WASM_SANDBOXING_EXPAT) && !defined(XP_IOS)
    const w2c_mem_capacity capacity =
        get_valid_wasm2c_memory_capacity(aSize, true /* 32-bit wasm memory*/);

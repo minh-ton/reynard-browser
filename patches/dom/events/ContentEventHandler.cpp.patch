@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index 11b57e330c97..0d402c866f65 100644
+index 11b57e330c97..3401c01eaf63 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
 @@ -6,6 +6,7 @@
@@ -28,12 +28,9 @@ index 11b57e330c97..0d402c866f65 100644
  nsresult ContentEventHandler::InitCommon(EventMessage aEventMessage,
                                           SelectionType aSelectionType,
                                           bool aRequireFlush) {
-@@ -550,8 +555,11 @@ nsresult ContentEventHandler::Init(WidgetQueryContentEvent* aEvent) {
-   aEvent->EmplaceReply();
+@@ -551,7 +556,8 @@ nsresult ContentEventHandler::Init(WidgetQueryContentEvent* aEvent) {
  
    aEvent->mReply->mContentsRoot = mRootElement.get();
-+  // REYNARD: Focused text controls query against their anonymous editor root,
-+  // which is not itself editable even though the host textarea/input is.
    aEvent->mReply->mIsEditableContent =
 -      mRootElement && mRootElement->IsEditable();
 +      mRootElement && (mRootElement->IsEditable() ||
@@ -41,11 +38,11 @@ index 11b57e330c97..0d402c866f65 100644
  
    nsRect r;
    nsIFrame* frame = nsCaret::GetGeometry(mSelection, &r);
-@@ -609,6 +617,15 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -609,6 +615,15 @@ nsresult ContentEventHandler::QueryContentRect(
  
    aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
        resultRect, presContext->AppUnitsPerDevPixel());
-+  // REYNARD: Keep editor/content rect queries in the same visual coordinate
++  // Keep editor/content rect queries in the same visual coordinate
 +  // space as caret and text rect queries so native iOS selection UI tracks
 +  // async zoom and panning correctly.
 +  if (nsPresContext* rootContext =
@@ -57,11 +54,11 @@ index 11b57e330c97..0d402c866f65 100644
    // Returning empty rect may cause native IME confused, let's make sure to
    // return non-empty rect.
    EnsureNonEmptyRect(aEvent->mReply->mRect);
-@@ -616,6 +633,53 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -616,6 +631,53 @@ nsresult ContentEventHandler::QueryContentRect(
    return NS_OK;
  }
  
-+// REYNARD: Detect the focused text control's anonymous editor root so iOS
++// Detect the focused text control's anonymous editor root so iOS
 +// query-content requests can use textarea scrollport-relative geometry.
 +static nsTextControlFrame* GetFocusedTextControlFrameForRoot(
 +    Element* aRootElement) {
@@ -87,7 +84,7 @@ index 11b57e330c97..0d402c866f65 100644
 +  return textControlFrame;
 +}
 +
-+// REYNARD: Collect text control range geometry without edge-clamping so iOS
++// Collect text control range geometry without edge-clamping so iOS
 +// selection UI can disappear when the selection scrolls fully out of view.
 +static bool GetUnclampedTextControlRangeRect(nsRange* aRange, nsRect& aRect) {
 +  if (!aRange) {
@@ -111,12 +108,12 @@ index 11b57e330c97..0d402c866f65 100644
  // Editor places a padding <br> element under its root content if the editor
  // doesn't have any text. This happens even for single line editors.
  // When we get text content and when we change the selection,
-@@ -2379,6 +2443,48 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2379,6 +2441,48 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
    }
    DOMRangeAndAdjustedOffsetInFlattenedText domRangeAndAdjustedOffset =
        domRangeAndAdjustedOffsetOrError.unwrap();
 +
-+  // REYNARD: Text controls need unclamped range geometry instead of the normal
++  // Text controls need unclamped range geometry instead of the normal
 +  // edge-clamped query path used for generic editable content.
 +  if (GetFocusedTextControlFrameForRoot(mRootElement)) {
 +    nsRect unclampedRect;
@@ -160,13 +157,13 @@ index 11b57e330c97..0d402c866f65 100644
    nsString string;
    if (NS_WARN_IF(NS_FAILED(
            GenerateFlatTextContent(domRangeAndAdjustedOffset.mRange, string)))) {
-@@ -2698,6 +2804,76 @@ nsresult ContentEventHandler::OnQueryEditorRect(
+@@ -2698,6 +2802,76 @@ nsresult ContentEventHandler::OnQueryEditorRect(
      return rv;
    }
  
 +  if (nsTextControlFrame* textControlFrame =
 +          GetFocusedTextControlFrameForRoot(mRootElement)) {
-+    // REYNARD: Focused text controls need the live scrollport here so native
++    // Focused text controls need the live scrollport here so native
 +    // UIKit selection UI can disappear once a textarea scrolls the selection
 +    // fully out of view.
 +    if (ScrollContainerFrame* scrollTargetFrame =
@@ -177,7 +174,7 @@ index 11b57e330c97..0d402c866f65 100644
 +        nsPresContext* presContext = scrollTargetFrame->PresContext();
 +        aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
 +            resultRect, presContext->AppUnitsPerDevPixel());
-+        // REYNARD: Match the visual-space transform used by caret/text rect
++        // Match the visual-space transform used by caret/text rect
 +        // queries so the native selection bounds stay aligned while zoomed.
 +        if (nsPresContext* rootContext =
 +                presContext->GetInProcessRootContentDocumentPresContext()) {
@@ -192,7 +189,7 @@ index 11b57e330c97..0d402c866f65 100644
 +    }
 +  }
 +
-+  // REYNARD: For contenteditable elements (which don't have a text control
++  // For contenteditable elements (which don't have a text control
 +  // frame), find the nearest scroll container that clips the editor and use
 +  // its scroll port rect. Without this, the editor rect for overflowing
 +  // contenteditable divs would be the full element bounding rect, causing

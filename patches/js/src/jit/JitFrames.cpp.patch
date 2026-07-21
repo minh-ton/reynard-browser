@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/JitFrames.cpp b/js/src/jit/JitFrames.cpp
-index f7a2b661298d..25d05dd21809 100644
+index f7a2b661298d..1de8ffc5d954 100644
 --- a/js/src/jit/JitFrames.cpp
 +++ b/js/src/jit/JitFrames.cpp
 @@ -14,7 +14,9 @@
@@ -12,15 +12,11 @@ index f7a2b661298d..25d05dd21809 100644
  #include "jit/IonScript.h"
  #include "jit/JitRuntime.h"
  #include "jit/JitSpewer.h"
-@@ -1198,7 +1200,14 @@ static void TraceBaselineStubFrame(JSTracer* trc, const JSJitFrameIter& frame) {
+@@ -1198,7 +1200,10 @@ static void TraceBaselineStubFrame(JSTracer* trc, const JSJitFrameIter& frame) {
        MOZ_ASSERT(stub->usesTrampolineCode());
      } else {
        MOZ_ASSERT(stub->toCacheIRStub()->makesGCCalls());
 -      stub->toCacheIRStub()->trace(trc);
-+
-+      // REYNARD: Keep the active CacheIR failure chain alive while a stub frame
-+      // is on the stack so guard-failure tail jumps cannot resume into stubs
-+      // that were unlinked or reclaimed during a GC triggered by this stub.
 +      for (ICStub* activeStub = stub; activeStub && !activeStub->isFallback();
 +           activeStub = activeStub->toCacheIRStub()->next()) {
 +        activeStub->toCacheIRStub()->trace(trc);
@@ -28,15 +24,11 @@ index f7a2b661298d..25d05dd21809 100644
  
  #ifndef ENABLE_PORTABLE_BASELINE_INTERP
        for (int i = 0; i < stub->jitCode()->localTracingSlots(); ++i) {
-@@ -1218,7 +1227,20 @@ static void TraceWeakBaselineStubFrame(JSTracer* trc,
+@@ -1218,7 +1223,16 @@ static void TraceWeakBaselineStubFrame(JSTracer* trc,
    if (ICStub* stub = layout->maybeStubPtr()) {
      if (!stub->isFallback()) {
        MOZ_ASSERT(stub->toCacheIRStub()->makesGCCalls());
 -      stub->toCacheIRStub()->traceWeak(trc);
-+
-+      // REYNARD: Mirror ICEntry::traceWeak for the live on-stack chain so the
-+      // current stub does not tail-jump through next_ pointers to stubs that
-+      // weak tracing just detached from the entry.
 +      ICCacheIRStub* activeStub = stub->toCacheIRStub();
 +      activeStub->traceWeak(trc);
 +
@@ -50,13 +42,10 @@ index f7a2b661298d..25d05dd21809 100644
      }
    }
  }
-@@ -1228,6 +1250,21 @@ static void TraceIonICCallFrame(JSTracer* trc, const JSJitFrameIter& frame) {
+@@ -1227,6 +1241,17 @@ static void TraceIonICCallFrame(JSTracer* trc, const JSJitFrameIter& frame) {
+   MOZ_ASSERT(frame.type() == FrameType::IonICCall);
    IonICCallFrameLayout* layout = (IonICCallFrameLayout*)frame.fp();
    TraceRoot(trc, layout->stubCode(), "ion-ic-call-code");
- 
-+  // REYNARD: Keep the live Ion CacheIR chain strongly traced while a VM call
-+  // is on the stack so failure-path nextCodeRaw_ jumps can't resume into stubs
-+  // that were detached or collected during the call.
 +  if (IonICStub* activeStub = layout->stub()) {
 +    TraceCacheIRStub(trc, activeStub, activeStub->stubInfo());
 +
@@ -68,7 +57,6 @@ index f7a2b661298d..25d05dd21809 100644
 +      nextCodeRaw = next->nextCodeRaw();
 +    }
 +  }
-+
+ 
    for (int i = 0; i < (*layout->stubCode())->localTracingSlots(); ++i) {
      TraceRoot(trc, layout->locallyTracedValuePtr(i),
-               "ion-ic-local-tracing-slot");

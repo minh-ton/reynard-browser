@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 3d33f9916a24..b77bef69f496 100644
+index 3d33f9916a24..3c1bb4a54a6f 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -5884,7 +5884,7 @@
@@ -106,7 +106,7 @@ index 3d33f9916a24..b77bef69f496 100644
  -   name: gfx.font_rendering.coretext.enabled
      type: RelaxedAtomicBool
 +#if defined(XP_IOS)
-+  # REYNARD: iOS system fonts may restrict cmap/table access; CoreText
++  # iOS system fonts may restrict cmap/table access; CoreText
 +  # shaping preserves correct system fallback behavior (including emoji).
 +    value: true
 +#else
@@ -129,7 +129,7 @@ index 3d33f9916a24..b77bef69f496 100644
  - name: layers.gpu-process.enabled
    type: bool
 -#if defined(XP_WIN) || defined(MOZ_WIDGET_ANDROID) || defined(XP_MACOSX)
-+# REYNARD: Enable GPU process by default on iOS so Rendering launches in a
++# Enable GPU process by default on iOS so Rendering launches in a
 +# dedicated NSExtension child process.
 +#if defined(XP_WIN) || defined(MOZ_WIDGET_ANDROID) || defined(XP_MACOSX) || defined(XP_IOS)
    value: true
@@ -230,7 +230,7 @@ index 3d33f9916a24..b77bef69f496 100644
    type: RelaxedAtomicBool
    mirror: always
 -#if defined(ANDROID) || defined(MOZ_THUNDERBIRD) || defined(XP_IOS)
-+# REYNARD: Enable socket process networking on iOS.
++# Enable socket process networking on iOS.
 +#if defined(XP_IOS)
 +  value: true
 +#elif defined(ANDROID) || defined(MOZ_THUNDERBIRD)
@@ -242,7 +242,7 @@ index 3d33f9916a24..b77bef69f496 100644
    type: RelaxedAtomicBool
    mirror: always
 +  #  value: false
-+# REYNARD: Enable socket process networking on iOS.
++# Enable socket process networking on iOS.
 +#if defined(XP_IOS)
 +  value: true
 +#else

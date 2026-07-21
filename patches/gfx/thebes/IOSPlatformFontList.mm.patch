@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/IOSPlatformFontList.mm b/gfx/thebes/IOSPlatformFontList.mm
-index 6342e7e84c32..ef880deb1662 100644
+index 6342e7e84c32..e716af563d6d 100644
 --- a/gfx/thebes/IOSPlatformFontList.mm
 +++ b/gfx/thebes/IOSPlatformFontList.mm
 @@ -3,16 +3,69 @@
@@ -63,7 +63,7 @@ index 6342e7e84c32..ef880deb1662 100644
      mozilla::LookAndFeel::FontID aSystemFontID, nsACString& aSystemFontName,
      gfxFontStyle& aFontStyle) {
 -  MOZ_CRASH("UNIMPLEMENTED");
-+  // REYNARD: iOS system font lookup through UIKit and report the family as
++  // iOS system font lookup through UIKit and report the family as
 +  // -apple-system
 +  UIFont* font = GetUIFontForSystemFontID(aSystemFontID);
 +  MOZ_ASSERT(font, "system font not set");

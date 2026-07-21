@@ -1,5 +1,5 @@
 diff --git a/dom/canvas/WebGLExtensions.cpp b/dom/canvas/WebGLExtensions.cpp
-index 0cd6f8726d01..b0dc2011b611 100644
+index 0cd6f8726d01..afafd80c008f 100644
 --- a/dom/canvas/WebGLExtensions.cpp
 +++ b/dom/canvas/WebGLExtensions.cpp
 @@ -140,7 +140,9 @@ void WebGLExtensionColorBufferHalfFloat::OnSetExplicit() {
@@ -7,8 +7,8 @@ index 0cd6f8726d01..b0dc2011b611 100644
  bool WebGLExtensionColorBufferHalfFloat::IsSupported(
      const WebGLContext* webgl) {
 -  if (webgl->IsWebGL2()) return false;
-+  // REYNARD: According to the MDN page for EXT_color_buffer_half_float
-+  // extension, this should be supported by WebGL 2? 
++  // According to the MDN page for EXT_color_buffer_half_float
++  // extension, this should be supported by WebGL 2?
 +  // if (webgl->IsWebGL2()) return false;
  
    const auto& gl = webgl->gl;

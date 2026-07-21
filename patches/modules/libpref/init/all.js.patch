@@ -1,12 +1,12 @@
 diff --git a/modules/libpref/init/all.js b/modules/libpref/init/all.js
-index 7f57c5510c54..5be5ceb1fda8 100644
+index 7f57c5510c54..aa5787ac5ad2 100644
 --- a/modules/libpref/init/all.js
 +++ b/modules/libpref/init/all.js
 @@ -66,6 +66,10 @@ pref("security.crash_tracking.js_load_1.maxCrashes", 1);
  
  pref("general.useragent.compatMode.firefox", false);
  
-+// REYNARD: Reduce GeckoView logging noise because the default "Debug" level
++// Reduce GeckoView logging noise because the default "Debug" level
 +// just makes debugging near to impossible.
 +pref("geckoview.logging", "Warn");
 +
@@ -17,7 +17,7 @@ index 7f57c5510c54..5be5ceb1fda8 100644
    // For non-Latin/Greek/Cyrillic scripts, there may not be any serif/sans-serif
    // distinction available, so both generics resolve to the same font.
  
-+  // REYNARD: default to sans-serif on iOS so generic resolution uses
++  // Default to sans-serif on iOS so generic resolution uses
 +  // -apple-system first for SF-based text rendering.
 +  pref("font.default.x-unicode", "sans-serif");
 +  pref("font.default.x-western", "sans-serif");

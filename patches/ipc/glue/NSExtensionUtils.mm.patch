@@ -1,9 +1,9 @@
 diff --git a/ipc/glue/NSExtensionUtils.mm b/ipc/glue/NSExtensionUtils.mm
 new file mode 100644
-index 000000000000..42402cb7308d
+index 000000000000..aae5c6b21c43
 --- /dev/null
 +++ b/ipc/glue/NSExtensionUtils.mm
-@@ -0,0 +1,559 @@
+@@ -0,0 +1,554 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -70,7 +70,7 @@ index 000000000000..42402cb7308d
 +  [super dealloc];
 +}
 +
-+// REYNARD: Somehow the child must actively send an initial XPC call to trigget
++// Somehow the child must actively send an initial XPC call to trigget
 +// host listener acceptance. So the ping method here is called so that the
 +// parent can receive and retain the NSXPC connection.
 +- (void)ping {
@@ -164,8 +164,6 @@ index 000000000000..42402cb7308d
 +
 +static NSExtension* _Nullable CreateNSExtension(
 +    NSString* identifier, NSError* _Nullable* _Nullable error) {
-+  // REYNARD: Probe private NSExtension constructors at runtime so we can
-+  // support API shape differences across OS versions.
 +  Class extensionClass = NSClassFromString(@"NSExtension");
 +  if (!extensionClass) {
 +    return nil;
@@ -261,9 +259,6 @@ index 000000000000..42402cb7308d
 +  }
 +  mStarted = true;
 +
-+  // REYNARD: Run launch bootstrap on a dedicated serial queue so callback and
-+  // timeout delivery never depend on the app main thread while Gecko performs
-+  // synchronous launch waits.
 +  dispatch_async(ExtensionLaunchQueue(), ^{
 +    __block bool completed = false;
 +    void (^completeOnce)(NSError* _Nullable) = ^(NSError* _Nullable error) {
@@ -495,7 +490,7 @@ index 000000000000..42402cb7308d
 +void NSExtensionProcess::StartProcess(
 +    const std::function<void(Result<NSExtensionProcess, LaunchError>&&)>&
 +        aCompletion) {
-+  // REYNARD: Launch child process via NSExtension and bridge its
++  // Launch child process via NSExtension and bridge its
 +  // NSXPCConnection to libxpc for Gecko child bootstrap.
 +  auto ownedCompletion = std::make_shared<
 +      std::function<void(Result<NSExtensionProcess, LaunchError>&&)>>(

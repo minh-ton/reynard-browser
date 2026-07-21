@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/ContentParent.cpp b/dom/ipc/ContentParent.cpp
-index 2ee13e7e51c7..7579be7800b2 100644
+index 2ee13e7e51c7..b918e3c11cd9 100644
 --- a/dom/ipc/ContentParent.cpp
 +++ b/dom/ipc/ContentParent.cpp
 @@ -3007,14 +3007,15 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
@@ -46,7 +46,7 @@ index 2ee13e7e51c7..7579be7800b2 100644
  
 +IPCResult ContentParent::RecvNotifyGPUProcessLost(
 +    const uint64_t& aProcessToken) {
-+  // REYNARD: Route content-side abnormal compositor shutdown events through
++  // Route content-side abnormal compositor shutdown events through
 +  // the active GPU process token so recovery targets the correct process.
 +  gfx::GPUProcessManager* gpm = gfx::GPUProcessManager::Get();
 +  if (gpm) {

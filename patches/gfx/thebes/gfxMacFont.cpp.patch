@@ -1,12 +1,12 @@
 diff --git a/gfx/thebes/gfxMacFont.cpp b/gfx/thebes/gfxMacFont.cpp
-index 005688e3db92..674480ee7ac3 100644
+index 005688e3db92..53476d1724d5 100644
 --- a/gfx/thebes/gfxMacFont.cpp
 +++ b/gfx/thebes/gfxMacFont.cpp
 @@ -26,6 +26,14 @@
  using namespace mozilla;
  using namespace mozilla::gfx;
  
-+// REYNARD: Pull the preserved CoreText descriptor from the unscaled font so
++// Pull the preserved CoreText descriptor from the unscaled font so
 +// metrics and glyph measurement can recreate the original Apple system font.
 +static CTFontDescriptorRef GetUnscaledFontDescriptor(const gfxMacFont* aFont) {
 +  auto* unscaledFont =
@@ -21,7 +21,7 @@ index 005688e3db92..674480ee7ac3 100644
    if (!mCTFont) {
      bool isInstalledFont =
          !mFontEntry->IsUserFont() || mFontEntry->IsLocalUserFont();
-+    // REYNARD: Use the preserved font descriptor
++    // Use the preserved font descriptor
 +    CTFontDescriptorRef fontDesc = GetUnscaledFontDescriptor(this);
      mCTFont = CreateCTFontFromCGFontWithVariations(mCGFont, mAdjustedSize,
 -                                                   isInstalledFont);
@@ -37,7 +37,7 @@ index 005688e3db92..674480ee7ac3 100644
 -      ::CTFontCreateWithGraphicsFont(mCGFont, mAdjustedSize, nullptr, nullptr));
 +  bool isInstalledFont =
 +      !mFontEntry->IsUserFont() || mFontEntry->IsLocalUserFont();
-+  // REYNARD: Use the preserved font descriptor
++  // Use the preserved font descriptor
 +  CTFontDescriptorRef fontDesc = GetUnscaledFontDescriptor(this);
 +  AutoCFTypeRef<CTFontRef> ctFont(CreateCTFontFromCGFontWithVariations(
 +      mCGFont, mAdjustedSize, isInstalledFont, fontDesc));

@@ -1,5 +1,5 @@
 diff --git a/gfx/ots/RLBoxWOFF2Host.cpp b/gfx/ots/RLBoxWOFF2Host.cpp
-index 071ead8746cd..0f233aac1202 100644
+index 071ead8746cd..36ca0771a818 100644
 --- a/gfx/ots/RLBoxWOFF2Host.cpp
 +++ b/gfx/ots/RLBoxWOFF2Host.cpp
 @@ -9,6 +9,7 @@
@@ -14,7 +14,7 @@ index 071ead8746cd..0f233aac1202 100644
    return decompressedSize;
  }
  
-+// REYNARD: iOS fallback path for valid WOFF2 webfonts when RLBox conversion
++// iOS fallback path for valid WOFF2 webfonts when RLBox conversion
 +// fails; decode with native woff2 and continue through the same OTS validation
 +// via ProcessTTC/ProcessTTF.
 +static bool ProcessWOFF2Unsandboxed(ots::FontFile* aHeader,

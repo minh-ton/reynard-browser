@@ -1,5 +1,5 @@
 diff --git a/layout/ipc/RemoteLayerTreeOwner.cpp b/layout/ipc/RemoteLayerTreeOwner.cpp
-index 33f0b073e093..c22a2c17d6d4 100644
+index 33f0b073e093..37485af6f631 100644
 --- a/layout/ipc/RemoteLayerTreeOwner.cpp
 +++ b/layout/ipc/RemoteLayerTreeOwner.cpp
 @@ -84,14 +84,33 @@ void RemoteLayerTreeOwner::Destroy() {
@@ -14,7 +14,7 @@ index 33f0b073e093..c22a2c17d6d4 100644
      return;
    }
  
-+  // REYNARD: Do not report compositor options on failed reconnect attempts.
++  // Do not report compositor options on failed reconnect attempts.
 +  // I found out that BrowserChild::ReinitRendering weirdly treats options
 +  // presence as success.
    mLayersConnected =
@@ -26,7 +26,7 @@ index 33f0b073e093..c22a2c17d6d4 100644
 +    return;
 +  }
 +
-+  // REYNARD: During GPU/compositor recovery, ensure the recreated child
++  //  During GPU/compositor recovery, ensure the recreated child
 +  // layertree is readopted onto the current root compositor. Without this,
 +  // display lists can flow to the child pipeline while composition targets a
 +  // new root pipeline that has no display list yet.

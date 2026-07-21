@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeChild.cpp b/gfx/layers/ipc/CompositorBridgeChild.cpp
-index 1ceab334989c..12bf62ee1623 100644
+index 1ceab334989c..da0f6e94fba6 100644
 --- a/gfx/layers/ipc/CompositorBridgeChild.cpp
 +++ b/gfx/layers/ipc/CompositorBridgeChild.cpp
 @@ -204,7 +204,8 @@ void CompositorBridgeChild::ShutDown() {
@@ -20,13 +20,10 @@ index 1ceab334989c..12bf62ee1623 100644
  
    sCompositorBridge = this;
  }
-@@ -305,6 +307,15 @@ void CompositorBridgeChild::ActorDestroy(ActorDestroyReason aWhy) {
+@@ -305,6 +307,12 @@ void CompositorBridgeChild::ActorDestroy(ActorDestroyReason aWhy) {
      // false.
      gfxCriticalNote << "CompositorBridgeChild receives IPC close with "
                         "reason=AbnormalShutdown";
-+
-+    // REYNARD: In content processes, propagate abnormal compositor shutdown
-+    // along with the current GPU process token so parent can recover.
 +    if (mProcessToken && XRE_IsContentProcess()) {
 +      if (dom::ContentChild* contentChild = dom::ContentChild::GetSingleton();
 +          contentChild && contentChild->CanSend()) {

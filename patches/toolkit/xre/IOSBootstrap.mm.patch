@@ -1,5 +1,5 @@
 diff --git a/toolkit/xre/IOSBootstrap.mm b/toolkit/xre/IOSBootstrap.mm
-index 264320aed775..2fc51beabfae 100644
+index 264320aed775..6552f255e4cc 100644
 --- a/toolkit/xre/IOSBootstrap.mm
 +++ b/toolkit/xre/IOSBootstrap.mm
 @@ -8,13 +8,24 @@
@@ -37,7 +37,7 @@ index 264320aed775..2fc51beabfae 100644
    return gCurrentProcessExtension;
  }
  
-+// REYNARD: Wait for the parent process to finish the per-pid JIT attach path
++// Wait for the parent process to finish the per-pid JIT attach path
 +// before allowing the content child to keep SpiderMonkey JIT enabled.
 +static bool WaitForJITReadySignal(mozilla::widget::ChildJITStatus* aStatus) {
 +  auto finish = [&](bool ok) {
@@ -79,7 +79,7 @@ index 264320aed775..2fc51beabfae 100644
 +
 +void mozilla::widget::NotifyChildProcessStarted(int32_t aPid,
 +                                                const char* aProcessType) {
-+  // REYNARD: Forward child process launch notifications to the Swift host so
++  // Forward child process launch notifications to the Swift host so
 +  // it can attach the JIT debugger path as soon as the pid is
 +  // known in the parent process, while still letting the app distinguish the
 +  // Gecko child process type.
@@ -117,13 +117,10 @@ index 264320aed775..2fc51beabfae 100644
  static int ChildProcessInitImpl(int aArgc, char** aArgv) {
    auto bootstrap = mozilla::GetBootstrap();
    if (bootstrap.isErr()) {
-@@ -111,12 +193,79 @@ static int ChildProcessInitImpl(int aArgc, char** aArgv) {
+@@ -111,12 +193,76 @@ static int ChildProcessInitImpl(int aArgc, char** aArgv) {
        /* aRandomizeSmall */ !XRE_IsContentProcess());
  #endif
  
-+  // REYNARD: Probe the child process directly for writable-to-executable page
-+  // transitions before SpiderMonkey initializes executable memory. This keeps
-+  // JIT gating independent from the NSExtension bootstrap path.
 +  const bool isContentProcess = XRE_IsContentProcess();
 +  if (isContentProcess) {
 +    mozilla::widget::ChildJITStatus status = {0, {0, {0, 0, 0}}};
@@ -197,7 +194,7 @@ index 264320aed775..2fc51beabfae 100644
  void HandleBootstrapMessage(xpc_object_t aEvent) {
    // Set up stdout and stderr if they were provided.
    int fd = xpc_dictionary_dup_fd(aEvent, "stdout");
-@@ -132,6 +281,11 @@ void HandleBootstrapMessage(xpc_object_t aEvent) {
+@@ -132,6 +278,11 @@ void HandleBootstrapMessage(xpc_object_t aEvent) {
      close(fd);
    }
  
@@ -209,7 +206,7 @@ index 264320aed775..2fc51beabfae 100644
    // Immediately send a reply with our pid
    auto reply = mozilla::AdoptDarwinObject(xpc_dictionary_create_reply(aEvent));
    xpc_dictionary_set_int64(reply.get(), "pid", getpid());
-@@ -198,6 +352,18 @@ void HandleBootstrapMessage(xpc_object_t aEvent) {
+@@ -198,6 +349,18 @@ void HandleBootstrapMessage(xpc_object_t aEvent) {
    }
    argv[argc] = nullptr;
  
@@ -218,12 +215,12 @@ index 264320aed775..2fc51beabfae 100644
                   [argc, argv] { _exit(ChildProcessInitImpl(argc, argv)); });
 +  */
 +
-+  // REYNARD: Run Gecko child bootstrap off the NSExtension main queue so
++  // Run Gecko child bootstrap off the NSExtension main queue so
 +  // host lifecycle notifications can still be serviced synchronously.
 +  // dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0),
 +  //               [argc, argv] { _exit(ChildProcessInitImpl(argc, argv)); });
 +
-+  // REYNARD: ^^ The above approach works but the libdispatch global worker
++  // ^^ The above approach works but the libdispatch global worker
 +  // threads have a very small stack size that causes the Gecko child process to
 +  // crash during deep JS execution. So we use a pthread thread with a large
 +  // stack size instead!

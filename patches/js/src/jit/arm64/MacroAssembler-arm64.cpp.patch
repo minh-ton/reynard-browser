@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/arm64/MacroAssembler-arm64.cpp b/js/src/jit/arm64/MacroAssembler-arm64.cpp
-index 8fd8cb71a107..95c4d2de51fb 100644
+index 8fd8cb71a107..65f38b7bb41d 100644
 --- a/js/src/jit/arm64/MacroAssembler-arm64.cpp
 +++ b/js/src/jit/arm64/MacroAssembler-arm64.cpp
 @@ -8,11 +8,13 @@
@@ -36,7 +36,7 @@ index 8fd8cb71a107..95c4d2de51fb 100644
  enum class Width { _32 = 32, _64 = 64 };
  
  static inline ARMRegister X(Register r) { return ARMRegister(r, 64); }
-@@ -1729,18 +1737,24 @@ void MacroAssembler::patchFarJump(CodeOffset farJump, uint32_t targetOffset) {
+@@ -1729,18 +1737,22 @@ void MacroAssembler::patchFarJump(CodeOffset farJump, uint32_t targetOffset) {
  }
  
  void MacroAssembler::patchFarJump(uint8_t* farJump, uint8_t* target) {
@@ -59,13 +59,11 @@ index 8fd8cb71a107..95c4d2de51fb 100644
    inst1->SetInstructionBits((uint32_t)distance);
    inst2->SetInstructionBits((uint32_t)(distance >> 32));
 +
-+  // REYNARD: Far-jump literals are patched at runtime for wasm tiering.
-+  // Commit the writable-alias updates back to the executable view on iOS.
 +  FinalizeExecutablePatch(executableInst1, 2 * vixl::kInstructionSize);
  }
  
  CodeOffset MacroAssembler::nopPatchableToCall() {
-@@ -1752,16 +1766,22 @@ CodeOffset MacroAssembler::nopPatchableToCall() {
+@@ -1752,16 +1764,22 @@ CodeOffset MacroAssembler::nopPatchableToCall() {
  
  void MacroAssembler::patchNopToCall(uint8_t* call, uint8_t* target) {
    uint8_t* inst = call - 4;
@@ -94,7 +92,7 @@ index 8fd8cb71a107..95c4d2de51fb 100644
  }
  
  CodeOffset MacroAssembler::move32WithPatch(Register dest) {
-@@ -3329,11 +3349,15 @@ void MacroAssembler::patchNearAddressMove(CodeLocationLabel loc,
+@@ -3329,11 +3347,14 @@ void MacroAssembler::patchNearAddressMove(CodeLocationLabel loc,
    ptrdiff_t off = target - loc;
    MOZ_RELEASE_ASSERT(vixl::IsInt21(off));
  
@@ -108,7 +106,6 @@ index 8fd8cb71a107..95c4d2de51fb 100644
 +  vixl::Register rd = vixl::XRegister(executable->Rd());
    adr(cur, rd, off);
 +
-+  // REYNARD: This runtime ADR rewrite must be made visible to the RX alias on iOS.
 +  FinalizeExecutablePatch(executable, vixl::kInstructionSize);
  }
  

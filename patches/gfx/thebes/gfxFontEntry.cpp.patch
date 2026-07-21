@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/gfxFontEntry.cpp b/gfx/thebes/gfxFontEntry.cpp
-index a634bb49e37d..e29e7a3577c4 100644
+index a634bb49e37d..e90bca229d93 100644
 --- a/gfx/thebes/gfxFontEntry.cpp
 +++ b/gfx/thebes/gfxFontEntry.cpp
 @@ -1652,13 +1652,36 @@ void gfxFontFamily::FindFontForChar(GlobalFontMatch* aMatchData) {
@@ -7,7 +7,7 @@ index a634bb49e37d..e29e7a3577c4 100644
    float distance = INFINITY;
  
 -  for (auto* e : entries) {
-+  // REYARD: Make variation-sequence color glyph support can qualify a font even
++  // Make variation-sequence color glyph support can qualify a font even
 +  // when base cmap says missing
 +  const bool hasPresentationRequest =
 +      aMatchData->mPresentation != FontPresentation::Any;

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index 4441c8faf625..62fd7646da8e 100644
+index 4441c8faf625..7fb660eefaa2 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -3,10 +3,13 @@
@@ -310,7 +310,7 @@ index 4441c8faf625..62fd7646da8e 100644
  
    nsresult rv = NS_OK;
 -  if (mUsingNativeEventLoop) {
-+  // REYNARD: Extension child processes already run under NSExtensionMain's
++  // Extension child processes already run under NSExtensionMain's
 +  // UIKit loop, so calling UIApplicationMain again crashes.
 +  const bool isExtensionChildProcess =
 +      !XRE_IsParentProcess() && GetCurrentProcessExtension();
@@ -335,7 +335,7 @@ index 4441c8faf625..62fd7646da8e 100644
      return;
    }
  
-+  // REYNARD: This is causing a crash in the extension child process, because
++  // This is causing a crash in the extension child process, because
 +  // the following causes them to enter a shutdown phase and cleanup while
 +  // the process is live.
 +
@@ -343,7 +343,7 @@ index 4441c8faf625..62fd7646da8e 100644
    // Perform the steps which would normally happen after nsAppShell::Run, such
    // as `~ScopedXPCOMStartup`, as UIApplicationMain will never shutdown.
    if (nsCOMPtr<nsIAppStartup> appStartup = components::AppStartup::Service()) {
-@@ -331,12 +580,20 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -331,12 +580,19 @@ static void ApplicationWillTerminate(bool aCallExit) {
  
    gDirServiceProvider->DoShutdown();
  
@@ -357,8 +357,7 @@ index 4441c8faf625..62fd7646da8e 100644
 -  NS_ShutdownXPCOM(servMgr);
 +  NS_ShutdownXPCOM(servMgr); */
 +
-+
-+  // REYNARD: So we skip those entirely, force invalidates these extensions
++  // So we skip those entirely, force invalidates these extensions
 +  // manually and terminate them.
 +  mozilla::ipc::GeckoChildProcessHost::GetAll(
 +      [](mozilla::ipc::GeckoChildProcessHost* aHost) {

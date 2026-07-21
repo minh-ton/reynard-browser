@@ -1,5 +1,5 @@
 diff --git a/gfx/ipc/GPUProcessManager.cpp b/gfx/ipc/GPUProcessManager.cpp
-index 8429c88bf057..63b1a78fa8a6 100644
+index 8429c88bf057..6b30c5471310 100644
 --- a/gfx/ipc/GPUProcessManager.cpp
 +++ b/gfx/ipc/GPUProcessManager.cpp
 @@ -1384,7 +1384,9 @@ bool GPUProcessManager::CreateContentBridges(
@@ -13,12 +13,10 @@ index 8429c88bf057..63b1a78fa8a6 100644
    const uint32_t compositorManagerNamespace = AllocateNamespace();
    const uint32_t compositorBridgeNamespace = AllocateNamespace();
    const uint32_t imageBridgeNamespace = AllocateNamespace();
-@@ -1398,6 +1400,9 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1398,6 +1400,7 @@ bool GPUProcessManager::CreateContentBridges(
                                aOutVRBridge)) {
      return false;
    }
-+  // REYNARD: Publish the current GPU process token so content can report
-+  // compositor abnormal shutdowns for the correct process instance.
 +  *aOutProcessToken = mProcessToken;
    // RemoteMediaManager is only supported in the GPU process, so we allow this
    // to be fallible.

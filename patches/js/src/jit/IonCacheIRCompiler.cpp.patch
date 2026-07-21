@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/IonCacheIRCompiler.cpp b/js/src/jit/IonCacheIRCompiler.cpp
-index 1fd18f1d6c7c..eec0fca217b2 100644
+index 1fd18f1d6c7c..b7c001cc3b58 100644
 --- a/js/src/jit/IonCacheIRCompiler.cpp
 +++ b/js/src/jit/IonCacheIRCompiler.cpp
 @@ -51,6 +51,7 @@ IonCacheIRCompiler::IonCacheIRCompiler(JSContext* cx, TempAllocator& alloc,
@@ -10,14 +10,12 @@ index 1fd18f1d6c7c..eec0fca217b2 100644
        savedLiveRegs_(false),
        localTracingSlots_(0),
        perfSpewer_(ic->script(), ic->pc()) {
-@@ -80,6 +81,14 @@ void IonCacheIRCompiler::pushStubCodePointer() {
+@@ -80,6 +81,12 @@ void IonCacheIRCompiler::pushStubCodePointer() {
    stubJitCodeOffset_.emplace(masm.PushWithPatch(ImmPtr((void*)-1)));
  }
  
 +void IonCacheIRCompiler::pushStubAndStubCodePointer() {
 +  MOZ_ASSERT(currentStub_);
-+  // REYNARD: Only IonICCallFrameLayout carries the active IonICStub*.
-+  // OOL exit-frame layouts still expect a single JitCode* marker word.
 +  masm.Push(ImmPtr(currentStub_));
 +  pushStubCodePointer();
 +}
@@ -25,7 +23,7 @@ index 1fd18f1d6c7c..eec0fca217b2 100644
  // AutoSaveLiveRegisters must be used when we make a call that can GC. The
  // constructor ensures all live registers are stored on the stack (where the GC
  // expects them) and the destructor restores these registers.
-@@ -264,7 +273,7 @@ static void* GetReturnAddressToIonCode(JSContext* cx) {
+@@ -264,7 +271,7 @@ static void* GetReturnAddressToIonCode(JSContext* cx) {
  void IonCacheIRCompiler::enterStubFrame(MacroAssembler& masm,
                                          const AutoSaveLiveRegisters&) {
    MOZ_ASSERT(!enteredStubFrame_);
@@ -34,7 +32,7 @@ index 1fd18f1d6c7c..eec0fca217b2 100644
    masm.Push(FrameDescriptor(FrameType::IonJS));
    masm.Push(ImmPtr(GetReturnAddressToIonCode(cx_)));
  
-@@ -582,6 +591,7 @@ bool IonCacheIRCompiler::init() {
+@@ -582,6 +589,7 @@ bool IonCacheIRCompiler::init() {
  
  JitCode* IonCacheIRCompiler::compile(IonICStub* stub) {
    AutoCreatedBy acb(masm, "IonCacheIRCompiler::compile");

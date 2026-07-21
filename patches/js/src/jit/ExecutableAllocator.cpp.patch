@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/ExecutableAllocator.cpp b/js/src/jit/ExecutableAllocator.cpp
-index 340a63964b52..bc227311c43c 100644
+index 340a63964b52..ee200a38c86b 100644
 --- a/js/src/jit/ExecutableAllocator.cpp
 +++ b/js/src/jit/ExecutableAllocator.cpp
 @@ -24,6 +24,7 @@
@@ -10,16 +10,14 @@ index 340a63964b52..bc227311c43c 100644
  
  #include "js/MemoryMetrics.h"
  #include "util/Poison.h"
-@@ -301,7 +302,11 @@ void ExecutableAllocator::poisonCode(JSRuntime* rt,
+@@ -301,7 +302,9 @@ void ExecutableAllocator::poisonCode(JSRuntime* rt,
        // Note: we use memset instead of js::Poison because we want to poison
        // JIT code in release builds too. Furthermore, we don't want the
        // invalid-ObjectValue poisoning js::Poison does in debug builds.
 -      memset(ranges[i].start, JS_SWEPT_CODE_PATTERN, ranges[i].size);
-+        // REYNARD: iOS writable/reprotect uses a separate writable alias; poison
-+        // bytes through that alias so memset does not fault on the RX view.
-+        void* writableRange =
++      void* writableRange =
 +          WritableJitAllocationFromExecutable(ranges[i].start, ranges[i].size);
-+        memset(writableRange, JS_SWEPT_CODE_PATTERN, ranges[i].size);
++      memset(writableRange, JS_SWEPT_CODE_PATTERN, ranges[i].size);
        MOZ_MAKE_MEM_NOACCESS(ranges[i].start, ranges[i].size);
      }
    }

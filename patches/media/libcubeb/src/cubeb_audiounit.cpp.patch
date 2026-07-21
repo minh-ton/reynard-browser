@@ -1,5 +1,5 @@
 diff --git a/media/libcubeb/src/cubeb_audiounit.cpp b/media/libcubeb/src/cubeb_audiounit.cpp
-index d1a217687acd..af5712315442 100644
+index d1a217687acd..116f138a4549 100644
 --- a/media/libcubeb/src/cubeb_audiounit.cpp
 +++ b/media/libcubeb/src/cubeb_audiounit.cpp
 @@ -299,6 +299,12 @@ struct cubeb_stream {
@@ -7,7 +7,7 @@ index d1a217687acd..af5712315442 100644
    unique_ptr<property_listener> output_source_listener;
    #endif
 +#if TARGET_OS_IPHONE
-+  // REYNARD: kHALOutputParam_Volume is unavailable on RemoteIO,
++  // kHALOutputParam_Volume is unavailable on RemoteIO,
 +  // so volume is applied as a software gain multiplier in the 
 +  // render callback instead.
 +  atomic<float> software_volume{1.0f};
@@ -20,7 +20,7 @@ index d1a217687acd..af5712315442 100644
    }
  
 +#if TARGET_OS_IPHONE
-+  // REYNARD: Apply software volume.
++  // Apply software volume.
 +  float vol = stm->software_volume.load(memory_order_relaxed);
 +  if (vol != 1.0f) {
 +    float * samples =

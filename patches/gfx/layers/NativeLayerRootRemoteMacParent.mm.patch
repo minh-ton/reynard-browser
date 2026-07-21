@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerRootRemoteMacParent.mm b/gfx/layers/NativeLayerRootRemoteMacParent.mm
-index 731551b96d9f..c6381fd82469 100644
+index 731551b96d9f..9f80aa5409d4 100644
 --- a/gfx/layers/NativeLayerRootRemoteMacParent.mm
 +++ b/gfx/layers/NativeLayerRootRemoteMacParent.mm
 @@ -15,9 +15,25 @@
@@ -7,7 +7,7 @@ index 731551b96d9f..c6381fd82469 100644
  }
  
 +void NativeLayerRootRemoteMacParent::Shutdown() {
-+  // REYNARD: Clear the remote layer state and release the root before the
++  // Clear the remote layer state and release the root before the
 +  // UIKit view backing it is torn down.
 +  if (mRealNativeLayerRoot) {
 +    mRealNativeLayerRoot->SetLayers({});

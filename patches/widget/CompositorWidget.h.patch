@@ -1,12 +1,12 @@
 diff --git a/widget/CompositorWidget.h b/widget/CompositorWidget.h
-index a303bd028f01..02c8873e3fe1 100644
+index a303bd028f01..75fec5cd5846 100644
 --- a/widget/CompositorWidget.h
 +++ b/widget/CompositorWidget.h
 @@ -58,8 +58,9 @@ class CompositorWidgetDelegate {
  };
  
  // Platforms that support out-of-process widgets.
-+// REYNARD: Enable the same OOP compositor widget plumbing on iOS.
++// Enable the same OOP compositor widget plumbing on iOS.
  #if defined(XP_WIN) || defined(MOZ_X11) || defined(MOZ_WIDGET_ANDROID) || \
 -    defined(MOZ_WAYLAND) || defined(XP_MACOSX)
 +    defined(MOZ_WAYLAND) || defined(XP_MACOSX) || defined(XP_IOS)

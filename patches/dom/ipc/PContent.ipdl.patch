@@ -1,12 +1,12 @@
 diff --git a/dom/ipc/PContent.ipdl b/dom/ipc/PContent.ipdl
-index 23fb64851635..9226486d4351 100644
+index 23fb64851635..6afd9d5f25df 100644
 --- a/dom/ipc/PContent.ipdl
 +++ b/dom/ipc/PContent.ipdl
 @@ -571,6 +571,10 @@ parent:
      async UpdateRemotePrintSettings(MaybeDiscardedBrowsingContext aBc,
                                      PrintData aPrintData);
  
-+    // REYNARD: Allow content process to report compositor bridge abnormal
++    // Allow content process to report compositor bridge abnormal
 +    // shutdown with the active GPU process token.
 +    [Priority=control] async NotifyGPUProcessLost(uint64_t aProcessToken);
 +

@@ -1,12 +1,12 @@
 diff --git a/ipc/glue/ExtensionKitUtils.mm b/ipc/glue/ExtensionKitUtils.mm
-index 31058126f6fc..f102f4f4d03c 100644
+index 31058126f6fc..83c3220edd2c 100644
 --- a/ipc/glue/ExtensionKitUtils.mm
 +++ b/ipc/glue/ExtensionKitUtils.mm
 @@ -2,6 +2,8 @@
   * License, v. 2.0. If a copy of the MPL was not distributed with this
   * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
  
-+// REYNARD: This file is now unused. See NSExtensionUtils.mm instead.
++// This file is now unused. See NSExtensionUtils.mm instead.
 +
  #include "ExtensionKitUtils.h"
  #include "LaunchError.h"

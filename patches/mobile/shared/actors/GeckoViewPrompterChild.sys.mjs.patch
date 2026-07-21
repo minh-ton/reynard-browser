@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs b/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
-index dcb397c62cc4..7749e89729af 100644
+index dcb397c62cc4..a7528aa51e5c 100644
 --- a/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
 +++ b/mobile/shared/actors/GeckoViewPrompterChild.sys.mjs
 @@ -56,6 +56,26 @@ export class GeckoViewPrompterChild extends GeckoViewActorChild {
@@ -7,7 +7,7 @@ index dcb397c62cc4..7749e89729af 100644
     */
    async receiveMessage({ name, data }) {
 +
-+    // REYNARD: A hack to get the input button position of the file input element.
++    // A hack to get the input button position of the file input element.
 +    if (name == "GetFileInputRect") {
 +      const win = this.contentWindow;
 +      const el = win?.document?.activeElement;

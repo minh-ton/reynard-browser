@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/CoreTextFontList.cpp b/gfx/thebes/CoreTextFontList.cpp
-index e2a4ed57c87d..f579d75f53c7 100644
+index e2a4ed57c87d..e24e720c5ff0 100644
 --- a/gfx/thebes/CoreTextFontList.cpp
 +++ b/gfx/thebes/CoreTextFontList.cpp
 @@ -354,6 +354,12 @@ nsresult CTFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
@@ -7,7 +7,7 @@ index e2a4ed57c87d..f579d75f53c7 100644
      charmap = new gfxCharacterMap(0);
      mHasCmapTable = false;
 +    if (!mIsDataUserFont) {
-+      // REYNARD: if cmap access is unavailable on iOS system fonts, force
++      // If cmap access is unavailable on iOS system fonts, force
 +      // CoreText shaping for this face instead of HarfBuzz table-driven
 +      // shaping.
 +      mRequiresAAT = true;
@@ -67,7 +67,7 @@ index e2a4ed57c87d..f579d75f53c7 100644
    fe->mStyleRange = mStyleRange;
    fe->mStretchRange = mStretchRange;
    fe->mFixedPitch = mFixedPitch;
-+  // REYNARD: Preserve the retained CoreText descriptor when cloning a system
++  // Preserve the retained CoreText descriptor when cloning a system
 +  // font entry so descriptor-based recreation stays available.
 +  if (mFontDesc) {
 +    fe->mFontDesc = static_cast<CTFontDescriptorRef>(::CFRetain(mFontDesc));
@@ -189,7 +189,7 @@ index e2a4ed57c87d..f579d75f53c7 100644
 -        .EnumGet(static_cast<glean::fontlist::BadFallbackFontLabel>(
 -            cantUseFallbackFont))
 -        .Add();
-+  // REYNARD: when generic fallback fails for emoji codepoints on iOS,
++  // When generic fallback fails for emoji codepoints on iOS,
 +  // explicitly probe AppleColorEmoji and use it if CoreText confirms support.
 +  if (!fontEntry) {
 +    AutoCFTypeRef<CTFontRef> emojiBase(

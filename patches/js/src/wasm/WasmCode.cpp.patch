@@ -1,5 +1,5 @@
 diff --git a/js/src/wasm/WasmCode.cpp b/js/src/wasm/WasmCode.cpp
-index bb80ac2549a4..09c352045e27 100644
+index bb80ac2549a4..e1b90a131c27 100644
 --- a/js/src/wasm/WasmCode.cpp
 +++ b/js/src/wasm/WasmCode.cpp
 @@ -29,6 +29,7 @@
@@ -10,26 +10,22 @@ index bb80ac2549a4..09c352045e27 100644
  #include "util/Poison.h"
  #include "vm/HelperThreadState.h"  // PartialTier2CompileTask
  #ifdef MOZ_VTUNE
-@@ -205,7 +206,11 @@ bool CodeSource::copyAndLink(jit::AutoMarkJitCodeWritableForThread& writable,
+@@ -205,7 +206,9 @@ bool CodeSource::copyAndLink(jit::AutoMarkJitCodeWritableForThread& writable,
    if (masm_) {
      masm_->executableCopy(codeStart);
    } else {
 -    memcpy(codeStart, bytes_, length_);
-+    // REYNARD: Copy through the writable alias so iOS dual-mapped JIT pages
-+    // are never written via the RX address.
 +    uint8_t* writableCodeStart =
 +        WritableJitAllocationFromExecutable(codeStart, length_);
 +    memcpy(writableCodeStart, bytes_, length_);
    }
  
    // Use link data if we have it, or else fall back to basic linking using the
-@@ -384,7 +389,11 @@ SharedCodeSegment CodeSegment::allocate(const CodeSource& codeSource,
+@@ -384,7 +387,9 @@ SharedCodeSegment CodeSegment::allocate(const CodeSource& codeSource,
    MOZ_ASSERT(codeEnd <= allocationEnd);
    size_t paddingAfterCode = allocationEnd - codeEnd;
    // The swept code pattern is guaranteed to crash if it is ever executed.
 -  memset(codeEnd, JS_SWEPT_CODE_PATTERN, paddingAfterCode);
-+  // REYNARD: Poison wasm code padding through the writable alias to avoid
-+  // faults when the executable mapping is RX-only.
 +  uint8_t* writableCodeEnd =
 +      WritableJitAllocationFromExecutable(codeEnd, paddingAfterCode);
 +  memset(writableCodeEnd, JS_SWEPT_CODE_PATTERN, paddingAfterCode);

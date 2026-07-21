@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.h b/gfx/layers/ipc/CompositorBridgeParent.h
-index 3e4951ce0676..99d1e3813ef8 100644
+index 3e4951ce0676..30dca833df6b 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.h
 +++ b/gfx/layers/ipc/CompositorBridgeParent.h
-@@ -248,10 +248,13 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
+@@ -248,7 +248,7 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
    void InitSameProcess(widget::CompositorWidget* aWidget,
                         const LayersId& aLayerTreeId);
  
@@ -11,9 +11,3 @@ index 3e4951ce0676..99d1e3813ef8 100644
    // macOS platform-specific initdata uses move semantics, which
    // changes the method signature. Other platforms don't need to
    // override the existing method.
-+
-+  // REYNARD: iOS now carries endpoint init data for compositor widgets, so it
-+  // requires the same move-semantics constructor handling as macOS.
-   mozilla::ipc::IPCResult RecvPCompositorWidgetConstructor(
-       PCompositorWidgetParent* actor,
-       CompositorWidgetInitData&& aInitData) override;

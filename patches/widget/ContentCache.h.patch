@@ -1,5 +1,5 @@
 diff --git a/widget/ContentCache.h b/widget/ContentCache.h
-index 53456460c859..b33a9061a370 100644
+index 53456460c859..c6937fb17d70 100644
 --- a/widget/ContentCache.h
 +++ b/widget/ContentCache.h
 @@ -44,6 +44,13 @@ class ContentCache {
@@ -7,7 +7,7 @@ index 53456460c859..b33a9061a370 100644
    [[nodiscard]] bool IsValid() const;
  
 +  /**
-+   * REYNARD: Adjust all cached rects by the given delta. Used when the page
++   * Adjust all cached rects by the given delta. Used when the page
 +   * scrolls while an editor is focused, to update the cached positions without
 +   * re-querying the content process.
 +   */
@@ -20,7 +20,7 @@ index 53456460c859..b33a9061a370 100644
    Maybe<TextRectArray> mTextRectArray;
    Maybe<TextRectArray> mLastCommitStringTextRectArray;
  
-+  // REYNARD: Track whether the cached editor rect belongs to focused editable
++  // Track whether the cached editor rect belongs to focused editable
 +  // content so parent-side query replies do not need to infer it from geometry.
 +  bool mEditorRectIsEditable = false;
    LayoutDeviceIntRect mEditorRect;

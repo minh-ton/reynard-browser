@@ -1,5 +1,5 @@
 diff --git a/parser/expat/rlbox_expat.h b/parser/expat/rlbox_expat.h
-index cebd90be580d..d7b617c5f088 100644
+index cebd90be580d..d62b8dc8f9c7 100644
 --- a/parser/expat/rlbox_expat.h
 +++ b/parser/expat/rlbox_expat.h
 @@ -10,7 +10,8 @@
@@ -7,7 +7,7 @@ index cebd90be580d..d7b617c5f088 100644
  #include "mozilla/rlbox/rlbox_config.h"
  
 -#ifdef MOZ_WASM_SANDBOXING_EXPAT
-+// REYNARD: Use NOOP sandbox for iOS
++// Use NOOP sandbox for iOS
 +#if defined(MOZ_WASM_SANDBOXING_EXPAT) && !defined(XP_IOS)
  // Include the generated header file so that we are able to resolve the symbols
  // in the wasm binary
