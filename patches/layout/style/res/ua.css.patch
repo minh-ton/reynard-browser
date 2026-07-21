@@ -1,14 +1,19 @@
 diff --git a/layout/style/res/ua.css b/layout/style/res/ua.css
-index 037c5e20b464..6faa74c73c85 100644
+index 037c5e20b464..27b6058c55d9 100644
 --- a/layout/style/res/ua.css
 +++ b/layout/style/res/ua.css
-@@ -9,6 +9,11 @@
+@@ -9,6 +9,16 @@
              them
  */
  
 +/* REYNARD: Hide caret since we have UIKit's own caret implementation. */
 +:root {  
 +  caret-color: transparent;  
++}
++
++*|*::selection {
++  color: HighlightText !important;
++  background-color: Highlight !important;
 +}
 +
  /* Tables */
