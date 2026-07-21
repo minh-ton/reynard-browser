@@ -1,8 +1,8 @@
 diff --git a/mobile/ios/app/mobile.js b/mobile/ios/app/mobile.js
-index e835b1c33d86..baafad54b83d 100644
+index e835b1c33d86..3b8cd6d4e48e 100644
 --- a/mobile/ios/app/mobile.js
 +++ b/mobile/ios/app/mobile.js
-@@ -3,7 +3,99 @@
+@@ -3,7 +3,102 @@
  // License, v. 2.0. If a copy of the MPL was not distributed with this
  // file, You can obtain one at http://mozilla.org/MPL/2.0/.
  
@@ -17,6 +17,9 @@ index e835b1c33d86..baafad54b83d 100644
 +pref("dom.ipc.processPrelaunch.enabled", true);
 +
 +pref("dom.ipc.processCount.webIsolated", 1);
++
++// Enable meta-viewport support
++pref("dom.meta-viewport.enabled", true);
 +
 +// Enable WebShare support (bug 1402369)
 +pref("dom.webshare.enabled", true);
@@ -103,7 +106,7 @@ index e835b1c33d86..baafad54b83d 100644
  
  // Use software webrender on simulator due to missing APIs.
  #if TARGET_OS_SIMULATOR
-@@ -19,3 +111,5 @@ pref("security.sandbox.content.level", 1);
+@@ -19,3 +114,5 @@ pref("security.sandbox.content.level", 1);
  // 1 complete progressbar at DOMContentLoaded
  // 2 complete progressbar at first MozAfterPaint after DOMContentLoaded
  pref("page_load.progressbar_completion", 2);
