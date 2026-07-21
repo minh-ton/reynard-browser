@@ -21,7 +21,6 @@ public struct ContentPermission {
         case storageAccess = "storage-access"
         case localDeviceAccess = "loopback-network"
         case localNetworkAccess = "local-network"
-        case deviceSensors = "device-sensors"
     }
     
     public enum Value: Int32 {

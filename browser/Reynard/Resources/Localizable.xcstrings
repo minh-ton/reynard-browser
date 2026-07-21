@@ -1399,29 +1399,6 @@
         }
       }
     },
-    "Allow %@ to use motion & orientation sensors?" : {
-      "comment" : "Website host",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow %@ to use motion & orientation sensors?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voulez-vous autoriser %@ à utiliser les capteurs gyroscopiques de votre appareil ?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许“%@”使用运动与方向传感器吗？"
-          }
-        }
-      }
-    },
     "Allow %@ to use your camera and microphone?" : {
       "comment" : "Website host",
       "localizations" : {

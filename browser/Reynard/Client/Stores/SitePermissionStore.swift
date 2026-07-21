@@ -45,8 +45,6 @@ enum SitePermission: String, CaseIterable {
             self = .localDeviceAccess
         case .localNetworkAccess:
             self = .localNetworkAccess
-        case .deviceSensors:
-            return nil
         case .autoplay:
             self = .autoplay
         case .webxr:
