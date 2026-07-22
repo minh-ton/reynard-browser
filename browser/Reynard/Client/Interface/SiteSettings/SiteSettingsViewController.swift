@@ -15,7 +15,7 @@ final class SiteSettingsViewController: UITableViewController {
         case availability
         case media
         case permissions
-        case resetAction
+        case websiteActions
     }
     
     private enum Row: CaseIterable {
@@ -99,7 +99,7 @@ final class SiteSettingsViewController: UITableViewController {
         
         sections.append(.media)
         sections.append(.permissions)
-        sections.append(.resetAction)
+        sections.append(.websiteActions)
         return sections
     }
     
@@ -144,8 +144,8 @@ final class SiteSettingsViewController: UITableViewController {
             return loadState == .loaded ? mediaRows.count : 0
         case .permissions:
             return loadState == .loaded ? permissionRows.count : 0
-        case .resetAction:
-            return loadState == .loaded ? 1 : 0
+        case .websiteActions:
+            return loadState == .loaded ? 2 : 0
         }
     }
     
@@ -161,7 +161,7 @@ final class SiteSettingsViewController: UITableViewController {
             return NSLocalizedString("Media", comment: "")
         case .permissions:
             return NSLocalizedString("Permissions", comment: "")
-        case .resetAction:
+        case .websiteActions:
             return nil
         }
     }
@@ -181,8 +181,8 @@ final class SiteSettingsViewController: UITableViewController {
             return permissionCell(at: indexPath)
         case .permissions:
             return permissionCell(at: indexPath)
-        case .resetAction:
-            return resetWebsiteSettingsCell()
+        case .websiteActions:
+            return websiteActionCell(at: indexPath)
         }
     }
     
@@ -198,8 +198,8 @@ final class SiteSettingsViewController: UITableViewController {
             handlePermissionSelection(at: indexPath)
         case .permissions:
             handlePermissionSelection(at: indexPath)
-        case .resetAction:
-            confirmResetWebsiteSettings()
+        case .websiteActions:
+            handleWebsiteActionSelection(at: indexPath)
         }
         
         tableView.deselectRow(at: indexPath, animated: true)
@@ -262,10 +262,15 @@ final class SiteSettingsViewController: UITableViewController {
         return cell
     }
     
-    private func resetWebsiteSettingsCell() -> UITableViewCell {
+    private func websiteActionCell(at indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = NSLocalizedString("Reset Settings for This Website", comment: "")
-        cell.textLabel?.textColor = .systemRed
+        if indexPath.row == 0 {
+            cell.textLabel?.text = NSLocalizedString("Clear Cookies and Website Data", comment: "")
+            cell.textLabel?.textColor = .systemRed
+        } else {
+            cell.textLabel?.text = NSLocalizedString("Reset Settings for This Website", comment: "")
+            cell.textLabel?.textColor = .systemRed
+        }
         cell.textLabel?.textAlignment = .center
         cell.accessoryView = nil
         cell.accessoryType = .none
@@ -283,7 +288,7 @@ final class SiteSettingsViewController: UITableViewController {
             return mediaRows[safe: indexPath.row]
         case .permissions:
             return permissionRows[safe: indexPath.row]
-        case .availability, .resetAction:
+        case .availability, .websiteActions:
             return nil
         }
     }
@@ -321,6 +326,14 @@ final class SiteSettingsViewController: UITableViewController {
             self?.applyOption(at: optionIndex, for: row)
         }
         navigationController?.pushViewController(picker, animated: true)
+    }
+    
+    private func handleWebsiteActionSelection(at indexPath: IndexPath) {
+        if indexPath.row == 0 {
+            confirmClearWebsiteData()
+        } else {
+            confirmResetWebsiteSettings()
+        }
     }
     
     @objc private func dismissModal() {
@@ -427,6 +440,47 @@ final class SiteSettingsViewController: UITableViewController {
                 AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: "")),
             ]
         )
+    }
+    
+    private func confirmClearWebsiteData() {
+        AlertPresenter.show(
+            title: NSLocalizedString("Clear Cookies and Website Data", comment: ""),
+            message: String(
+                format: NSLocalizedString("Removing cookies and website data for %@ may require you to sign in again.", comment: "Website host"),
+                host
+            ),
+            buttons: [
+                AlertPresenter.Button(title: NSLocalizedString("Clear", comment: "Destructive button"), style: .destructive) { [weak self] in
+                    self?.clearWebsiteData()
+                },
+                AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: "")),
+            ]
+        )
+    }
+    
+    private func clearWebsiteData() {
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            do {
+                try await GeckoStorageController.clearData(
+                    forHost: host,
+                    flags: GeckoStorageClearFlags.cookies
+                    | GeckoStorageClearFlags.authSessions
+                    | GeckoStorageClearFlags.domStorages
+                )
+                await MainActor.run {
+                    self.session.reload()
+                }
+            } catch {
+                AlertPresenter.show(
+                    title: NSLocalizedString("Couldn’t Clear Cookies and Website Data", comment: ""),
+                    message: "\(error)"
+                )
+            }
+        }
     }
     
     private func performResetWebsiteSettings() {

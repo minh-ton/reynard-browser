@@ -25,6 +25,16 @@ public enum GeckoStorageController {
         )
     }
     
+    public static func clearData(forHost host: String, flags: Int64) async throws {
+        _ = try await GeckoEventDispatcherWrapper.runtimeInstance.query(
+            type: "GeckoView:ClearHostData",
+            message: [
+                "host": host,
+                "flags": flags,
+            ]
+        )
+    }
+    
     public static func clearHistory(since startDate: Date?) async throws {
         if let startDate {
             _ = try await GeckoEventDispatcherWrapper.runtimeInstance.query(

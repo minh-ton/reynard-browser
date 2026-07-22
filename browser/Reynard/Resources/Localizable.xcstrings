@@ -2225,6 +2225,16 @@
         }
       }
     },
+    "Clear Cookies and Website Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Cookies and Website Data"
+          }
+        }
+      }
+    },
     "Clear Downloads" : {
       "localizations" : {
         "en" : {
@@ -2529,6 +2539,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法清除浏览数据"
+          }
+        }
+      }
+    },
+    "Couldn’t Clear Cookies and Website Data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Clear Cookies and Website Data"
           }
         }
       }
@@ -5780,6 +5800,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除最近关闭的标签页"
+          }
+        }
+      }
+    },
+    "Removing cookies and website data for %@ may require you to sign in again." : {
+      "comment" : "Website host",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removing cookies and website data for %@ may require you to sign in again."
           }
         }
       }
