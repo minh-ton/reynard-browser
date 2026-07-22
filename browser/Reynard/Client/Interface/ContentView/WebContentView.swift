@@ -12,6 +12,7 @@ final class WebContentView: UIView {
     fileprivate enum UX {
         static let minimumPullDistance: CGFloat = 8
         static let refreshThreshold: CGFloat = 350
+        static let landscapePhoneRefreshThreshold: CGFloat = 100
         static let quickScaleMaximumInterval: TimeInterval = 0.3
         static let quickScaleSpatialTolerance: CGFloat = 44
         static let refreshingContentOffset: CGFloat = 64
@@ -312,7 +313,12 @@ private final class PullToRefreshGestureRecognizer: UIGestureRecognizer {
         return touchPosition.y - touchOrigin.y
     }
     var progress: CGFloat {
-        return min(pullDistance / WebContentView.UX.refreshThreshold, 1)
+        let isLandscapePhone = view?.traitCollection.userInterfaceIdiom == .phone &&
+        (view?.bounds.width ?? 0) > (view?.bounds.height ?? 0)
+        let refreshThreshold = isLandscapePhone
+        ? WebContentView.UX.landscapePhoneRefreshThreshold
+        : WebContentView.UX.refreshThreshold
+        return min(pullDistance / refreshThreshold, 1)
     }
     private var isRecognizing: Bool {
         return state == .began || state == .changed
