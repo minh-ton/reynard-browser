@@ -238,7 +238,7 @@ final class WebContentView: UIView {
             refreshIndicator.startAnimating()
             isTrackingPullProgress = true
         }
-        refreshIndicator.layer.timeOffset = progress
+        refreshIndicator.layer.timeOffset = progress * 0.3 // much better to look at
     }
     
     private func startRefreshIndicatorAnimation() {
