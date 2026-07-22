@@ -76,6 +76,8 @@ final class BrowserPreferences {
             key("HomepageSettings", "frequentlyVisitedSiteCount"): 8,
             key("HomepageSettings", "showsRecentlyClosedTabs"): true,
             key("HomepageSettings", "recentlyClosedTabLimit"): 10,
+            key("HomepageSettings", "showsRecommendations"): true,
+            key("HomepageSettings", "showsNewUpdates"): true,
             key("HomepageSettings", "donationRecommendationMultiplier"): 1,
             
             // Appearance
@@ -431,6 +433,26 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue, forSetting: "HomepageSettings", key: "recentlyClosedTabLimit")
+                NotificationCenter.default.post(name: .homepageSettingsDidChange, object: nil)
+            }
+        }
+        
+        static var showsRecommendations: Bool {
+            get {
+                return prefs.bool(forSetting: "HomepageSettings", key: "showsRecommendations")
+            }
+            set {
+                prefs.set(newValue, forSetting: "HomepageSettings", key: "showsRecommendations")
+                NotificationCenter.default.post(name: .homepageSettingsDidChange, object: nil)
+            }
+        }
+        
+        static var showsNewUpdates: Bool {
+            get {
+                return prefs.bool(forSetting: "HomepageSettings", key: "showsNewUpdates")
+            }
+            set {
+                prefs.set(newValue, forSetting: "HomepageSettings", key: "showsNewUpdates")
                 NotificationCenter.default.post(name: .homepageSettingsDidChange, object: nil)
             }
         }

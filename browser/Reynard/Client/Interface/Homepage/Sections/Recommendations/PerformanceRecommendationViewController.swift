@@ -379,6 +379,10 @@ final class PerformanceRecommendationViewController: UIViewController, HomepageR
     }
     
     private static func resolvedContent(isPrivateBrowsing: Bool, contentMode: HomepageContentMode) -> PerformanceRecommendationContent? {
+        guard Prefs.HomepageSettings.showsRecommendations else {
+            return nil
+        }
+        
         if isPrivateBrowsing || contentMode.isDetached {
             return nil
         }

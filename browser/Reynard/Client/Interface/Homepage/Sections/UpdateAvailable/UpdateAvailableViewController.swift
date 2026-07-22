@@ -151,6 +151,10 @@ final class UpdateAvailableViewController: UIViewController, HomepageRecommendat
     }
     
     static func isRecommendationShown(isPrivateBrowsing: Bool, contentMode: HomepageContentMode) -> Bool {
+        guard Prefs.HomepageSettings.showsNewUpdates else {
+            return false
+        }
+        
         if isPrivateBrowsing || contentMode.isDetached {
             return false
         }

@@ -3818,6 +3818,16 @@
         }
       }
     },
+    "Homepage Banners" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homepage Banners"
+          }
+        }
+      }
+    },
     "Homepage Sections" : {
       "localizations" : {
         "en" : {
@@ -4611,6 +4621,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新标签页"
+          }
+        }
+      }
+    },
+    "New Updates" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Updates"
           }
         }
       }
@@ -5639,6 +5659,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近关闭的标签页"
+          }
+        }
+      }
+    },
+    "Recommendations" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommendations"
           }
         }
       }
