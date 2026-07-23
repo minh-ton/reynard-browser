@@ -10,6 +10,7 @@ import UIKit
 final class ToolbarButton: UIButton {
     private enum UX {
         static let toolbarButtonCornerRadius: CGFloat = 10
+        static let minimumTouchTargetSideLength: CGFloat = 44
         static let downloadButtonSideLength: CGFloat = 44
         static let downloadIconSize: CGFloat = 24
         static let downloadIconVerticalOffset: CGFloat = -1
@@ -80,6 +81,18 @@ final class ToolbarButton: UIButton {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard isUserInteractionEnabled, !isHidden, alpha > 0 else {
+            return false
+        }
+        
+        let horizontalInset = min(0, (bounds.width - UX.minimumTouchTargetSideLength) / 2)
+        let verticalInset = min(0, (bounds.height - UX.minimumTouchTargetSideLength) / 2)
+        let hitFrame = bounds.insetBy(dx: horizontalInset, dy: verticalInset)
+        
+        return hitFrame.contains(point)
     }
     
     override var intrinsicContentSize: CGSize {
