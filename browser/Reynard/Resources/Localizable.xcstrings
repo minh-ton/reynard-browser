@@ -1195,16 +1195,6 @@
         }
       }
     },
-    "All Cookies" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All Cookies"
-          }
-        }
-      }
-    },
     "All Downloads" : {
       "localizations" : {
         "en" : {
@@ -1245,16 +1235,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有历史记录"
-          }
-        }
-      }
-    },
-    "All Third-Party Cookies" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All Third-Party Cookies"
           }
         }
       }
@@ -1779,16 +1759,6 @@
         }
       }
     },
-    "Automatically attempts to connect to websites using HTTPS encryption protocol for increased security." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically attempts to connect to websites using HTTPS encryption protocol for increased security."
-          }
-        }
-      }
-    },
     "Autoplay" : {
       "localizations" : {
         "en" : {
@@ -2221,16 +2191,6 @@
         }
       }
     },
-    "Choose which trackers and scripts to block." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose which trackers and scripts to block."
-          }
-        }
-      }
-    },
     "Clear" : {
       "comment" : "Destructive button\nSwipe action",
       "localizations" : {
@@ -2374,16 +2334,6 @@
         }
       }
     },
-    "Clears cookies set by redirects to known tracking websites." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clears cookies set by redirects to known tracking websites."
-          }
-        }
-      }
-    },
     "Close All Tabs" : {
       "localizations" : {
         "en" : {
@@ -2472,16 +2422,6 @@
         }
       }
     },
-    "Cookies" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cookies"
-          }
-        }
-      }
-    },
     "Cookies and Website Data" : {
       "localizations" : {
         "en" : {
@@ -2500,16 +2440,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cookie 与网站数据"
-          }
-        }
-      }
-    },
-    "Cookies from Unvisited Websites" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cookies from Unvisited Websites"
           }
         }
       }
@@ -2855,16 +2785,6 @@
         }
       }
     },
-    "Cross-Site and Social Media Trackers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cross-Site and Social Media Trackers"
-          }
-        }
-      }
-    },
     "Cross-Site Cookies" : {
       "localizations" : {
         "en" : {
@@ -2883,26 +2803,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "跨站 Cookie"
-          }
-        }
-      }
-    },
-    "Cross-Site Tracking Cookies" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cross-Site Tracking Cookies"
-          }
-        }
-      }
-    },
-    "Cryptominers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cryptominers"
           }
         }
       }
@@ -2926,16 +2826,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自定义"
-          }
-        }
-      }
-    },
-    "Custom Protection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom Protection"
           }
         }
       }
@@ -3660,16 +3550,6 @@
         }
       }
     },
-    "Enable in All Tabs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable in All Tabs"
-          }
-        }
-      }
-    },
     "Enable JIT" : {
       "localizations" : {
         "en" : {
@@ -3710,26 +3590,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启用 JIT 以提高性能并确保网站正常工作。"
-          }
-        }
-      }
-    },
-    "Enable Only in Private Tabs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Only in Private Tabs"
-          }
-        }
-      }
-    },
-    "Enables fingerprinting protection to stop suspected fingerprinters." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enables fingerprinting protection to stop suspected fingerprinters."
           }
         }
       }
@@ -3887,16 +3747,6 @@
         }
       }
     },
-    "Fingerprinters" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fingerprinters"
-          }
-        }
-      }
-    },
     "Firefox for Android" : {
       "localizations" : {
         "en" : {
@@ -3915,26 +3765,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Android 版 Firefox"
-          }
-        }
-      }
-    },
-    "Fix Major Website Issues" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fix Major Website Issues"
-          }
-        }
-      }
-    },
-    "Fix Minor Website Issues" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fix Minor Website Issues"
           }
         }
       }
@@ -4103,16 +3933,6 @@
         }
       }
     },
-    "HTTPS-Only Mode" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HTTPS-Only Mode"
-          }
-        }
-      }
-    },
     "If something looks broken on this website, try turning it off." : {
       "localizations" : {
         "en" : {
@@ -4163,16 +3983,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导入配对文件…"
-          }
-        }
-      }
-    },
-    "In All Tabs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In All Tabs"
           }
         }
       }
@@ -4331,16 +4141,6 @@
         }
       }
     },
-    "Isolate Cross-Site Cookies" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Isolate Cross-Site Cookies"
-          }
-        }
-      }
-    },
     "It's extremely rare that you encounter this issue! Make sure that your TrollStore installation or jailbroken environment is properly configured.\n\nYou may use the browser without JIT temporarily until the next launch by activating JIT-Less Mode." : {
       "comment" : "Paragraph break intentional",
       "localizations" : {
@@ -4426,16 +4226,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续下载"
-          }
-        }
-      }
-    },
-    "Known Fingerprinters" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Known Fingerprinters"
           }
         }
       }
@@ -4573,42 +4363,13 @@
         }
       }
     },
-    "Learn more about Custom Protection..." : {
+    "Learn more about %@ Protection..." : {
+      "comment" : "Protection name placeholder",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Learn more about Custom Protection..."
-          }
-        }
-      }
-    },
-    "Learn more about Standard Protection..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Learn more about Standard Protection..."
-          }
-        }
-      }
-    },
-    "Learn more about Strict Protection..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Learn more about Strict Protection..."
-          }
-        }
-      }
-    },
-    "Limits the ability of social networks to track your browsing activity around the web." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Limits the ability of social networks to track your browsing activity around the web."
+            "value" : "Learn more about %@ Protection..."
           }
         }
       }
@@ -4741,16 +4502,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请确保已启用 TrollStore 的 URL Scheme。"
-          }
-        }
-      }
-    },
-    "May cause websites to break." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "May cause websites to break."
           }
         }
       }
@@ -5452,16 +5203,6 @@
         }
       }
     },
-    "Only in Private Tabs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only in Private Tabs"
-          }
-        }
-      }
-    },
     "Open in\nFiles" : {
       "comment" : "Line break intentional",
       "localizations" : {
@@ -5727,16 +5468,6 @@
         }
       }
     },
-    "Pages will load normally, but block fewer trackers." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pages will load normally, but block fewer trackers."
-          }
-        }
-      }
-    },
     "Password" : {
       "localizations" : {
         "en" : {
@@ -5876,16 +5607,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在准备 JIT"
-          }
-        }
-      }
-    },
-    "Prevents malicious scripts gaining access to your device to mine digital currency." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prevents malicious scripts gaining access to your device to mine digital currency."
           }
         }
       }
@@ -6072,16 +5793,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recommendations"
-          }
-        }
-      }
-    },
-    "Redirect Trackers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Redirect Trackers"
           }
         }
       }
@@ -7287,16 +6998,6 @@
         }
       }
     },
-    "Social Media Trackers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Social Media Trackers"
-          }
-        }
-      }
-    },
     "Some websites are available in multiple languages. Choose languages in the order you prefer." : {
       "localizations" : {
         "en" : {
@@ -7341,76 +7042,6 @@
         }
       }
     },
-    "Standard" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standard"
-          }
-        }
-      }
-    },
-    "Standard Protection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standard Protection"
-          }
-        }
-      }
-    },
-    "Stops outside ads, videos, and other content from loading that contains tracking code. May affect some website functionality." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stops outside ads, videos, and other content from loading that contains tracking code. May affect some website functionality."
-          }
-        }
-      }
-    },
-    "Stops uniquely identifiable data from being collected about your device that can be used for tracking purposes." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stops uniquely identifiable data from being collected about your device that can be used for tracking purposes."
-          }
-        }
-      }
-    },
-    "Strict" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strict"
-          }
-        }
-      }
-    },
-    "Strict Protection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strict Protection"
-          }
-        }
-      }
-    },
-    "Stronger tracking protection and faster performance, but some websites may not work properly." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stronger tracking protection and faster performance, but some websites may not work properly."
-          }
-        }
-      }
-    },
     "Support The Project" : {
       "localizations" : {
         "en" : {
@@ -7429,16 +7060,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "支持本项目"
-          }
-        }
-      }
-    },
-    "Suspected Fingerprinters" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suspected Fingerprinters"
           }
         }
       }
@@ -7550,16 +7171,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "录视频"
-          }
-        }
-      }
-    },
-    "Tell Websites Not to Share & Sell Data" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tell Websites Not to Share & Sell Data"
           }
         }
       }
@@ -7923,26 +7534,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顶部"
-          }
-        }
-      }
-    },
-    "Total Cookie Protection isolates cookies to the website you’re on so trackers like ad networks can’t use them to follow you across websites." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Total Cookie Protection isolates cookies to the website you’re on so trackers like ad networks can’t use them to follow you across websites."
-          }
-        }
-      }
-    },
-    "Tracking Content" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tracking Content"
           }
         }
       }
@@ -8618,13 +8209,13 @@
         }
       }
     },
-    "What %@ Blocks" : {
+    "What %@ Protection Blocks" : {
       "comment" : "Protection mode name placeholder",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What %@ Blocks"
+            "value" : "What %@ Protection Blocks"
           }
         }
       }
@@ -8647,16 +8238,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下载完成后，在共享表单中选取你用于侧载 Reynard 的 App 以安装更新。"
-          }
-        }
-      }
-    },
-    "Will cause websites to break." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Will cause websites to break."
           }
         }
       }

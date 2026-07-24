@@ -70,15 +70,15 @@ final class BlockedTrackersViewController: UITableViewController {
     private func title(for category: BlockedTrackerCategory) -> String {
         switch category {
         case .crossSiteTrackingCookies:
-            return NSLocalizedString("Cross-Site Tracking Cookies", comment: "")
+            return NSLocalizedString("Cross-Site Tracking Cookies", tableName: "SettingsLocalizable", comment: "")
         case .cryptominers:
-            return NSLocalizedString("Cryptominers", comment: "")
+            return NSLocalizedString("Cryptominers", tableName: "SettingsLocalizable", comment: "")
         case .fingerprinters:
-            return NSLocalizedString("Fingerprinters", comment: "")
+            return NSLocalizedString("Fingerprinters", tableName: "SettingsLocalizable", comment: "")
         case .socialMediaTrackers:
-            return NSLocalizedString("Social Media Trackers", comment: "")
+            return NSLocalizedString("Social Media Trackers", tableName: "SettingsLocalizable", comment: "")
         case .trackingContent:
-            return NSLocalizedString("Tracking Content", comment: "")
+            return NSLocalizedString("Tracking Content", tableName: "SettingsLocalizable", comment: "")
         }
     }
 }

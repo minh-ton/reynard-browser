@@ -30,7 +30,7 @@ struct PrivacySettingsSection {
         case .clearBrowsingData:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Clear Browsing Data", comment: ""))
         case .httpsOnlyMode:
-            return SettingsViewUtils.disclosureCell(title: NSLocalizedString("HTTPS-Only Mode", comment: ""))
+            return SettingsViewUtils.disclosureCell(title: NSLocalizedString("HTTPS-Only Mode", tableName: "SettingsLocalizable", comment: ""))
         case .trackingProtection:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Tracking Protection", comment: ""))
         }

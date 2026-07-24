@@ -138,7 +138,7 @@ final class TrackingProtectionPreferencesViewController: SettingsTableViewContro
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         if indexPath == IndexPath(row: 0, section: 1) {
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = NSLocalizedString("Tell Websites Not to Share & Sell Data", comment: "")
+            cell.textLabel?.text = NSLocalizedString("Tell Websites Not to Share & Sell Data", tableName: "SettingsLocalizable", comment: "")
             cell.textLabel?.numberOfLines = 0
             cell.accessoryView = globalPrivacyControlSwitch
             cell.selectionStyle = .none
@@ -157,84 +157,84 @@ final class TrackingProtectionPreferencesViewController: SettingsTableViewContro
         switch displayedRows[indexPath.row] {
         case .standard:
             return protectionLevelCell(
-                title: NSLocalizedString("Standard", comment: ""),
-                description: NSLocalizedString("Pages will load normally, but block fewer trackers.", comment: ""),
+                title: NSLocalizedString("Standard", tableName: "SettingsLocalizable", comment: ""),
+                description: NSLocalizedString("Pages will load normally, but block fewer trackers.", tableName: "SettingsLocalizable", comment: ""),
                 protectionLevel: .standard
             )
         case .strict:
             return protectionLevelCell(
-                title: NSLocalizedString("Strict", comment: ""),
-                description: NSLocalizedString("Stronger tracking protection and faster performance, but some websites may not work properly.", comment: ""),
+                title: NSLocalizedString("Strict", tableName: "SettingsLocalizable", comment: ""),
+                description: NSLocalizedString("Stronger tracking protection and faster performance, but some websites may not work properly.", tableName: "SettingsLocalizable", comment: ""),
                 protectionLevel: .strict
             )
         case .strictBaselineAllowList:
             return togglePreferenceCell(
-                title: NSLocalizedString("Fix Major Website Issues", comment: ""),
+                title: NSLocalizedString("Fix Major Website Issues", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.strictBaselineAllowListEnabled,
                 isEnabled: true
             )
         case .strictConvenienceAllowList:
             return togglePreferenceCell(
-                title: NSLocalizedString("Fix Minor Website Issues", comment: ""),
+                title: NSLocalizedString("Fix Minor Website Issues", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.strictConvenienceAllowListEnabled,
                 isEnabled: Prefs.TrackingProtectionPreferences.strictBaselineAllowListEnabled
             )
         case .custom:
             return protectionLevelCell(
-                title: NSLocalizedString("Custom", comment: ""),
-                description: NSLocalizedString("Choose which trackers and scripts to block.", comment: ""),
+                title: NSLocalizedString("Custom", tableName: "SettingsLocalizable", comment: ""),
+                description: NSLocalizedString("Choose which trackers and scripts to block.", tableName: "SettingsLocalizable", comment: ""),
                 protectionLevel: .custom
             )
         case .customBaselineAllowList:
             return togglePreferenceCell(
-                title: NSLocalizedString("Fix Major Website Issues", comment: ""),
+                title: NSLocalizedString("Fix Major Website Issues", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.customBaselineAllowListEnabled,
                 isEnabled: true
             )
         case .customConvenienceAllowList:
             return togglePreferenceCell(
-                title: NSLocalizedString("Fix Minor Website Issues", comment: ""),
+                title: NSLocalizedString("Fix Minor Website Issues", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.customConvenienceAllowListEnabled,
                 isEnabled: Prefs.TrackingProtectionPreferences.customBaselineAllowListEnabled
             )
         case .customCookies:
             return customChoiceCell(
-                title: NSLocalizedString("Cookies", comment: ""),
+                title: NSLocalizedString("Cookies", tableName: "SettingsLocalizable", comment: ""),
                 selection: CustomTrackingProtectionOption.cookies.selectedOptionTitle
             )
         case .customTrackingContent:
             return customChoiceCell(
-                title: NSLocalizedString("Tracking Content", comment: ""),
+                title: NSLocalizedString("Tracking Content", tableName: "SettingsLocalizable", comment: ""),
                 selection: CustomTrackingProtectionOption.trackingContent.selectedOptionTitle
             )
         case .customCryptominers:
             return togglePreferenceCell(
-                title: NSLocalizedString("Cryptominers", comment: ""),
+                title: NSLocalizedString("Cryptominers", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.customBlocksCryptominers,
                 isEnabled: true
             )
         case .customKnownFingerprinters:
             return togglePreferenceCell(
-                title: NSLocalizedString("Known Fingerprinters", comment: ""),
+                title: NSLocalizedString("Known Fingerprinters", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.customBlocksKnownFingerprinters,
                 isEnabled: true
             )
         case .customRedirectTrackers:
             return togglePreferenceCell(
-                title: NSLocalizedString("Redirect Trackers", comment: ""),
+                title: NSLocalizedString("Redirect Trackers", tableName: "SettingsLocalizable", comment: ""),
                 description: nil,
                 isChecked: Prefs.TrackingProtectionPreferences.customBlocksRedirectTrackers,
                 isEnabled: true
             )
         case .customSuspectedFingerprinters:
             return customChoiceCell(
-                title: NSLocalizedString("Suspected Fingerprinters", comment: ""),
+                title: NSLocalizedString("Suspected Fingerprinters", tableName: "SettingsLocalizable", comment: ""),
                 selection: CustomTrackingProtectionOption.suspectedFingerprinters.selectedOptionTitle
             )
         case .off:
@@ -366,16 +366,22 @@ final class TrackingProtectionPreferencesViewController: SettingsTableViewContro
     }
     
     private func protectionDetailsTitle(for protectionLevel: TrackingProtectionLevel) -> String? {
+        let protectionName: String
         switch protectionLevel {
         case .standard:
-            return NSLocalizedString("Learn more about Standard Protection...", comment: "")
+            protectionName = NSLocalizedString("Standard", tableName: "SettingsLocalizable", comment: "")
         case .strict:
-            return NSLocalizedString("Learn more about Strict Protection...", comment: "")
+            protectionName = NSLocalizedString("Strict", tableName: "SettingsLocalizable", comment: "")
         case .custom:
-            return NSLocalizedString("Learn more about Custom Protection...", comment: "")
+            protectionName = NSLocalizedString("Custom", tableName: "SettingsLocalizable", comment: "")
         case .off:
             return nil
         }
+
+        return String(
+            format: NSLocalizedString("Learn more about %@ Protection...", comment: "Protection name placeholder"),
+            protectionName
+        )
     }
     
     private func protectionLevelCell(title: String, description: String?, protectionLevel: TrackingProtectionLevel) -> UITableViewCell {

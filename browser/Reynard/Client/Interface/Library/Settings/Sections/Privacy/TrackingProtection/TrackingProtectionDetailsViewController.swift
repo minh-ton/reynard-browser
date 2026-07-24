@@ -20,38 +20,38 @@ final class TrackingProtectionDetailsViewController: SettingsTableViewController
         var title: String {
             switch self {
             case .socialMediaTrackers:
-                return NSLocalizedString("Social Media Trackers", comment: "")
+                return NSLocalizedString("Social Media Trackers", tableName: "SettingsLocalizable", comment: "")
             case .crossSiteCookies:
-                return NSLocalizedString("Cross-Site Cookies", comment: "")
+                return NSLocalizedString("Cross-Site Cookies", tableName: "SettingsLocalizable", comment: "")
             case .cryptominers:
-                return NSLocalizedString("Cryptominers", comment: "")
+                return NSLocalizedString("Cryptominers", tableName: "SettingsLocalizable", comment: "")
             case .knownFingerprinters:
-                return NSLocalizedString("Known Fingerprinters", comment: "")
+                return NSLocalizedString("Known Fingerprinters", tableName: "SettingsLocalizable", comment: "")
             case .trackingContent:
-                return NSLocalizedString("Tracking Content", comment: "")
+                return NSLocalizedString("Tracking Content", tableName: "SettingsLocalizable", comment: "")
             case .redirectTrackers:
-                return NSLocalizedString("Redirect Trackers", comment: "")
+                return NSLocalizedString("Redirect Trackers", tableName: "SettingsLocalizable", comment: "")
             case .suspectedFingerprinters:
-                return NSLocalizedString("Suspected Fingerprinters", comment: "")
+                return NSLocalizedString("Suspected Fingerprinters", tableName: "SettingsLocalizable", comment: "")
             }
         }
         
         var description: String {
             switch self {
             case .socialMediaTrackers:
-                return NSLocalizedString("Limits the ability of social networks to track your browsing activity around the web.", comment: "")
+                return NSLocalizedString("Limits the ability of social networks to track your browsing activity around the web.", tableName: "SettingsLocalizable", comment: "")
             case .crossSiteCookies:
-                return NSLocalizedString("Total Cookie Protection isolates cookies to the website you’re on so trackers like ad networks can’t use them to follow you across websites.", comment: "")
+                return NSLocalizedString("Total Cookie Protection isolates cookies to the website you’re on so trackers like ad networks can’t use them to follow you across websites.", tableName: "SettingsLocalizable", comment: "")
             case .cryptominers:
-                return NSLocalizedString("Prevents malicious scripts gaining access to your device to mine digital currency.", comment: "")
+                return NSLocalizedString("Prevents malicious scripts gaining access to your device to mine digital currency.", tableName: "SettingsLocalizable", comment: "")
             case .knownFingerprinters:
-                return NSLocalizedString("Stops uniquely identifiable data from being collected about your device that can be used for tracking purposes.", comment: "")
+                return NSLocalizedString("Stops uniquely identifiable data from being collected about your device that can be used for tracking purposes.", tableName: "SettingsLocalizable", comment: "")
             case .trackingContent:
-                return NSLocalizedString("Stops outside ads, videos, and other content from loading that contains tracking code. May affect some website functionality.", comment: "")
+                return NSLocalizedString("Stops outside ads, videos, and other content from loading that contains tracking code. May affect some website functionality.", tableName: "SettingsLocalizable", comment: "")
             case .redirectTrackers:
-                return NSLocalizedString("Clears cookies set by redirects to known tracking websites.", comment: "")
+                return NSLocalizedString("Clears cookies set by redirects to known tracking websites.", tableName: "SettingsLocalizable", comment: "")
             case .suspectedFingerprinters:
-                return NSLocalizedString("Enables fingerprinting protection to stop suspected fingerprinters.", comment: "")
+                return NSLocalizedString("Enables fingerprinting protection to stop suspected fingerprinters.", tableName: "SettingsLocalizable", comment: "")
             }
         }
         
@@ -82,13 +82,13 @@ final class TrackingProtectionDetailsViewController: SettingsTableViewController
         switch protectionLevel {
         case .standard:
             categories = Category.allCases.filter { $0 != .trackingContent }
-            protectionTitle = NSLocalizedString("Standard Protection", comment: "")
+            protectionTitle = NSLocalizedString("Standard", tableName: "SettingsLocalizable", comment: "")
         case .strict:
             categories = Category.allCases
-            protectionTitle = NSLocalizedString("Strict Protection", comment: "")
+            protectionTitle = NSLocalizedString("Strict", tableName: "SettingsLocalizable", comment: "")
         case .custom:
             categories = Category.allCases.filter(\.isEnabledForCustomProtection)
-            protectionTitle = NSLocalizedString("Custom Protection", comment: "")
+            protectionTitle = NSLocalizedString("Custom", tableName: "SettingsLocalizable", comment: "")
         case .off:
             categories = []
             protectionTitle = ""
@@ -122,7 +122,10 @@ final class TrackingProtectionDetailsViewController: SettingsTableViewController
         guard section == 0 else {
             return SettingsSectionText()
         }
-        let title = String(format: NSLocalizedString("What %@ Blocks", comment: "Protection mode name placeholder"), protectionTitle)
+        let title = String(
+            format: NSLocalizedString("What %@ Protection Blocks", comment: "Protection mode name placeholder"),
+            protectionTitle
+        )
         return SettingsSectionText(headerTitle: title)
     }
     

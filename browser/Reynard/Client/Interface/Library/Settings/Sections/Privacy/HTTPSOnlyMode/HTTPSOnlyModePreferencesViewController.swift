@@ -25,7 +25,7 @@ final class HTTPSOnlyModePreferencesViewController: SettingsTableViewController 
     
     init() {
         super.init(style: .insetGrouped)
-        title = NSLocalizedString("HTTPS-Only Mode", comment: "")
+        title = NSLocalizedString("HTTPS-Only Mode", tableName: "SettingsLocalizable", comment: "")
     }
     
     required init?(coder: NSCoder) {
@@ -49,7 +49,7 @@ final class HTTPSOnlyModePreferencesViewController: SettingsTableViewController 
     
     override func sectionText(for section: Int) -> SettingsSectionText {
         return SettingsSectionText(
-            footerTitle: NSLocalizedString("Automatically attempts to connect to websites using HTTPS encryption protocol for increased security.", comment: "")
+            footerTitle: NSLocalizedString("Automatically attempts to connect to websites using HTTPS encryption protocol for increased security.", tableName: "SettingsLocalizable", comment: "")
         )
     }
     
@@ -61,18 +61,18 @@ final class HTTPSOnlyModePreferencesViewController: SettingsTableViewController 
         switch displayedRows[indexPath.row] {
         case .enabled:
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = NSLocalizedString("HTTPS-Only Mode", comment: "")
+            cell.textLabel?.text = NSLocalizedString("HTTPS-Only Mode", tableName: "SettingsLocalizable", comment: "")
             cell.accessoryView = httpsOnlyModeSwitch
             cell.selectionStyle = .none
             return cell
         case .allTabs:
             return scopeCell(
-                title: NSLocalizedString("Enable in All Tabs", comment: ""),
+                title: NSLocalizedString("Enable in All Tabs", tableName: "SettingsLocalizable", comment: ""),
                 scope: .allTabs
             )
         case .privateTabs:
             return scopeCell(
-                title: NSLocalizedString("Enable Only in Private Tabs", comment: ""),
+                title: NSLocalizedString("Enable Only in Private Tabs", tableName: "SettingsLocalizable", comment: ""),
                 scope: .privateTabs
             )
         }

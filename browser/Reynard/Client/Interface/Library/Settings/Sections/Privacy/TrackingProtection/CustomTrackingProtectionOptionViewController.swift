@@ -15,11 +15,11 @@ enum CustomTrackingProtectionOption {
     var title: String {
         switch self {
         case .cookies:
-            return NSLocalizedString("Cookies", comment: "")
+            return NSLocalizedString("Cookies", tableName: "SettingsLocalizable", comment: "")
         case .trackingContent:
-            return NSLocalizedString("Tracking Content", comment: "")
+            return NSLocalizedString("Tracking Content", tableName: "SettingsLocalizable", comment: "")
         case .suspectedFingerprinters:
-            return NSLocalizedString("Suspected Fingerprinters", comment: "")
+            return NSLocalizedString("Suspected Fingerprinters", tableName: "SettingsLocalizable", comment: "")
         }
     }
     
@@ -29,8 +29,8 @@ enum CustomTrackingProtectionOption {
             return cookiePolicyOptions.map { ($0.title, $0.description) }
         case .trackingContent, .suspectedFingerprinters:
             return [
-                (NSLocalizedString("In All Tabs", comment: ""), nil),
-                (NSLocalizedString("Only in Private Tabs", comment: ""), nil),
+                (NSLocalizedString("In All Tabs", tableName: "SettingsLocalizable", comment: ""), nil),
+                (NSLocalizedString("Only in Private Tabs", tableName: "SettingsLocalizable", comment: ""), nil),
                 (NSLocalizedString("Do Not Block", comment: ""), nil),
             ]
         }
@@ -73,11 +73,11 @@ enum CustomTrackingProtectionOption {
     
     private var cookiePolicyOptions: [(value: CustomCookiePolicy, title: String, description: String?)] {
         return [
-            (.isolateCrossSite, NSLocalizedString("Isolate Cross-Site Cookies", comment: ""), nil),
-            (.crossSiteAndSocialTrackers, NSLocalizedString("Cross-Site and Social Media Trackers", comment: ""), nil),
-            (.unvisitedWebsites, NSLocalizedString("Cookies from Unvisited Websites", comment: ""), nil),
-            (.thirdParty, NSLocalizedString("All Third-Party Cookies", comment: ""), NSLocalizedString("May cause websites to break.", comment: "")),
-            (.all, NSLocalizedString("All Cookies", comment: ""), NSLocalizedString("Will cause websites to break.", comment: "")),
+            (.isolateCrossSite, NSLocalizedString("Isolate Cross-Site Cookies", tableName: "SettingsLocalizable", comment: ""), nil),
+            (.crossSiteAndSocialTrackers, NSLocalizedString("Cross-Site and Social Media Trackers", tableName: "SettingsLocalizable", comment: ""), nil),
+            (.unvisitedWebsites, NSLocalizedString("Cookies from Unvisited Websites", tableName: "SettingsLocalizable", comment: ""), nil),
+            (.thirdParty, NSLocalizedString("All Third-Party Cookies", tableName: "SettingsLocalizable", comment: ""), NSLocalizedString("May cause websites to break", tableName: "SettingsLocalizable", comment: "")),
+            (.all, NSLocalizedString("All Cookies", tableName: "SettingsLocalizable", comment: ""), NSLocalizedString("Will cause websites to break", tableName: "SettingsLocalizable", comment: "")),
             (.none, NSLocalizedString("Do Not Block", comment: ""), nil),
         ]
     }
