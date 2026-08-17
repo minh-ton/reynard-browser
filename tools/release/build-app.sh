@@ -16,4 +16,24 @@ cp "$XCCONFIG_PATH" "$DIST_DIR/Reynard.xcconfig"
 BUILD_SHA=$(git -C "$ROOT_DIR" rev-parse HEAD | cut -c1-7)
 sed -i '' "s/CURRENT_BUILD = .*/CURRENT_BUILD = $BUILD_SHA/" "$DIST_DIR/Reynard.xcconfig"
 
-xcodebuild archive -scheme "Reynard" -archivePath "$DIST_DIR/Reynard.xcarchive" -project "$PROJECT_PATH" -sdk iphoneos -arch arm64 -configuration Release -xcconfig "$DIST_DIR/Reynard.xcconfig"
+run_xcodebuild() {
+	xcodebuild archive \
+		-scheme "Reynard" \
+		-archivePath "$DIST_DIR/Reynard.xcarchive" \
+		-project "$PROJECT_PATH" \
+		-sdk iphoneos \
+		-arch arm64 \
+		-configuration Release \
+		-xcconfig "$DIST_DIR/Reynard.xcconfig" \
+		"$@"
+}
+
+if [ "${1:-}" = "--no-signing" ]; then
+	run_xcodebuild \
+		CODE_SIGNING_ALLOWED=NO \
+		CODE_SIGNING_REQUIRED=NO \
+		CODE_SIGN_IDENTITY="" \
+		PROVISIONING_PROFILE_SPECIFIER=""
+else
+	run_xcodebuild
+fi
