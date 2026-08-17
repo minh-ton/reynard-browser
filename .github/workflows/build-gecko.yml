@@ -1,0 +1,79 @@
+name: Build Gecko
+
+on:
+  workflow_call:
+    inputs:
+      variant:
+        required: true
+        type: string
+      build_args:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Gecko ${{ inputs.variant }}
+    runs-on: macos-26
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      SCCACHE_GHA_VERSION: reynard-${{ inputs.variant }}
+      SCCACHE_C_CUSTOM_CACHE_BUSTER: reynard-${{ inputs.variant }}
+      RUSTC_WRAPPER: sccache
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Install build dependencies
+        run: |
+          brew install python@3.12 lld cbindgen llvm
+          echo "$(brew --prefix python@3.12)/libexec/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix lld)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Hash Rust toolchain for cache
+        id: rust_toolchain
+        run: echo "hash=$(rustc -Vv | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Initialize Gecko submodule
+        run: git submodule update --init --depth 1 engine/firefox
+
+      - name: Update Gecko source
+        run: ./tools/development/update-gecko.sh
+
+      - name: Apply Gecko patches
+        run: ./tools/development/apply-patches.sh
+
+      - name: Restore Gecko build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.mozbuild
+            engine/firefox/.cargo
+            engine/firefox/obj-aarch64-apple-ios
+          key: buildcache-gecko-${{ runner.os }}-${{ runner.arch }}-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-${{ hashFiles('engine/release.txt', 'patches/**/*.patch', 'tools/development/build-gecko.sh') }}
+          restore-keys: |
+            buildcache-gecko-${{ runner.os }}-${{ runner.arch }}-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-
+
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Build Gecko
+        env:
+          CC: clang
+          CXX: clang++
+          LD: ld64.lld
+        run: ./tools/development/build-gecko.sh ${{ inputs.build_args }}

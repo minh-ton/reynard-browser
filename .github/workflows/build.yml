@@ -1,0 +1,43 @@
+name: Build Reynard
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gecko:
+    name: Build Gecko (${{ matrix.variant }})
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - variant: standard
+            build_args: ""
+          - variant: nojemalloc
+            build_args: "--disable-jemalloc"
+    uses: ./.github/workflows/build-gecko.yml
+    with:
+      variant: ${{ matrix.variant }}
+      build_args: ${{ matrix.build_args }}
+
+  app:
+    name: App (${{ matrix.variant }})
+    needs: gecko
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        variant:
+          - standard
+          - nojemalloc
+    uses: ./.github/workflows/build-app.yml
+    with:
+      variant: ${{ matrix.variant }}
+    secrets:
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}

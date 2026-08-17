@@ -31,6 +31,7 @@ fi
 	echo "ac_add_options --enable-lto"
 	echo "ac_add_options --disable-debug"
 	echo "ac_add_options --disable-tests"
+	echo "ac_add_options --with-ccache=sccache"
 	if [ "${1:-}" = "--disable-jemalloc" ]; then
 		echo "ac_add_options --disable-jemalloc"
 	fi
