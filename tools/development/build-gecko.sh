@@ -8,12 +8,16 @@ FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
 TARGET="aarch64-apple-ios"
 USE_SCCACHE=false
+AUTO_CLOBBER=false
 DISABLE_JEMALLOC=false
 
 for arg in "$@"; do
 	case "$arg" in
 		--use-sccache)
 			USE_SCCACHE=true
+			;;
+		--auto-clobber)
+			AUTO_CLOBBER=true
 			;;
 		--disable-jemalloc)
 			DISABLE_JEMALLOC=true
@@ -50,6 +54,9 @@ fi
 	fi
 	if [ "$DISABLE_JEMALLOC" = true ]; then
 		echo "ac_add_options --disable-jemalloc"
+	fi
+	if [ "$AUTO_CLOBBER" = true ]; then
+		echo "mk_add_options AUTOCLOBBER=1"
 	fi
 } > "$FIREFOX_DIR/.mozconfig"
 
