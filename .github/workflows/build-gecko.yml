@@ -64,9 +64,9 @@ jobs:
             ~/.mozbuild
             engine/firefox/.cargo
             engine/firefox/obj-aarch64-apple-ios
-          key: buildcache-gecko-${{ runner.os }}-${{ runner.arch }}-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-${{ hashFiles('engine/release.txt', 'patches/**/*.patch', 'tools/development/build-gecko.sh') }}
+          key: buildcache-gecko-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-${{ hashFiles('engine/release.txt', 'patches/**/*.patch', 'tools/development/build-gecko.sh') }}
           restore-keys: |
-            buildcache-gecko-${{ runner.os }}-${{ runner.arch }}-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-
+            buildcache-gecko-${{ inputs.variant }}-${{ steps.rust_toolchain.outputs.hash }}-
 
       - name: Set up sccache
         uses: mozilla-actions/sccache-action@v0.0.11

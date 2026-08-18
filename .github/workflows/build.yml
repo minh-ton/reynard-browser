@@ -2,37 +2,61 @@ name: Build Reynard
 
 on:
   workflow_dispatch:
+    inputs:
+      build_normal_ipa:
+        description: Build a normal IPA
+        required: false
+        default: true
+        type: boolean
+      build_trollstore_tipa:
+        description: Build a TrollStore TIPA
+        required: false
+        default: true
+        type: boolean
+      build_jailbroken_ipa:
+        description: Build a jailbroken IPA
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  gecko:
-    name: Build Gecko (${{ matrix.variant }})
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        include:
-          - variant: standard
-            build_args: ""
-          - variant: nojemalloc
-            build_args: "--disable-jemalloc"
+  gecko-standard:
+    if: ${{ inputs.build_normal_ipa || inputs.build_trollstore_tipa }}
+    name: Build Gecko (standard)
     uses: ./.github/workflows/build-gecko.yml
     with:
-      variant: ${{ matrix.variant }}
-      build_args: ${{ matrix.build_args }}
+      variant: standard
+      build_args: --use-sccache
 
-  app:
-    name: App (${{ matrix.variant }})
-    needs: gecko
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        variant:
-          - standard
-          - nojemalloc
+  app-standard:
+    if: ${{ inputs.build_normal_ipa || inputs.build_trollstore_tipa }}
+    needs: gecko-standard
+    name: Build app (standard)
     uses: ./.github/workflows/build-app.yml
     with:
-      variant: ${{ matrix.variant }}
+      variant: standard
+      build_normal_ipa: ${{ inputs.build_normal_ipa }}
+      build_trollstore_tipa: ${{ inputs.build_trollstore_tipa }}
+      build_jailbroken_ipa: false
+
+  gecko-nojemalloc:
+    if: ${{ inputs.build_jailbroken_ipa }}
+    name: Build Gecko (nojemalloc)
+    uses: ./.github/workflows/build-gecko.yml
+    with:
+      variant: nojemalloc
+      build_args: --disable-jemalloc --use-sccache
+
+  app-nojemalloc:
+    if: ${{ inputs.build_jailbroken_ipa }}
+    needs: gecko-nojemalloc
+    name: Build app (nojemalloc)
+    uses: ./.github/workflows/build-app.yml
+    with:
+      variant: nojemalloc
+      build_normal_ipa: false
+      build_trollstore_tipa: false
+      build_jailbroken_ipa: ${{ inputs.build_jailbroken_ipa }}

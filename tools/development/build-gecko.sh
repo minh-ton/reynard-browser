@@ -7,6 +7,19 @@ ROOT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 FIREFOX_DIR="$ROOT_DIR/engine/firefox"
 
 TARGET="aarch64-apple-ios"
+USE_SCCACHE=false
+DISABLE_JEMALLOC=false
+
+for arg in "$@"; do
+	case "$arg" in
+		--use-sccache)
+			USE_SCCACHE=true
+			;;
+		--disable-jemalloc)
+			DISABLE_JEMALLOC=true
+			;;
+	esac
+done
 
 cd "$ROOT_DIR"
 
@@ -32,8 +45,10 @@ fi
 	echo "ac_add_options --disable-debug"
 	echo "ac_add_options --disable-tests"
 	echo "ac_add_options --enable-bootstrap"
-	echo "ac_add_options --with-ccache=sccache"
-	if [ "${1:-}" = "--disable-jemalloc" ]; then
+	if [ "$USE_SCCACHE" = true ]; then
+		echo "ac_add_options --with-ccache=sccache"
+	fi
+	if [ "$DISABLE_JEMALLOC" = true ]; then
 		echo "ac_add_options --disable-jemalloc"
 	fi
 } > "$FIREFOX_DIR/.mozconfig"
