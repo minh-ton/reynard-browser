@@ -66,6 +66,14 @@ extension TabManager {
         selectedTab.state.loadingState.isLoading ? selectedTab.session.stop() : selectedTab.session.reload()
     }
     
+    func hardReloadSelectedTab() {
+        guard let selectedTab else {
+            return
+        }
+        
+        selectedTab.session.reload(flags: GeckoSessionLoadFlags.bypassCache)
+    }
+    
     var activeTabs: [Tab] {
         return selectedTabMode == .private ? privateTabs : regularTabs
     }

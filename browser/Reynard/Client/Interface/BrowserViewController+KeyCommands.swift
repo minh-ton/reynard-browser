@@ -50,6 +50,18 @@ extension BrowserViewController {
         }
     }
     
+    @objc func hardReloadPageKeyCommand(_ sender: UIKeyCommand) {
+        guard hasSelectedWebPage,
+              let session = tabManager.selectedTab?.session else {
+            return
+        }
+        if session.isOpen() {
+            session.reload(flags: GeckoSessionLoadFlags.bypassCache)
+        } else {
+            reloadTerminatedTab()
+        }
+    }
+    
     @objc func zoomInKeyCommand(_ sender: UIKeyCommand) {
         guard hasSelectedWebPage else {
             return

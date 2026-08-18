@@ -15,6 +15,7 @@ protocol GeckoSessionHandlerCommon: GeckoEventListenerInternal {
 
 public enum GeckoSessionLoadFlags {
     public static let none = 0
+    public static let bypassCache = 1 << 0
     public static let replaceHistory = 1 << 6
 }
 
@@ -274,11 +275,11 @@ public class GeckoSession {
             ])
     }
     
-    public func reload() {
+    public func reload(flags: Int = GeckoSessionLoadFlags.none) {
         dispatcher.dispatch(
             type: "GeckoView:Reload",
             message: [
-                "flags": 0
+                "flags": flags
             ])
     }
     

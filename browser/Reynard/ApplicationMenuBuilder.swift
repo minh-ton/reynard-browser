@@ -36,6 +36,7 @@ enum ApplicationMenuBuilder {
         
         let viewMenu = UIMenu(title: "", options: .displayInline, children: [
             UIKeyCommand(title: NSLocalizedString("Reload Page", comment: ""), action: #selector(BrowserViewController.reloadPageKeyCommand(_:)), input: "r", modifierFlags: .command),
+            UIKeyCommand(title: NSLocalizedString("Hard Reload Page", comment: ""), action: #selector(BrowserViewController.hardReloadPageKeyCommand(_:)), input: "r", modifierFlags: [.command, .shift]),
             UIKeyCommand(title: NSLocalizedString("Zoom In", comment: ""), action: #selector(BrowserViewController.zoomInKeyCommand(_:)), input: "+", modifierFlags: .command),
             UIKeyCommand(title: NSLocalizedString("Zoom Out", comment: ""), action: #selector(BrowserViewController.zoomOutKeyCommand(_:)), input: "-", modifierFlags: .command),
             UIKeyCommand(title: NSLocalizedString("Actual Size", comment: ""), action: #selector(BrowserViewController.actualSizeKeyCommand(_:)), input: "0", modifierFlags: .command),

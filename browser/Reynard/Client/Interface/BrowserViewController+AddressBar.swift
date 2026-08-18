@@ -54,6 +54,15 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         tabManager.reloadOrStopSelectedTab()
     }
     
+    func addressBarDidRequestHardReload(_ addressBar: AddressBar) {
+        if tabManager.selectedTab?.session.isOpen() == false {
+            reloadTerminatedTab()
+            return
+        }
+        
+        tabManager.hardReloadSelectedTab()
+    }
+    
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem] {
         addonCoordinator.currentSiteMenuItems().map { item in
             AddressBarMenu.AddonItem(

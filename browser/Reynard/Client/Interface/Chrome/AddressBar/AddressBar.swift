@@ -9,6 +9,7 @@ import UIKit
 
 protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestReloadOrStop(_ addressBar: AddressBar)
+    func addressBarDidRequestHardReload(_ addressBar: AddressBar)
     func addressBarAddonItems(_ addressBar: AddressBar) -> [AddressBarMenu.AddonItem]
     func addressBar(_ addressBar: AddressBar, didSelectAddon item: AddonMenuItem)
     func addressBarDidRequestFindInPage(_ addressBar: AddressBar)
@@ -100,6 +101,7 @@ final class AddressBar: UIView {
     private var chromeMode: BrowserChromeMode = .phone
     private var autocompleteState: AutocompleteState = .none
     private var autocompleteDeletedText: String?
+    private var trailingButtonState: TrailingButtonState = .hidden
     
     private var currentText: String?
     private var currentLocationText: String?
@@ -633,6 +635,7 @@ final class AddressBar: UIView {
         addressBarContent.addInteraction(UIContextMenuInteraction(delegate: self))
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
+        trailingButton.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(handleTrailingButtonLongPress)))
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
         dismissButton.addTarget(self, action: #selector(handleDismissButtonTap), for: .touchUpInside)
     }
@@ -779,6 +782,7 @@ final class AddressBar: UIView {
     }
     
     private func applyTrailingButtonState(_ state: TrailingButtonState) {
+        trailingButtonState = state
         let visible = state != .hidden
         trailingButton.isHidden = !visible
         trailingButton.isUserInteractionEnabled = visible
@@ -874,6 +878,15 @@ final class AddressBar: UIView {
     @objc
     private func handleTrailingButtonTap() {
         delegate?.addressBarDidRequestReloadOrStop(self)
+    }
+    
+    @objc
+    private func handleTrailingButtonLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began, trailingButtonState == .reload else {
+            return
+        }
+        
+        delegate?.addressBarDidRequestHardReload(self)
     }
     
     @objc
