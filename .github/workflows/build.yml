@@ -1,6 +1,8 @@
 name: Build Reynard
 
 on:
+  schedule:
+    - cron: '0 18 * * *'
   workflow_dispatch:
     inputs:
       build_normal_ipa:
@@ -37,11 +39,13 @@ jobs:
           BUILD_NORMAL_IPA: ${{ inputs.build_normal_ipa }}
           BUILD_TROLLSTORE_TIPA: ${{ inputs.build_trollstore_tipa }}
           BUILD_JAILBROKEN_IPA: ${{ inputs.build_jailbroken_ipa }}
+          RUN_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
         with:
           script: |
             const variants = [];
 
             if (
+              process.env.RUN_SCHEDULED_BUILD === 'true' ||
               process.env.BUILD_NORMAL_IPA === 'true' ||
               process.env.BUILD_TROLLSTORE_TIPA === 'true'
             ) {
@@ -52,7 +56,10 @@ jobs:
               });
             }
 
-            if (process.env.BUILD_JAILBROKEN_IPA === 'true') {
+            if (
+              process.env.RUN_SCHEDULED_BUILD === 'true' ||
+              process.env.BUILD_JAILBROKEN_IPA === 'true'
+            ) {
               variants.push({
                 variant: 'nojemalloc',
                 build_args: '--disable-jemalloc --use-sccache --auto-clobber',
@@ -159,40 +166,37 @@ jobs:
         run: ./tools/release/build-app.sh --no-signing
 
       - name: Create IPA
-        if: ${{ matrix.variant == 'standard' && inputs.build_normal_ipa }}
+        if: ${{ matrix.variant == 'standard' && (github.event_name == 'schedule' || inputs.build_normal_ipa) }}
         run: ./tools/release/create-ipa.sh
 
       - name: Create TrollStore TIPA
-        if: ${{ matrix.variant == 'standard' && inputs.build_trollstore_tipa }}
+        if: ${{ matrix.variant == 'standard' && (github.event_name == 'schedule' || inputs.build_trollstore_tipa) }}
         run: ./tools/release/create-ipa.sh --trollstore
 
       - name: Create Jailbroken IPA
-        if: ${{ matrix.variant == 'nojemalloc' && inputs.build_jailbroken_ipa }}
+        if: ${{ matrix.variant == 'nojemalloc' && (github.event_name == 'schedule' || inputs.build_jailbroken_ipa) }}
         run: ./tools/release/create-ipa.sh --jailbroken
 
       - name: Upload IPA
-        if: ${{ matrix.variant == 'standard' && inputs.build_normal_ipa }}
+        if: ${{ matrix.variant == 'standard' && (github.event_name == 'schedule' || inputs.build_normal_ipa) }}
         uses: actions/upload-artifact@v4
         with:
           name: Reynard.ipa
           path: dist/Reynard.ipa
           if-no-files-found: error
-          retention-days: 14
 
       - name: Upload TrollStore TIPA
-        if: ${{ matrix.variant == 'standard' && inputs.build_trollstore_tipa }}
+        if: ${{ matrix.variant == 'standard' && (github.event_name == 'schedule' || inputs.build_trollstore_tipa) }}
         uses: actions/upload-artifact@v4
         with:
           name: Reynard-TrollStore.tipa
           path: dist/Reynard-TrollStore.tipa
           if-no-files-found: error
-          retention-days: 14
 
       - name: Upload Jailbroken IPA
-        if: ${{ matrix.variant == 'nojemalloc' && inputs.build_jailbroken_ipa }}
+        if: ${{ matrix.variant == 'nojemalloc' && (github.event_name == 'schedule' || inputs.build_jailbroken_ipa) }}
         uses: actions/upload-artifact@v4
         with:
           name: Reynard-Jailbroken.ipa
           path: dist/Reynard-Jailbroken.ipa
           if-no-files-found: error
-          retention-days: 14
