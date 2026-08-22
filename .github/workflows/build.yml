@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   prepare:
+    if: ${{ github.repository_owner == 'minh-ton' }}
     name: Select build variants
     runs-on: ubuntu-latest
     outputs:
