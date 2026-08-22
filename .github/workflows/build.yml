@@ -164,7 +164,7 @@ jobs:
         run: brew install ldid
 
       - name: Build app
-        run: ./tools/release/build-app.sh --no-signing
+        run: ./tools/release/build-app.sh --no-signing ${{ github.event_name == 'schedule' && '--nightly' || '' }}
 
       - name: Create IPA
         if: ${{ matrix.variant == 'standard' && (github.event_name == 'schedule' || inputs.build_normal_ipa) }}
