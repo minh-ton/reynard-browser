@@ -300,7 +300,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべての Cookie"
+            "value" : "すべてのCookie"
           }
         },
         "ka" : {
@@ -892,7 +892,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべてのサードパーティ Cookie"
+            "value" : "すべてのサードパーティCookie"
           }
         },
         "ka" : {
@@ -1460,7 +1460,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "セキュリティ強化のため、自動的に HTTPS 暗号化プロトコルを使用してサイトへの接続を試行します。"
+            "value" : "セキュリティ向上のため、自動的にHTTPS暗号化接続を試みます。"
           }
         },
         "ka" : {
@@ -2542,7 +2542,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "既知のトラッキングウェブサイトへのリダイレクトにより設定された Cookie を消去します。"
+            "value" : "既知のトラッキングサイトへのリダイレクトで設定されたCookieを消去します。"
           }
         },
         "ka" : {
@@ -3708,7 +3708,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未訪問のサイトの Cookie"
+            "value" : "未訪問のWebサイトからのCookie"
           }
         },
         "ka" : {
@@ -4276,7 +4276,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クロスサイト Cookie"
+            "value" : "クロスサイトCookie"
           }
         },
         "ka" : {
@@ -4826,7 +4826,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クロスサイトトラッキング Cookie"
+            "value" : "クロスサイトトラッキングCookie"
           }
         },
         "ka" : {
@@ -5412,7 +5412,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クロスサイトトラッカーとソーシャルメディアトラッカー"
+            "value" : "クロスサイトおよびSNSトラッカー"
           }
         },
         "ka" : {
@@ -7194,7 +7194,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プライベートタブのみ有効にする"
+            "value" : "プライベートタブのみで有効化"
           }
         },
         "ka" : {
@@ -7732,7 +7732,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべてのタブで有効にする"
+            "value" : "すべてのタブで有効化"
           }
         },
         "ka" : {
@@ -8258,7 +8258,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フィンガープリント防止を有効にすると、疑わしいフィンガープリント採取を阻止します。"
+            "value" : "フィンガープリント防止を有効にして、疑わしいフィンガープリント採取を阻止します。"
           }
         },
         "ka" : {
@@ -9214,7 +9214,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サイトの主要な問題を修正"
+            "value" : "主要なWebサイトの問題を修正"
           }
         },
         "ka" : {
@@ -9620,7 +9620,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サイトの軽微な問題を修正"
+            "value" : "軽微なWebサイトの問題を修正"
           }
         },
         "ka" : {
@@ -10642,7 +10642,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべてのタブに適用"
+            "value" : "すべてのタブ"
           }
         },
         "ka" : {
@@ -11216,7 +11216,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クロスサイト Cookie を分離する"
+            "value" : "クロスサイトCookieを分離"
           }
         },
         "ka" : {
@@ -12226,7 +12226,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ソーシャルネットワークによるウェブ上の行動追跡を制限します。"
+            "value" : "SNSによるWeb上の閲覧行動の追跡を制限します。"
           }
         },
         "ka" : {
@@ -12812,7 +12812,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ウェブサイトが動作しない可能性があります"
+            "value" : "Webサイトが正常に動作しない可能性があります"
           }
         },
         "ka" : {
@@ -13416,7 +13416,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プライベートタブのみ適用"
+            "value" : "プライベートタブのみ"
           }
         },
         "ka" : {
@@ -13990,7 +13990,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ページは正常に読み込まれますが、ブロックされるトラッカーが少なくなります。"
+            "value" : "ページは通常どおり読み込まれますが、ブロックされるトラッカーは少なくなります。"
           }
         },
         "ka" : {
@@ -14510,7 +14510,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "悪意のあるスクリプトによる暗号通貨マイニングを防止します。"
+            "value" : "悪意のあるスクリプトが端末のリソースを使って暗号通貨をマイニングするのを防止します。"
           }
         },
         "ka" : {
@@ -15628,7 +15628,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SNS メディアトラッカー"
+            "value" : "SNSトラッカー"
           }
         },
         "ka" : {
@@ -16728,7 +16728,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "追跡コードを含む外部の広告、動画、その他のコンテンツの読み込みを停止します。一部のウェブサイトの機能に影響する場合があります。"
+            "value" : "追跡コードを含む外部の広告、動画、その他のコンテンツの読み込みを阻止します。一部のWebサイトの機能に影響する場合があります。"
           }
         },
         "ka" : {
@@ -17266,7 +17266,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "端末を一意に識別できるデータがユーザーを追跡する目的で収集されるのを防止します。"
+            "value" : "追跡目的で使用される、端末を一意に識別可能なデータの収集を阻止します。"
           }
         },
         "ka" : {
@@ -18366,7 +18366,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "トラッキング防止を強力にし、パフォーマンスを高速化します。ただし、一部のサイトが正常に機能しなくなる可能性があります。"
+            "value" : "トラッキング防止を強化し読み込みを高速化しますが、一部のWebサイトが正常に動作しない場合があります。"
           }
         },
         "ka" : {
@@ -19328,7 +19328,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ウェブサイトにユーザーデータの共有と販売の拒否を通知する"
+            "value" : "Webサイトにデータの共有・販売の拒否を通知"
           }
         },
         "ka" : {
@@ -19818,7 +19818,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "包括的 Cookie 保護機能により、現在のサイトに対する Cookie を分離して、サイトを横断してあなたを追跡する Cookie を広告ネットワークなどのトラッカーが利用できないようにします。"
+            "value" : "包括的Cookie保護（Total Cookie Protection）により、Cookieをアクセス中のWebサイトごとに分離し、広告ネットワークなどのトラッカーがサイトを横断してあなたを追跡できないようにします。"
           }
         },
         "ka" : {
@@ -20972,7 +20972,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ウェブサイトが動作しない原因になります"
+            "value" : "Webサイトが正常に動作しなくなる原因となります"
           }
         },
         "ka" : {
