@@ -1,0 +1,42 @@
+name: Check Localizations
+
+on:
+  pull_request:
+    paths:
+      - 'browser/**/*.xcstrings'
+      - 'tools/localization/**'
+      - '.github/workflows/check-localizations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Catalogs (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test the checker
+        run: python -B -m unittest discover -s tools/localization -v
+      - name: Check catalogs
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            python -B tools/localization/check_catalogs.py --base "$BASE_SHA"
+          else
+            python -B tools/localization/check_catalogs.py
+          fi
