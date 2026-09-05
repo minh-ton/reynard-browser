@@ -12,19 +12,23 @@ This project is mainly for users on older iOS versions who are stuck with an out
 
 The latest builds are available for download on the [Releases](https://github.com/minh-ton/reynard-browser/releases) page. Please note that this project is still in an early experimental state, so expect bugs and missing features.
 
-### TrollStore (iOS 14 - 16.6.1, 17.0)
+You can check [iOS Guide](https://ios.cfw.guide/get-started/) for the latest jailbreak and TrollStore support for your device and iOS/iPadOS version.
+
+### TrollStore and TrollStore Lite
 
 For the best experience, I'd recommend sideloading Reynard via [TrollStore](https://github.com/opa334/TrollStore) using the `Reynard-TrollStore.tipa` build. This gives you automatic JIT enablement, better performance, and automatic app updates. For automatic app updates, make sure that the **URL Scheme Enabled** option is turned on in TrollStore.
 
 > [!NOTE]
-> - [palera1n](https://palera.in/) and [Dopamine](https://ellekit.space/dopamine/) users on an iOS version without TrollStore support should install [TrollStore Lite](https://havoc.app/package/trollstorelite) and sideload the `Reynard-TrollStore.tipa` build with it.
+> - [palera1n](https://palera.in/) and [Dopamine](https://ellekit.space/dopamine/) users on an iOS version without TrollStore support should install [TrollStore Lite](https://havoc.app/package/trollstorelite) and sideload the `Reynard-TrollStore.tipa` build with it. TrollStore Lite requires a jailbreak.
 > -  `libhooker`-based jailbreaks, such as [Taurine](https://taurine.app/), should sideload the `Reynard-Jailbroken.ipa` build instead, either through TrollStore or the Jailbroken method below.
 
 ### AltStore or SideStore (iOS 17.4+)
 
-You should use [AltStore](https://altstore.io/) or [SideStore](https://sidestore.io/) to sideload the `Reynard.ipa` build when TrollStore is not available, especially on newer iOS versions. Please note that you must select the **Keep App Extensions** option during installation, as Reynard relies on its extensions to function and will not work without them. 
+You should use [AltStore](https://altstore.io/) or [SideStore](https://sidestore.io/) to sideload the `Reynard.ipa` build when neither TrollStore nor TrollStore Lite is available, especially on newer iOS versions. Please note that you must select the **Keep App Extensions** option during installation, as Reynard relies on its extensions to function and will not work without them.
 
 You can also [click here](https://stikstore.app/altdirect/?url=https://github.com/minh-ton/reynard-browser/releases/download/0.0.1-a1/source.json&exclude=livecontainer,stikstore,trollapps,feather) to add the AltSource for Reynard to AltStore or SideStore.
+
+To enable JIT after installing through AltStore or SideStore, follow [this guide](https://github.com/minh-ton/reynard-browser/wiki/Manually-Enabling-JIT).
 
 > [!IMPORTANT]
 > - **LiveContainer is not supported** due to its own limitations.
@@ -34,6 +38,8 @@ You can also [click here](https://stikstore.app/altdirect/?url=https://github.co
 ### Jailbroken (iOS 13)
 
 Sideload the `Reynard-Jailbroken.ipa` build using [Filza File Manager](https://www.tigisoftware.com/default/?page_id=78) with [AppSync Unified](https://github.com/akemin-dayo/AppSync) on a **jailbroken device**. You will also benefit from automatic JIT enablement and better performance.
+
+For common questions and troubleshooting, see the [FAQ](https://github.com/minh-ton/reynard-browser/issues/130).
 
 ## Preview
 
@@ -151,7 +157,7 @@ Build dependencies and the Gecko engine.
 ./tools/development/build-gecko.sh
 ```
 
-To run Reynard, open `Reynard.xcodeproj` in Xcode and build/run it from there.
+To run Reynard, open `browser/Reynard.xcodeproj` in Xcode and build/run it from there.
 
 ## Notes
 
