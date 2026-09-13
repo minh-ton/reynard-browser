@@ -479,7 +479,7 @@ public class GeckoSession {
         window?.setDynamicToolbarMaxHeight(max(0, height))
     }
     
-    public func setContentOffsets(top: CGFloat, bottom: CGFloat, topInset: CGFloat) {
-        window?.setContentOffsets(top, bottom: bottom, topInset: topInset)
+    public func setContentOffsets(top: CGFloat, bottom: CGFloat, topInset: CGFloat, bottomInset: CGFloat) {
+        window?.setContentOffsets(top, bottom: bottom, topInset: topInset, bottomInset: bottomInset)
     }
 }

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/GeckoViewSwiftSupport.h b/widget/uikit/GeckoViewSwiftSupport.h
-index e68fca9134c0..12d4d243ea56 100644
+index e68fca9134c0..ffd7351f28a0 100644
 --- a/widget/uikit/GeckoViewSwiftSupport.h
 +++ b/widget/uikit/GeckoViewSwiftSupport.h
 @@ -17,15 +17,71 @@
@@ -74,7 +74,7 @@ index e68fca9134c0..12d4d243ea56 100644
  @end
  
  @protocol GeckoProcessExtension <NSObject>
-@@ -55,8 +111,26 @@
+@@ -55,8 +111,27 @@
  @end
  
  @protocol GeckoViewWindow <NSObject>
@@ -92,7 +92,8 @@ index e68fca9134c0..12d4d243ea56 100644
 +- (void)setDynamicToolbarMaxHeight:(CGFloat)height;
 +- (void)setContentOffsets:(CGFloat)top
 +                   bottom:(CGFloat)bottom
-+                 topInset:(CGFloat)topInset;
++                 topInset:(CGFloat)topInset
++              bottomInset:(CGFloat)bottomInset;
 +- (void)updateScreenOrientation:(NSInteger)interfaceOrientation;
 +
 +// Keyboard

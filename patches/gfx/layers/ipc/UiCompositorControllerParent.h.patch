@@ -1,15 +1,16 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerParent.h b/gfx/layers/ipc/UiCompositorControllerParent.h
-index 5f737ba747ac..dfd06c975810 100644
+index 5f737ba747ac..5e32d64f972d 100644
 --- a/gfx/layers/ipc/UiCompositorControllerParent.h
 +++ b/gfx/layers/ipc/UiCompositorControllerParent.h
-@@ -39,7 +39,9 @@ class UiCompositorControllerParent final
+@@ -39,7 +39,10 @@ class UiCompositorControllerParent final
                                                bool* aOutResumed);
    mozilla::ipc::IPCResult RecvInvalidateAndRender();
    mozilla::ipc::IPCResult RecvMaxToolbarHeight(const int32_t& aHeight);
 -  mozilla::ipc::IPCResult RecvFixedBottomOffset(const int32_t& aOffset);
 +  mozilla::ipc::IPCResult RecvFixedLayerMargins(const int32_t& aTop,
 +                                                const int32_t& aBottom,
-+                                                const int32_t& aTopInset);
++                                                const int32_t& aTopInset,
++                                                const int32_t& aBottomInset);
    mozilla::ipc::IPCResult RecvDefaultClearColor(const uint32_t& aColor);
    mozilla::ipc::IPCResult RecvRequestScreenPixels(
        uint64_t aRequestId, gfx::IntRect aSourceRect,

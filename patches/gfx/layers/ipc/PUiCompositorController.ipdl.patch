@@ -1,13 +1,14 @@
 diff --git a/gfx/layers/ipc/PUiCompositorController.ipdl b/gfx/layers/ipc/PUiCompositorController.ipdl
-index ddae7c999256..d12e52f1e5f9 100644
+index ddae7c999256..1613dab96c88 100644
 --- a/gfx/layers/ipc/PUiCompositorController.ipdl
 +++ b/gfx/layers/ipc/PUiCompositorController.ipdl
-@@ -30,7 +30,7 @@ parent:
+@@ -30,7 +30,8 @@ parent:
  
    async InvalidateAndRender();
    async MaxToolbarHeight(int32_t aHeight);
 -  async FixedBottomOffset(int32_t aOffset);
-+  async FixedLayerMargins(int32_t aTop, int32_t aBottom, int32_t aTopInset);
++  async FixedLayerMargins(int32_t aTop, int32_t aBottom, int32_t aTopInset,
++                         int32_t aBottomInset);
    async DefaultClearColor(uint32_t aColor);
    async RequestScreenPixels(uint64_t aRequestId, IntRect aSourceRect,
                              FileDescriptor aHardwareBuffer);

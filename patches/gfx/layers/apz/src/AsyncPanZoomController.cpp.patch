@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/AsyncPanZoomController.cpp b/gfx/layers/apz/src/AsyncPanZoomController.cpp
-index 1098039b4217..5998079e40fd 100644
+index 1098039b4217..03cdc160c9c9 100644
 --- a/gfx/layers/apz/src/AsyncPanZoomController.cpp
 +++ b/gfx/layers/apz/src/AsyncPanZoomController.cpp
 @@ -2810,6 +2810,7 @@ nsEventStatus AsyncPanZoomController::OnPanMayBegin(
@@ -115,24 +115,29 @@ index 1098039b4217..5998079e40fd 100644
  
      // If this is the first time we got metrics for this content (isDefault) and
      // the update type was none and the offset didn't change then we don't have
-@@ -7247,9 +7286,33 @@ ScreenMargin AsyncPanZoomController::GetFixedLayerMargins(
+@@ -7247,9 +7286,38 @@ ScreenMargin AsyncPanZoomController::GetFixedLayerMargins(
    return mCompositorFixedLayerMargins;
  }
  
 -void AsyncPanZoomController::SetFixedLayerMargins(const ScreenMargin& aMargin) {
 +void AsyncPanZoomController::SetFixedLayerMargins(const ScreenMargin& aMargin,
-+                                                  ScreenCoord aTopInset) {
++                                                  ScreenCoord aTopInset,
++                                                  ScreenCoord aBottomInset) {
    RecursiveMutexAutoLock lock(mRecursiveMutex);
    mCompositorFixedLayerMargins = aMargin;
-+  const ParentLayerCoord inset = ViewAs<ParentLayerPixel>(
++  const ParentLayerCoord topInset = ViewAs<ParentLayerPixel>(
 +      aTopInset, PixelCastJustification::ScreenIsParentLayerForRoot);
-+  if (Metrics().GetContentTopInset() == inset) {
++  const ParentLayerCoord bottomInset = ViewAs<ParentLayerPixel>(
++      aBottomInset, PixelCastJustification::ScreenIsParentLayerForRoot);
++  if (Metrics().GetContentTopInset() == topInset &&
++      Metrics().GetContentBottomInset() == bottomInset) {
 +    return;
 +  }
 +
 +  CSSPoint offset = Metrics().GetVisualScrollOffset();
 +  const bool atTop = offset.y <= Metrics().CalculateScrollRange().Y();
-+  Metrics().SetContentTopInset(inset);
++  Metrics().SetContentTopInset(topInset);
++  Metrics().SetContentBottomInset(bottomInset);
 +  if (atTop) {
 +    const CSSCoord scrollTop = Metrics().CalculateScrollRange().Y();
 +    CSSPoint layoutOffset = Metrics().GetLayoutScrollOffset();

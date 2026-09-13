@@ -1,18 +1,19 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.h b/gfx/layers/apz/src/APZCTreeManager.h
-index 055cbc99d1f4..b43f3571dd89 100644
+index 055cbc99d1f4..37d2bc4bf804 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.h
 +++ b/gfx/layers/apz/src/APZCTreeManager.h
-@@ -494,7 +494,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
+@@ -494,7 +494,9 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
    /**
     * Set fixed layer margins for dynamic toolbar.
     */
 -  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom);
 +  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom,
-+                            ScreenIntCoord aTopInset = 0);
++                            ScreenIntCoord aTopInset = 0,
++                            ScreenIntCoord aBottomInset = 0);
  
    /**
     * Refer to apz::ComputeTransformForScrollThumb() for a description
-@@ -719,16 +720,14 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
+@@ -719,16 +721,14 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
                              const MutexAutoLock& aProofOfMapLock) const
        MOZ_REQUIRES(mMapLock);
  
@@ -37,11 +38,12 @@ index 055cbc99d1f4..b43f3571dd89 100644
  
    /**
     * Perform hit testing for a touch-start event.
-@@ -1142,6 +1141,7 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
+@@ -1142,6 +1142,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZInputBridge {
     * Acquire mMapLock before accessing this.
     */
    ScreenMargin mCompositorFixedLayerMargins MOZ_GUARDED_BY(mMapLock);
 +  ScreenCoord mContentTopInset MOZ_GUARDED_BY(mMapLock){0};
++  ScreenCoord mContentBottomInset MOZ_GUARDED_BY(mMapLock){0};
    /* Similar to above |mCompositorFixedLayerMargins|. But this value is the
     * margins on the main-thread at the last time position:fixed elements were
     * updated during the dynamic toolbar transitions.

@@ -75,6 +75,7 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
     private var contentBottomOffset: CGFloat = 0
     private var toolbarTopOffset: CGFloat = 0
     private var contentTopInset: CGFloat = 0
+    private var contentBottomInset: CGFloat = 0
     private var webContentBottomOffset: CGFloat = 0
     private var focusedInputOffset: CGFloat = 0
     private var focusedInputTask: Task<Void, Never>?
@@ -259,13 +260,19 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
     func setToolbarLimits(
         maxHeight: CGFloat,
         contentTopInset: CGFloat,
+        contentBottomInset: CGFloat,
         webContentBottomOffset: CGFloat
     ) {
+        defer {
+            applyToolbarOffsets(top: toolbarTopOffset, bottom: -contentBottomOffset, refresh: true)
+        }
+        
         if maxHeight != dynamicToolbarMaxHeight {
             dynamicToolbarMaxHeight = maxHeight
             session?.setDynamicToolbarMaxHeight(maxHeight)
         }
         
+        self.contentBottomInset = contentBottomInset
         guard abs(contentTopInset - self.contentTopInset) > 0.5
                 || abs(webContentBottomOffset - self.webContentBottomOffset) > 0.5 else {
             return
@@ -275,7 +282,6 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         self.webContentBottomOffset = webContentBottomOffset
         updateContentBottomInset()
         superview?.layoutIfNeeded()
-        applyToolbarOffsets(top: toolbarTopOffset, bottom: -contentBottomOffset, refresh: true)
     }
     
     func applyToolbarOffsets(top: CGFloat, bottom: CGFloat, refresh: Bool = false) {
@@ -288,7 +294,8 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         session?.setContentOffsets(
             top: -top,
             bottom: contentBottomOffset,
-            topInset: contentTopInset
+            topInset: contentTopInset,
+            bottomInset: contentBottomInset
         )
     }
     

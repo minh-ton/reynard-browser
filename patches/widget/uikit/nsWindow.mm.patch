@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index ba3fc1051a01..8e49f2cdb10c 100644
+index ba3fc1051a01..e0d3225486a8 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,9 +11,10 @@
@@ -1103,7 +1103,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  int32_t nsWindow::RoundsWidgetCoordinatesTo() {
    if (BackingScaleFactor() == 2.0) {
      return 2;
-@@ -1117,10 +1381,179 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1117,10 +1381,180 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return 1;
  }
  
@@ -1111,7 +1111,8 @@ index ba3fc1051a01..8e49f2cdb10c 100644
 +
 +void nsWindow::UpdateDynamicToolbarOffset(ScreenIntCoord aTopOffset,
 +                                          ScreenIntCoord aBottomOffset,
-+                                          ScreenIntCoord aTopInset) {
++                                          ScreenIntCoord aTopInset,
++                                          ScreenIntCoord aBottomInset) {
 +  mContentTopInset = aTopInset;
 +  const ScreenIntCoord offset = std::clamp(
 +      aTopOffset + aBottomOffset, -mDynamicToolbarMaxHeight, ScreenIntCoord(0));
@@ -1131,14 +1132,14 @@ index ba3fc1051a01..8e49f2cdb10c 100644
 +        const CGPoint safeAreaTop = [mNativeView
 +            convertPoint:window.safeAreaLayoutGuide.layoutFrame.origin
 +                fromView:window];
-+        const CGFloat topMargin = std::clamp(
-+            safeAreaTop.y, CGFloat(0), window.safeAreaInsets.top);
++        const CGFloat topMargin =
++            std::clamp(safeAreaTop.y, CGFloat(0), window.safeAreaInsets.top);
 +        minimumTopMargin =
 +            ScreenIntCoord(lround(topMargin * BackingScaleFactor()));
 +      }
 +      controller->SetFixedLayerMargins(
 +          std::max(aTopInset + aTopOffset, minimumTopMargin),
-+          aBottomOffset - aTopInset, aTopInset);
++          aBottomOffset - aTopInset, aTopInset, aBottomInset);
 +    }
 +  }
 +}
@@ -1283,7 +1284,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  void nsWindow::HandleMainThreadCATransaction() {
    // Trigger a synchronous OMTC composite. This will call NextSurface and
    // NotifySurfaceReady on the compositor thread to update mNativeLayerRoot's
-@@ -1198,6 +1631,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1198,6 +1632,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
@@ -1292,7 +1293,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  EventDispatcher* nsWindow::GetEventDispatcher() const {
    if (mIOSView) {
      return mIOSView->mEventDispatcher;
-@@ -1205,28 +1640,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1205,28 +1641,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return nullptr;
  }
  
@@ -1438,7 +1439,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  NS_IMPL_ISUPPORTS(IOSView, nsIGeckoViewEventDispatcher, nsIGeckoViewView)
  
  nsresult IOSView::GetInitData(JSContext* aCx,
-@@ -1247,6 +1785,57 @@ - (UIView*)view {
+@@ -1247,6 +1786,59 @@ - (UIView*)view {
    return mWindow ? (UIView*)mWindow->GetNativeData(NS_NATIVE_WIDGET) : nil;
  }
  
@@ -1458,13 +1459,15 @@ index ba3fc1051a01..8e49f2cdb10c 100644
 +
 +- (void)setContentOffsets:(CGFloat)top
 +                   bottom:(CGFloat)bottom
-+                 topInset:(CGFloat)topInset {
++                 topInset:(CGFloat)topInset
++              bottomInset:(CGFloat)bottomInset {
 +  if (mWindow) {
 +    const CGFloat scale = mWindow->BackingScaleFactor();
 +    mWindow->UpdateDynamicToolbarOffset(
 +        ScreenIntCoord(lround(top * scale)),
 +        ScreenIntCoord(lround(bottom * scale)),
-+        ScreenIntCoord(lround(topInset * scale)));
++        ScreenIntCoord(lround(topInset * scale)),
++        ScreenIntCoord(lround(bottomInset * scale)));
 +  }
 +}
 +
@@ -1496,7 +1499,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  - (void)close {
    if (mWindow) {
      if (IOSView* iosView = mWindow->GetIOSView()) {
-@@ -1260,6 +1849,10 @@ - (void)close {
+@@ -1260,6 +1852,10 @@ - (void)close {
      mOuterWindow = nullptr;
    }
  }
@@ -1507,7 +1510,7 @@ index ba3fc1051a01..8e49f2cdb10c 100644
  @end
  
  id<GeckoViewWindow> GeckoViewOpenWindow(NSString* aId,
-@@ -1302,6 +1895,7 @@ - (void)close {
+@@ -1302,6 +1898,7 @@ - (void)close {
    MOZ_ASSERT(window);
  
    window->SetIOSView(iosView.forget());

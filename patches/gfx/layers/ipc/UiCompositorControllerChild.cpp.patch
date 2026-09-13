@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerChild.cpp b/gfx/layers/ipc/UiCompositorControllerChild.cpp
-index 89dc6497e3cb..08c6d8748c1c 100644
+index 89dc6497e3cb..08bd779d0259 100644
 --- a/gfx/layers/ipc/UiCompositorControllerChild.cpp
 +++ b/gfx/layers/ipc/UiCompositorControllerChild.cpp
 @@ -22,8 +22,10 @@
@@ -14,26 +14,28 @@ index 89dc6497e3cb..08c6d8748c1c 100644
    MOZ_CRASH("Platform does not support UiCompositorController");
    return nullptr;
  }
-@@ -111,7 +113,17 @@ bool UiCompositorControllerChild::SetMaxToolbarHeight(const int32_t& aHeight) {
+@@ -111,7 +113,19 @@ bool UiCompositorControllerChild::SetMaxToolbarHeight(const int32_t& aHeight) {
  }
  
  bool UiCompositorControllerChild::SetFixedBottomOffset(int32_t aOffset) {
 -  return SendFixedBottomOffset(aOffset);
-+  return SetFixedLayerMargins(0, aOffset, 0);
++  return SetFixedLayerMargins(0, aOffset, 0, 0);
 +}
 +
 +bool UiCompositorControllerChild::SetFixedLayerMargins(int32_t aTop,
 +                                                       int32_t aBottom,
-+                                                       int32_t aTopInset) {
++                                                       int32_t aTopInset,
++                                                       int32_t aBottomInset) {
 +  if (!mIsOpen) {
-+    mFixedLayerMargins = Some(FixedLayerMargins{aTop, aBottom, aTopInset});
++    mFixedLayerMargins =
++        Some(FixedLayerMargins{aTop, aBottom, aTopInset, aBottomInset});
 +    return true;
 +  }
-+  return SendFixedLayerMargins(aTop, aBottom, aTopInset);
++  return SendFixedLayerMargins(aTop, aBottom, aTopInset, aBottomInset);
  }
  
  bool UiCompositorControllerChild::ToolbarAnimatorMessageFromUI(
-@@ -196,29 +208,38 @@ bool UiCompositorControllerChild::EnableLayerUpdateNotifications(
+@@ -196,29 +210,38 @@ bool UiCompositorControllerChild::EnableLayerUpdateNotifications(
  void UiCompositorControllerChild::Destroy() {
    MOZ_ASSERT(NS_IsMainThread());
  
@@ -92,13 +94,14 @@ index 89dc6497e3cb..08c6d8748c1c 100644
        }));
  
    task.Wait();
-@@ -358,6 +379,11 @@ void UiCompositorControllerChild::SendCachedValues() {
+@@ -358,6 +381,12 @@ void UiCompositorControllerChild::SendCachedValues() {
      SendMaxToolbarHeight(mMaxToolbarHeight.ref());
      mMaxToolbarHeight.reset();
    }
 +  if (mFixedLayerMargins) {
 +    const auto& margins = mFixedLayerMargins.ref();
-+    SendFixedLayerMargins(margins.mTop, margins.mBottom, margins.mTopInset);
++    SendFixedLayerMargins(margins.mTop, margins.mBottom, margins.mTopInset,
++                          margins.mBottomInset);
 +    mFixedLayerMargins.reset();
 +  }
    if (mDefaultClearColor) {

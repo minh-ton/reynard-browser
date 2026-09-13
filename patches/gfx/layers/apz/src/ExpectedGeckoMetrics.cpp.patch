@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/ExpectedGeckoMetrics.cpp b/gfx/layers/apz/src/ExpectedGeckoMetrics.cpp
-index 179bc78d2e66..d22c133d06dd 100644
+index 179bc78d2e66..c5772af4616c 100644
 --- a/gfx/layers/apz/src/ExpectedGeckoMetrics.cpp
 +++ b/gfx/layers/apz/src/ExpectedGeckoMetrics.cpp
 @@ -4,6 +4,8 @@
@@ -11,15 +11,21 @@ index 179bc78d2e66..d22c133d06dd 100644
  #include "FrameMetrics.h"
  
  namespace mozilla {
-@@ -12,6 +14,12 @@ namespace layers {
+@@ -12,6 +14,18 @@ namespace layers {
  void ExpectedGeckoMetrics::UpdateFrom(const FrameMetrics& aMetrics) {
    mVisualScrollOffset = aMetrics.GetVisualScrollOffset();
    mLayoutScrollOffset = aMetrics.GetLayoutScrollOffset();
-+  if (aMetrics.GetContentTopInset() > 0) {
-+    // Gecko clamps its layout viewport to the document's top. The visual offset
-+    // still includes the inset so the callback transform can account for it.
-+    mLayoutScrollOffset.y = std::max(
-+        mLayoutScrollOffset.y, CSSCoord(aMetrics.GetScrollableRect().Y()));
++  if (aMetrics.GetContentTopInset() > 0 ||
++      aMetrics.GetContentBottomInset() > 0) {
++    // Gecko clamps its layout viewport to the document. The visual offset
++    // still includes the insets so the callback transform can account for them.
++    const CSSRect& scrollableRect = aMetrics.GetScrollableRect();
++    const CSSCoord scrollTop = scrollableRect.Y();
++    const CSSCoord scrollBottom =
++        std::max(scrollTop, CSSCoord(scrollableRect.YMost() -
++                                     aMetrics.GetLayoutViewport().Height()));
++    mLayoutScrollOffset.y =
++        std::clamp(mLayoutScrollOffset.y, scrollTop, scrollBottom);
 +  }
    mZoom = aMetrics.GetZoom();
    mDevPixelsPerCSSPixel = aMetrics.GetDevPixelsPerCSSPixel();

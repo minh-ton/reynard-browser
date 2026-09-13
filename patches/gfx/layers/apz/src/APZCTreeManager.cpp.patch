@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.cpp b/gfx/layers/apz/src/APZCTreeManager.cpp
-index 525cc79ed3c3..4f0b7e140fe0 100644
+index 525cc79ed3c3..0176355c5c5c 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.cpp
 +++ b/gfx/layers/apz/src/APZCTreeManager.cpp
 @@ -4,6 +4,7 @@
@@ -66,7 +66,7 @@ index 525cc79ed3c3..4f0b7e140fe0 100644
  
    ScrollableLayerGuid::ViewID stickyTarget = aStickyInfo.mStickyPosTarget;
    if (stickyTarget == ScrollableLayerGuid::NULL_SCROLL_ID) {
-@@ -3785,13 +3774,30 @@ SideBits APZCTreeManager::SidesStuckToRootContent(
+@@ -3785,13 +3774,31 @@ SideBits APZCTreeManager::SidesStuckToRootContent(
                aMode, AsyncTransformComponents{AsyncTransformComponent::eLayout})
            .mTranslation;
  
@@ -82,53 +82,58 @@ index 525cc79ed3c3..4f0b7e140fe0 100644
 +    sides |= SideBits::eBottom;
 +  }
 +  result = ComputeFixedMarginsOffset(aProofOfMapLock, sides,
-+                                      mGeckoFixedLayerMargins);
++                                     mGeckoFixedLayerMargins);
 +  if ((aStickyInfo.mFixedPosSides & SideBits::eTop) != SideBits::eNone) {
-+    const float topMargin = ComputeFixedMarginsOffset(
-+        aProofOfMapLock, SideBits::eTop, mGeckoFixedLayerMargins).y;
++    const float topMargin =
++        ComputeFixedMarginsOffset(aProofOfMapLock, SideBits::eTop,
++                                  mGeckoFixedLayerMargins)
++            .y;
 +    const float scrollDelta = -translation.y;
 +    const float inner = aStickyInfo.mStickyScrollRangeInner.YMost();
 +    const float outer = aStickyInfo.mStickyScrollRangeOuter.YMost();
 +    // Start sticking when the header reaches the toolbar.
-+    const float adjustment =
-+        std::clamp(scrollDelta + topMargin, inner, outer) -
-+        std::clamp(scrollDelta, inner, outer);
++    const float adjustment = std::clamp(scrollDelta + topMargin, inner, outer) -
++                             std::clamp(scrollDelta, inner, outer);
 +    if (adjustment != 0 || (sides & SideBits::eTop) != SideBits::eNone) {
 +      result.y = adjustment;
 +    }
    }
    return result;
  }
-@@ -3959,11 +3965,13 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3959,11 +3966,15 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
  }
  
  void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
 -                                           ScreenIntCoord aBottom) {
 +                                           ScreenIntCoord aBottom,
-+                                           ScreenIntCoord aTopInset) {
++                                           ScreenIntCoord aTopInset,
++                                           ScreenIntCoord aBottomInset) {
    {
      MutexAutoLock lock(mMapLock);
      mCompositorFixedLayerMargins.top = ScreenCoord(aTop);
      mCompositorFixedLayerMargins.bottom = ScreenCoord(aBottom);
 +    mContentTopInset = ScreenCoord(aTopInset);
++    mContentBottomInset = ScreenCoord(aBottomInset);
    }
    {
      RecursiveMutexAutoLock lock(mTreeLock);
-@@ -3973,9 +3981,15 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
+@@ -3973,9 +3984,17 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
  
  void APZCTreeManager::SetFixedLayerMarginsOnRootContentApzcs(
      const RecursiveMutexAutoLock& aProofOfTreeLock) {
 -  ScreenMargin margins = GetCompositorFixedLayerMargins();
 +  ScreenMargin margins;
 +  ScreenCoord topInset;
++  ScreenCoord bottomInset;
 +  {
 +    MutexAutoLock lock(mMapLock);
 +    margins = GetCompositorFixedLayerMargins(lock);
 +    topInset = mContentTopInset;
++    bottomInset = mContentBottomInset;
 +  }
    for (auto* apzc : mRootContentApzcs) {
 -    apzc->SetFixedLayerMargins(margins);
-+    apzc->SetFixedLayerMargins(margins, topInset);
++    apzc->SetFixedLayerMargins(margins, topInset, bottomInset);
    }
  }
  

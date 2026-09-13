@@ -1,21 +1,23 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.cpp b/gfx/layers/ipc/CompositorBridgeParent.cpp
-index 89b0220589c8..8092e96a8265 100644
+index 89b0220589c8..f75da00b1345 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.cpp
 +++ b/gfx/layers/ipc/CompositorBridgeParent.cpp
-@@ -834,9 +834,10 @@ void CompositorBridgeParent::SetConfirmedTargetAPZC(
+@@ -834,9 +834,12 @@ void CompositorBridgeParent::SetConfirmedTargetAPZC(
  }
  
  void CompositorBridgeParent::SetFixedLayerMargins(ScreenIntCoord aTop,
 -                                                  ScreenIntCoord aBottom) {
 +                                                  ScreenIntCoord aBottom,
-+                                                  ScreenIntCoord aTopInset) {
++                                                  ScreenIntCoord aTopInset,
++                                                  ScreenIntCoord aBottomInset) {
    if (mApzcTreeManager) {
 -    mApzcTreeManager->SetFixedLayerMargins(aTop, aBottom);
-+    mApzcTreeManager->SetFixedLayerMargins(aTop, aBottom, aTopInset);
++    mApzcTreeManager->SetFixedLayerMargins(aTop, aBottom, aTopInset,
++                                           aBottomInset);
    }
  
    ScheduleComposition(wr::RenderReasons::RESIZE);
-@@ -1530,7 +1531,7 @@ CompositorBridgeParent::AllocPCompositorWidgetParent(
+@@ -1530,7 +1533,7 @@ CompositorBridgeParent::AllocPCompositorWidgetParent(
  #endif
  }
  

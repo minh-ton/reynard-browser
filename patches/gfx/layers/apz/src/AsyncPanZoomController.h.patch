@@ -1,14 +1,15 @@
 diff --git a/gfx/layers/apz/src/AsyncPanZoomController.h b/gfx/layers/apz/src/AsyncPanZoomController.h
-index 7e922201775f..6f98d376d0a3 100644
+index 7e922201775f..3a932f47b0d7 100644
 --- a/gfx/layers/apz/src/AsyncPanZoomController.h
 +++ b/gfx/layers/apz/src/AsyncPanZoomController.h
-@@ -1958,11 +1958,13 @@ class AsyncPanZoomController {
+@@ -1958,11 +1958,14 @@ class AsyncPanZoomController {
      return mState == PINCHING || mState == ANIMATING_ZOOM;
    }
  
 -  void SetFixedLayerMargins(const ScreenMargin& aMargins);
 +  void SetFixedLayerMargins(const ScreenMargin& aMargins,
-+                            ScreenCoord aTopInset = 0);
++                            ScreenCoord aTopInset = 0,
++                            ScreenCoord aBottomInset = 0);
  
   private:
    // The timestamp of the latest touch start event.

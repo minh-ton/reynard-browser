@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.h b/gfx/layers/ipc/CompositorBridgeParent.h
-index e4b5f7be74cc..b8a28e865821 100644
+index e4b5f7be74cc..9e479fc28c6a 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.h
 +++ b/gfx/layers/ipc/CompositorBridgeParent.h
 @@ -252,7 +252,7 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
@@ -11,13 +11,14 @@ index e4b5f7be74cc..b8a28e865821 100644
    // macOS platform-specific initdata uses move semantics, which
    // changes the method signature. Other platforms don't need to
    // override the existing method.
-@@ -331,7 +331,8 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
+@@ -331,7 +331,9 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
    void SetConfirmedTargetAPZC(
        const LayersId& aLayersId, const uint64_t& aInputBlockId,
        nsTArray<ScrollableLayerGuid>&& aTargets) override;
 -  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom);
 +  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom,
-+                            ScreenIntCoord aTopInset = 0);
++                            ScreenIntCoord aTopInset = 0,
++                            ScreenIntCoord aBottomInset = 0);
    void EndWheelTransaction(
        const LayersId& aLayersId,
        PWebRenderBridgeParent::EndWheelTransactionResolver&& aResolve) override;

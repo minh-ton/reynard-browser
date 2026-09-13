@@ -1,25 +1,26 @@
 diff --git a/gfx/layers/FrameMetrics.h b/gfx/layers/FrameMetrics.h
-index 604a23b42287..87f49af65b84 100644
+index 604a23b42287..475606dd18f0 100644
 --- a/gfx/layers/FrameMetrics.h
 +++ b/gfx/layers/FrameMetrics.h
-@@ -115,6 +115,7 @@ struct FrameMetrics {
+@@ -115,6 +115,8 @@ struct FrameMetrics {
                 aOther.mCompositionBoundsWidthIgnoringScrollbars &&
             mDisplayPort.IsEqualEdges(aOther.mDisplayPort) &&
             mScrollableRect.IsEqualEdges(aOther.mScrollableRect) &&
 +           mContentTopInset == aOther.mContentTopInset &&
++           mContentBottomInset == aOther.mContentBottomInset &&
             mCumulativeResolution == aOther.mCumulativeResolution &&
             mDevPixelsPerCSSPixel == aOther.mDevPixelsPerCSSPixel &&
             mScrollOffset == aOther.mScrollOffset &&
-@@ -179,7 +180,7 @@ struct FrameMetrics {
+@@ -179,7 +181,7 @@ struct FrameMetrics {
    // down. i.e. we know that scrollableRect can go back as far as zero.
    // but we don't know how much further ahead it can go.
    CSSRect GetExpandedScrollableRect() const {
 -    CSSRect scrollableRect = mScrollableRect;
-+    CSSRect scrollableRect = GetScrollableRectWithTopInset(mZoom);
++    CSSRect scrollableRect = GetScrollableRectWithContentInsets(mZoom);
      CSSSize compSize = CalculateCompositedSizeInCssPixels();
      if (scrollableRect.Width() < compSize.width) {
        scrollableRect.SetRectX(
-@@ -190,8 +191,9 @@ struct FrameMetrics {
+@@ -190,8 +192,9 @@ struct FrameMetrics {
  
      if (scrollableRect.Height() < compSize.height) {
        scrollableRect.SetRectY(
@@ -31,17 +32,17 @@ index 604a23b42287..87f49af65b84 100644
            compSize.height);
      }
  
-@@ -229,7 +231,8 @@ struct FrameMetrics {
+@@ -229,7 +232,8 @@ struct FrameMetrics {
    }
  
    CSSRect CalculateScrollRange() const {
 -    return CalculateScrollRange(mScrollableRect, mCompositionBounds, mZoom);
-+    return CalculateScrollRange(GetScrollableRectWithTopInset(mZoom),
++    return CalculateScrollRange(GetScrollableRectWithContentInsets(mZoom),
 +                                mCompositionBounds, mZoom);
    }
  
    void ScrollBy(const CSSPoint& aPoint) {
-@@ -411,6 +414,38 @@ struct FrameMetrics {
+@@ -411,6 +415,44 @@ struct FrameMetrics {
      mScrollableRect = aScrollableRect;
    }
  
@@ -51,20 +52,26 @@ index 604a23b42287..87f49af65b84 100644
 +    mContentTopInset = aInset;
 +  }
 +
-+  CSSRect GetScrollableRectWithTopInset(
++  ParentLayerCoord GetContentBottomInset() const { return mContentBottomInset; }
++
++  void SetContentBottomInset(ParentLayerCoord aInset) {
++    mContentBottomInset = aInset;
++  }
++
++  CSSRect GetScrollableRectWithContentInsets(
 +      const CSSToParentLayerScale& aZoom) const {
 +    CSSRect rect = mScrollableRect;
-+    if (mContentTopInset > 0 && aZoom.scale > 0) {
-+      const CSSCoord inset = mContentTopInset / aZoom;
++    if ((mContentTopInset > 0 || mContentBottomInset > 0) && aZoom.scale > 0) {
++      const CSSCoord topInset = mContentTopInset / aZoom;
 +      const ParentLayerCoord compositionHeight =
 +          mCompositionSizeWithoutDynamicToolbar.height > 0
 +              ? mCompositionSizeWithoutDynamicToolbar.height
 +              : mCompositionBounds.Height();
 +      if (CSSCoord(rect.Height()) * aZoom <= compositionHeight) {
 +        // Short pages need the inset without any extra scrolling.
-+        rect.MoveBy(CSSPoint(0, -inset));
++        rect.MoveBy(CSSPoint(0, -topInset));
 +      } else {
-+        rect.Inflate(CSSMargin(inset, 0, 0, 0));
++        rect.Inflate(CSSMargin(topInset, 0, mContentBottomInset / aZoom, 0));
 +      }
 +    }
 +    return rect;
@@ -80,12 +87,13 @@ index 604a23b42287..87f49af65b84 100644
    // If the frame is in vertical-RTL writing mode(E.g. "writing-mode:
    // vertical-rl" in CSS), or if it's in horizontal-RTL writing-mode(E.g.
    // "writing-mode: horizontal-tb; direction: rtl;" in CSS), then this function
-@@ -577,6 +612,9 @@ struct FrameMetrics {
+@@ -577,6 +619,10 @@ struct FrameMetrics {
    // system is understood by window.scrollTo().
    CSSRect mScrollableRect;
  
-+  // Extra space above the page for the toolbar. Used only by APZ.
++  // Extra space around the page for the toolbars. Used only by APZ.
 +  ParentLayerCoord mContentTopInset{0};
++  ParentLayerCoord mContentBottomInset{0};
 +
    // The cumulative resolution of the current frame. This is the product of the
    // pres-shell resolutions of the document containing this scroll frame and its
