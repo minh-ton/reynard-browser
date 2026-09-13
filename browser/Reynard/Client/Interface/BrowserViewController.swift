@@ -328,12 +328,12 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             self?.sidebarCoordinator.toggle(animated: true)
         }
         browserChrome.onBack = { [weak self] in
-            self?.toolbarController.reset()
+            self?.toolbarController.reset(preserveManualCollapse: true)
             self?.prepareThumbnailForNavigation()
             self?.tabManager.goBack()
         }
         browserChrome.onForward = { [weak self] in
-            self?.toolbarController.reset()
+            self?.toolbarController.reset(preserveManualCollapse: true)
             self?.prepareThumbnailForNavigation()
             self?.tabManager.goForward()
         }
@@ -357,7 +357,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
                     return
                 }
                 
-                self.toolbarController.reset()
+                self.toolbarController.reset(preserveManualCollapse: true)
                 self.prepareThumbnailForNavigation()
                 switch direction {
                 case .back:

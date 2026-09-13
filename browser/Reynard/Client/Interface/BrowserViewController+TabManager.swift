@@ -172,7 +172,7 @@ extension BrowserViewController: TabManagerDelegate {
         case .location:
             if index == tabManager.selectedTabIndex {
                 contentView.resetScrollTracking()
-                toolbarController.reset()
+                toolbarController.reset(preserveManualCollapse: true)
                 let tab = tabManager.activeTabs[index]
                 contentView.noteHistoryLocationChange()
                 refreshAddressBar()

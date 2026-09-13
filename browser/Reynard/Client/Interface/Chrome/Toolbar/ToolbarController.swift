@@ -191,7 +191,9 @@ final class ToolbarController {
     
     func lock(for reason: LockReason) {
         guard lockReasons.insert(reason).inserted else { return }
-        reset()
+        reset(
+            preserveManualCollapse: reason == .pageNavigation || reason == .historyNavigation
+        )
     }
     
     func unlock(for reason: LockReason) {
@@ -328,7 +330,8 @@ final class ToolbarController {
         collapse()
     }
     
-    func reset(animated: Bool = true) {
+    func reset(animated: Bool = true, preserveManualCollapse: Bool = false) {
+        guard !preserveManualCollapse || !isCollapsedUntilReset else { return }
         cancelAnimation()
         isBottomToolbarCollapsed = false
         isCollapsedUntilReset = false
