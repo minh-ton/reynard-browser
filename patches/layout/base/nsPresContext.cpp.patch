@@ -1,5 +1,5 @@
 diff --git a/layout/base/nsPresContext.cpp b/layout/base/nsPresContext.cpp
-index e9f3ce4be656..1a955da3a25b 100644
+index e9f3ce4be656..513946a8405f 100644
 --- a/layout/base/nsPresContext.cpp
 +++ b/layout/base/nsPresContext.cpp
 @@ -714,7 +714,7 @@ void nsPresContext::Init(nsDeviceContext* aDeviceContext) {
@@ -11,3 +11,27 @@ index e9f3ce4be656..1a955da3a25b 100644
    if (IsRootContentDocumentCrossProcess()) {
      if (BrowserChild* browserChild = BrowserChild::GetFrom(GetDocShell())) {
        if (MOZ_LIKELY(!Preferences::HasUserValue(
+@@ -2903,13 +2903,16 @@ void nsPresContext::SetDynamicToolbarMaxHeight(ScreenIntCoord aHeight) {
+   AdjustSizeForViewportUnits();
+ 
+   if (RefPtr<mozilla::PresShell> presShell = mPresShell) {
+-    // Changing the max height of the dynamic toolbar changes the ICB size, we
+-    // need to kick a reflow with the current window dimensions since the max
+-    // height change doesn't change the window dimensions but
+-    // PresShell::ResizeReflow ends up subtracting the new dynamic toolbar
+-    // height from the window dimensions and kick a reflow with the proper ICB
+-    // size.
+-    presShell->ForceResizeReflowWithCurrentDimensions();
++    if (presShell->UsesMobileViewportSizing()) {
++      presShell->ForceResizeReflowWithCurrentDimensions();
++    } else {
++      LayoutDeviceIntSize size;
++      if (nsLayoutUtils::GetDocumentViewerSize(this, size)) {
++        presShell->SetLayoutViewportSize(
++            LayoutDeviceIntSize::ToAppUnits(size, AppUnitsPerDevPixel()),
++            false);
++      }
++    }
+   }
+ }
+ 

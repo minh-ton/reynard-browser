@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index ba3fc1051a01..e0d3225486a8 100644
+index ba3fc1051a01..5dd392677c59 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,9 +11,10 @@
@@ -883,15 +883,15 @@ index ba3fc1051a01..e0d3225486a8 100644
 +}
 +
 +// Focus and input
- 
--  if (!mParent && mNativeView.window) {
--    // convert to screen coords
--    temp = [mNativeView.window convertPoint:temp toWindow:nil];
++
 +void nsWindow::SetFocus(Raise, mozilla::dom::CallerType) {
 +  [[mNativeView window] makeKeyWindow];
 +  [mNativeView becomeFirstResponder];
 +}
-+
+ 
+-  if (!mParent && mNativeView.window) {
+-    // convert to screen coords
+-    temp = [mNativeView.window convertPoint:temp toWindow:nil];
 +bool nsWindow::FocusForHardwareKeyboard() {
 +  if (!mNativeView || ![mNativeView window]) {
 +    return false;
@@ -1103,7 +1103,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  int32_t nsWindow::RoundsWidgetCoordinatesTo() {
    if (BackingScaleFactor() == 2.0) {
      return 2;
-@@ -1117,10 +1381,180 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1117,10 +1381,185 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return 1;
  }
  
@@ -1113,7 +1113,10 @@ index ba3fc1051a01..e0d3225486a8 100644
 +                                          ScreenIntCoord aBottomOffset,
 +                                          ScreenIntCoord aTopInset,
 +                                          ScreenIntCoord aBottomInset) {
-+  mContentTopInset = aTopInset;
++  if (mContentTopInset != aTopInset) {
++    mContentTopInset = aTopInset;
++    [mNativeView updateSafeAreaInsets];
++  }
 +  const ScreenIntCoord offset = std::clamp(
 +      aTopOffset + aBottomOffset, -mDynamicToolbarMaxHeight, ScreenIntCoord(0));
 +  if (mWidgetListener) {
@@ -1186,13 +1189,15 @@ index ba3fc1051a01..e0d3225486a8 100644
 +void nsWindow::UpdateSafeAreaInsets(
 +    const LayoutDeviceIntMargin& aSafeAreaInsets) {
 +  mSafeAreaInsets = aSafeAreaInsets;
++  mSafeAreaInsets.top =
++      std::max(0, mSafeAreaInsets.top - int32_t(mContentTopInset));
 +
 +  if (mWidgetListener) {
-+    mWidgetListener->SafeAreaInsetsChanged(aSafeAreaInsets);
++    mWidgetListener->SafeAreaInsetsChanged(mSafeAreaInsets);
 +  }
 +
 +  if (mAttachedWidgetListener) {
-+    mAttachedWidgetListener->SafeAreaInsetsChanged(aSafeAreaInsets);
++    mAttachedWidgetListener->SafeAreaInsetsChanged(mSafeAreaInsets);
 +  }
 +}
 +
@@ -1284,7 +1289,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  void nsWindow::HandleMainThreadCATransaction() {
    // Trigger a synchronous OMTC composite. This will call NextSurface and
    // NotifySurfaceReady on the compositor thread to update mNativeLayerRoot's
-@@ -1198,6 +1632,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1198,6 +1637,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
@@ -1293,7 +1298,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  EventDispatcher* nsWindow::GetEventDispatcher() const {
    if (mIOSView) {
      return mIOSView->mEventDispatcher;
-@@ -1205,28 +1641,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1205,28 +1646,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return nullptr;
  }
  
@@ -1439,7 +1444,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  NS_IMPL_ISUPPORTS(IOSView, nsIGeckoViewEventDispatcher, nsIGeckoViewView)
  
  nsresult IOSView::GetInitData(JSContext* aCx,
-@@ -1247,6 +1786,59 @@ - (UIView*)view {
+@@ -1247,6 +1791,59 @@ - (UIView*)view {
    return mWindow ? (UIView*)mWindow->GetNativeData(NS_NATIVE_WIDGET) : nil;
  }
  
@@ -1499,7 +1504,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  - (void)close {
    if (mWindow) {
      if (IOSView* iosView = mWindow->GetIOSView()) {
-@@ -1260,6 +1852,10 @@ - (void)close {
+@@ -1260,6 +1857,10 @@ - (void)close {
      mOuterWindow = nullptr;
    }
  }
@@ -1510,7 +1515,7 @@ index ba3fc1051a01..e0d3225486a8 100644
  @end
  
  id<GeckoViewWindow> GeckoViewOpenWindow(NSString* aId,
-@@ -1302,6 +1898,7 @@ - (void)close {
+@@ -1302,6 +1903,7 @@ - (void)close {
    MOZ_ASSERT(window);
  
    window->SetIOSView(iosView.forget());

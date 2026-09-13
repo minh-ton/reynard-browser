@@ -15,6 +15,7 @@ protocol AddressBarDelegate: AnyObject {
     func addressBarDidRequestFindInPage(_ addressBar: AddressBar)
     func addressBarDidRequestPageZoom(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteModeChange(_ addressBar: AddressBar)
+    func addressBarDidRequestHideToolbar(_ addressBar: AddressBar)
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar)
     func addressBar(_ addressBar: AddressBar, didRequestBookmarkInFavorites favorites: Bool)
     func addressBarShareableURL(_ addressBar: AddressBar) -> URL?
@@ -368,6 +369,10 @@ final class AddressBar: UIView {
             onChangeWebsiteMode: { [weak self] in
                 guard let self else { return }
                 self.delegate?.addressBarDidRequestWebsiteModeChange(self)
+            },
+            onHideToolbar: { [weak self] in
+                guard let self else { return }
+                self.delegate?.addressBarDidRequestHideToolbar(self)
             },
             onWebsiteSettings: { [weak self] in
                 guard let self else { return }

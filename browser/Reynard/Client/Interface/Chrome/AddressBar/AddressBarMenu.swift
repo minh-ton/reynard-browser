@@ -26,6 +26,7 @@ enum AddressBarMenu {
         onFindInPage: @escaping () -> Void,
         onPageZoom: @escaping () -> Void,
         onChangeWebsiteMode: @escaping () -> Void,
+        onHideToolbar: @escaping () -> Void,
         onWebsiteSettings: @escaping () -> Void,
         onBookmark: @escaping (Bool) -> Void
     ) -> UIMenu {
@@ -88,7 +89,11 @@ enum AddressBarMenu {
             })
         }
         
-        var settingsActions: [UIMenuElement] = []
+        var settingsActions: [UIMenuElement] = [
+            UIAction(title: NSLocalizedString("Hide Toolbar", comment: ""), image: UIImage(named: "reynard.arrow.up.left.and.arrow.down.right")) { _ in
+                onHideToolbar()
+            }
+        ]
         if url?.host != nil {
             settingsActions.append(UIAction(title: NSLocalizedString("Website Settings", comment: ""), image: UIImage(named: "reynard.gear")) { _ in
                 onWebsiteSettings()

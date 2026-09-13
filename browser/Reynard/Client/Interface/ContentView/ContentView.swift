@@ -79,6 +79,7 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
     private var webContentBottomOffset: CGFloat = 0
     private var focusedInputOffset: CGFloat = 0
     private var focusedInputTask: Task<Void, Never>?
+    private var resizesPageWithToolbar = false
     
     private var canGoBack = false
     private var canGoForward = false
@@ -263,15 +264,9 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         contentBottomInset: CGFloat,
         webContentBottomOffset: CGFloat
     ) {
-        defer {
-            applyToolbarOffsets(top: toolbarTopOffset, bottom: -contentBottomOffset, refresh: true)
-        }
+        defer { updateToolbarLayout() }
         
-        if maxHeight != dynamicToolbarMaxHeight {
-            dynamicToolbarMaxHeight = maxHeight
-            session?.setDynamicToolbarMaxHeight(maxHeight)
-        }
-        
+        dynamicToolbarMaxHeight = maxHeight
         self.contentBottomInset = contentBottomInset
         guard abs(contentTopInset - self.contentTopInset) > 0.5
                 || abs(webContentBottomOffset - self.webContentBottomOffset) > 0.5 else {
@@ -284,19 +279,16 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         superview?.layoutIfNeeded()
     }
     
-    func applyToolbarOffsets(top: CGFloat, bottom: CGFloat, refresh: Bool = false) {
+    func applyToolbarOffsets(top: CGFloat, bottom: CGFloat, resizesPage: Bool, refresh: Bool = false) {
         let contentBottomOffset = -bottom
-        guard refresh || top != toolbarTopOffset || contentBottomOffset != self.contentBottomOffset else {
+        guard refresh || top != toolbarTopOffset || contentBottomOffset != self.contentBottomOffset
+                || resizesPage != resizesPageWithToolbar else {
             return
         }
         toolbarTopOffset = top
+        resizesPageWithToolbar = resizesPage
         self.contentBottomOffset = contentBottomOffset
-        session?.setContentOffsets(
-            top: -top,
-            bottom: contentBottomOffset,
-            topInset: contentTopInset,
-            bottomInset: contentBottomInset
-        )
+        updateToolbarLayout()
     }
     
     func configureLayout(
@@ -319,6 +311,23 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
             topAnchor: safeAreaLayoutGuide.topAnchor,
             bottomAnchor: self.bottomAnchor
         )
+    }
+    
+    private func updateToolbarLayout() {
+        let toolbarHeight = resizesPageWithToolbar
+        ? dynamicToolbarMaxHeight - toolbarTopOffset + contentBottomOffset
+        : dynamicToolbarMaxHeight
+        session?.setDynamicToolbarMaxHeight(toolbarHeight)
+        session?.setContentOffsets(
+            top: resizesPageWithToolbar ? 0 : -toolbarTopOffset,
+            bottom: resizesPageWithToolbar ? 0 : contentBottomOffset,
+            topInset: layoutTopInset,
+            bottomInset: contentBottomInset
+        )
+    }
+    
+    private var layoutTopInset: CGFloat {
+        return contentTopInset - (resizesPageWithToolbar ? toolbarTopOffset : 0)
     }
     
     private func applyLayoutState(
@@ -431,7 +440,7 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
                 right: 0
             ))
             let newOffset = calculateFocusedInputOffset(
-                focusedInputBottom: viewportFrame.minY + viewportFrame.height * bottomRatio,
+                focusedInputBottom: engineFrame.minY + layoutTopInset + viewportFrame.height * bottomRatio,
                 webContentBottom: viewportFrame.maxY,
                 caretRect: engineView.convert(caretRect, to: self),
                 keyboardTop: keyboardFrame.minY - bottomInset - frame.minY - focusedInputOffset
@@ -535,8 +544,7 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         resetFocusedInputRelocation()
         webContentView.setTab(tab, pageBackgroundColor: pageBackgroundColor)
         onAppearanceChanged?()
-        tab?.session.setDynamicToolbarMaxHeight(dynamicToolbarMaxHeight)
-        applyToolbarOffsets(top: toolbarTopOffset, bottom: -contentBottomOffset, refresh: true)
+        updateToolbarLayout()
         updatePullToRefreshAvailability()
     }
     

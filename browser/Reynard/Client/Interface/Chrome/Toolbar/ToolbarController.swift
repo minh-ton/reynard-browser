@@ -23,6 +23,7 @@ final class ToolbarController {
     private enum UX {
         static let toolbarScrollFactor: CGFloat = 0.8
         static let maximumTransitionSpeed: CGFloat = 600
+        static let manualCollapseSpeedMultiplier: CGFloat = 2
         static let snapDelay: TimeInterval = 0.1
         static let snapDuration: TimeInterval = 0.3
     }
@@ -45,6 +46,8 @@ final class ToolbarController {
     private var pendingSnap: DispatchWorkItem?
     private var animationDisplayLink: CADisplayLink?
     private var isBottomToolbarCollapsed = false
+    private var isCollapsedUntilReset = false
+    private var resizesPage = false
     private var lockReasons = Set<LockReason>()
     
     // MARK: - Lifecycle
@@ -146,6 +149,7 @@ final class ToolbarController {
             return
         }
         transitionOffset = clampedOffset
+        resizesPage = isCollapsedUntilReset || (resizesPage && transitionOffset > 0)
         let tabBarHeight = chromeMode == .pad && tabBar.visibility != .hidden ? tabBar.bounds.height : 0
         // After the tabs hide, centering and toolbar collapse share the same progress.
         let collapseProgress = max(0, transitionOffset - tabBarHeight) / max(maxTransitionOffset - tabBarHeight, 1)
@@ -170,6 +174,7 @@ final class ToolbarController {
         contentView.applyToolbarOffsets(
             top: topContentOffset,
             bottom: bottomToolbarOffset,
+            resizesPage: resizesPage,
             refresh: refresh
         )
     }
@@ -191,6 +196,7 @@ final class ToolbarController {
         scrollPosition = max(0, position)
         guard Prefs.AppearanceSettings.scrollToHideToolbarEnabled,
               maxToolbarOffset > 0,
+              !isCollapsedUntilReset,
               lockReasons.isEmpty else {
             return
         }
@@ -248,11 +254,12 @@ final class ToolbarController {
     
     @objc private func updateAnimation() {
         let time = CACurrentMediaTime()
-        let maximumStep = UX.maximumTransitionSpeed * CGFloat(time - lastAnimationTime)
+        let speedMultiplier = isCollapsedUntilReset ? UX.manualCollapseSpeedMultiplier : 1
+        let maximumStep = UX.maximumTransitionSpeed * speedMultiplier * CGFloat(time - lastAnimationTime)
         lastAnimationTime = time
         var requestedOffset = targetOffset
         if let snapStartTime {
-            let progress = min(CGFloat((time - snapStartTime) / UX.snapDuration), 1)
+            let progress = min(CGFloat((time - snapStartTime) / UX.snapDuration) * speedMultiplier, 1)
             let easedProgress = 1 - pow(1 - progress, 2)
             requestedOffset = snapOrigin + (targetOffset - snapOrigin) * easedProgress
         }
@@ -300,9 +307,15 @@ final class ToolbarController {
         beginSnap(to: maxTransitionOffset)
     }
     
+    func collapseUntilReset() {
+        isCollapsedUntilReset = true
+        collapse()
+    }
+    
     func reset(animated: Bool = true) {
         cancelAnimation()
         isBottomToolbarCollapsed = false
+        isCollapsedUntilReset = false
         guard animated else {
             setTransitionOffset(0, refresh: true, animatesContent: false)
             return

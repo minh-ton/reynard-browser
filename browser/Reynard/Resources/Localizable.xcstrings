@@ -12006,6 +12006,16 @@
         }
       }
     },
+    "Hide Toolbar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Toolbar"
+          }
+        }
+      }
+    },
     "History" : {
       "localizations" : {
         "cs" : {

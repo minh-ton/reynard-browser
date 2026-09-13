@@ -101,6 +101,10 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         refreshAddressBar()
     }
     
+    func addressBarDidRequestHideToolbar(_ addressBar: AddressBar) {
+        toolbarController.collapseUntilReset()
+    }
+    
     func addressBarDidRequestWebsiteSettings(_ addressBar: AddressBar) {
         presentWebsiteSettings()
     }
