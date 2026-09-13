@@ -862,15 +862,18 @@ final class TabManagerImplementation: NSObject, TabManager {
         }
         
         if wasSelected {
-            if !tabs(for: mode).isEmpty {
-                selectTab(at: min(index, tabs(for: mode).count - 1), mode: mode)
+            let remainingTabs = tabs(for: mode)
+            if !remainingTabs.isEmpty {
+                let previousIndex = remainingTabs.indices
+                    .filter { remainingTabs[$0].state.selectionOrder > 0 }
+                    .max { remainingTabs[$0].state.selectionOrder < remainingTabs[$1].state.selectionOrder }
+                selectTab(at: previousIndex ?? min(index, remainingTabs.count - 1), mode: mode)
+            } else if mode == .private && !regularTabs.isEmpty {
+                selectTab(at: max(selectedIndex(for: .regular), 0), mode: .regular)
             } else {
-                let fallbackMode: TabMode = mode == .regular ? .private : .regular
-                selectTab(at: max(selectedIndex(for: fallbackMode), 0), mode: fallbackMode)
+                persistState()
             }
-        }
-        
-        if !wasSelected {
+        } else {
             persistState()
         }
         delegate?.tabManagerDidChangeTabs(self)
