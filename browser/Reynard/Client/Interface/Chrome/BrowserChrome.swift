@@ -439,6 +439,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
             locationTitle: locationTitle,
             showsBarMenu: showsBarMenu
         )
+        _ = updateToolbarTextTransition()
     }
     
     func updateAddressBarMenu(url: String?, usesDesktopWebsite: Bool?) {
