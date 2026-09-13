@@ -187,6 +187,7 @@ final class AddressBar: UIView {
         field.translatesAutoresizingMaskIntoConstraints = false
         field.borderStyle = .none
         field.backgroundColor = .clear
+        field.textAlignment = .left
         field.placeholder = AddressBar.placeholderText
         field.keyboardType = .webSearch
         field.autocapitalizationType = .none
@@ -746,7 +747,6 @@ final class AddressBar: UIView {
             addressLabel.isHidden = false
             textField.isHidden = true
         }
-        textField.textAlignment = .left
     }
     
     private func applyLeadingButtonState(_ state: LeadingButtonState) {
@@ -793,6 +793,27 @@ final class AddressBar: UIView {
     }
     
     // MARK: - Display Content
+    
+    func toolbarTextPresentation(in view: UIView) -> (text: NSAttributedString, font: UIFont, frame: CGRect)? {
+        guard !addressLabel.isHidden,
+              let displayText = addressLabel.attributedText else {
+            return nil
+        }
+        let font: UIFont = addressLabel.font
+        let textWidth = addressLabel.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: font.lineHeight)).width
+        let width = min(textWidth, addressLabel.bounds.width)
+        let frame = CGRect(
+            x: 0,
+            y: (addressLabel.bounds.height - font.lineHeight) / 2,
+            width: width,
+            height: font.lineHeight
+        )
+        return (displayText, font, addressLabel.convert(frame, to: view))
+    }
+    
+    func setDisplayTextHidden(_ hidden: Bool) {
+        addressLabel.alpha = hidden ? 0 : 1
+    }
     
     private func displayAttributedText() -> NSAttributedString? {
         guard let currentText, !currentText.isEmpty else {

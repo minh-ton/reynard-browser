@@ -77,10 +77,20 @@ final class TabBar: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hitView = super.hitTest(point, with: event)
+        return hitView === self && tabCollection.transform.ty < 0 ? nil : hitView
+    }
+    
     // MARK: - Layout
     
     func setVisibility(_ visibility: Visibility, animated: Bool) {
         presentation.setVisibility(visibility, animated: animated)
+    }
+    
+    func setCollapseOffset(_ offset: CGFloat) {
+        alpha = 1 - offset / max(bounds.height, 1)
+        tabCollection.transform = CGAffineTransform(translationX: 0, y: -offset)
     }
     
     func invalidateLayout() {

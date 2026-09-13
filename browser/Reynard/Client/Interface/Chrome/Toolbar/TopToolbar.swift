@@ -133,12 +133,12 @@ final class TopToolbar: UIView {
         
         return safeAreaLayoutGuide
     }()
-
+    
     private var compactAddressBarHorizontalInset: CGFloat {
         if #available(iOS 26.0, *) {
             return 0
         }
-
+        
         return UX.topToolbarHorizontalInset
     }
     
@@ -224,6 +224,10 @@ final class TopToolbar: UIView {
         backgroundBottomConstraint.isActive = false
         backgroundBottomConstraint = backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor)
         backgroundBottomConstraint.isActive = true
+    }
+    
+    func setBackgroundCollapseOffset(_ offset: CGFloat) {
+        backgroundBottomConstraint.constant = -offset
     }
     
     func apply(
