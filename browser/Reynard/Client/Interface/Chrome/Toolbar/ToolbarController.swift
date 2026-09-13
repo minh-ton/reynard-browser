@@ -24,6 +24,7 @@ final class ToolbarController {
         static let toolbarScrollFactor: CGFloat = 0.8
         static let maximumTransitionSpeed: CGFloat = 600
         static let manualCollapseSpeedMultiplier: CGFloat = 2
+        static let maxTextCenterDuration: TimeInterval = 0.2
         static let snapDelay: TimeInterval = 0.1
         static let snapDuration: TimeInterval = 0.3
     }
@@ -35,13 +36,14 @@ final class ToolbarController {
     
     private var chromeMode: BrowserChromeMode = .phone
     private var transitionOffset: CGFloat = 0
-    private var textCenteringDistance: CGFloat = 0
+    private var textCenterProgress: CGFloat = 0
     private var maxToolbarOffset: CGFloat = 0
     private var maxTopToolbarOffset: CGFloat = 0
     private var scrollPosition: CGFloat = 0
     private var snapOrigin: CGFloat = 0
     private var targetOffset: CGFloat = 0
     private var snapStartTime: CFTimeInterval?
+    private var snapTextCenterOrigin: CGFloat = 0
     private var lastAnimationTime: CFTimeInterval = 0
     private var pendingSnap: DispatchWorkItem?
     private var animationDisplayLink: CADisplayLink?
@@ -139,20 +141,25 @@ final class ToolbarController {
     }
     
     private var maxTransitionOffset: CGFloat {
-        let tabBarHeight = chromeMode == .pad && tabBar.visibility != .hidden ? tabBar.bounds.height : 0
-        return maxToolbarOffset > 0 ? max(maxToolbarOffset, tabBarHeight + textCenteringDistance) : 0
+        return maxToolbarOffset
     }
     
-    private func setTransitionOffset(_ requestedOffset: CGFloat, refresh: Bool = false, animatesContent: Bool = true) {
+    private func setTransitionOffset(
+        _ requestedOffset: CGFloat,
+        refresh: Bool = false,
+        animatesContent: Bool = true,
+        textCenterProgress requestedTextCenterProgress: CGFloat? = nil
+    ) {
         let clampedOffset = min(max(0, requestedOffset), maxTransitionOffset)
-        guard refresh || clampedOffset != transitionOffset else {
+        let textCenterChanged = requestedTextCenterProgress.map { $0 != textCenterProgress } ?? false
+        guard refresh || clampedOffset != transitionOffset || textCenterChanged else {
             return
         }
         transitionOffset = clampedOffset
         resizesPage = isCollapsedUntilReset || (resizesPage && transitionOffset > 0)
         let tabBarHeight = chromeMode == .pad && tabBar.visibility != .hidden ? tabBar.bounds.height : 0
-        // After the tabs hide, centering and toolbar collapse share the same progress.
         let collapseProgress = max(0, transitionOffset - tabBarHeight) / max(maxTransitionOffset - tabBarHeight, 1)
+        textCenterProgress = requestedTextCenterProgress ?? collapseProgress
         let tabBarCollapseOffset = min(transitionOffset, tabBarHeight)
         let topToolbarOffset = max(0, maxTopToolbarOffset - tabBarHeight) * collapseProgress
         let topContentOffset = topToolbarOffset + tabBarCollapseOffset
@@ -165,6 +172,7 @@ final class ToolbarController {
             bottomOffset: bottomToolbarOffset,
             tabBarCollapseOffset: tabBarCollapseOffset,
             collapseProgress: isBottomToolbarCollapsed && chromeMode == .phone ? 0 : collapseProgress,
+            textCenterProgress: textCenterProgress,
             isBottomToolbarCollapsed: isBottomToolbarCollapsed,
             animatesContent: animatesContent
         )
@@ -207,10 +215,6 @@ final class ToolbarController {
         }
         snapStartTime = nil
         
-        if transitionOffset == 0 {
-            textCenteringDistance = browserChrome.toolbarTextCenteringDistance
-        }
-        
         var maximumOffset = maxTransitionOffset
         if scrollPosition < maxTopToolbarOffset {
             maximumOffset *= scrollPosition / maxTopToolbarOffset
@@ -240,6 +244,7 @@ final class ToolbarController {
             setTransitionOffset(targetOffset, refresh: true)
             return
         }
+        snapTextCenterOrigin = textCenterProgress
         snapStartTime = CACurrentMediaTime()
         startAnimation()
     }
@@ -258,14 +263,28 @@ final class ToolbarController {
         let maximumStep = UX.maximumTransitionSpeed * speedMultiplier * CGFloat(time - lastAnimationTime)
         lastAnimationTime = time
         var requestedOffset = targetOffset
+        var requestedTextCenterProgress: CGFloat?
         if let snapStartTime {
             let progress = min(CGFloat((time - snapStartTime) / UX.snapDuration) * speedMultiplier, 1)
             let easedProgress = 1 - pow(1 - progress, 2)
             requestedOffset = snapOrigin + (targetOffset - snapOrigin) * easedProgress
+            if targetOffset > snapOrigin {
+                let centerProgress = min(
+                    CGFloat((time - snapStartTime) / UX.maxTextCenterDuration) * speedMultiplier,
+                    1
+                )
+                let easedCenterProgress = 1 - pow(1 - centerProgress, 2)
+                requestedTextCenterProgress = snapTextCenterOrigin
+                + (1 - snapTextCenterOrigin) * easedCenterProgress
+            }
         }
         let step = min(max(requestedOffset - transitionOffset, -maximumStep), maximumStep)
-        setTransitionOffset(transitionOffset + step)
-        if transitionOffset == targetOffset {
+        setTransitionOffset(
+            transitionOffset + step,
+            textCenterProgress: requestedTextCenterProgress
+        )
+        let isTextCentered = targetOffset <= snapOrigin || textCenterProgress == 1
+        if transitionOffset == targetOffset && isTextCentered {
             animationDisplayLink?.invalidate()
             animationDisplayLink = nil
             snapStartTime = nil
@@ -297,9 +316,6 @@ final class ToolbarController {
     func collapse(animated: Bool = true) {
         cancelAnimation()
         isBottomToolbarCollapsed = false
-        if transitionOffset == 0 {
-            textCenteringDistance = browserChrome.toolbarTextCenteringDistance
-        }
         guard animated else {
             setTransitionOffset(maxTransitionOffset, refresh: true, animatesContent: false)
             return

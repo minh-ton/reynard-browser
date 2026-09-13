@@ -113,6 +113,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     
     private var state: State?
     private var toolbarCollapseProgress: CGFloat = 0
+    private var toolbarTextCenterProgress: CGFloat = 0
     private var isToolbarContentHidden = false
     private var toolbarContentAlphas: (top: CGFloat, bottom: CGFloat) = (1, 1)
     
@@ -192,6 +193,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     func apply(state: State) {
         if self.state?.mode != state.mode {
             toolbarCollapseProgress = 0
+            toolbarTextCenterProgress = 0
         }
         
         self.state = state
@@ -439,7 +441,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
             locationTitle: locationTitle,
             showsBarMenu: showsBarMenu
         )
-        _ = updateToolbarTextTransition()
+        _ = updateToolbarTextTransition(textCenterProgress: toolbarTextCenterProgress)
     }
     
     func updateAddressBarMenu(url: String?, usesDesktopWebsite: Bool?) {
@@ -627,16 +629,12 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         return topToolbar.convert(topToolbar.bounds, to: view)
     }
     
-    var toolbarTextCenteringDistance: CGFloat {
-        guard let presentation = addressBar.toolbarTextPresentation(in: self) else { return 0 }
-        return abs(bounds.midX - presentation.frame.midX)
-    }
-    
     func setToolbarTransition(
         topOffset: CGFloat,
         bottomOffset: CGFloat,
         tabBarCollapseOffset: CGFloat,
         collapseProgress: CGFloat,
+        textCenterProgress: CGFloat,
         isBottomToolbarCollapsed: Bool,
         animatesContent: Bool
     ) {
@@ -648,7 +646,8 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         : .identity
         let previousProgress = toolbarCollapseProgress
         toolbarCollapseProgress = collapseProgress
-        let isTextFullSize = updateToolbarTextTransition()
+        toolbarTextCenterProgress = textCenterProgress
+        let isTextFullSize = updateToolbarTextTransition(textCenterProgress: textCenterProgress)
         if collapseProgress == 0 || (collapseProgress < previousProgress && isTextFullSize) {
             isToolbarContentHidden = false
         } else if collapseProgress > previousProgress {
@@ -693,7 +692,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         topToolbar.setSidebarButtonTransition(alpha: alpha, hidden: hidden)
     }
     
-    private func updateToolbarTextTransition() -> Bool {
+    private func updateToolbarTextTransition(textCenterProgress: CGFloat) -> Bool {
         guard toolbarCollapseProgress > 0,
               let state,
               state.presentation == .browsing,
@@ -726,7 +725,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         toolbarTextLabel.attributedText = presentation.text
         toolbarTextLabel.bounds = CGRect(x: 0, y: 0, width: expandedFrame.width, height: presentation.font.lineHeight)
         toolbarTextLabel.center = CGPoint(
-            x: expandedFrame.midX + (bounds.midX - expandedFrame.midX) * toolbarCollapseProgress,
+            x: expandedFrame.midX + (bounds.midX - expandedFrame.midX) * textCenterProgress,
             y: textEdge + (isBottom ? -textHeight : textHeight) / 2
         )
         toolbarTextLabel.transform = CGAffineTransform(scaleX: scale, y: scale)
