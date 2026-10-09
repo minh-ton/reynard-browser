@@ -1,5 +1,5 @@
 diff --git a/layout/generic/nsIFrame.cpp b/layout/generic/nsIFrame.cpp
-index 0d1a43be430d..dcdb6629a8ac 100644
+index 0d1a43be430d..15ca8e8a15bc 100644
 --- a/layout/generic/nsIFrame.cpp
 +++ b/layout/generic/nsIFrame.cpp
 @@ -3436,6 +3436,9 @@ void nsIFrame::BuildDisplayListForStackingContext(
@@ -12,12 +12,12 @@ index 0d1a43be430d..dcdb6629a8ac 100644
        (DisplayPortUtils::IsFixedPosFrameInDisplayPort(this) ||
         BuilderHasScrolledClip(aBuilder));
  
-@@ -5011,7 +5014,32 @@ bool nsIFrame::IsSelectable(StyleUserSelect* aSelectStyle) const {
+@@ -5011,7 +5014,33 @@ bool nsIFrame::IsSelectable(StyleUserSelect* aSelectStyle) const {
    return style != StyleUserSelect::None;
  }
  
 +#if defined(XP_IOS)
-+static bool IsInEditableTextSelectionContext(const nsIFrame* aFrame) {
++static bool IsInNativeTextSelectionContext(const nsIFrame* aFrame) {
 +  nsIContent* content = aFrame->GetContent();
 +  if (!content) {
 +    return false;
@@ -27,8 +27,9 @@ index 0d1a43be430d..dcdb6629a8ac 100644
 +      content->IsInNativeAnonymousSubtree()
 +          ? content->GetClosestNativeAnonymousSubtreeRootParentOrHost()
 +          : content;
-+  if (control && control->IsTextControlElement()) {
-+    return !control->AsElement()->IsDisabledOrReadOnly();
++  if (auto* textControl = TextControlElement::FromNodeOrNull(control)) {
++    return textControl->IsSingleLineTextControlOrTextArea() &&
++           !textControl->IsDisabled();
 +  }
 +
 +  return content->GetInclusiveEditableAncestor() != nullptr;
@@ -37,7 +38,7 @@ index 0d1a43be430d..dcdb6629a8ac 100644
 +
  bool nsIFrame::ShouldPaintNormalSelection() const {
 +#if defined(XP_IOS)
-+  if (IsInEditableTextSelectionContext(this)) {
++  if (IsInNativeTextSelectionContext(this)) {
 +    return false;
 +  }
 +#endif

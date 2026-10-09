@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..b1563cbcdf14
+index 000000000000..44a14ecc228f
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3911 @@
+@@ -0,0 +1,3939 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -167,6 +167,7 @@ index 000000000000..b1563cbcdf14
 +- (void)setupTextInput;
 +- (void)teardownTextInput;
 +- (BOOL)isEditable;
++- (BOOL)isTextSelectable;
 +- (widget::TextInputHandler*)textHandler;
 +
 +- (void)scheduleResponderBlur;
@@ -356,7 +357,7 @@ index 000000000000..b1563cbcdf14
 +
 +bool TextInputHandler::QueryNativeTextInput(
 +    const NativeTextInputRequest& aRequest, NativeTextInputReply& aReply) {
-+  if (Destroyed() || !mWidget->GetInputContext().mIMEState.IsEditable()) {
++  if (Destroyed() || !mWidget->GetInputContext().IsTextSelectable()) {
 +    return false;
 +  }
 +
@@ -380,7 +381,8 @@ index 000000000000..b1563cbcdf14
 +  if (geometryQuery && mNativeTextInputState && !mNativeTextInputStateDirty) {
 +    aReply = NativeTextInputReply();
 +    aReply.mSucceeded = true;
-+    aReply.mEditable = true;
++    aReply.mEditable = mNativeTextInputState->mEditable;
++    aReply.mSelectable = mNativeTextInputState->mSelectable;
 +
 +    if (aRequest.mQuery == NativeTextInputQuery::Caret) {
 +      for (const auto& caret : mNativeTextInputState->mCaretRects) {
@@ -415,11 +417,11 @@ index 000000000000..b1563cbcdf14
 +    return !Destroyed();
 +  }
 +
-+  if (Destroyed() || !mWidget->GetInputContext().mIMEState.IsEditable()) {
++  if (Destroyed() || !mWidget->GetInputContext().IsTextSelectable()) {
 +    return false;
 +  }
 +
-+  if (!aReply.mEditable || dom::BrowserParent::GetFocused() != browser) {
++  if (!aReply.mSelectable || dom::BrowserParent::GetFocused() != browser) {
 +    return false;
 +  }
 +
@@ -436,7 +438,7 @@ index 000000000000..b1563cbcdf14
 +      view->mEditable.mFloatingCursorActive = NO;
 +    }
 +
-+    if (!mWidget->GetInputContext().mIMEState.IsEditable()) {
++    if (!mWidget->GetInputContext().IsTextSelectable()) {
 +      mWidget->SetNativeTextInputScrollers({});
 +    }
 +  }
@@ -1514,6 +1516,11 @@ index 000000000000..b1563cbcdf14
 +  mEditable.mEditableTextInteraction.textInput = self;
 +  mEditable.mEditableTextInteraction.delegate = self;
 +
++  mEditable.mReadOnlyTextInteraction = [[UITextInteraction
++      textInteractionForMode:UITextInteractionModeNonEditable] retain];
++  mEditable.mReadOnlyTextInteraction.textInput = self;
++  mEditable.mReadOnlyTextInteraction.delegate = self;
++
 +  [self setupTextDragInteractions];
 +  [self updateTextInteractions];
 +
@@ -1537,15 +1544,18 @@ index 000000000000..b1563cbcdf14
 +  [self cancelAutoscroll];
 +  [self teardownTextDragInteractions];
 +  [NSObject cancelPreviousPerformRequestsWithTarget:self];
-+  mEditable.mEditableTextInteraction.delegate = nil;
-+  mEditable.mEditableTextInteraction.textInput = nil;
 +  [mEditable.mTextInteractionAssistantDelegate detach];
 +
-+  if (mEditable.mEditableTextInteraction.view == self) {
-+    [self removeInteraction:mEditable.mEditableTextInteraction];
++  for (UITextInteraction* interaction : {mEditable.mEditableTextInteraction,
++                                         mEditable.mReadOnlyTextInteraction}) {
++    interaction.delegate = nil;
++    interaction.textInput = nil;
++    if (interaction.view == self) {
++      [self removeInteraction:interaction];
++    }
++    [interaction release];
 +  }
 +
-+  [mEditable.mEditableTextInteraction release];
 +  [mEditable.mTextInteractionAssistantDelegate release];
 +  [mEditable.mTokenizer release];
 +  [(ChildViewUndoManager*)mEditable.mUndoManager detachFromTextInput];
@@ -1563,8 +1573,13 @@ index 000000000000..b1563cbcdf14
 +         mGeckoChild->GetInputContext().mIMEState.IsEditable();
 +}
 +
++- (BOOL)isTextSelectable {
++  return mGeckoChild && !mGeckoChild->Destroyed() &&
++         mGeckoChild->GetInputContext().IsTextSelectable();
++}
++
 +- (widget::TextInputHandler*)textHandler {
-+  return [self isEditable] ? mGeckoChild->GetTextInputHandler() : nullptr;
++  return [self isTextSelectable] ? mGeckoChild->GetTextInputHandler() : nullptr;
 +}
 +
 +- (id<UITextInputDelegate>)inputDelegate {
@@ -1648,23 +1663,35 @@ index 000000000000..b1563cbcdf14
 +    mEditable.mTextDragInteraction.enabled = [self isEditable];
 +  }
 +
-+  UITextInteraction* interaction = mEditable.mEditableTextInteraction;
++  UITextInteraction* interaction = [self isEditable]
++                                       ? mEditable.mEditableTextInteraction
++                                       : mEditable.mReadOnlyTextInteraction;
 +  if (!interaction) {
 +    return;
 +  }
 +
-+  // Keep editing gestures working when inputmode=none hides the keyboard.
-+  if (![self isEditable]) {
-+    [self cancelAutoscroll];
-+    if (interaction.view == self) {
-+      [[self selectionCommandController] hideSelectionCommands];
-+      [[self interactionAssistant] deactivateSelection];
-+      mEditable.mSelectionActivated = NO;
-+      [mEditable.mTextInteractionAssistantDelegate detach];
-+      [self removeInteraction:interaction];
-+      [mEditable.mTextInteractionAssistantDelegate release];
-+      mEditable.mTextInteractionAssistantDelegate = nil;
++  BOOL selectable = [self isTextSelectable];
++  for (UITextInteraction* attached : {mEditable.mEditableTextInteraction,
++                                      mEditable.mReadOnlyTextInteraction}) {
++    if (attached.view != self) {
++      continue;
 +    }
++
++    if (attached == interaction && selectable) {
++      continue;
++    }
++
++    [self cancelAutoscroll];
++    [[self selectionCommandController] hideSelectionCommands];
++    [[self interactionAssistant] deactivateSelection];
++    mEditable.mSelectionActivated = NO;
++    [mEditable.mTextInteractionAssistantDelegate detach];
++    [self removeInteraction:attached];
++    [mEditable.mTextInteractionAssistantDelegate release];
++    mEditable.mTextInteractionAssistantDelegate = nil;
++  }
++
++  if (!selectable) {
 +    return;
 +  }
 +
@@ -1686,7 +1713,7 @@ index 000000000000..b1563cbcdf14
 +- (void)updateSelectionActivation {
 +  id<GeckoTextInteractionAssistant> assistant = [self interactionAssistant];
 +  BOOL dragging = mEditable.mTextDragSession || mEditable.mTextDropSession;
-+  BOOL shouldActivate = !dragging && [self isEditable];
++  BOOL shouldActivate = !dragging && [self isTextSelectable];
 +  if (shouldActivate) {
 +    shouldActivate = [self isFirstResponder] && self.selectedTextRange;
 +  }
@@ -1734,7 +1761,7 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)refreshSelectionUI {
-+  if (![self isEditable]) {
++  if (![self isTextSelectable]) {
 +    return;
 +  }
 +
@@ -1797,7 +1824,7 @@ index 000000000000..b1563cbcdf14
 +
 +  mEditable.mAsyncScrollInProgress = aScrolling;
 +  if (aScrolling) {
-+    if ([self isEditable] && [self isFirstResponder] &&
++    if ([self isTextSelectable] && [self isFirstResponder] &&
 +        ![self isInteractingWithText]) {
 +      [[self selectionCommandController] hideSelectionCommands];
 +    }
@@ -1813,7 +1840,7 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)selectionGeometryChanged {
-+  if (![self isEditable]) {
++  if (![self isTextSelectable]) {
 +    return;
 +  }
 +
@@ -1831,7 +1858,7 @@ index 000000000000..b1563cbcdf14
 +- (void)applySelectionGeometryChange {
 +  mEditable.mPendingSelectionGeometryRefresh = NO;
 +
-+  if (![self isEditable] || ![self isFirstResponder]) {
++  if (![self isTextSelectable] || ![self isFirstResponder]) {
 +    return;
 +  }
 +
@@ -1843,7 +1870,7 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)refreshCompositorSelection {
-+  if (![self isEditable] || ![self isFirstResponder]) {
++  if (![self isTextSelectable] || ![self isFirstResponder]) {
 +    return;
 +  }
 +
@@ -1958,7 +1985,8 @@ index 000000000000..b1563cbcdf14
 +
 +- (BOOL)isInteractingWithText {
 +  if (mEditable.mFloatingCursorActive ||
-+      mEditable.mEditableTextInteraction.inGesture) {
++      mEditable.mEditableTextInteraction.inGesture ||
++      mEditable.mReadOnlyTextInteraction.inGesture) {
 +    return YES;
 +  }
 +
@@ -1967,7 +1995,7 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)startAutoscroll:(CGPoint)aPoint {
-+  if (![self isEditable] || !self.isFirstResponder) {
++  if (![self isTextSelectable] || !self.isFirstResponder) {
 +    [self cancelAutoscroll];
 +    return;
 +  }
@@ -3405,8 +3433,8 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)selectAll:(id)aSender {
-+  if (![self isEditable] || ![self canPerformAction:@selector(selectAll:)
-+                                         withSender:aSender]) {
++  if (![self isTextSelectable] || ![self canPerformAction:@selector(selectAll:)
++                                               withSender:aSender]) {
 +    return;
 +  }
 +
@@ -3527,7 +3555,7 @@ index 000000000000..b1563cbcdf14
 +}
 +
 +- (void)showEditMenuForSecondaryClickAtPoint:(CGPoint)aPoint {
-+  if (![self isEditable]) {
++  if (![self isTextSelectable]) {
 +    return;
 +  }
 +

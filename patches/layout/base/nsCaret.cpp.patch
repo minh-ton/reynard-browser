@@ -1,15 +1,36 @@
 diff --git a/layout/base/nsCaret.cpp b/layout/base/nsCaret.cpp
-index e61e4ba19c87..e4ae83d23e37 100644
+index e61e4ba19c87..6a62c3984934 100644
 --- a/layout/base/nsCaret.cpp
 +++ b/layout/base/nsCaret.cpp
-@@ -474,6 +474,13 @@ nsIFrame* nsCaret::GetPaintGeometry(nsRect* aCaretRect, nsRect* aHookRect,
+@@ -16,6 +16,7 @@
+ #include "mozilla/PresShell.h"
+ #include "mozilla/ScrollContainerFrame.h"
+ #include "mozilla/StaticPrefs_bidi.h"
++#include "mozilla/TextControlElement.h"
+ #include "mozilla/dom/CharacterDataBuffer.h"
+ #include "mozilla/dom/Selection.h"
+ #include "mozilla/gfx/2D.h"
+@@ -474,6 +475,26 @@ nsIFrame* nsCaret::GetPaintGeometry(nsRect* aCaretRect, nsRect* aHookRect,
  
    nsIFrame* frame = data.mFrame;
    nsIFrame* unadjustedFrame = data.mUnadjustedFrame;
 +#ifdef MOZ_WIDGET_UIKIT
-+  // UITextInteraction draws the caret in editable content.
++  // UIKit handles the caret and selection
 +  if (!mReadOnly && unadjustedFrame->ContentIsEditable()) {
 +    return nullptr;
++  }
++
++  nsIContent* content = unadjustedFrame->GetContent();
++  nsIContent* control =
++      content && content->IsInNativeAnonymousSubtree()
++          ? content->GetClosestNativeAnonymousSubtreeRootParentOrHost()
++          : content;
++
++  if (auto* textControl = TextControlElement::FromNodeOrNull(control)) {
++    if (textControl->IsSingleLineTextControlOrTextArea() &&
++        !textControl->IsDisabled()) {
++      return nullptr;
++    }
 +  }
 +#endif
 +
