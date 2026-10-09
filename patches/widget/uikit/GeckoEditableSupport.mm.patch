@@ -1,6 +1,6 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..8be2d64986a1
+index 000000000000..5ebc8db7a442
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
 @@ -0,0 +1,3774 @@
@@ -1481,11 +1481,11 @@ index 000000000000..8be2d64986a1
 +                                                 toPosition:range.end];
 +}
 +
-+- (BOOL)scheduleReplacementsForRange:(UITextRange*)aRange
++/* - (BOOL)scheduleReplacementsForRange:(UITextRange*)aRange
 +                         withOptions:(NSUInteger)aOptions {
 +  // Place the caret on tap instead of selecting a word for replacement.
 +  return NO;
-+}
++} */
 +
 +@end
 +
