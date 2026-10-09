@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..c8fe66c8870a
+index 000000000000..c9fb9e97341c
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3744 @@
+@@ -0,0 +1,3748 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -2026,7 +2026,11 @@ index 000000000000..c8fe66c8870a
 +}
 +
 +- (void)keyboardDidRequestDismissal:(NSNotification*)aNotification {
-+  if ([self isEditable] && [self isFirstResponder]) {
++  RefPtr<dom::BrowserParent> browser = dom::BrowserParent::GetFocused();
++  nsCOMPtr<nsIWidget> widget =
++      browser ? browser->GetTextInputHandlingWidget() : nullptr;
++
++  if ([self isEditable] && widget == mGeckoChild) {
 +    mGeckoChild->DismissSoftwareKeyboard();
 +  }
 +}
