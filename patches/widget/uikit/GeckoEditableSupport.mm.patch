@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..3686d938ef33
+index 000000000000..8be2d64986a1
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3750 @@
+@@ -0,0 +1,3774 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1394,6 +1394,7 @@ index 000000000000..3686d938ef33
 +  id<GeckoTextInteractionAssistant> mAssistant;
 +}
 +- (instancetype)initWithAssistant:(id<GeckoTextInteractionAssistant>)aAssistant;
++- (id<GeckoTextRangeAdjustmentInteraction>)rangeAdjustment;
 +- (void)attachToInteractions;
 +- (void)detach;
 +@end
@@ -1414,9 +1415,29 @@ index 000000000000..3686d938ef33
 +  [super dealloc];
 +}
 +
++- (id<GeckoTextRangeAdjustmentInteraction>)rangeAdjustment {
++  if (![mAssistant respondsToSelector:@selector(rangeAdjustmentInteraction)]) {
++    return nil;
++  }
++
++  if (![mAssistant respondsToSelector:@selector(textRangeAdjustmentInteraction:
++                                                didBeginAtPoint:)]) {
++    return nil;
++  }
++
++  id<GeckoTextRangeAdjustmentInteraction> adjustment =
++      mAssistant.rangeAdjustmentInteraction;
++  if (![adjustment respondsToSelector:@selector(adjustmentDelegate)] ||
++      ![adjustment respondsToSelector:@selector(setAdjustmentDelegate:)]) {
++    return nil;
++  }
++
++  return adjustment;
++}
++
 +- (void)attachToInteractions {
 +  [mAssistant interactions].assistantDelegate = self;
-+  mAssistant.rangeAdjustmentInteraction.adjustmentDelegate = self;
++  [self rangeAdjustment].adjustmentDelegate = self;
 +}
 +
 +- (void)detach {
@@ -1425,14 +1446,17 @@ index 000000000000..3686d938ef33
 +    interaction.assistantDelegate = mAssistant;
 +  }
 +
-+  id<GeckoTextRangeAdjustmentInteraction> adjustment =
-+      mAssistant.rangeAdjustmentInteraction;
++  id<GeckoTextRangeAdjustmentInteraction> adjustment = [self rangeAdjustment];
 +  if (adjustment.adjustmentDelegate == self) {
 +    adjustment.adjustmentDelegate = mAssistant;
 +  }
 +}
 +
 +- (BOOL)respondsToSelector:(SEL)aSelector {
++  if (aSelector == @selector(textRangeAdjustmentInteraction:didBeginAtPoint:)) {
++    return [mAssistant respondsToSelector:aSelector];
++  }
++
 +  return [super respondsToSelector:aSelector] ||
 +         [mAssistant respondsToSelector:aSelector];
 +}
