@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/UIKitUtils.mm b/widget/uikit/UIKitUtils.mm
-index 3c259b196fdd..e022e0998a80 100644
+index 3c259b196fdd..5c8b81a47f08 100644
 --- a/widget/uikit/UIKitUtils.mm
 +++ b/widget/uikit/UIKitUtils.mm
 @@ -11,7 +11,7 @@
@@ -11,7 +11,26 @@ index 3c259b196fdd..e022e0998a80 100644
      return UIKeyboardTypeDecimalPad;
    }
    if (aContext.mHTMLInputMode.EqualsLiteral("numeric")) {
-@@ -88,6 +88,12 @@
+@@ -23,6 +23,9 @@
+   if (aContext.mHTMLInputMode.EqualsLiteral("tel")) {
+     return UIKeyboardTypePhonePad;
+   }
++  if (aContext.mHTMLInputMode.EqualsLiteral("text")) {
++    return UIKeyboardTypeDefault;
++  }
+   if (aContext.mHTMLInputMode.EqualsLiteral("url")) {
+     return UIKeyboardTypeURL;
+   }
+@@ -31,7 +34,7 @@
+     return UIKeyboardTypeEmailAddress;
+   }
+   if (aContext.mHTMLInputType.EqualsLiteral("number")) {
+-    return UIKeyboardTypeNumberPad;
++    return UIKeyboardTypeNumbersAndPunctuation;
+   }
+   if (aContext.mHTMLInputType.EqualsLiteral("tel")) {
+     return UIKeyboardTypePhonePad;
+@@ -88,6 +91,12 @@
  // static
  UITextAutocorrectionType UIKitUtils::GetUITextAutocorrectionType(
      const InputContext& aContext) {
