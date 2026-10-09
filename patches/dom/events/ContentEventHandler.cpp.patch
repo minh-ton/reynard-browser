@@ -1,8 +1,8 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index d11a218cd050..75129060b8bb 100644
+index d11a218cd050..c125461eedc5 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
-@@ -6,43 +6,59 @@
+@@ -6,43 +6,60 @@
  
  #include <algorithm>
  
@@ -13,6 +13,7 @@ index d11a218cd050..75129060b8bb 100644
  #include "mozilla/CheckedInt.h"
  #include "mozilla/ContentIterator.h"
 +#include "mozilla/EditorBase.h"
++#include "mozilla/EditorCommands.h"
 +#include "mozilla/EventStateManager.h"
  #include "mozilla/IMEStateManager.h"
  #include "mozilla/IntegerRange.h"
@@ -62,7 +63,7 @@ index d11a218cd050..75129060b8bb 100644
  #include "nsTextFrame.h"
  
  // Work around conflicting define in rpcndr.h
-@@ -443,6 +459,1102 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
+@@ -443,6 +460,1127 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
    return rangeInRootElement;
  }
  
@@ -336,6 +337,10 @@ index d11a218cd050..75129060b8bb 100644
 +            aReply.mCanUndo = editor->CanUndo();
 +            aReply.mCanRedo = editor->CanRedo();
 +          }
++
++          RefPtr<EditorCommand> command = StyleUpdatingCommand::GetInstance();
++          aReply.mCanFormat =
++              command->IsCommandEnabled(Command::FormatBold, editor);
 +        }
 +      }
 +
@@ -919,6 +924,27 @@ index d11a218cd050..75129060b8bb 100644
 +      editor->SwitchTextDirectionTo(direction);
 +      break;
 +    }
++    case NativeTextInputQuery::ToggleBold:
++    case NativeTextInputQuery::ToggleItalic:
++    case NativeTextInputQuery::ToggleUnderline: {
++      RefPtr<EditorBase> editor =
++          nsContentUtils::GetActiveEditor(mDocument->GetPresContext());
++      NS_ENSURE_TRUE(editor && aReply.mEditable, NS_ERROR_NOT_AVAILABLE);
++
++      Command format = Command::FormatBold;
++      if (aRequest.mQuery == NativeTextInputQuery::ToggleItalic) {
++        format = Command::FormatItalic;
++      } else if (aRequest.mQuery == NativeTextInputQuery::ToggleUnderline) {
++        format = Command::FormatUnderline;
++      }
++
++      RefPtr<EditorCommand> command = StyleUpdatingCommand::GetInstance();
++      NS_ENSURE_TRUE(command->IsCommandEnabled(format, editor),
++                     NS_ERROR_NOT_AVAILABLE);
++      rv = command->DoCommand(format, *editor, nullptr);
++      NS_ENSURE_SUCCESS(rv, rv);
++      break;
++    }
 +    case NativeTextInputQuery::SetSelection: {
 +      NS_ENSURE_TRUE(aReply.mEditable, NS_ERROR_NOT_AVAILABLE);
 +      WidgetSelectionEvent selection(true, eSetSelection, widget);
@@ -1165,7 +1191,7 @@ index d11a218cd050..75129060b8bb 100644
  nsresult ContentEventHandler::InitCommon(EventMessage aEventMessage,
                                           SelectionType aSelectionType,
                                           bool aRequireFlush) {
-@@ -628,6 +1740,13 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -628,6 +1766,13 @@ nsresult ContentEventHandler::QueryContentRect(
  
    aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
        resultRect, presContext->AppUnitsPerDevPixel());
@@ -1179,7 +1205,7 @@ index d11a218cd050..75129060b8bb 100644
    // Returning empty rect may cause native IME confused, let's make sure to
    // return non-empty rect.
    EnsureNonEmptyRect(aEvent->mReply->mRect);
-@@ -635,6 +1754,32 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -635,6 +1780,32 @@ nsresult ContentEventHandler::QueryContentRect(
    return NS_OK;
  }
  
@@ -1212,7 +1238,7 @@ index d11a218cd050..75129060b8bb 100644
  // Editor places a padding <br> element under its root content if the editor
  // doesn't have any text. This happens even for single line editors.
  // When we get text content and when we change the selection,
-@@ -2525,6 +3670,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2525,6 +3696,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
    }
    DOMRangeAndAdjustedOffsetInFlattenedText domRangeAndAdjustedOffset =
        domRangeAndAdjustedOffsetOrError.unwrap();
@@ -1220,7 +1246,7 @@ index d11a218cd050..75129060b8bb 100644
    nsString string;
    if (NS_WARN_IF(NS_FAILED(
            GenerateFlatTextContent(domRangeAndAdjustedOffset.mRange, string)))) {
-@@ -2847,7 +3993,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2847,7 +4019,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
  }
  
  nsresult ContentEventHandler::OnQueryEditorRect(
@@ -1229,7 +1255,7 @@ index d11a218cd050..75129060b8bb 100644
    nsresult rv = Init(aEvent);
    if (NS_FAILED(rv)) {
      return rv;
-@@ -2862,9 +4008,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
+@@ -2862,9 +4034,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
      }
    }
  
@@ -1304,7 +1330,7 @@ index d11a218cd050..75129060b8bb 100644
  
    MOZ_ASSERT(aEvent->Succeeded());
    return NS_OK;
-@@ -3407,8 +4616,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
+@@ -3407,8 +4642,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
    return NS_OK;
  }
  
@@ -1315,7 +1341,7 @@ index d11a218cd050..75129060b8bb 100644
    NS_ASSERTION(aFrame, "aFrame must not be null");
  
    nsPresContext* thisPC = aFrame->PresContext();
-@@ -3416,12 +4625,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
+@@ -3416,12 +4651,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
    if (NS_WARN_IF(!rootPC)) {
      return NS_ERROR_FAILURE;
    }
@@ -1394,7 +1420,7 @@ index d11a218cd050..75129060b8bb 100644
  
    // TransformFrameRectToAncestor returned the rect in the ancestor's appUnits,
    // but we want it in aFrame's units (in case of different full-zoom factors),
-@@ -3481,7 +4754,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
+@@ -3481,7 +4780,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
    }
  }
  
@@ -1404,7 +1430,7 @@ index d11a218cd050..75129060b8bb 100644
    aEvent->mSucceeded = false;
  
    // Get selection to manipulate
-@@ -3533,6 +4807,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3533,6 +4833,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
      }
    }
  
@@ -1424,7 +1450,7 @@ index d11a218cd050..75129060b8bb 100644
    if (aEvent->mReversed) {
      nsCOMPtr<nsINode> startNodeStrong(startNode);
      nsCOMPtr<nsINode> endNodeStrong(endNode);
-@@ -3558,7 +4845,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3558,7 +4871,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
    // `ContentEventHandler` is a `MOZ_STACK_CLASS`, so `mSelection` is known to
    // be alive.
    MOZ_KnownLive(mSelection)

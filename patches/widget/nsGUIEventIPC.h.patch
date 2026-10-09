@@ -1,5 +1,5 @@
 diff --git a/widget/nsGUIEventIPC.h b/widget/nsGUIEventIPC.h
-index a2a73f583d28..b5530b2175a9 100644
+index a2a73f583d28..caa4d5623fb7 100644
 --- a/widget/nsGUIEventIPC.h
 +++ b/widget/nsGUIEventIPC.h
 @@ -16,6 +16,7 @@
@@ -40,10 +40,10 @@ index a2a73f583d28..b5530b2175a9 100644
 +                                  mAssociateWithNext);
 +DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::NativeTextInputReply, mSucceeded,
 +                                  mEditable, mHasText, mCanUndo, mCanRedo,
-+                                  mScrolled, mCaretColor, mCaretColorIsAuto,
-+                                  mSuppressSelectionDisplay, mText,
-+                                  mSelectionStart, mSelectionLength, mOffset,
-+                                  mCharacterOffset, mAssociateWithNext,
++                                  mCanFormat, mScrolled, mCaretColor,
++                                  mCaretColorIsAuto, mSuppressSelectionDisplay,
++                                  mText, mSelectionStart, mSelectionLength,
++                                  mOffset, mCharacterOffset, mAssociateWithNext,
 +                                  mHitSelectableContent, mRect, mRTL, mBackward,
 +                                  mRects, mSelectionScrollers,
 +                                  mScrollReferences, mClipRects, mCaretRects);

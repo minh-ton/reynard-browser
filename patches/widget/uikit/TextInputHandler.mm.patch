@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
-index e8f05ad59f6f..613a4562ad46 100644
+index e8f05ad59f6f..ed7a74239aac 100644
 --- a/widget/uikit/TextInputHandler.mm
 +++ b/widget/uikit/TextInputHandler.mm
 @@ -2,16 +2,22 @@
@@ -771,29 +771,51 @@ index e8f05ad59f6f..613a4562ad46 100644
  }
  
  bool TextInputHandler::HandleCommand(Command aCommand) {
-@@ -100,32 +779,37 @@
+@@ -100,32 +779,51 @@
      return false;
    }
  
+-  if (aCommand != Command::DeleteCharBackward) {
+-    return false;
+-  }
+-
+-  nsEventStatus status = nsEventStatus_eIgnore;
+-  if (!DispatchKeyDownEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0, status)) {
 +  if (KeyEventState* currentKeyEvent = CurrentKeyEvent()) {
 +    currentKeyEvent->mCommand = Some(aCommand);
 +    if (DispatchCurrentKeyDown(false)) {
 +      DispatchCurrentKeyPress();
 +    }
 +    currentKeyEvent->mInputMethodHandled = true;
-+    return true;
-+  }
+     return true;
+   }
+-  if (Destroyed() || status == nsEventStatus_eConsumeNoDefault) {
+-    return true;
 +
-   if (aCommand != Command::DeleteCharBackward) {
-     return false;
++  NativeTextInputRequest request;
++  switch (aCommand) {
++    case Command::FormatBold:
++      request.mQuery = NativeTextInputQuery::ToggleBold;
++      break;
++    case Command::FormatItalic:
++      request.mQuery = NativeTextInputQuery::ToggleItalic;
++      break;
++    case Command::FormatUnderline:
++      request.mQuery = NativeTextInputQuery::ToggleUnderline;
++      break;
++    case Command::DeleteCharBackward:
++      return EmulateKeyboardEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0);
++    default:
++      return false;
    }
  
--  nsEventStatus status = nsEventStatus_eIgnore;
--  if (!DispatchKeyDownEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0, status)) {
--    return true;
-+  return EmulateKeyboardEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0);
+-  // TODO: Focus check
++  NativeTextInputReply reply;
++  return QueryNativeTextInput(request, reply);
 +}
-+
+ 
+-  if (!DispatchKeyPressEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0, status)) {
+-    return true;
 +bool TextInputHandler::HandlePhysicalDeleteBackward() {
 +  KeyEventState* currentKeyEvent = CurrentKeyEvent();
 +  if (!currentKeyEvent) {
@@ -808,24 +830,17 @@ index e8f05ad59f6f..613a4562ad46 100644
  
 -  // TODO: Focus check
 -
--  if (!DispatchKeyPressEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0, status)) {
-+  if (!PrepareCurrentKeyForIME()) {
-     return true;
-   }
--  if (Destroyed() || status == nsEventStatus_eConsumeNoDefault) {
--    return true;
--  }
--
--  // TODO: Focus check
--
 -  DispatchKeyUpEvent(NS_VK_BACK, KEY_NAME_INDEX_Backspace, 0, status);
 -
 -  return true;
++  if (!PrepareCurrentKeyForIME()) {
++    return true;
++  }
 +  return false;
  }
  
  static uint32_t ComputeKeyModifiers(uint32_t aCharCode) {
-@@ -136,7 +820,8 @@ static uint32_t ComputeKeyModifiers(uint32_t aCharCode) {
+@@ -136,7 +834,8 @@ static uint32_t ComputeKeyModifiers(uint32_t aCharCode) {
  }
  
  static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
@@ -835,7 +850,7 @@ index e8f05ad59f6f..613a4562ad46 100644
    aEvent.mKeyCode = aKeyCode;
    aEvent.mIsRepeat = false;
    aEvent.mKeyNameIndex = aKeyNameIndex;
-@@ -146,7 +831,7 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -146,7 +845,7 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
    if (aEvent.mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
      aEvent.mKeyValue = aCharCode;
    }
@@ -844,7 +859,7 @@ index e8f05ad59f6f..613a4562ad46 100644
    aEvent.mLocation = eKeyLocationStandard;
    aEvent.mTimeStamp = TimeStamp::Now();
  }
-@@ -154,12 +839,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -154,12 +853,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
  bool TextInputHandler::DispatchKeyDownEvent(uint32_t aKeyCode,
                                              KeyNameIndex aKeyNameIndex,
                                              char16_t aCharCode,
@@ -859,7 +874,7 @@ index e8f05ad59f6f..613a4562ad46 100644
    nsresult rv = mDispatcher->BeginNativeInputTransaction();
    if (NS_FAILED(rv)) {
      NS_WARNING("BeginNativeInputTransaction is failed");
-@@ -171,12 +857,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -171,12 +871,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
  bool TextInputHandler::DispatchKeyUpEvent(uint32_t aKeyCode,
                                            KeyNameIndex aKeyNameIndex,
                                            char16_t aCharCode,
@@ -874,7 +889,7 @@ index e8f05ad59f6f..613a4562ad46 100644
    nsresult rv = mDispatcher->BeginNativeInputTransaction();
    if (NS_FAILED(rv)) {
      NS_WARNING("BeginNativeInputTransaction is failed");
-@@ -188,12 +875,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -188,12 +889,13 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
  bool TextInputHandler::DispatchKeyPressEvent(uint32_t aKeyCode,
                                               KeyNameIndex aKeyNameIndex,
                                               char16_t aCharCode,
@@ -889,7 +904,7 @@ index e8f05ad59f6f..613a4562ad46 100644
    nsresult rv = mDispatcher->BeginNativeInputTransaction();
    if (NS_FAILED(rv)) {
      NS_WARNING("BeginNativeInputTransaction is failed");
-@@ -205,34 +893,58 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
+@@ -205,34 +907,58 @@ static void InitKeyEvent(WidgetKeyboardEvent& aEvent, uint32_t aKeyCode,
  bool TextInputHandler::EmulateKeyboardEvent(uint32_t aKeyCode,
                                              KeyNameIndex aKeyNameIndex,
                                              char16_t aCharCode) {

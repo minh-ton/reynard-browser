@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..8442802a8eab
+index 000000000000..b1563cbcdf14
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3800 @@
+@@ -0,0 +1,3911 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -127,6 +127,10 @@ index 000000000000..8442802a8eab
 +@property(nonatomic, readonly) CGPoint extentPoint;
 +@end
 +
++@interface UIMenuItem (GeckoTextStyle)
++@property(nonatomic) BOOL dontDismiss;
++@end
++
 +@protocol GeckoTextContextMenuInteraction <NSObject>
 +- (UIEditMenuInteraction*)editMenuInteraction API_AVAILABLE(ios(16.0));
 +@end
@@ -205,6 +209,8 @@ index 000000000000..8442802a8eab
 +- (void)replace:(id)aSender;
 +- (void)undo:(id)aSender;
 +- (void)redo:(id)aSender;
++- (void)_showTextStyleOptions:(id)aSender;
++- (void)textStyleMenuDidHide:(NSNotification*)aNotification;
 +- (id<GeckoTextInteractionCommands>)selectionCommandController;
 +- (void)updateEditMenu;
 +- (void)showEditMenuForSecondaryClickAtPoint:(CGPoint)aPoint;
@@ -1527,6 +1533,7 @@ index 000000000000..8442802a8eab
 +                                                object:nil];
 +  }
 +
++  [self textStyleMenuDidHide:nil];
 +  [self cancelAutoscroll];
 +  [self teardownTextDragInteractions];
 +  [NSObject cancelPreviousPerformRequestsWithTarget:self];
@@ -1751,6 +1758,7 @@ index 000000000000..8442802a8eab
 +  }
 +
 +  [self updateSelectionActivation];
++  [self updateEditMenu];
 +
 +  if (@available(iOS 16.0, *)) {
 +    id<GeckoTextInteractionAssistant> assistant = [self interactionAssistant];
@@ -3252,6 +3260,33 @@ index 000000000000..8442802a8eab
 +  NSRange selection = [self selectedRange];
 +  BOOL selected = selection.location != NSNotFound && selection.length;
 +  BOOL editable = [self isEditable];
++
++  BOOL formatsText = aAction == @selector(toggleBoldface:) ||
++                     aAction == @selector(toggleItalics:) ||
++                     aAction == @selector(toggleUnderline:);
++
++  // Hide other actions while the old formatting submenu is open.
++  if (mEditable.mShowingTextStyleOptions && !formatsText) {
++    return NO;
++  }
++
++  if (formatsText || aAction == @selector(_showTextStyleOptions:)) {
++    const NativeTextInputReply* state = handler->NativeTextInputState();
++    if (!state || !state->mCanFormat) {
++      return NO;
++    }
++
++    if (formatsText) {
++      return YES;
++    }
++
++    if (@available(iOS 16.0, *)) {
++      return NO;
++    }
++
++    return selected;
++  }
++
 +  if (aAction == @selector(undo:) || aAction == @selector(redo:)) {
 +    const NativeTextInputReply* state = handler->NativeTextInputState();
 +    if (!editable || !state) {
@@ -3402,6 +3437,73 @@ index 000000000000..8442802a8eab
 +  }
 +}
 +
++- (void)toggleBoldface:(id)aSender {
++  [self performEditingCommand:Command::FormatBold];
++}
++
++- (void)toggleItalics:(id)aSender {
++  [self performEditingCommand:Command::FormatItalic];
++}
++
++- (void)toggleUnderline:(id)aSender {
++  [self performEditingCommand:Command::FormatUnderline];
++}
++
++- (void)_showTextStyleOptions:(id)aSender {
++  if (@available(iOS 16.0, *)) {
++    return;
++  } else {
++    if (![self canPerformAction:_cmd withSender:aSender]) {
++      return;
++    }
++
++    mEditable.mShowingTextStyleOptions = YES;
++    [NSNotificationCenter.defaultCenter
++        addObserver:self
++           selector:@selector(textStyleMenuDidHide:)
++               name:UIMenuControllerDidHideMenuNotification
++             object:nil];
++
++    NSBundle* bundle = [NSBundle bundleForClass:UIView.class];
++    auto item = [&](NSString* aTitle, SEL aAction) {
++      NSString* title = [bundle localizedStringForKey:aTitle
++                                                value:aTitle
++                                                table:nil];
++      UIMenuItem* menuItem =
++          [[[UIMenuItem alloc] initWithTitle:title action:aAction] autorelease];
++      menuItem.dontDismiss = YES;
++      return menuItem;
++    };
++
++    UIMenuController* menu = UIMenuController.sharedMenuController;
++    menu.menuItems = @[
++      item(@"Bold", @selector(toggleBoldface:)),
++      item(@"Italic", @selector(toggleItalics:)),
++      item(@"Underline", @selector(toggleUnderline:))
++    ];
++
++    [menu showMenuFromView:self
++                      rect:[self firstRectForRange:self.selectedTextRange]];
++  }
++}
++
++- (void)textStyleMenuDidHide:(NSNotification*)aNotification {
++  if (@available(iOS 16.0, *)) {
++    return;
++  } else {
++    if (!mEditable.mShowingTextStyleOptions) {
++      return;
++    }
++
++    mEditable.mShowingTextStyleOptions = NO;
++    UIMenuController.sharedMenuController.menuItems = nil;
++    [NSNotificationCenter.defaultCenter
++        removeObserver:self
++                  name:UIMenuControllerDidHideMenuNotification
++                object:nil];
++  }
++}
++
 +- (id<GeckoTextInteractionCommands>)selectionCommandController {
 +  id<GeckoTextInteractionAssistant> assistant = [self interactionAssistant];
 +  return [assistant respondsToSelector:@selector(showSelectionCommands)]
@@ -3413,6 +3515,14 @@ index 000000000000..8442802a8eab
 +  if (![self isFirstResponder] || mEditable.mTextDragSession ||
 +      mEditable.mTextDropSession) {
 +    [[self selectionCommandController] hideSelectionCommands];
++  }
++
++  if (@available(iOS 16.0, *)) {
++    return;
++  } else {
++    if (mEditable.mShowingTextStyleOptions && ![self hasSelection]) {
++      [UIMenuController.sharedMenuController hideMenuFromView:self];
++    }
 +  }
 +}
 +
@@ -3642,7 +3752,8 @@ index 000000000000..8442802a8eab
 +    return UITextInlinePredictionTypeNo;
 +  }
 +
-+  // UIKit disables default inline predictions for custom text views, so we cant use type default here.
++  // UIKit disables default inline predictions for custom text views, so we cant
++  // use type default here.
 +  return UITextInlinePredictionTypeYes;
 +}
 +
