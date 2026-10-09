@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index 7661a1e0bfbf..147d23d018cf 100644
+index 7661a1e0bfbf..f692affb74e3 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
 @@ -142,6 +142,10 @@
@@ -220,7 +220,21 @@ index 7661a1e0bfbf..147d23d018cf 100644
    return true;
  }
  
-@@ -3306,10 +3433,15 @@ bool BrowserParent::SendInsertText(const WidgetContentCommandEvent& aEvent) {
+@@ -3295,6 +3422,13 @@ bool BrowserParent::SendSimpleContentCommandEvent(
+     return false;
+   }
+   mContentCache.OnContentCommandEvent(aEvent);
++#ifdef MOZ_WIDGET_UIKIT
++  if (aEvent.mMessage == eContentCommandUndo ||
++      aEvent.mMessage == eContentCommandRedo) {
++    RefPtr<BrowserParent> kungFuDeathGrip(this);
++    return PBrowserParent::SendNativeSimpleContentCommandEvent(aEvent.mMessage);
++  }
++#endif
+   return Manager()->IsInputPriorityEventEnabled()
+              ? PBrowserParent::SendSimpleContentCommandEvent(aEvent.mMessage)
+              : PBrowserParent::SendNormalPrioritySimpleContentCommandEvent(
+@@ -3306,10 +3440,15 @@ bool BrowserParent::SendInsertText(const WidgetContentCommandEvent& aEvent) {
      return false;
    }
    mContentCache.OnContentCommandEvent(aEvent);
@@ -236,7 +250,7 @@ index 7661a1e0bfbf..147d23d018cf 100644
  }
  
  bool BrowserParent::SendReplaceText(const WidgetContentCommandEvent& aEvent) {
-@@ -3470,7 +3602,20 @@ mozilla::ipc::IPCResult BrowserParent::RecvGetInputContext(
+@@ -3470,7 +3609,20 @@ mozilla::ipc::IPCResult BrowserParent::RecvGetInputContext(
  
  mozilla::ipc::IPCResult BrowserParent::RecvSetInputContext(
      const InputContext& aContext, const InputContextAction& aAction) {
@@ -257,7 +271,7 @@ index 7661a1e0bfbf..147d23d018cf 100644
    return IPC_OK();
  }
  
-@@ -3920,7 +4065,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
+@@ -3920,7 +4072,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
      const MaybeDiscarded<WindowContext>& aSourceTopWindowContext) {
    nsCOMPtr<nsIDragService> dragService =
        do_GetService("@mozilla.org/widget/dragservice;1");
@@ -267,7 +281,7 @@ index 7661a1e0bfbf..147d23d018cf 100644
    const bool isValidRemoteDrag = [&]() {
      if (!dragService || !presContext) {
        return false;
-@@ -3983,6 +4129,10 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
+@@ -3983,6 +4136,10 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
    presContext->EventStateManager()->BeginTrackingRemoteDragGesture(
        mFrameElement, dragStartData);
  

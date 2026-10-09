@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/PBrowser.ipdl b/dom/ipc/PBrowser.ipdl
-index 3f51dbc83eb1..40d4b692097b 100644
+index 3f51dbc83eb1..2a0163bebac3 100644
 --- a/dom/ipc/PBrowser.ipdl
 +++ b/dom/ipc/PBrowser.ipdl
 @@ -41,6 +41,7 @@ include "mozilla/ipc/TransportSecurityInfoUtils.h";
@@ -54,7 +54,7 @@ index 3f51dbc83eb1..40d4b692097b 100644
  
      [Priority=input]
      async MouseWheelEvent(WidgetWheelEvent event,
-@@ -847,9 +855,19 @@ both:
+@@ -847,19 +855,31 @@ both:
  child:
      [Priority=input] async CompositionEvent(WidgetCompositionEvent event);
      async NormalPriorityCompositionEvent(WidgetCompositionEvent event);
@@ -74,7 +74,11 @@ index 3f51dbc83eb1..40d4b692097b 100644
  
  
      [Priority=input] async SimpleContentCommandEvent(EventMessage message);
-@@ -860,6 +878,7 @@ child:
+     async NormalPrioritySimpleContentCommandEvent(EventMessage message);
++    [Nested=inside_sync] sync NativeSimpleContentCommandEvent(EventMessage message);
+ 
+     /**
+      * Dispatch eContentCommandInsertText event in the remote process.
       */
      [Priority=input] async InsertText(nsString aStringToInsert);
      async NormalPriorityInsertText(nsString aStringToInsert);

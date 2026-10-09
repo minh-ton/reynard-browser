@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserChild.h b/dom/ipc/BrowserChild.h
-index 81398b5c1312..c0f3e3bed453 100644
+index 81398b5c1312..6c9edb20c07f 100644
 --- a/dom/ipc/BrowserChild.h
 +++ b/dom/ipc/BrowserChild.h
 @@ -10,6 +10,7 @@
@@ -30,7 +30,7 @@ index 81398b5c1312..c0f3e3bed453 100644
    mozilla::ipc::IPCResult RecvMouseWheelEvent(
        const mozilla::WidgetWheelEvent& aEvent, const ScrollableLayerGuid& aGuid,
        const uint64_t& aInputBlockId);
-@@ -391,12 +396,28 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -391,18 +396,37 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    mozilla::ipc::IPCResult RecvNormalPriorityCompositionEvent(
        const mozilla::WidgetCompositionEvent& aEvent);
  
@@ -59,7 +59,16 @@ index 81398b5c1312..c0f3e3bed453 100644
    mozilla::ipc::IPCResult RecvSimpleContentCommandEvent(
        const mozilla::EventMessage& aMessage);
  
-@@ -411,6 +432,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+   mozilla::ipc::IPCResult RecvNormalPrioritySimpleContentCommandEvent(
+       const mozilla::EventMessage& aMessage);
+ 
++  mozilla::ipc::IPCResult RecvNativeSimpleContentCommandEvent(
++      const mozilla::EventMessage& aMessage);
++
+   mozilla::ipc::IPCResult RecvInsertText(const nsAString& aStringToInsert);
+ 
+   mozilla::ipc::IPCResult RecvUpdateRemoteStyle(
+@@ -411,6 +435,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    mozilla::ipc::IPCResult RecvNormalPriorityInsertText(
        const nsAString& aStringToInsert);
  
@@ -69,7 +78,7 @@ index 81398b5c1312..c0f3e3bed453 100644
    mozilla::ipc::IPCResult RecvReplaceText(const nsString& aReplaceSrcString,
                                            const nsString& aStringToInsert,
                                            uint32_t aOffset,
-@@ -448,7 +472,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -448,7 +475,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
  
    const EffectsInfo& GetEffectsInfo() const { return mEffectsInfo; }
  
@@ -78,7 +87,7 @@ index 81398b5c1312..c0f3e3bed453 100644
  
    MOZ_CAN_RUN_SCRIPT_BOUNDARY virtual mozilla::ipc::IPCResult RecvUpdateEffects(
        const EffectsInfo& aEffects);
-@@ -553,6 +577,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -553,6 +580,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    ScreenIntCoord GetDynamicToolbarMaxHeight() const {
      return mDynamicToolbarMaxHeight;
    };
@@ -88,7 +97,7 @@ index 81398b5c1312..c0f3e3bed453 100644
    mozilla::ScreenIntCoord GetKeyboardHeight() const { return mKeyboardHeight; }
  
    bool InAndroidPipMode() const { return mInAndroidPipMode; }
-@@ -871,6 +898,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -871,6 +901,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    // NOTE: This value is valuable only for the top level browser.
    LayoutDeviceIntPoint mChromeOffset;
    ScreenIntCoord mDynamicToolbarMaxHeight;

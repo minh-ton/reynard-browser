@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserChild.cpp b/dom/ipc/BrowserChild.cpp
-index b1343b7ec3aa..bfabf3c60e4c 100644
+index b1343b7ec3aa..84c998f3f1c6 100644
 --- a/dom/ipc/BrowserChild.cpp
 +++ b/dom/ipc/BrowserChild.cpp
 @@ -11,6 +11,7 @@
@@ -148,7 +148,19 @@ index b1343b7ec3aa..bfabf3c60e4c 100644
  mozilla::ipc::IPCResult BrowserChild::RecvSimpleContentCommandEvent(
      const EventMessage& aMessage) {
    WidgetContentCommandEvent localEvent(true, aMessage, mPuppetWidget);
-@@ -2686,6 +2766,11 @@ mozilla::ipc::IPCResult BrowserChild::RecvNormalPriorityInsertText(
+@@ -2670,6 +2750,11 @@ BrowserChild::RecvNormalPrioritySimpleContentCommandEvent(
+   return RecvSimpleContentCommandEvent(aMessage);
+ }
+ 
++mozilla::ipc::IPCResult BrowserChild::RecvNativeSimpleContentCommandEvent(
++    const EventMessage& aMessage) {
++  return RecvSimpleContentCommandEvent(aMessage);
++}
++
+ mozilla::ipc::IPCResult BrowserChild::RecvInsertText(
+     const nsAString& aStringToInsert) {
+   // Use normal event path to reach focused document.
+@@ -2686,6 +2771,11 @@ mozilla::ipc::IPCResult BrowserChild::RecvNormalPriorityInsertText(
    return RecvInsertText(aStringToInsert);
  }
  
