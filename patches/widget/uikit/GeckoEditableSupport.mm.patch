@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..5ebc8db7a442
+index 000000000000..9646ea8b0c03
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3774 @@
+@@ -0,0 +1,3784 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -831,9 +831,19 @@ index 000000000000..5ebc8db7a442
 +    return false;
 +  }
 +
-+  const bool notifyInputDelegate =
-+      aMessage == eContentCommandUndo || aMessage == eContentCommandRedo;
-+  return aOnlyEnabledCheck || SynchronizeTextInputState(notifyInputDelegate);
++  if (aOnlyEnabledCheck) {
++    return true;
++  }
++
++  switch (aMessage) {
++    case eContentCommandDelete:
++    case eContentCommandUndo:
++    case eContentCommandRedo:
++      return SynchronizeTextInputState(true);
++    default:
++      // These commands finish later. Gecko notifies UIKit of their changes.
++      return true;
++  }
 +}
 +
 +// MARK: - Selection Scrolling

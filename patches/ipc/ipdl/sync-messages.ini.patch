@@ -1,5 +1,5 @@
 diff --git a/ipc/ipdl/sync-messages.ini b/ipc/ipdl/sync-messages.ini
-index d56225567094..44d0bdad8d4a 100644
+index d56225567094..534c3f808920 100644
 --- a/ipc/ipdl/sync-messages.ini
 +++ b/ipc/ipdl/sync-messages.ini
 @@ -124,6 +124,18 @@ description = legacy sync IPC - please add detailed description
@@ -15,7 +15,7 @@ index d56225567094..44d0bdad8d4a 100644
 +[PBrowser::NativeSelectionEvent]
 +description = Apply the selection before UIKit reads it or deletes the selected text.
 +[PBrowser::NativeSimpleContentCommandEvent]
-+description = Finish undo or redo before UIKit reads the updated text and selection for its next edit.
++description = Finish deletion, undo, or redo before UIKit reads the updated text and selection for its next edit.
 +[PBrowser::NativeInsertText]
 +description = Insert the text before UIKit reads the updated text and caret position for its next edit.
  [PBrowser::RequestNativeKeyBindings]
