@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..9646ea8b0c03
+index 000000000000..9b4794d9a7ba
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3784 @@
+@@ -0,0 +1,3801 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -74,20 +74,6 @@ index 000000000000..9646ea8b0c03
 +@property(nonatomic) BOOL learnsCorrections;
 +@property(nonatomic) UITextShortcutConversionType shortcutConversionType;
 +@property(nonatomic, retain) UIColor* insertionPointColor;
-+@end
-+
-+@protocol ChildViewCredentialDelegate <NSObject>
-+- (nullable UITextContentType)autofillTextContentType;
-+- (nullable NSString*)autofillOrigin;
-+- (BOOL)acceptsLoginCredentials;
-+- (void)didSelectAutofillUsername:(nullable NSString*)aUsername
-+                         password:(nullable NSString*)aPassword;
-+- (void)didSelectOneTimeCode:(NSString*)aOneTimeCode;
-+@end
-+
-+@protocol CredentialSuggestion <NSObject>
-+@property(nonatomic, readonly, nullable) NSString* username;
-+@property(nonatomic, readonly, nullable) NSString* password;
 +@end
 +
 +@interface ChildView : UIView {
@@ -177,9 +163,14 @@ index 000000000000..9646ea8b0c03
 +                               UITextAutoscrolling>
 +- (void)setupTextInput;
 +- (void)teardownTextInput;
-+- (widget::TextInputHandler*)textHandler;
 +- (BOOL)isEditable;
-+- (UIColor*)insertionPointColor;
++- (widget::TextInputHandler*)textHandler;
++
++- (void)scheduleResponderBlur;
++- (void)cancelResponderBlur;
++- (void)applyResponderBlur;
++- (void)dismissSoftwareKeyboard;
++- (void)keyboardDidRequestDismissal:(NSNotification*)aNotification;
 +
 +- (void)updateTextInteractions;
 +- (void)updateSelectionActivation;
@@ -189,24 +180,14 @@ index 000000000000..9646ea8b0c03
 +- (void)applySelectionGeometryChange;
 +- (void)refreshCompositorSelection;
 +- (void)setSelectionHandlesVisible:(BOOL)aVisible;
-+- (CGRect)_selectionClipRect;
 +- (BOOL)isInteractingWithText;
 +- (void)updateTextAutoscroll:(NSTimer*)aTimer;
 +
-+- (void)scheduleResponderBlur;
-+- (void)cancelResponderBlur;
-+- (void)applyResponderBlur;
-+- (void)dismissSoftwareKeyboard;
-+- (void)keyboardDidRequestDismissal:(NSNotification*)aNotification;
-+
 +- (NSUInteger)documentLength;
-+- (NSRange)selectedRange;
++- (ChildViewTextPosition*)textPosForPosition:(UITextPosition*)aPosition;
 +- (NSRange)rangeForTextRange:(UITextRange*)aRange;
 +- (ChildViewTextRange*)textRangeForRange:(NSRange)aRange;
-+- (ChildViewTextPosition*)textPosForPosition:(UITextPosition*)aPosition;
-+
-+- (CGRect)caretRectForPosition:(UITextPosition*)aPosition
-+                     transform:(CGAffineTransform*)aTransform;
++- (NSRange)selectedRange;
 +
 +- (void)replaceRangeWithTextWithoutClosingTyping:(UITextRange*)aRange
 +                                 replacementText:(NSString*)aText;
@@ -217,24 +198,24 @@ index 000000000000..9646ea8b0c03
 +- (void)insertDictationText:(NSString*)aText
 +             replacingRange:(UITextRange*)aRange;
 +
-+- (void)updateEditMenu;
-+- (id<GeckoTextInteractionCommands>)selectionCommandController;
-+- (void)showEditMenuForSecondaryClickAtPoint:(CGPoint)aPoint;
-+- (void)performEditingCommand:(Command)aCommand;
++- (CGRect)_selectionClipRect;
++- (UIColor*)insertionPointColor;
++- (CGRect)caretRectForPosition:(UITextPosition*)aPosition
++                     transform:(CGAffineTransform*)aTransform;
++
 +- (void)replace:(id)aSender;
 +- (void)undo:(id)aSender;
 +- (void)redo:(id)aSender;
++- (id<GeckoTextInteractionCommands>)selectionCommandController;
++- (void)updateEditMenu;
++- (void)showEditMenuForSecondaryClickAtPoint:(CGPoint)aPoint;
++
++- (void)performEditingCommand:(Command)aCommand;
 +@end
 +
 +@interface ChildView (TextDrag)
 +- (void)setupTextDragInteractions;
 +- (void)teardownTextDragInteractions;
-+@end
-+
-+@interface ChildView (PasswordAutofill)
-+- (void)setAutofillDelegate:(nullable id<ChildViewCredentialDelegate>)aDelegate;
-+- (void)activatePasswordInputForAutofill;
-+- (nullable NSURL*)activeAutofillURL;
 +@end
 +
 +@implementation ChildViewTextPosition
@@ -753,66 +734,6 @@ index 000000000000..9646ea8b0c03
 +  return QueryNativeTextInput(request, reply) && SynchronizeTextInputState();
 +}
 +
-+gfx::Matrix TextInputHandler::SelectionScrollTransform(
-+    const nsTArray<NativeTextInputScrollReference>& aReferences) const {
-+  LayoutDevicePoint translation;
-+  LayoutDevicePoint origin;
-+  float zoom = 1.0f;
-+  for (const auto& reference : aReferences) {
-+    const auto* update =
-+        mWidget->GetNativeTextInputScrollUpdate(reference.mGuid);
-+    if (!update) {
-+      continue;
-+    }
-+
-+    // Don't move newer geometry back to an older scroll position.
-+    if (update->mGeneration < reference.mGeneration) {
-+      continue;
-+    }
-+
-+    const CSSPoint offset = reference.mFixed
-+                                ? update->mVisualOffset - update->mLayoutOffset
-+                                : update->mVisualOffset;
-+    const CSSPoint delta = offset - reference.mOffset;
-+    translation -=
-+        reference.mXAxis * float(delta.x) + reference.mYAxis * float(delta.y);
-+
-+    if (reference.mZoom > 0.0f) {
-+      zoom = update->mZoom / reference.mZoom;
-+      origin = reference.mOrigin;
-+    }
-+  }
-+
-+  const LayoutDevicePoint offset = origin * (1.0f - zoom) + translation * zoom;
-+  return gfx::Matrix(zoom, 0, 0, zoom, offset.x, offset.y);
-+}
-+
-+LayoutDeviceRect TextInputHandler::TransformSelectionRect(
-+    const LayoutDeviceIntRect& aRect,
-+    const nsTArray<NativeTextInputScrollReference>& aReferences) const {
-+  const gfx::Matrix transform = SelectionScrollTransform(aReferences);
-+  return LayoutDeviceRect(aRect.x * transform._11 + transform._31,
-+                          aRect.y * transform._22 + transform._32,
-+                          aRect.width * transform._11,
-+                          aRect.height * transform._22);
-+}
-+
-+bool TextInputHandler::EditorRect(LayoutDeviceRect& aRect) {
-+  RefPtr<TextInputHandler> self(this);
-+  const NativeTextInputReply* state = NativeTextInputState();
-+  if (!state) {
-+    return false;
-+  }
-+
-+  aRect = TransformSelectionRect(state->mRect, state->mScrollReferences);
-+  for (const auto& clip : state->mClipRects) {
-+    aRect = aRect.Intersect(
-+        TransformSelectionRect(clip.mRect, clip.mScrollReferences));
-+  }
-+
-+  return true;
-+}
-+
 +bool TextInputHandler::RunCommand(EventMessage aMessage, bool aOnlyEnabledCheck,
 +                                  bool* aIsEnabled) {
 +  RefPtr<TextInputHandler> self(this);
@@ -885,6 +806,66 @@ index 000000000000..9646ea8b0c03
 +  if (mNativeTextInputState && !mNativeTextInputStateDirty) {
 +    [view refreshCompositorSelection];
 +  }
++}
++
++gfx::Matrix TextInputHandler::SelectionScrollTransform(
++    const nsTArray<NativeTextInputScrollReference>& aReferences) const {
++  LayoutDevicePoint translation;
++  LayoutDevicePoint origin;
++  float zoom = 1.0f;
++  for (const auto& reference : aReferences) {
++    const auto* update =
++        mWidget->GetNativeTextInputScrollUpdate(reference.mGuid);
++    if (!update) {
++      continue;
++    }
++
++    // Don't move newer geometry back to an older scroll position.
++    if (update->mGeneration < reference.mGeneration) {
++      continue;
++    }
++
++    const CSSPoint offset = reference.mFixed
++                                ? update->mVisualOffset - update->mLayoutOffset
++                                : update->mVisualOffset;
++    const CSSPoint delta = offset - reference.mOffset;
++    translation -=
++        reference.mXAxis * float(delta.x) + reference.mYAxis * float(delta.y);
++
++    if (reference.mZoom > 0.0f) {
++      zoom = update->mZoom / reference.mZoom;
++      origin = reference.mOrigin;
++    }
++  }
++
++  const LayoutDevicePoint offset = origin * (1.0f - zoom) + translation * zoom;
++  return gfx::Matrix(zoom, 0, 0, zoom, offset.x, offset.y);
++}
++
++LayoutDeviceRect TextInputHandler::TransformSelectionRect(
++    const LayoutDeviceIntRect& aRect,
++    const nsTArray<NativeTextInputScrollReference>& aReferences) const {
++  const gfx::Matrix transform = SelectionScrollTransform(aReferences);
++  return LayoutDeviceRect(aRect.x * transform._11 + transform._31,
++                          aRect.y * transform._22 + transform._32,
++                          aRect.width * transform._11,
++                          aRect.height * transform._22);
++}
++
++bool TextInputHandler::EditorRect(LayoutDeviceRect& aRect) {
++  RefPtr<TextInputHandler> self(this);
++  const NativeTextInputReply* state = NativeTextInputState();
++  if (!state) {
++    return false;
++  }
++
++  aRect = TransformSelectionRect(state->mRect, state->mScrollReferences);
++  for (const auto& clip : state->mClipRects) {
++    aRect = aRect.Intersect(
++        TransformSelectionRect(clip.mRect, clip.mScrollReferences));
++  }
++
++  return true;
 +}
 +
 +}  // namespace mozilla::widget
@@ -978,36 +959,9 @@ index 000000000000..9646ea8b0c03
 +  return false;
 +}
 +
++// MARK: - UIKit Text Helpers
++
 +namespace {
-+
-+CGRect UIKitSelectionGeometry(widget::TextInputHandler& aHandler,
-+                              const NativeTextInputRect& aRect, CGFloat aScale,
-+                              CGAffineTransform& aTransform,
-+                              bool aCaret = false) {
-+  gfx::Matrix transform = aRect.mTransform;
-+  transform *= aHandler.SelectionScrollTransform(aRect.mScrollReferences);
-+  LayoutDeviceRect rect = aRect.mUntransformedRect;
-+  const gfx::Point center =
-+      transform.TransformPoint(rect.Center().ToUnknownPoint());
-+  if (aCaret && aRect.mVertical) {
-+    // UIKit draws an upright caret, even in vertical text.
-+    std::swap(rect.width, rect.height);
-+    gfx::Matrix rotation(0, -1, 1, 0, 0, 0);
-+    transform = rotation * transform;
-+  }
-+
-+  // UIKit clips the rect before applying its transform. Keep its position in
-+  // the text view and rotate around that position.
-+  rect.MoveTo(LayoutDevicePoint(center.x, center.y) -
-+              LayoutDevicePoint(rect.width, rect.height) / 2.0f);
-+  const CGFloat x = center.x / aScale;
-+  const CGFloat y = center.y / aScale;
-+  aTransform = CGAffineTransformMake(transform._11, transform._12,
-+                                     transform._21, transform._22,
-+                                     x - transform._11 * x - transform._21 * y,
-+                                     y - transform._12 * x - transform._22 * y);
-+  return DevPixelsToUIKitPoints(rect, aScale);
-+}
 +
 +NativeTextInputDirection NativeDirection(UITextDirection aDirection) {
 +  switch (aDirection) {
@@ -1107,6 +1061,35 @@ index 000000000000..9646ea8b0c03
 +    offset = NSMaxRange(range);
 +  }
 +  return styles.forget();
++}
++
++CGRect UIKitSelectionGeometry(widget::TextInputHandler& aHandler,
++                              const NativeTextInputRect& aRect, CGFloat aScale,
++                              CGAffineTransform& aTransform,
++                              bool aCaret = false) {
++  gfx::Matrix transform = aRect.mTransform;
++  transform *= aHandler.SelectionScrollTransform(aRect.mScrollReferences);
++  LayoutDeviceRect rect = aRect.mUntransformedRect;
++  const gfx::Point center =
++      transform.TransformPoint(rect.Center().ToUnknownPoint());
++  if (aCaret && aRect.mVertical) {
++    // UIKit draws an upright caret, even in vertical text.
++    std::swap(rect.width, rect.height);
++    gfx::Matrix rotation(0, -1, 1, 0, 0, 0);
++    transform = rotation * transform;
++  }
++
++  // UIKit clips the rect before applying its transform. Keep its position in
++  // the text view and rotate around that position.
++  rect.MoveTo(LayoutDevicePoint(center.x, center.y) -
++              LayoutDevicePoint(rect.width, rect.height) / 2.0f);
++  const CGFloat x = center.x / aScale;
++  const CGFloat y = center.y / aScale;
++  aTransform = CGAffineTransformMake(transform._11, transform._12,
++                                     transform._21, transform._22,
++                                     x - transform._11 * x - transform._21 * y,
++                                     y - transform._12 * x - transform._22 * y);
++  return DevPixelsToUIKitPoints(rect, aScale);
 +}
 +
 +}  // namespace
@@ -1392,13 +1375,7 @@ index 000000000000..9646ea8b0c03
 +
 +@end
 +
-+// MARK: - Text Interaction Lifecycle
-+
-+static NSString* KeyboardDismissalNotificationName() {
-+  auto* name = static_cast<NSString* const*>(
-+      dlsym(RTLD_DEFAULT, "UIKeyboardPrivateDidRequestDismissalNotification"));
-+  return name ? *name : nil;
-+}
++// MARK: - Text Interaction Delegate
 +
 +@interface GeckoTextInteractionAssistantDelegate : NSObject {
 +  id<GeckoTextInteractionAssistant> mAssistant;
@@ -1499,6 +1476,14 @@ index 000000000000..9646ea8b0c03
 +
 +@end
 +
++// MARK: - Text Input Lifecycle
++
++static NSString* KeyboardDismissalNotificationName() {
++  auto* name = static_cast<NSString* const*>(
++      dlsym(RTLD_DEFAULT, "UIKeyboardPrivateDidRequestDismissalNotification"));
++  return name ? *name : nil;
++}
++
 +@implementation ChildView (Shared)
 +
 +- (void)setupTextInput {
@@ -1567,8 +1552,89 @@ index 000000000000..9646ea8b0c03
 +  mEditable = {};
 +}
 +
++- (BOOL)isEditable {
++  return mGeckoChild && !mGeckoChild->Destroyed() &&
++         mGeckoChild->GetInputContext().mIMEState.IsEditable();
++}
++
 +- (widget::TextInputHandler*)textHandler {
 +  return [self isEditable] ? mGeckoChild->GetTextInputHandler() : nullptr;
++}
++
++- (id<UITextInputDelegate>)inputDelegate {
++  return mEditable.mTextInputDelegates.anyObject;
++}
++
++- (void)setInputDelegate:(id<UITextInputDelegate>)aDelegate {
++  [mEditable.mTextInputDelegates removeAllObjects];
++  if (aDelegate) {
++    [mEditable.mTextInputDelegates addObject:aDelegate];
++  }
++}
++
++- (UIView*)textInputView {
++  return self;
++}
++
++// MARK: - Responder Lifecycle
++
++- (UIView*)inputView {
++  if (mGeckoChild && mGeckoChild->IsSoftwareKeyboardSuppressed()) {
++    static UIView* hiddenInputView = [[UIView alloc] initWithFrame:CGRectZero];
++    return hiddenInputView;
++  }
++
++  return nil;
++}
++
++- (void)scheduleResponderBlur {
++  [self cancelResponderBlur];
++  [self performSelector:@selector(applyResponderBlur)
++             withObject:nil
++             afterDelay:0
++                inModes:@[ NSRunLoopCommonModes ]];
++}
++
++- (void)cancelResponderBlur {
++  [NSObject
++      cancelPreviousPerformRequestsWithTarget:self
++                                     selector:@selector(applyResponderBlur)
++                                       object:nil];
++}
++
++- (void)applyResponderBlur {
++  [self resignFirstResponder];
++}
++
++- (void)dismissSoftwareKeyboard {
++  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
++    [self unmarkText];
++
++    NativeTextInputRequest request;
++    request.mQuery = NativeTextInputQuery::BlurFocusedInput;
++    NativeTextInputReply reply;
++    handler->QueryNativeTextInput(request, reply);
++  }
++
++  [self cancelResponderBlur];
++  [self resignFirstResponder];
++}
++
++- (void)keyboardDidRequestDismissal:(NSNotification*)aNotification {
++  RefPtr<dom::BrowserParent> browser = dom::BrowserParent::GetFocused();
++  nsCOMPtr<nsIWidget> widget =
++      browser ? browser->GetTextInputHandlingWidget() : nullptr;
++
++  if ([self isEditable] && widget == mGeckoChild) {
++    mGeckoChild->DismissSoftwareKeyboard();
++  }
++}
++
++// MARK: - Text Interactions
++
++- (UIEditingInteractionConfiguration)editingInteractionConfiguration {
++  return [self isEditable] ? UIEditingInteractionConfigurationDefault
++                           : UIEditingInteractionConfigurationNone;
 +}
 +
 +- (void)updateTextInteractions {
@@ -2026,69 +2092,12 @@ index 000000000000..9646ea8b0c03
 +  }
 +}
 +
-+// MARK: - Responder Lifecycle
-+
-+- (void)scheduleResponderBlur {
-+  [self cancelResponderBlur];
-+  [self performSelector:@selector(applyResponderBlur)
-+             withObject:nil
-+             afterDelay:0
-+                inModes:@[ NSRunLoopCommonModes ]];
-+}
-+
-+- (void)cancelResponderBlur {
-+  [NSObject
-+      cancelPreviousPerformRequestsWithTarget:self
-+                                     selector:@selector(applyResponderBlur)
-+                                       object:nil];
-+}
-+
-+- (void)applyResponderBlur {
-+  [self resignFirstResponder];
-+}
-+
-+- (void)dismissSoftwareKeyboard {
-+  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
-+    [self unmarkText];
-+
-+    NativeTextInputRequest request;
-+    request.mQuery = NativeTextInputQuery::BlurFocusedInput;
-+    NativeTextInputReply reply;
-+    handler->QueryNativeTextInput(request, reply);
-+  }
-+
-+  [self cancelResponderBlur];
-+  [self resignFirstResponder];
-+}
-+
-+- (void)keyboardDidRequestDismissal:(NSNotification*)aNotification {
-+  RefPtr<dom::BrowserParent> browser = dom::BrowserParent::GetFocused();
-+  nsCOMPtr<nsIWidget> widget =
-+      browser ? browser->GetTextInputHandlingWidget() : nullptr;
-+
-+  if ([self isEditable] && widget == mGeckoChild) {
-+    mGeckoChild->DismissSoftwareKeyboard();
-+  }
-+}
-+
 +// MARK: - Text Positions and Ranges
 +
 +- (NSUInteger)documentLength {
 +  uint32_t length = 0;
 +  RefPtr<widget::TextInputHandler> handler = [self textHandler];
 +  return handler && handler->TextLength(length) ? length : 0;
-+}
-+
-+- (NSRange)selectedRange {
-+  NSRange range = NSMakeRange(NSNotFound, 0);
-+  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
-+    handler->SelectedRange(range);
-+  }
-+  return range;
-+}
-+
-+- (NSRange)selectionRange {
-+  return [self selectedRange];
 +}
 +
 +- (ChildViewTextPosition*)textPosForPosition:(UITextPosition*)aPosition {
@@ -2246,6 +2255,15 @@ index 000000000000..9646ea8b0c03
 +                             : UITextStorageDirectionBackward];
 +}
 +
++- (UITextRange*)characterRangeByExtendingPosition:(UITextPosition*)aPosition
++                                      inDirection:
++                                          (UITextLayoutDirection)aDirection {
++  UITextPosition* other = [self positionFromPosition:aPosition
++                                         inDirection:aDirection
++                                              offset:1];
++  return other ? [self textRangeFromPosition:aPosition toPosition:other] : nil;
++}
++
 +- (NSComparisonResult)comparePosition:(UITextPosition*)aPosition
 +                           toPosition:(UITextPosition*)aOther {
 +  ChildViewTextPosition* position = [self textPosForPosition:aPosition];
@@ -2300,6 +2318,23 @@ index 000000000000..9646ea8b0c03
 +  }
 +
 +  return position.offset - range.location;
++}
++
++- (NSRange)selectedRange {
++  NSRange range = NSMakeRange(NSNotFound, 0);
++  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
++    handler->SelectedRange(range);
++  }
++  return range;
++}
++
++- (NSRange)selectionRange {
++  return [self selectedRange];
++}
++
++- (BOOL)hasSelection {
++  NSRange range = [self selectedRange];
++  return range.location != NSNotFound && range.length != 0;
 +}
 +
 +- (UITextRange*)selectedTextRange {
@@ -2386,7 +2421,104 @@ index 000000000000..9646ea8b0c03
 +  [self refreshSelectionUI];
 +}
 +
-+// MARK: - Text Storage and Composition
++- (NSWritingDirection)baseWritingDirectionForPosition:(UITextPosition*)aPosition
++                                          inDirection:(UITextStorageDirection)
++                                                          aDirection {
++  ChildViewTextPosition* position = [self textPosForPosition:aPosition];
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  if (!position || !handler) {
++    return NSWritingDirectionNatural;
++  }
++
++  NativeTextInputRequest request;
++  request.mQuery = NativeTextInputQuery::WritingDirection;
++  request.mOffset = position.offset;
++  request.mAssociateWithNext = aDirection == UITextStorageDirectionForward;
++  NativeTextInputReply reply;
++  if (!handler->QueryNativeTextInput(request, reply)) {
++    return NSWritingDirectionNatural;
++  }
++
++  return reply.mRTL ? NSWritingDirectionRightToLeft
++                    : NSWritingDirectionLeftToRight;
++}
++
++- (void)setBaseWritingDirection:(NSWritingDirection)aDirection
++                       forRange:(UITextRange*)aRange {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  NSRange range = [self rangeForTextRange:aRange];
++  NSRange selection = [self selectedRange];
++  if (!handler || range.location == NSNotFound) {
++    return;
++  }
++
++  if (!NSEqualRanges(range, selection) ||
++      aDirection == NSWritingDirectionNatural) {
++    return;
++  }
++
++  NativeTextInputRequest request;
++  request.mQuery = NativeTextInputQuery::SetWritingDirection;
++  request.mDirection = aDirection == NSWritingDirectionRightToLeft
++                           ? NativeTextInputDirection::Backward
++                           : NativeTextInputDirection::Forward;
++  NativeTextInputReply reply;
++  if (handler->QueryNativeTextInput(request, reply)) {
++    handler->SynchronizeTextInputState();
++    [self refreshSelectionUI];
++  }
++}
++
++// MARK: - Text Boundaries
++
++- (id<UITextInputTokenizer>)tokenizer {
++  return mEditable.mTokenizer;
++}
++
++- (UITextRange*)rangeEnclosingPosition:(UITextPosition*)aPosition
++                       withGranularity:(UITextGranularity)aGranularity
++                           inDirection:(UITextDirection)aDirection {
++  return [self.tokenizer rangeEnclosingPosition:aPosition
++                                withGranularity:aGranularity
++                                    inDirection:aDirection];
++}
++
++- (BOOL)isPosition:(UITextPosition*)aPosition
++        atBoundary:(UITextGranularity)aGranularity
++       inDirection:(UITextDirection)aDirection {
++  return [self.tokenizer isPosition:aPosition
++                         atBoundary:aGranularity
++                        inDirection:aDirection];
++}
++
++- (UITextPosition*)positionFromPosition:(UITextPosition*)aPosition
++                             toBoundary:(UITextGranularity)aGranularity
++                            inDirection:(UITextDirection)aDirection {
++  return [self.tokenizer positionFromPosition:aPosition
++                                   toBoundary:aGranularity
++                                  inDirection:aDirection];
++}
++
++- (BOOL)isPosition:(UITextPosition*)aPosition
++    withinTextUnit:(UITextGranularity)aGranularity
++       inDirection:(UITextDirection)aDirection {
++  return [self.tokenizer isPosition:aPosition
++                     withinTextUnit:aGranularity
++                        inDirection:aDirection];
++}
++
++// MARK: - Text Storage
++
++- (BOOL)hasText {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  const NativeTextInputReply* state =
++      handler ? handler->NativeTextInputState() : nullptr;
++  return state && state->mHasText;
++}
++
++- (BOOL)hasContent {
++  return [self hasText];
++}
 +
 +- (NSString*)textInRange:(UITextRange*)aRange {
 +  NSRange range = [self rangeForTextRange:aRange];
@@ -2398,6 +2530,15 @@ index 000000000000..9646ea8b0c03
 +  }
 +
 +  return XPCOMStringToNSString(text);
++}
++
++- (void)insertText:(NSString*)aText {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  if (handler && handler->InsertText(aText)) {
++    handler->SynchronizeTextInputState();
++    [self scrollSelectionToVisible:NO];
++    [self refreshSelectionUI];
++  }
 +}
 +
 +- (void)replaceRange:(UITextRange*)aRange withText:(NSString*)aText {
@@ -2418,6 +2559,65 @@ index 000000000000..9646ea8b0c03
 +                                 replacementText:(NSString*)aText {
 +  [self replaceRange:aRange withText:aText];
 +}
++
++// MARK: - Backward Deletion
++
++- (void)_expandSelectionToBackwardDeletionCluster {
++  AutoRestore<BOOL> preparing(mEditable.mPreparingBackwardDeletionSelection);
++  mEditable.mPreparingBackwardDeletionSelection = YES;
++  [super _expandSelectionToBackwardDeletionCluster];
++}
++
++- (void)_expandSelectionToBackwardDeletionClusterWithReinsertionOut:
++    (NSString**)aReinsertion {
++  AutoRestore<BOOL> preparing(mEditable.mPreparingBackwardDeletionSelection);
++  mEditable.mPreparingBackwardDeletionSelection = YES;
++  [super
++      _expandSelectionToBackwardDeletionClusterWithReinsertionOut:aReinsertion];
++}
++
++- (void)deleteBackward {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  if (!handler || handler->HandlePhysicalDeleteBackward()) {
++    return;
++  }
++
++  NSRange marked;
++  NSRange selection = [self selectedRange];
++  if (handler->MarkedRange(marked) && selection.location != NSNotFound) {
++    NSString* text = [self textInRange:[self textRangeForRange:marked]];
++    if (!text) {
++      return;
++    }
++
++    if (selection.location < marked.location ||
++        NSMaxRange(selection) > NSMaxRange(marked)) {
++      return;
++    }
++
++    NSRange deletion =
++        NSMakeRange(selection.location - marked.location, selection.length);
++    if (!deletion.length && deletion.location) {
++      deletion =
++          [text rangeOfComposedCharacterSequenceAtIndex:deletion.location - 1];
++    }
++    if (deletion.length) {
++      NSString* replacement = [text stringByReplacingCharactersInRange:deletion
++                                                            withString:@""];
++      [self setMarkedText:replacement
++            selectedRange:NSMakeRange(deletion.location, 0)];
++    }
++    return;
++  }
++
++  if (handler->HandleCommand(Command::DeleteCharBackward)) {
++    handler->SynchronizeTextInputState();
++    [self scrollSelectionToVisible:NO];
++    [self refreshSelectionUI];
++  }
++}
++
++// MARK: - Text Annotations
 +
 +- (NSMutableAttributedString*)textAnnotations {
 +  UITextRange* range =
@@ -2608,6 +2808,8 @@ index 000000000000..9646ea8b0c03
 +  [annotations removeAttribute:aAnnotation range:range];
 +}
 +
++// MARK: - Composition
++
 +- (UITextRange*)markedTextRange {
 +  NSRange range;
 +  RefPtr<widget::TextInputHandler> handler = [self textHandler];
@@ -2652,15 +2854,6 @@ index 000000000000..9646ea8b0c03
 +  RefPtr<widget::TextInputHandler> handler = [self textHandler];
 +  if (handler && handler->UnmarkText(true)) {
 +    handler->SynchronizeTextInputState();
-+    [self refreshSelectionUI];
-+  }
-+}
-+
-+- (void)insertText:(NSString*)aText {
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  if (handler && handler->InsertText(aText)) {
-+    handler->SynchronizeTextInputState();
-+    [self scrollSelectionToVisible:NO];
 +    [self refreshSelectionUI];
 +  }
 +}
@@ -2744,144 +2937,6 @@ index 000000000000..9646ea8b0c03
 +  [self refreshSelectionUI];
 +}
 +
-+// MARK: - Backward Deletion
-+
-+- (void)_expandSelectionToBackwardDeletionCluster {
-+  AutoRestore<BOOL> preparing(mEditable.mPreparingBackwardDeletionSelection);
-+  mEditable.mPreparingBackwardDeletionSelection = YES;
-+  [super _expandSelectionToBackwardDeletionCluster];
-+}
-+
-+- (void)_expandSelectionToBackwardDeletionClusterWithReinsertionOut:
-+    (NSString**)aReinsertion {
-+  AutoRestore<BOOL> preparing(mEditable.mPreparingBackwardDeletionSelection);
-+  mEditable.mPreparingBackwardDeletionSelection = YES;
-+  [super
-+      _expandSelectionToBackwardDeletionClusterWithReinsertionOut:aReinsertion];
-+}
-+
-+- (void)deleteBackward {
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  if (!handler || handler->HandlePhysicalDeleteBackward()) {
-+    return;
-+  }
-+
-+  NSRange marked;
-+  NSRange selection = [self selectedRange];
-+  if (handler->MarkedRange(marked) && selection.location != NSNotFound) {
-+    NSString* text = [self textInRange:[self textRangeForRange:marked]];
-+    if (!text) {
-+      return;
-+    }
-+
-+    if (selection.location < marked.location ||
-+        NSMaxRange(selection) > NSMaxRange(marked)) {
-+      return;
-+    }
-+
-+    NSRange deletion =
-+        NSMakeRange(selection.location - marked.location, selection.length);
-+    if (!deletion.length && deletion.location) {
-+      deletion =
-+          [text rangeOfComposedCharacterSequenceAtIndex:deletion.location - 1];
-+    }
-+    if (deletion.length) {
-+      NSString* replacement = [text stringByReplacingCharactersInRange:deletion
-+                                                            withString:@""];
-+      [self setMarkedText:replacement
-+            selectedRange:NSMakeRange(deletion.location, 0)];
-+    }
-+    return;
-+  }
-+
-+  if (handler->HandleCommand(Command::DeleteCharBackward)) {
-+    handler->SynchronizeTextInputState();
-+    [self scrollSelectionToVisible:NO];
-+    [self refreshSelectionUI];
-+  }
-+}
-+
-+- (BOOL)hasText {
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  const NativeTextInputReply* state =
-+      handler ? handler->NativeTextInputState() : nullptr;
-+  return state && state->mHasText;
-+}
-+
-+- (BOOL)hasContent {
-+  return [self hasText];
-+}
-+
-+- (BOOL)hasSelection {
-+  NSRange range = [self selectedRange];
-+  return range.location != NSNotFound && range.length != 0;
-+}
-+
-+- (BOOL)isEditable {
-+  return mGeckoChild && !mGeckoChild->Destroyed() &&
-+         mGeckoChild->GetInputContext().mIMEState.IsEditable();
-+}
-+
-+- (id<UITextInputDelegate>)inputDelegate {
-+  return mEditable.mTextInputDelegates.anyObject;
-+}
-+
-+- (void)setInputDelegate:(id<UITextInputDelegate>)aDelegate {
-+  [mEditable.mTextInputDelegates removeAllObjects];
-+  if (aDelegate) {
-+    [mEditable.mTextInputDelegates addObject:aDelegate];
-+  }
-+}
-+
-+- (id<UITextInputTokenizer>)tokenizer {
-+  return mEditable.mTokenizer;
-+}
-+
-+- (UITextRange*)rangeEnclosingPosition:(UITextPosition*)aPosition
-+                       withGranularity:(UITextGranularity)aGranularity
-+                           inDirection:(UITextDirection)aDirection {
-+  return [self.tokenizer rangeEnclosingPosition:aPosition
-+                                withGranularity:aGranularity
-+                                    inDirection:aDirection];
-+}
-+
-+- (BOOL)isPosition:(UITextPosition*)aPosition
-+        atBoundary:(UITextGranularity)aGranularity
-+       inDirection:(UITextDirection)aDirection {
-+  return [self.tokenizer isPosition:aPosition
-+                         atBoundary:aGranularity
-+                        inDirection:aDirection];
-+}
-+
-+- (UITextPosition*)positionFromPosition:(UITextPosition*)aPosition
-+                             toBoundary:(UITextGranularity)aGranularity
-+                            inDirection:(UITextDirection)aDirection {
-+  return [self.tokenizer positionFromPosition:aPosition
-+                                   toBoundary:aGranularity
-+                                  inDirection:aDirection];
-+}
-+
-+- (BOOL)isPosition:(UITextPosition*)aPosition
-+    withinTextUnit:(UITextGranularity)aGranularity
-+       inDirection:(UITextDirection)aDirection {
-+  return [self.tokenizer isPosition:aPosition
-+                     withinTextUnit:aGranularity
-+                        inDirection:aDirection];
-+}
-+
-+- (UIView*)textInputView {
-+  return self;
-+}
-+
-+- (UIView*)inputView {
-+  if (mGeckoChild && mGeckoChild->IsSoftwareKeyboardSuppressed()) {
-+    static UIView* hiddenInputView = [[UIView alloc] initWithFrame:CGRectZero];
-+    return hiddenInputView;
-+  }
-+
-+  return nil;
-+}
-+
 +// MARK: - Text Geometry and Hit Testing
 +
 +- (CGRect)_selectionClipRect {
@@ -2893,6 +2948,25 @@ index 000000000000..9646ea8b0c03
 +        bounds, DevPixelsToUIKitPoints(editor, self.contentScaleFactor));
 +  }
 +  return CGRectIsNull(bounds) ? CGRectZero : bounds;
++}
++
++- (UIColor*)insertionPointColor {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  const NativeTextInputReply* state =
++      handler ? handler->NativeTextInputState() : nullptr;
++  if (!state) {
++    return self.tintColor;
++  }
++
++  const nscolor color = state->mCaretColor;
++  if (state->mCaretColorIsAuto && NS_GET_A(color)) {
++    return self.tintColor;
++  }
++
++  return [UIColor colorWithRed:NS_GET_R(color) / 255.0
++                         green:NS_GET_G(color) / 255.0
++                          blue:NS_GET_B(color) / 255.0
++                         alpha:NS_GET_A(color) / 255.0];
 +}
 +
 +- (CGRect)caretRectForPosition:(UITextPosition*)aPosition
@@ -3113,15 +3187,6 @@ index 000000000000..9646ea8b0c03
 +                                    inDirection:UITextStorageDirectionForward];
 +}
 +
-+- (UITextRange*)characterRangeByExtendingPosition:(UITextPosition*)aPosition
-+                                      inDirection:
-+                                          (UITextLayoutDirection)aDirection {
-+  UITextPosition* other = [self positionFromPosition:aPosition
-+                                         inDirection:aDirection
-+                                              offset:1];
-+  return other ? [self textRangeFromPosition:aPosition toPosition:other] : nil;
-+}
-+
 +- (UITextPosition*)positionWithinRange:(UITextRange*)aRange
 +                   farthestInDirection:(UITextLayoutDirection)aDirection {
 +  NSRange range = [self rangeForTextRange:aRange];
@@ -3175,54 +3240,6 @@ index 000000000000..9646ea8b0c03
 +      positionWithOffset:offset
 +                affinity:associateWithNext ? UITextStorageDirectionForward
 +                                           : UITextStorageDirectionBackward];
-+}
-+
-+- (NSWritingDirection)baseWritingDirectionForPosition:(UITextPosition*)aPosition
-+                                          inDirection:(UITextStorageDirection)
-+                                                          aDirection {
-+  ChildViewTextPosition* position = [self textPosForPosition:aPosition];
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  if (!position || !handler) {
-+    return NSWritingDirectionNatural;
-+  }
-+
-+  NativeTextInputRequest request;
-+  request.mQuery = NativeTextInputQuery::WritingDirection;
-+  request.mOffset = position.offset;
-+  request.mAssociateWithNext = aDirection == UITextStorageDirectionForward;
-+  NativeTextInputReply reply;
-+  if (!handler->QueryNativeTextInput(request, reply)) {
-+    return NSWritingDirectionNatural;
-+  }
-+
-+  return reply.mRTL ? NSWritingDirectionRightToLeft
-+                    : NSWritingDirectionLeftToRight;
-+}
-+
-+- (void)setBaseWritingDirection:(NSWritingDirection)aDirection
-+                       forRange:(UITextRange*)aRange {
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  NSRange range = [self rangeForTextRange:aRange];
-+  NSRange selection = [self selectedRange];
-+  if (!handler || range.location == NSNotFound) {
-+    return;
-+  }
-+
-+  if (!NSEqualRanges(range, selection) ||
-+      aDirection == NSWritingDirectionNatural) {
-+    return;
-+  }
-+
-+  NativeTextInputRequest request;
-+  request.mQuery = NativeTextInputQuery::SetWritingDirection;
-+  request.mDirection = aDirection == NSWritingDirectionRightToLeft
-+                           ? NativeTextInputDirection::Backward
-+                           : NativeTextInputDirection::Forward;
-+  NativeTextInputReply reply;
-+  if (handler->QueryNativeTextInput(request, reply)) {
-+    handler->SynchronizeTextInputState();
-+    [self refreshSelectionUI];
-+  }
 +}
 +
 +// MARK: - Editing Commands
@@ -3370,11 +3387,6 @@ index 000000000000..9646ea8b0c03
 +  return [self isEditable] ? mEditable.mUndoManager : nil;
 +}
 +
-+- (UIEditingInteractionConfiguration)editingInteractionConfiguration {
-+  return [self isEditable] ? UIEditingInteractionConfigurationDefault
-+                           : UIEditingInteractionConfigurationNone;
-+}
-+
 +- (void)undo:(id)aSender {
 +  RefPtr<widget::TextInputHandler> handler = [self textHandler];
 +  if (handler && [self canPerformAction:@selector(undo:) withSender:aSender]) {
@@ -3421,12 +3433,18 @@ index 000000000000..9646ea8b0c03
 +  }
 +}
 +
++// MARK: - Keyboard Editing Commands
++
 +- (void)performEditingCommand:(Command)aCommand {
 +  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
 +    handler->HandleCommand(aCommand);
 +    handler->SynchronizeTextInputState(true);
 +    [self refreshSelectionUI];
 +  }
++}
++
++- (void)_deleteForwardAndNotify:(BOOL)aNotify {
++  [self performEditingCommand:Command::DeleteCharForward];
 +}
 +
 +- (void)_deleteByWord {
@@ -3443,10 +3461,6 @@ index 000000000000..9646ea8b0c03
 +
 +- (void)_deleteToEndOfLine {
 +  [self performEditingCommand:Command::DeleteToEndOfLine];
-+}
-+
-+- (void)_deleteForwardAndNotify:(BOOL)aNotify {
-+  [self performEditingCommand:Command::DeleteCharForward];
 +}
 +
 +- (void)_deleteToEndOfParagraph {
@@ -3489,30 +3503,6 @@ index 000000000000..9646ea8b0c03
 +  return nil;
 +}
 +
-+- (UITextInputArrowKeyHistory*)
-+    _moveToStartOfParagraph:(BOOL)aExtending
-+                withHistory:(UITextInputArrowKeyHistory*)aHistory {
-+  [self performEditingCommand:aExtending ? Command::SelectBeginParagraph
-+                                         : Command::BeginParagraph];
-+  return nil;
-+}
-+
-+- (UITextInputArrowKeyHistory*)_moveToStartOfLine:(BOOL)aExtending
-+                                      withHistory:(UITextInputArrowKeyHistory*)
-+                                                      aHistory {
-+  [self performEditingCommand:aExtending ? Command::SelectBeginLine
-+                                         : Command::BeginLine];
-+  return nil;
-+}
-+
-+- (UITextInputArrowKeyHistory*)
-+    _moveToStartOfDocument:(BOOL)aExtending
-+               withHistory:(UITextInputArrowKeyHistory*)aHistory {
-+  [self
-+      performEditingCommand:aExtending ? Command::SelectTop : Command::MoveTop];
-+  return nil;
-+}
-+
 +- (UITextInputArrowKeyHistory*)_moveToEndOfWord:(BOOL)aExtending
 +                                    withHistory:
 +                                        (UITextInputArrowKeyHistory*)aHistory {
@@ -3522,10 +3512,26 @@ index 000000000000..9646ea8b0c03
 +}
 +
 +- (UITextInputArrowKeyHistory*)
++    _moveToStartOfParagraph:(BOOL)aExtending
++                withHistory:(UITextInputArrowKeyHistory*)aHistory {
++  [self performEditingCommand:aExtending ? Command::SelectBeginParagraph
++                                         : Command::BeginParagraph];
++  return nil;
++}
++
++- (UITextInputArrowKeyHistory*)
 +    _moveToEndOfParagraph:(BOOL)aExtending
 +              withHistory:(UITextInputArrowKeyHistory*)aHistory {
 +  [self performEditingCommand:aExtending ? Command::SelectEndParagraph
 +                                         : Command::EndParagraph];
++  return nil;
++}
++
++- (UITextInputArrowKeyHistory*)_moveToStartOfLine:(BOOL)aExtending
++                                      withHistory:(UITextInputArrowKeyHistory*)
++                                                      aHistory {
++  [self performEditingCommand:aExtending ? Command::SelectBeginLine
++                                         : Command::BeginLine];
 +  return nil;
 +}
 +
@@ -3538,6 +3544,14 @@ index 000000000000..9646ea8b0c03
 +}
 +
 +- (UITextInputArrowKeyHistory*)
++    _moveToStartOfDocument:(BOOL)aExtending
++               withHistory:(UITextInputArrowKeyHistory*)aHistory {
++  [self
++      performEditingCommand:aExtending ? Command::SelectTop : Command::MoveTop];
++  return nil;
++}
++
++- (UITextInputArrowKeyHistory*)
 +    _moveToEndOfDocument:(BOOL)aExtending
 +             withHistory:(UITextInputArrowKeyHistory*)aHistory {
 +  [self performEditingCommand:aExtending ? Command::SelectBottom
@@ -3545,74 +3559,7 @@ index 000000000000..9646ea8b0c03
 +  return nil;
 +}
 +
-+- (NSDictionary*)_autofillContext {
-+  NSURL* autofillURL = [self activeAutofillURL];
-+  if (!autofillURL) {
-+    return nil;
-+  }
-+
-+  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L11803
-+  //
-+  // Initially, I thought getting the credential chip to show is impossible
-+  // since we can't set Associated Domains inside the app's settings, but
-+  // looking at _TIKeyboardStateAutofillContextAssociatedDomainsKey and
-+  // _AFAutoFillContextAssociatedDomainsKey by reversing AutoFillCore, seems
-+  // like supplying the lowercased host to the _AssociatedDomains field is
-+  // enough to make them show up!
-+
-+  BOOL acceptsLoginCredentials =
-+      [mEditable.mCredentialDelegate acceptsLoginCredentials];
-+  NSMutableDictionary* context =
-+      [NSMutableDictionary dictionaryWithDictionary:@{
-+        @"_WKAutofillContextVersion" : @2,
-+        @"_WebViewURL" : autofillURL,
-+        @"_AssociatedDomains" : @[ autofillURL.host.lowercaseString ],
-+        // show the credential chip for the current domain instead of the
-+        // generic "Passwords" chip
-+      }];
-+  if (acceptsLoginCredentials) {
-+    context[@"_acceptsLoginCredentials"] = @YES;
-+  }
-+  return context;
-+}
-+
-+- (void)insertTextSuggestion:(id)aSuggestion {
-+  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L6578
-+  Class suggestionClass = NSClassFromString(@"UITextAutofillSuggestion");
-+  if (!suggestionClass || ![aSuggestion isKindOfClass:suggestionClass] ||
-+      ![aSuggestion respondsToSelector:@selector(username)] ||
-+      ![aSuggestion respondsToSelector:@selector(password)] ||
-+      ![mEditable.mCredentialDelegate acceptsLoginCredentials] ||
-+      ![self activeAutofillURL]) {
-+    return;
-+  }
-+
-+  // Hand to Swift, Gecko remains the only DOM-filling mechanism
-+  id<CredentialSuggestion> suggestion = aSuggestion;
-+  [mEditable.mCredentialDelegate didSelectAutofillUsername:suggestion.username
-+                                                  password:suggestion.password];
-+}
-+
-+// MARK: - UITextInputTraits (Shared)
-+
-+- (UIColor*)insertionPointColor {
-+  RefPtr<widget::TextInputHandler> handler = [self textHandler];
-+  const NativeTextInputReply* state =
-+      handler ? handler->NativeTextInputState() : nullptr;
-+  if (!state) {
-+    return self.tintColor;
-+  }
-+
-+  const nscolor color = state->mCaretColor;
-+  if (state->mCaretColorIsAuto && NS_GET_A(color)) {
-+    return self.tintColor;
-+  }
-+
-+  return [UIColor colorWithRed:NS_GET_R(color) / 255.0
-+                         green:NS_GET_G(color) / 255.0
-+                          blue:NS_GET_B(color) / 255.0
-+                         alpha:NS_GET_A(color) / 255.0];
-+}
++// MARK: - UITextInputTraits
 +
 +- (id<UITextInputTraits>)textInputTraits {
 +  id<GeckoUITextInputTraitsPrivate> traits =
@@ -3723,10 +3670,6 @@ index 000000000000..9646ea8b0c03
 +             : UITextSmartDashesTypeDefault;
 +}
 +
-+- (UITextContentType)textContentType {
-+  return [mEditable.mCredentialDelegate autofillTextContentType];
-+}
-+
 +- (BOOL)isSecureTextEntry {
 +  if (!mGeckoChild || mGeckoChild->Destroyed()) {
 +    return NO;
@@ -3737,10 +3680,36 @@ index 000000000000..9646ea8b0c03
 +
 +@end
 +
++// MARK: - Password Autofill
++
++@protocol ChildViewCredentialDelegate <NSObject>
++- (nullable UITextContentType)autofillTextContentType;
++- (nullable NSString*)autofillOrigin;
++- (BOOL)acceptsLoginCredentials;
++- (void)didSelectAutofillUsername:(nullable NSString*)aUsername
++                         password:(nullable NSString*)aPassword;
++- (void)didSelectOneTimeCode:(NSString*)aOneTimeCode;
++@end
++
++@protocol CredentialSuggestion <NSObject>
++@property(nonatomic, readonly, nullable) NSString* username;
++@property(nonatomic, readonly, nullable) NSString* password;
++@end
++
++@interface ChildView (PasswordAutofill)
++- (void)setAutofillDelegate:(nullable id<ChildViewCredentialDelegate>)aDelegate;
++- (void)activatePasswordInputForAutofill;
++- (nullable NSURL*)activeAutofillURL;
++@end
++
 +@implementation ChildView (PasswordAutofill)
 +
 +- (void)setAutofillDelegate:(id<ChildViewCredentialDelegate>)aDelegate {
 +  mEditable.mCredentialDelegate = aDelegate;
++}
++
++- (UITextContentType)textContentType {
++  return [mEditable.mCredentialDelegate autofillTextContentType];
 +}
 +
 +- (void)activatePasswordInputForAutofill {
@@ -3785,6 +3754,54 @@ index 000000000000..9646ea8b0c03
 +  }
 +
 +  return autofillURL;
++}
++
++- (NSDictionary*)_autofillContext {
++  NSURL* autofillURL = [self activeAutofillURL];
++  if (!autofillURL) {
++    return nil;
++  }
++
++  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L11803
++  //
++  // Initially, I thought getting the credential chip to show is impossible
++  // since we can't set Associated Domains inside the app's settings, but
++  // looking at _TIKeyboardStateAutofillContextAssociatedDomainsKey and
++  // _AFAutoFillContextAssociatedDomainsKey by reversing AutoFillCore, seems
++  // like supplying the lowercased host to the _AssociatedDomains field is
++  // enough to make them show up!
++
++  BOOL acceptsLoginCredentials =
++      [mEditable.mCredentialDelegate acceptsLoginCredentials];
++  NSMutableDictionary* context =
++      [NSMutableDictionary dictionaryWithDictionary:@{
++        @"_WKAutofillContextVersion" : @2,
++        @"_WebViewURL" : autofillURL,
++        @"_AssociatedDomains" : @[ autofillURL.host.lowercaseString ],
++        // show the credential chip for the current domain instead of the
++        // generic "Passwords" chip
++      }];
++  if (acceptsLoginCredentials) {
++    context[@"_acceptsLoginCredentials"] = @YES;
++  }
++  return context;
++}
++
++- (void)insertTextSuggestion:(id)aSuggestion {
++  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L6578
++  Class suggestionClass = NSClassFromString(@"UITextAutofillSuggestion");
++  if (!suggestionClass || ![aSuggestion isKindOfClass:suggestionClass] ||
++      ![aSuggestion respondsToSelector:@selector(username)] ||
++      ![aSuggestion respondsToSelector:@selector(password)] ||
++      ![mEditable.mCredentialDelegate acceptsLoginCredentials] ||
++      ![self activeAutofillURL]) {
++    return;
++  }
++
++  // Hand to Swift, Gecko remains the only DOM-filling mechanism
++  id<CredentialSuggestion> suggestion = aSuggestion;
++  [mEditable.mCredentialDelegate didSelectAutofillUsername:suggestion.username
++                                                  password:suggestion.password];
 +}
 +
 +@end
