@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..9b4794d9a7ba
+index 000000000000..8442802a8eab
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3801 @@
+@@ -0,0 +1,3800 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -148,7 +148,6 @@ index 000000000000..9b4794d9a7ba
 +- (void)endFloatingCursor;
 +- (id)textSelectionView;
 +- (NSUInteger)currentDraggedHandle;
-+- (id<GeckoTextSelectionView>)activeSelectionController;
 +- (void)updateSelectionWithPoint:(CGPoint)aPoint;
 +- (id<GeckoTextRangeAdjustmentInteraction>)rangeAdjustmentInteraction;
 +- (void)textRangeAdjustmentInteraction:(id)aInteraction
@@ -1458,7 +1457,7 @@ index 000000000000..9b4794d9a7ba
 +                             didBeginAtPoint:aPoint];
 +
 +  id<GeckoTextSelectionInteraction> selection =
-+      mAssistant.activeSelectionController.selection;
++      [[mAssistant textSelectionView] selection];
 +  id<UITextInput> document = selection.document;
 +  UITextRange* range = document.selectedTextRange;
 +
@@ -1736,8 +1735,8 @@ index 000000000000..9b4794d9a7ba
 +  NSRange marked;
 +  if (handler && handler->MarkedRange(marked)) {
 +    // Reload UIKit's stored selection after updating marked text.
-+    [[[self interactionAssistant]
-+         activeSelectionController].selection selectionChanged];
++    [[[[self interactionAssistant] textSelectionView] selection]
++        selectionChanged];
 +  }
 +
 +  static_cast<id<GeckoUITextInputTraitsPrivate>>(mEditable.mTextInputTraits)
@@ -2064,7 +2063,7 @@ index 000000000000..9b4794d9a7ba
 +    [assistant updateFloatingCursorAtPoint:mEditable.mFloatingCursorPoint];
 +  } else {
 +    id<GeckoTextSelectionInteraction> selection =
-+        assistant.activeSelectionController.selection;
++        [[assistant textSelectionView] selection];
 +    if (selection.selectedRange.empty) {
 +      [selection setSelectionWithPoint:mEditable.mTextAutoscrollPoint];
 +      [selection commit];
