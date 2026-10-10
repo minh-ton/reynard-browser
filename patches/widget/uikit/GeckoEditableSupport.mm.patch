@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..6d5a3720f7fe
+index 000000000000..6cc19c1ff284
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4036 @@
+@@ -0,0 +1,4061 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -60,6 +60,7 @@ index 000000000000..6d5a3720f7fe
 ++ (instancetype)activeInstance;
 +- (id<UITextInput>)inputDelegate;
 +- (id<GeckoKeyboardDeletionState>)keyboardStateManager;
++- (void)updateForChangedSelection;
 +- (void)replaceText:(id)aReplacement;
 +@end
 +
@@ -591,6 +592,12 @@ index 000000000000..6d5a3720f7fe
 +
 +  if (aNotifyInputDelegate && (selectionChanged || !hadCachedState)) {
 +    [[view interactionAssistant] selectionChanged];
++  }
++
++  if (view && aNotifyInputDelegate && selectionChanged) {
++    // Arrow actions ignore keyboard notifications until the key finishes.
++    view->mEditable.mPendingKeyboardContextUpdate = YES;
++    [view selectionGeometryChanged];
 +  }
 +
 +  return !Destroyed() && focusGeneration == mNativeTextInputFocusGeneration;
@@ -1876,6 +1883,8 @@ index 000000000000..6d5a3720f7fe
 +
 +- (void)applySelectionGeometryChange {
 +  mEditable.mPendingSelectionGeometryRefresh = NO;
++  const BOOL updateKeyboard = mEditable.mPendingKeyboardContextUpdate;
++  mEditable.mPendingKeyboardContextUpdate = NO;
 +
 +  if (![self isTextSelectable] || ![self isFirstResponder]) {
 +    return;
@@ -1883,6 +1892,14 @@ index 000000000000..6d5a3720f7fe
 +
 +  if (RefPtr<widget::TextInputHandler> handler = [self textHandler]) {
 +    handler->NativeTextInputState();
++  }
++
++  if (updateKeyboard) {
++    UIKeyboardImpl* keyboard =
++        [NSClassFromString(@"UIKeyboardImpl") activeInstance];
++    if ([keyboard inputDelegate] == self) {
++      [keyboard updateForChangedSelection];
++    }
 +  }
 +
 +  [self refreshSelectionUI];
@@ -2372,6 +2389,14 @@ index 000000000000..6d5a3720f7fe
 +  }
 +
 +  return position.offset - range.location;
++}
++
++- (void)beginSelectionChange {
++  [self.inputDelegate selectionWillChange:self];
++}
++
++- (void)endSelectionChange {
++  [self.inputDelegate selectionDidChange:self];
 +}
 +
 +- (NSRange)selectedRange {

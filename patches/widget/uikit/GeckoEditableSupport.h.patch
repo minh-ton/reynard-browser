@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
 new file mode 100644
-index 000000000000..aa46cadf5ce2
+index 000000000000..0dd7f060d937
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.h
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,167 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -80,6 +80,7 @@ index 000000000000..aa46cadf5ce2
 +  BOOL mLoadingTextDrop;
 +
 +  BOOL mPendingSelectionGeometryRefresh;
++  BOOL mPendingKeyboardContextUpdate;
 +  BOOL mSelectionActivated;
 +  BOOL mAsyncScrollInProgress;
 +  BOOL mPreparingBackwardDeletionSelection;
