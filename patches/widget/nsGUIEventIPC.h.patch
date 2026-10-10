@@ -1,5 +1,5 @@
 diff --git a/widget/nsGUIEventIPC.h b/widget/nsGUIEventIPC.h
-index a2a73f583d28..c8f9a61d7e43 100644
+index a2a73f583d28..5fdcf9bb3298 100644
 --- a/widget/nsGUIEventIPC.h
 +++ b/widget/nsGUIEventIPC.h
 @@ -16,6 +16,7 @@
@@ -89,22 +89,24 @@ index a2a73f583d28..c8f9a61d7e43 100644
             ReadParam(aReader, &aResult->mSucceeded);
    }
  };
-@@ -804,9 +847,11 @@ struct ParamTraits<mozilla::widget::InputContext::Origin>
+@@ -802,11 +845,11 @@ struct ParamTraits<mozilla::widget::InputContext::Origin>
+           mozilla::widget::InputContext::Origin::ORIGIN_MAIN,
+           mozilla::widget::InputContext::Origin::ORIGIN_CONTENT> {};
  
- DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::widget::InputContext, mIMEState,
-                                   mHTMLInputType, mHTMLInputMode, mActionHint,
+-DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::widget::InputContext, mIMEState,
+-                                  mHTMLInputType, mHTMLInputMode, mActionHint,
 -                                  mAutocapitalize, mAutocorrect, mOrigin,
 -                                  mHasHandledUserInput, mInPrivateBrowsing,
 -                                  mURI);
-+                                  mAutocapitalize, mAutocorrect,
-+                                  mSpellCheckingEnabled,
-+                                  mWritingSuggestionsEnabled, mHasBeenPassword,
-+                                  mReadOnly, mOrigin, mHasHandledUserInput,
-+                                  mInPrivateBrowsing, mURI);
++DEFINE_IPC_SERIALIZER_WITH_FIELDS(
++    mozilla::widget::InputContext, mIMEState, mHTMLInputType, mHTMLInputMode,
++    mActionHint, mAutocapitalize, mAutocorrect, mSpellCheckingEnabled,
++    mWritingSuggestionsEnabled, mHasBeenPassword, mHasEditableHost, mReadOnly,
++    mOrigin, mHasHandledUserInput, mInPrivateBrowsing, mURI);
  
  template <>
  struct ParamTraits<mozilla::widget::InputContextAction::Cause>
-@@ -1009,6 +1054,7 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1009,6 +1052,7 @@ struct ParamTraits<mozilla::PanGestureInput>
      WriteParam(aWriter, aParam.mMayTriggerSwipe);
      WriteParam(aWriter, aParam.mOverscrollBehaviorAllowsSwipe);
      WriteParam(aWriter, aParam.mSimulateMomentum);
@@ -112,7 +114,7 @@ index a2a73f583d28..c8f9a61d7e43 100644
      WriteParam(aWriter, aParam.mIsNoLineOrPageDelta);
    }
  
-@@ -1032,6 +1078,8 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1032,6 +1076,8 @@ struct ParamTraits<mozilla::PanGestureInput>
                                 &paramType::SetOverscrollBehaviorAllowsSwipe) &&
             ReadBoolForBitfield(aReader, aResult,
                                 &paramType::SetSimulateMomentum) &&

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index c1c4c3deb341..ca1e1b1bc137 100644
+index c1c4c3deb341..2bd42114d971 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,12 +11,14 @@
@@ -478,17 +478,18 @@ index c1c4c3deb341..ca1e1b1bc137 100644
    }
 +  return YES;
 +}
-+
+ 
+-  if (mGeckoChild->IsVirtualKeyboardDisabled()) {
+-    return NO;
 +- (BOOL)becomeFirstResponder {
 +  BOOL didBecomeFirstResponder = [super becomeFirstResponder];
 +  if (didBecomeFirstResponder) {
 +    [self updateSelectionActivation];
-+  }
+   }
+-  return YES;
 +  return didBecomeFirstResponder;
 +}
- 
--  if (mGeckoChild->IsVirtualKeyboardDisabled()) {
--    return NO;
++
 +- (BOOL)resignFirstResponder {
 +  BOOL didResignFirstResponder = [super resignFirstResponder];
 +  if (didResignFirstResponder) {
@@ -500,8 +501,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
 +      }
 +    }
 +    [self updateEditMenu];
-   }
--  return YES;
++  }
 +  return didResignFirstResponder;
  }
  
@@ -870,7 +870,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
    if (mWidgetListener) {
      mWidgetListener->WindowResized(this, innerBounds.Size());
    }
-@@ -993,45 +1089,159 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -993,45 +1089,169 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  }
  
  LayoutDeviceIntRect nsWindow::GetScreenBounds() {
@@ -971,6 +971,9 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  
    const bool changingEnabledState =
        aContext.IsInputAttributeChanged(mInputContext);
++  const bool selectionChangedIME =
++      aContext.mIMEState.mEnabled != mInputContext.mIMEState.mEnabled &&
++      aContext.mHasEditableHost && mInputContext.mHasEditableHost;
 +  const bool hadFirstResponder = [mNativeView isFirstResponder];
 +  const bool focusFromPointerInput =
 +      aAction.mCause == InputContextAction::CAUSE_MOUSE ||
@@ -988,6 +991,13 @@ index c1c4c3deb341..ca1e1b1bc137 100644
    mInputContext = aContext;
 +  if (mTextInputHandler) {
 +    mTextInputHandler->InvalidateTextInputState(true);
++  }
++
++  // Keep the keyboard session when selection crosses a non-editable child.
++  if (selectionChangedIME &&
++      aAction.mFocusChange == InputContextAction::FOCUS_NOT_CHANGED) {
++    [mNativeView updateTextInteractions];
++    return;
 +  }
 +
 +  if (IsVirtualKeyboardDisabled()) {
@@ -1023,7 +1033,8 @@ index c1c4c3deb341..ca1e1b1bc137 100644
 +    [mNativeView scheduleResponderBlur];
 +    return;
 +  }
-+
+ 
+-  if (aAction.UserMightRequestOpenVKB() || changingEnabledState) {
 +  // Existing first-responder ownership may be hardware-only. Software keyboard
 +  // authorization is tracked separately by mSoftwareKeyboardSuppressed.
 +  const bool shouldBecomeFirstResponder =
@@ -1035,14 +1046,13 @@ index c1c4c3deb341..ca1e1b1bc137 100644
 +    [mNativeView cancelResponderBlur];
 +    [mNativeView becomeFirstResponder];
 +  }
- 
--  if (aAction.UserMightRequestOpenVKB() || changingEnabledState) {
++
 +  if (shouldBecomeFirstResponder &&
 +      (aAction.UserMightRequestOpenVKB() || changingEnabledState)) {
      // TODO(m_kato):
      // It is unnecessary to call reloadInputViews with changingEnabledState if
      // virtual keyboard is disappeared.
-@@ -1051,16 +1261,65 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1051,16 +1271,65 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return mInputContext;
  }
  
@@ -1108,7 +1118,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  void nsWindow::SetBackgroundColor(const nscolor& aColor) {
    mNativeView.backgroundColor = [UIColor colorWithRed:NS_GET_R(aColor)
                                                  green:NS_GET_G(aColor)
-@@ -1068,6 +1327,13 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1068,6 +1337,13 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
                                                  alpha:NS_GET_A(aColor)];
  }
  
@@ -1122,7 +1132,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  void* nsWindow::GetNativeData(uint32_t aDataType) {
    void* retVal = nullptr;
  
-@@ -1111,6 +1377,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1111,6 +1387,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return [UIScreen mainScreen].scale;
  }
  
@@ -1131,7 +1141,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  int32_t nsWindow::RoundsWidgetCoordinatesTo() {
    if (BackingScaleFactor() == 2.0) {
      return 2;
-@@ -1118,10 +1386,202 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1118,10 +1396,202 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return 1;
  }
  
@@ -1334,7 +1344,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  void nsWindow::HandleMainThreadCATransaction() {
    // Trigger a synchronous OMTC composite. This will call NextSurface and
    // NotifySurfaceReady on the compositor thread to update mNativeLayerRoot's
-@@ -1199,6 +1659,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1199,6 +1669,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
@@ -1343,7 +1353,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  EventDispatcher* nsWindow::GetEventDispatcher() const {
    if (mIOSView) {
      return mIOSView->mEventDispatcher;
-@@ -1206,28 +1668,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1206,28 +1678,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return nullptr;
  }
  
@@ -1489,7 +1499,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  NS_IMPL_ISUPPORTS(IOSView, nsIGeckoViewEventDispatcher, nsIGeckoViewView)
  
  nsresult IOSView::GetInitData(JSContext* aCx,
-@@ -1248,6 +1813,81 @@ - (UIView*)view {
+@@ -1248,6 +1823,81 @@ - (UIView*)view {
    return mWindow ? (UIView*)mWindow->GetNativeData(NS_NATIVE_WIDGET) : nil;
  }
  
@@ -1571,7 +1581,7 @@ index c1c4c3deb341..ca1e1b1bc137 100644
  - (void)close {
    if (mWindow) {
      if (IOSView* iosView = mWindow->GetIOSView()) {
-@@ -1261,6 +1901,7 @@ - (void)close {
+@@ -1261,6 +1911,7 @@ - (void)close {
      outerWin->ForceClose();
    }
  }

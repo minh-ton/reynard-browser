@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index d11a218cd050..965b5286ad7f 100644
+index d11a218cd050..73d9bba16b12 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
 @@ -6,43 +6,60 @@
@@ -63,7 +63,7 @@ index d11a218cd050..965b5286ad7f 100644
  #include "nsTextFrame.h"
  
  // Work around conflicting define in rpcndr.h
-@@ -443,6 +460,1129 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
+@@ -443,6 +460,1262 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
    return rangeInRootElement;
  }
  
@@ -423,6 +423,18 @@ index d11a218cd050..965b5286ad7f 100644
 +          return {nullptr, -1};
 +        }
 +
++        // A non-editable inline block belongs to the surrounding text line.
++        while (block->IsInlineOutside() && block->GetContent() &&
++               !block->GetContent()->IsEditable()) {
++          auto [parentBlock, parentChild] =
++              block->GetContainingBlockForLine(true);
++          if (!parentBlock || !parentBlock->IsBlockFrame()) {
++            break;
++          }
++          block = parentBlock;
++          child = parentChild;
++        }
++
 +        nsILineIterator* lines = block->GetLineIterator();
 +        if (!lines->GetNumLines()) {
 +          return {nullptr, -1};
@@ -461,6 +473,7 @@ index d11a218cd050..965b5286ad7f 100644
 +      }
 +
 +      nsIFrame* previousBlock = nullptr;
++      nsIFrame* previousRectFrame = nullptr;
 +      int32_t previousLine = -1;
 +      bool previousInterior = false;
 +      UnsafePreContentIterator iter;
@@ -468,9 +481,22 @@ index d11a218cd050..965b5286ad7f 100644
 +      NS_ENSURE_SUCCESS(rv, rv);
 +
 +      for (; !iter.IsDone(); iter.Next()) {
-+        Text* text = Text::FromNode(iter.GetCurrentNode());
-+        if (!text) {
++        nsIContent* content = nsIContent::FromNode(iter.GetCurrentNode());
++        if (!content) {
 +          continue;
++        }
++
++        Text* text = Text::FromNode(content);
++
++        // Include breaks so empty lines also have a highlight.
++        if (!text) {
++          if (!content->IsHTMLElement(nsGkAtoms::br)) {
++            continue;
++          }
++
++          if (!ShouldBreakLineBefore(*content, mRootElement)) {
++            continue;
++          }
 +        }
 +
 +        const uint32_t start = text == range.mRange.GetStartContainer()
@@ -478,42 +504,67 @@ index d11a218cd050..965b5286ad7f 100644
 +                                   : 0;
 +        const uint32_t end = text == range.mRange.GetEndContainer()
 +                                 ? range.mRange.EndOffset()
-+                                 : text->Length();
-+        auto textOffset =
-+            GetFlatTextLengthInRange(RawNodePosition(mRootElement, 0u),
-+                                     RawNodePosition(text, 0u), mRootElement);
++                                 : (text ? text->Length() : kBRLength);
++        auto textOffset = GetFlatTextLengthInRange(
++            RawNodePosition(mRootElement, 0u),
++            RawNodePosition::Before(*content), mRootElement);
 +        if (textOffset.isErr()) {
 +          return textOffset.unwrapErr();
 +        }
 +
-+        for (nsIFrame* frame = text->GetPrimaryFrame(); frame;
++        if (!text) {
++          if (textOffset.inspect() < aRequest.mOffset) {
++            continue;
++          }
++
++          if (textOffset.inspect() >= aRequest.mOffset + aRequest.mLength) {
++            continue;
++          }
++        }
++
++        for (nsIFrame* frame = content->GetPrimaryFrame(); frame;
 +             frame = frame->GetNextContinuation()) {
-+          if (!frame->IsTextFrame()) {
-+            continue;
-+          }
-+
-+          const auto [frameStart, frameEnd] = frame->GetOffsets();
-+          uint32_t from = std::max(start, uint32_t(frameStart));
-+          uint32_t to = std::min(end, uint32_t(frameEnd));
-+          if (from >= to) {
-+            continue;
-+          }
-+
-+          nsPoint first, last;
-+          rv = frame->GetPointFromOffset(from, &first);
-+          NS_ENSURE_SUCCESS(rv, rv);
-+          rv = frame->GetPointFromOffset(to, &last);
-+          NS_ENSURE_SUCCESS(rv, rv);
-+
-+          // Text written right to left -> end is before start
++          uint32_t from = start;
++          uint32_t to = end;
 +          const bool vertical = frame->GetWritingMode().IsVertical();
 +          nsRect rect = frame->GetRectRelativeToSelf();
-+          if (vertical) {
-+            rect.y = std::min(first.y, last.y);
-+            rect.height = std::abs(last.y - first.y);
++          if (text) {
++            if (!frame->IsTextFrame()) {
++              continue;
++            }
++
++            const auto [frameStart, frameEnd] = frame->GetOffsets();
++            from = std::max(start, uint32_t(frameStart));
++            to = std::min(end, uint32_t(frameEnd));
++            if (from >= to) {
++              continue;
++            }
++
++            nsPoint first, last;
++            rv = frame->GetPointFromOffset(from, &first);
++            NS_ENSURE_SUCCESS(rv, rv);
++            rv = frame->GetPointFromOffset(to, &last);
++            NS_ENSURE_SUCCESS(rv, rv);
++
++            // Text written right to left -> end is before start
++            if (vertical) {
++              rect.y = std::min(first.y, last.y);
++              rect.height = std::abs(last.y - first.y);
++            } else {
++              rect.x = std::min(first.x, last.x);
++              rect.width = std::abs(last.x - first.x);
++            }
++          } else if (frame->IsBrFrame()) {
++            rect = GetLineBreakerRectBefore(frame).mRect;
++
++            // Keep a selected break visible even on a single line.
++            if (vertical) {
++              rect.height = frame->PresContext()->AppUnitsPerDevPixel();
++            } else {
++              rect.width = frame->PresContext()->AppUnitsPerDevPixel();
++            }
 +          } else {
-+            rect.x = std::min(first.x, last.x);
-+            rect.width = std::abs(last.x - first.x);
++            continue;
 +          }
 +
 +          NativeTextInputRect selectionRect;
@@ -547,6 +598,11 @@ index d11a218cd050..965b5286ad7f 100644
 +              }
 +
 +              if (insideBlock) {
++                if (ancestor->HasAnyStateBits(NS_FRAME_OUT_OF_FLOW)) {
++                  block = nullptr;
++                  break;
++                }
++
 +                if (ancestor->IsTransformed()) {
 +                  block = nullptr;
 +                  break;
@@ -646,7 +702,12 @@ index d11a218cd050..965b5286ad7f 100644
 +              rv = block->GetLineIterator()->CheckLineOrder(
 +                  line, &reordered, &firstVisual, &lastVisual);
 +              NS_ENSURE_SUCCESS(rv, rv);
-+              nsIFrame* child = frame->GetContainingBlockForLine(true).second;
++              nsIFrame* child = frame;
++
++              while (child->GetParent() && child->GetParent() != block) {
++                child = child->GetParent();
++              }
++
 +              const bool reachesLineEnd = child == lastVisual;
 +              const bool followsLineDirection =
 +                  selectionRect.mRTL == writingMode.IsBidiRTL();
@@ -659,26 +720,96 @@ index d11a218cd050..965b5286ad7f 100644
 +            }
 +
 +            rect = highlight.GetPhysicalRect(writingMode, size);
++
++            // Use shared coordinates for paragraphs in the same parent.
++            nsIFrame* parent = block->GetParent();
++            if (!block->HasAnyStateBits(NS_FRAME_OUT_OF_FLOW) &&
++                !block->IsTransformed() &&
++                !block->IsRelativelyOrStickyPositioned()) {
++              if (parent && parent->IsBlockFrame() &&
++                  parent->GetWritingMode() == writingMode) {
++                rect.MoveBy(block->GetOffsetTo(parent));
++                rectFrame = parent;
++              }
++            }
 +          }
 +
 +          rv = visualRect(rectFrame, rect, selectionRect);
 +          NS_ENSURE_SUCCESS(rv, rv);
 +
-+          // Join fully selected lines into one highlight. Join other rects only
-+          // when they overlap on the same line and have the same text
-+          // direction.
-+          if (block && block == previousBlock) {
++          if (block && previousBlock && rectFrame == previousRectFrame) {
 +            auto& previous = aReply.mRects.LastElement();
++            const bool sameLine =
++                block == previousBlock && line == previousLine;
++            const WritingMode writingMode = block->GetWritingMode();
++            bool nextLine = false;
++            if (!sameLine) {
++              if (!vertical) {
++                nextLine =
++                    selectionRect.mRect.YMost() > previous.mRect.YMost();
++              } else if (writingMode.IsVerticalRL()) {
++                nextLine = selectionRect.mRect.x < previous.mRect.x;
++              } else {
++                nextLine =
++                    selectionRect.mRect.XMost() > previous.mRect.XMost();
++              }
++            }
++
++            // Give neighboring lines the same edge, including after rounding.
++            // This fills paragraph gaps and avoids painting an edge twice.
++            if (nextLine) {
++              const auto& transform = selectionRect.mTransform;
++              if (!vertical) {
++                const int32_t edge = previous.mRect.YMost();
++                const float localEdge = (edge - transform._32) / transform._22;
++                previous.mUntransformedRect.SetBottomEdge(localEdge);
++                selectionRect.mUntransformedRect.SetTopEdge(localEdge);
++                selectionRect.mRect.SetTopEdge(edge);
++              } else if (writingMode.IsVerticalRL()) {
++                const int32_t edge = previous.mRect.x;
++                const float localEdge = (edge - transform._31) / transform._11;
++                previous.mUntransformedRect.SetLeftEdge(localEdge);
++                selectionRect.mUntransformedRect.SetRightEdge(localEdge);
++                selectionRect.mRect.SetRightEdge(edge);
++              } else {
++                const int32_t edge = previous.mRect.XMost();
++                const float localEdge = (edge - transform._31) / transform._11;
++                previous.mUntransformedRect.SetRightEdge(localEdge);
++                selectionRect.mUntransformedRect.SetLeftEdge(localEdge);
++                selectionRect.mRect.SetLeftEdge(edge);
++              }
++            } else if (sameLine && std::pair(block, line) != startLine) {
++              if (!vertical) {
++                selectionRect.mRect.SetTopEdge(
++                    std::max(selectionRect.mRect.y, previous.mRect.y));
++                selectionRect.mUntransformedRect.SetTopEdge(
++                    std::max(selectionRect.mUntransformedRect.y,
++                             previous.mUntransformedRect.y));
++              } else if (writingMode.IsVerticalRL()) {
++                selectionRect.mRect.SetRightEdge(
++                    std::min(selectionRect.mRect.XMost(),
++                             previous.mRect.XMost()));
++                selectionRect.mUntransformedRect.SetRightEdge(
++                    std::min(selectionRect.mUntransformedRect.XMost(),
++                             previous.mUntransformedRect.XMost()));
++              } else {
++                selectionRect.mRect.SetLeftEdge(
++                    std::max(selectionRect.mRect.x, previous.mRect.x));
++                selectionRect.mUntransformedRect.SetLeftEdge(
++                    std::max(selectionRect.mUntransformedRect.x,
++                             previous.mUntransformedRect.x));
++              }
++            }
++
++            // Keep partial first and last lines separate from the full lines.
 +            bool mergeRects = false;
-+            if (interior && previousInterior) {
++            if (interior && previousInterior && (sameLine || nextLine)) {
 +              mergeRects = true;
-+            } else if (line == previousLine &&
-+                       previous.mRTL == selectionRect.mRTL) {
++            } else if (sameLine && previous.mRTL == selectionRect.mRTL) {
 +              mergeRects = previous.mRect.Intersects(selectionRect.mRect);
 +            }
 +
-+            if (mergeRects &&
-+                previous.mTransform.ExactlyEquals(selectionRect.mTransform)) {
++            if (mergeRects) {
 +              previous.mRect = previous.mRect.Union(selectionRect.mRect);
 +              previous.mUntransformedRect = previous.mUntransformedRect.Union(
 +                  selectionRect.mUntransformedRect);
@@ -688,12 +819,14 @@ index d11a218cd050..965b5286ad7f 100644
 +                  std::max(previous.mEndOffset, selectionRect.mEndOffset);
 +              previous.mContainsStart |= selectionRect.mContainsStart;
 +              previous.mContainsEnd |= selectionRect.mContainsEnd;
++              previousBlock = block;
 +              previousLine = line;
 +              continue;
 +            }
 +          }
 +
 +          previousBlock = block;
++          previousRectFrame = rectFrame;
 +          previousLine = line;
 +          previousInterior = interior;
 +          aReply.mRects.AppendElement(selectionRect);
@@ -1193,7 +1326,7 @@ index d11a218cd050..965b5286ad7f 100644
  nsresult ContentEventHandler::InitCommon(EventMessage aEventMessage,
                                           SelectionType aSelectionType,
                                           bool aRequireFlush) {
-@@ -628,6 +1768,13 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -628,6 +1901,13 @@ nsresult ContentEventHandler::QueryContentRect(
  
    aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
        resultRect, presContext->AppUnitsPerDevPixel());
@@ -1207,7 +1340,7 @@ index d11a218cd050..965b5286ad7f 100644
    // Returning empty rect may cause native IME confused, let's make sure to
    // return non-empty rect.
    EnsureNonEmptyRect(aEvent->mReply->mRect);
-@@ -635,6 +1782,32 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -635,6 +1915,32 @@ nsresult ContentEventHandler::QueryContentRect(
    return NS_OK;
  }
  
@@ -1240,7 +1373,7 @@ index d11a218cd050..965b5286ad7f 100644
  // Editor places a padding <br> element under its root content if the editor
  // doesn't have any text. This happens even for single line editors.
  // When we get text content and when we change the selection,
-@@ -2525,6 +3698,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2525,6 +3831,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
    }
    DOMRangeAndAdjustedOffsetInFlattenedText domRangeAndAdjustedOffset =
        domRangeAndAdjustedOffsetOrError.unwrap();
@@ -1248,7 +1381,7 @@ index d11a218cd050..965b5286ad7f 100644
    nsString string;
    if (NS_WARN_IF(NS_FAILED(
            GenerateFlatTextContent(domRangeAndAdjustedOffset.mRange, string)))) {
-@@ -2847,7 +4021,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2847,7 +4154,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
  }
  
  nsresult ContentEventHandler::OnQueryEditorRect(
@@ -1257,7 +1390,7 @@ index d11a218cd050..965b5286ad7f 100644
    nsresult rv = Init(aEvent);
    if (NS_FAILED(rv)) {
      return rv;
-@@ -2862,9 +4036,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
+@@ -2862,9 +4169,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
      }
    }
  
@@ -1271,7 +1404,7 @@ index d11a218cd050..965b5286ad7f 100644
 +          GetFocusedTextControlFrameForRoot(mRootElement)) {
 +    editorContent = control->GetContent();
 +    editorFrame = control->GetScrollTargetFrame();
-+  }
+   }
 +#endif
 +  rv = QueryContentRect(editorContent, aEvent);
 +  NS_ENSURE_SUCCESS(rv, rv);
@@ -1327,12 +1460,12 @@ index d11a218cd050..965b5286ad7f 100644
 +
 +    // Preserve an empty clip when the editor is entirely out of view.
 +    aEvent->mReply->mRect = aEvent->mReply->mRect.Intersect(clipRect);
-   }
++  }
 +#endif
  
    MOZ_ASSERT(aEvent->Succeeded());
    return NS_OK;
-@@ -3407,8 +4644,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
+@@ -3407,8 +4777,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
    return NS_OK;
  }
  
@@ -1343,7 +1476,7 @@ index d11a218cd050..965b5286ad7f 100644
    NS_ASSERTION(aFrame, "aFrame must not be null");
  
    nsPresContext* thisPC = aFrame->PresContext();
-@@ -3416,12 +4653,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
+@@ -3416,12 +4786,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
    if (NS_WARN_IF(!rootPC)) {
      return NS_ERROR_FAILURE;
    }
@@ -1422,7 +1555,7 @@ index d11a218cd050..965b5286ad7f 100644
  
    // TransformFrameRectToAncestor returned the rect in the ancestor's appUnits,
    // but we want it in aFrame's units (in case of different full-zoom factors),
-@@ -3481,7 +4782,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
+@@ -3481,7 +4915,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
    }
  }
  
@@ -1432,7 +1565,7 @@ index d11a218cd050..965b5286ad7f 100644
    aEvent->mSucceeded = false;
  
    // Get selection to manipulate
-@@ -3533,6 +4835,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3533,6 +4968,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
      }
    }
  
@@ -1452,7 +1585,7 @@ index d11a218cd050..965b5286ad7f 100644
    if (aEvent->mReversed) {
      nsCOMPtr<nsINode> startNodeStrong(startNode);
      nsCOMPtr<nsINode> endNodeStrong(endNode);
-@@ -3558,7 +4873,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3558,7 +5006,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
    // `ContentEventHandler` is a `MOZ_STACK_CLASS`, so `mSelection` is known to
    // be alive.
    MOZ_KnownLive(mSelection)

@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..6cc19c1ff284
+index 000000000000..6795f8a7eca7
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4061 @@
+@@ -0,0 +1,4065 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1596,8 +1596,12 @@ index 000000000000..6cc19c1ff284
 +}
 +
 +- (BOOL)isEditable {
-+  return mGeckoChild && !mGeckoChild->Destroyed() &&
-+         mGeckoChild->GetInputContext().mIMEState.IsEditable();
++  if (!mGeckoChild || mGeckoChild->Destroyed()) {
++    return NO;
++  }
++
++  const InputContext context = mGeckoChild->GetInputContext();
++  return context.mIMEState.IsEditable() || context.mHasEditableHost;
 +}
 +
 +- (BOOL)isTextSelectable {

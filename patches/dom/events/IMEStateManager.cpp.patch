@@ -1,12 +1,13 @@
 diff --git a/dom/events/IMEStateManager.cpp b/dom/events/IMEStateManager.cpp
-index 97972ede68b0..205b8e9193c1 100644
+index 97972ede68b0..b445788d4172 100644
 --- a/dom/events/IMEStateManager.cpp
 +++ b/dom/events/IMEStateManager.cpp
-@@ -2189,6 +2189,33 @@ void IMEStateManager::SetIMEState(const IMEState& aState,
+@@ -2189,6 +2189,34 @@ void IMEStateManager::SetIMEState(const IMEState& aState,
      GetAutocapitalize(aState, *focusedElement, context,
                        context.mAutocapitalize);
      context.mAutocorrect = GetAutocorrect(aState, *focusedElement, context);
 +#ifdef XP_IOS
++    context.mHasEditableHost = focusedElement->IsEditable();
 +    context.mSpellCheckingEnabled =
 +        nsGenericHTMLElement::FromNode(focusedElement)->Spellcheck();
 +
