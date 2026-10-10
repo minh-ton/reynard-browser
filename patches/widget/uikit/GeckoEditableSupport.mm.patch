@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..44a14ecc228f
+index 000000000000..6d5a3720f7fe
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,3939 @@
+@@ -0,0 +1,4036 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -116,8 +116,11 @@ index 000000000000..44a14ecc228f
 +- (void)commit;
 +@end
 +
-+@protocol GeckoTextSelectionView <NSObject>
++@protocol GeckoTextSelectionSource <NSObject>
 +@property(nonatomic, readonly) id<GeckoTextSelectionInteraction> selection;
++@end
++
++@protocol GeckoTextSelectionView <NSObject>
 +- (void)updateSelectionRects;
 +@end
 +
@@ -151,6 +154,7 @@ index 000000000000..44a14ecc228f
 +- (void)updateFloatingCursorAtPoint:(CGPoint)aPoint;
 +- (void)endFloatingCursor;
 +- (id)textSelectionView;
++- (id<GeckoTextSelectionSource>)activeSelectionController;
 +- (NSUInteger)currentDraggedHandle;
 +- (void)updateSelectionWithPoint:(CGPoint)aPoint;
 +- (id<GeckoTextRangeAdjustmentInteraction>)rangeAdjustmentInteraction;
@@ -217,6 +221,7 @@ index 000000000000..44a14ecc228f
 +- (void)showEditMenuForSecondaryClickAtPoint:(CGPoint)aPoint;
 +
 +- (void)performEditingCommand:(Command)aCommand;
++- (void)_transpose;
 +@end
 +
 +@interface ChildView (TextDrag)
@@ -1384,6 +1389,21 @@ index 000000000000..44a14ecc228f
 +
 +// MARK: - Text Interaction Delegate
 +
++static id<GeckoTextSelectionInteraction> TextSelectionForAssistant(
++    id<GeckoTextInteractionAssistant> aAssistant) {
++  // Newer UIKit keeps selection on its controller instead of the view.
++  if ([aAssistant respondsToSelector:@selector(activeSelectionController)]) {
++    id<GeckoTextSelectionSource> controller =
++        [aAssistant activeSelectionController];
++    if ([controller respondsToSelector:@selector(selection)]) {
++      return controller.selection;
++    }
++  }
++
++  id<GeckoTextSelectionSource> view = [aAssistant textSelectionView];
++  return [view respondsToSelector:@selector(selection)] ? view.selection : nil;
++}
++
 +@interface GeckoTextInteractionAssistantDelegate : NSObject {
 +  id<GeckoTextInteractionAssistant> mAssistant;
 +}
@@ -1465,7 +1485,7 @@ index 000000000000..44a14ecc228f
 +                             didBeginAtPoint:aPoint];
 +
 +  id<GeckoTextSelectionInteraction> selection =
-+      [[mAssistant textSelectionView] selection];
++      TextSelectionForAssistant(mAssistant);
 +  id<UITextInput> document = selection.document;
 +  UITextRange* range = document.selectedTextRange;
 +
@@ -1769,8 +1789,7 @@ index 000000000000..44a14ecc228f
 +  NSRange marked;
 +  if (handler && handler->MarkedRange(marked)) {
 +    // Reload UIKit's stored selection after updating marked text.
-+    [[[[self interactionAssistant] textSelectionView] selection]
-+        selectionChanged];
++    [TextSelectionForAssistant([self interactionAssistant]) selectionChanged];
 +  }
 +
 +  static_cast<id<GeckoUITextInputTraitsPrivate>>(mEditable.mTextInputTraits)
@@ -2099,7 +2118,7 @@ index 000000000000..44a14ecc228f
 +    [assistant updateFloatingCursorAtPoint:mEditable.mFloatingCursorPoint];
 +  } else {
 +    id<GeckoTextSelectionInteraction> selection =
-+        [[assistant textSelectionView] selection];
++        TextSelectionForAssistant(assistant);
 +    if (selection.selectedRange.empty) {
 +      [selection setSelectionWithPoint:mEditable.mTextAutoscrollPoint];
 +      [selection commit];
@@ -3315,6 +3334,10 @@ index 000000000000..44a14ecc228f
 +    return selected;
 +  }
 +
++  if (aAction == @selector(_transpose)) {
++    return editable && !selected && [self hasText];
++  }
++
 +  if (aAction == @selector(undo:) || aAction == @selector(redo:)) {
 +    const NativeTextInputReply* state = handler->NativeTextInputState();
 +    if (!editable || !state) {
@@ -3602,6 +3625,80 @@ index 000000000000..44a14ecc228f
 +
 +- (void)_deleteToEndOfParagraph {
 +  [self performEditingCommand:Command::DeleteToEndOfParagraph];
++}
++
++- (void)_transpose {
++  if (![self isEditable]) {
++    return;
++  }
++
++  UITextRange* range = self.selectedTextRange;
++  if (!range || !range.empty) {
++    return;
++  }
++
++  UITextRange* paragraph =
++      [self.tokenizer rangeEnclosingPosition:range.start
++                             withGranularity:UITextGranularityParagraph
++                                 inDirection:UITextStorageDirectionBackward];
++
++  if (!paragraph) {
++    return;
++  }
++
++  // At a paragraph end, swap the last two characters instead.
++  BOOL atEnd = [self comparePosition:range.start
++                          toPosition:paragraph.end] == NSOrderedSame;
++  UITextPosition* end = range.end;
++
++  if (!atEnd) {
++    end = [self.tokenizer positionFromPosition:end
++                                    toBoundary:UITextGranularityCharacter
++                                   inDirection:UITextStorageDirectionForward];
++  }
++
++  if (!end) {
++    return;
++  }
++
++  UITextPosition* middle =
++      [self.tokenizer positionFromPosition:end
++                                toBoundary:UITextGranularityCharacter
++                               inDirection:UITextStorageDirectionBackward];
++  if (!middle) {
++    return;
++  }
++
++  UITextPosition* start =
++      [self.tokenizer positionFromPosition:middle
++                                toBoundary:UITextGranularityCharacter
++                               inDirection:UITextStorageDirectionBackward];
++  if (!start) {
++    return;
++  }
++
++  if ([self comparePosition:start
++                 toPosition:paragraph.start] == NSOrderedAscending) {
++    return;
++  }
++
++  if ([self comparePosition:end
++                 toPosition:paragraph.end] == NSOrderedDescending) {
++    return;
++  }
++
++  UITextRange* firstRange = [self textRangeFromPosition:start
++                                             toPosition:middle];
++  UITextRange* secondRange = [self textRangeFromPosition:middle toPosition:end];
++
++  NSString* first = [self textInRange:firstRange];
++  NSString* second = [self textInRange:secondRange];
++  if (!first.length || !second.length) {
++    return;
++  }
++
++  [self replaceRange:[self textRangeFromPosition:start toPosition:end]
++            withText:[second stringByAppendingString:first]];
 +}
 +
 +- (UITextInputArrowKeyHistory*)_moveUp:(BOOL)aExtending

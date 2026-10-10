@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index d11a218cd050..091255f6da61 100644
+index d11a218cd050..965b5286ad7f 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
 @@ -6,43 +6,60 @@
@@ -1012,13 +1012,13 @@ index d11a218cd050..091255f6da61 100644
 +          range.mRange.Start(), range.mRange.End(), IgnoreErrors());
 +      NS_ENSURE_TRUE(replacement, NS_ERROR_NOT_AVAILABLE);
 +
-+      // Move the caret after replacing its selection or the text just before
-+      // it. Keep it in place when correcting a word elsewhere.
-+      bool caretAtReplacementEnd = false;
-+      if (mSelection->IsCollapsed()) {
-+        caretAtReplacementEnd =
-+            mSelection->GetFocusNode() == replacement->GetEndContainer() &&
-+            mSelection->FocusOffset() == replacement->EndOffset();
++      // Move the caret after text replaced around it. Keep it in place when
++      // correcting a word elsewhere.
++      bool caretInReplacement = false;
++      if (const nsINode* focus = mSelection->GetFocusNode();
++          focus && mSelection->IsCollapsed()) {
++        caretInReplacement = replacement->IsPointInRange(
++            *focus, mSelection->FocusOffset(), IgnoreErrors());
 +      }
 +
 +      const bool replacingSelection =
@@ -1030,7 +1030,7 @@ index d11a218cd050..091255f6da61 100644
 +      rv = editor->ReplaceTextAsAction(
 +          aRequest.mText, replacement,
 +          EditorBase::AllowBeforeInputEventCancelable::Yes,
-+          caretAtReplacementEnd || replacingSelection
++          caretInReplacement || replacingSelection
 +              ? EditorBase::PreventSetSelection::No
 +              : EditorBase::PreventSetSelection::Yes);
 +      NS_ENSURE_SUCCESS(rv, rv);
