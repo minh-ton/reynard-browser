@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..4dce12c462f1
+index 000000000000..0a3426e2d557
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4079 @@
+@@ -0,0 +1,4117 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -62,6 +62,7 @@ index 000000000000..4dce12c462f1
 +- (id<GeckoKeyboardDeletionState>)keyboardStateManager;
 +- (void)updateForChangedSelection;
 +- (void)replaceText:(id)aReplacement;
++- (BOOL)autocorrectSpellingEnabled;
 +@end
 +
 +typedef enum {
@@ -150,6 +151,7 @@ index 000000000000..4dce12c462f1
 +- (void)deactivateSelection;
 +- (void)selectionChanged;
 +- (void)selectAll:(id)aSender;
++- (void)scheduleReplacements;
 +- (void)showSelectionCommandsForSecondaryClickAtPoint:(CGPoint)aPoint;
 +- (void)beginFloatingCursorAtPoint:(CGPoint)aPoint;
 +- (void)updateFloatingCursorAtPoint:(CGPoint)aPoint;
@@ -161,6 +163,8 @@ index 000000000000..4dce12c462f1
 +- (id<GeckoTextRangeAdjustmentInteraction>)rangeAdjustmentInteraction;
 +- (void)textRangeAdjustmentInteraction:(id)aInteraction
 +                       didBeginAtPoint:(CGPoint)aPoint;
++- (void)textRangeAdjustmentInteraction:(id)aInteraction
++                         didEndAtPoint:(CGPoint)aPoint;
 +- (CGPoint)_rangeAdjustmentPointInTextInputCoordinateSpace:(CGPoint)aPoint;
 +- (id<GeckoTextEditMenuAssistant>)_editMenuAssistant API_AVAILABLE(ios(16.0));
 +@end
@@ -213,6 +217,7 @@ index 000000000000..4dce12c462f1
 +                     transform:(CGAffineTransform*)aTransform;
 +
 +- (void)replace:(id)aSender;
++- (void)_promptForReplace:(id)aSender;
 +- (void)undo:(id)aSender;
 +- (void)redo:(id)aSender;
 +- (void)_showTextStyleOptions:(id)aSender;
@@ -1474,7 +1479,8 @@ index 000000000000..4dce12c462f1
 +}
 +
 +- (BOOL)respondsToSelector:(SEL)aSelector {
-+  if (aSelector == @selector(textRangeAdjustmentInteraction:didBeginAtPoint:)) {
++  if (aSelector == @selector(textRangeAdjustmentInteraction:didBeginAtPoint:) ||
++      aSelector == @selector(textRangeAdjustmentInteraction:didEndAtPoint:)) {
 +    return [mAssistant respondsToSelector:aSelector];
 +  }
 +
@@ -1502,11 +1508,22 @@ index 000000000000..4dce12c462f1
 +                                                 toPosition:range.end];
 +}
 +
-+/* - (BOOL)scheduleReplacementsForRange:(UITextRange*)aRange
++- (void)textRangeAdjustmentInteraction:(id)aInteraction
++                         didEndAtPoint:(CGPoint)aPoint {
++  [mAssistant textRangeAdjustmentInteraction:aInteraction didEndAtPoint:aPoint];
++
++  UITextRange* range =
++      TextSelectionForAssistant(mAssistant).document.selectedTextRange;
++  if (range && !range.empty) {
++    [mAssistant showSelectionCommands];
++  }
++}
++
++- (BOOL)scheduleReplacementsForRange:(UITextRange*)aRange
 +                         withOptions:(NSUInteger)aOptions {
-+  // Place the caret on tap instead of selecting a word for replacement.
++  // Keep selection taps on the edit menu. Show replacements only on request.
 +  return NO;
-+} */
++}
 +
 +@end
 +
@@ -2002,6 +2019,10 @@ index 000000000000..4dce12c462f1
 +- (void)interactionDidEnd:(UITextInteraction*)aInteraction {
 +  [self cancelAutoscroll];
 +  [self refreshSelectionUI];
++
++  if ([self hasSelection]) {
++    [[self selectionCommandController] showSelectionCommands];
++  }
 +}
 +
 +- (void)beginFloatingCursorAtPoint:(CGPoint)aPoint {
@@ -3411,6 +3432,16 @@ index 000000000000..4dce12c462f1
 +    return editable && !self.secureTextEntry;
 +  }
 +
++  if (aAction == @selector(_promptForReplace:)) {
++    if (!editable || !selected || self.secureTextEntry) {
++      return NO;
++    }
++
++    UIKeyboardImpl* keyboard =
++        [NSClassFromString(@"UIKeyboardImpl") activeInstance];
++    return [keyboard autocorrectSpellingEnabled];
++  }
++
 +  if (aAction == @selector(select:)) {
 +    return !selected && [self hasText] && !self.secureTextEntry;
 +  }
@@ -3456,6 +3487,13 @@ index 000000000000..4dce12c462f1
 +                             withSender:aSender]) {
 +    handler->RunCommand(eContentCommandDelete, false);
 +    [self refreshSelectionUI];
++  }
++}
++
++- (void)_promptForReplace:(id)aSender {
++  if ([self canPerformAction:_cmd withSender:aSender]) {
++    id<GeckoTextInteractionAssistant> assistant = [self interactionAssistant];
++    [assistant scheduleReplacements];
 +  }
 +}
 +
