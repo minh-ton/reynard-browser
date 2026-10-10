@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..6795f8a7eca7
+index 000000000000..4dce12c462f1
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4065 @@
+@@ -0,0 +1,4079 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1611,6 +1611,13 @@ index 000000000000..6795f8a7eca7
 +
 +- (widget::TextInputHandler*)textHandler {
 +  return [self isTextSelectable] ? mGeckoChild->GetTextInputHandler() : nullptr;
++}
++
++- (BOOL)supportsImagePaste {
++  RefPtr<widget::TextInputHandler> handler = [self textHandler];
++  const NativeTextInputReply* state =
++      handler ? handler->NativeTextInputState() : nullptr;
++  return state && state->mEditable && state->mCanFormat;
 +}
 +
 +- (id<UITextInputDelegate>)inputDelegate {
@@ -3385,8 +3392,15 @@ index 000000000000..6795f8a7eca7
 +  }
 +
 +  if (aAction == @selector(paste:)) {
-+    return editable && selection.location != NSNotFound &&
-+           UIPasteboard.generalPasteboard.hasStrings;
++    if (!editable || selection.location == NSNotFound) {
++      return NO;
++    }
++
++    if (UIPasteboard.generalPasteboard.hasStrings) {
++      return YES;
++    }
++
++    return [self supportsImagePaste] && UIPasteboard.generalPasteboard.hasImages;
 +  }
 +
 +  if (aAction == @selector(delete:)) {

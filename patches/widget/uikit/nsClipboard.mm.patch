@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/nsClipboard.mm b/widget/uikit/nsClipboard.mm
 new file mode 100644
-index 000000000000..c37203aff826
+index 000000000000..6bea819b2175
 --- /dev/null
 +++ b/widget/uikit/nsClipboard.mm
-@@ -0,0 +1,374 @@
+@@ -0,0 +1,405 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -135,9 +135,10 @@ index 000000000000..c37203aff826
 +    return false;
 +  }
 +
-+  return std::any_of(flavors.begin(), flavors.end(), [](const nsCString& flavor) {
-+    return flavor.EqualsLiteral(kNativeImageMime);
-+  });
++  return std::any_of(flavors.begin(), flavors.end(),
++                     [](const nsCString& flavor) {
++                       return flavor.EqualsLiteral(kNativeImageMime);
++                     });
 +}
 +
 +static NSData* ReadInputStream(nsIInputStream* aInputStream) {
@@ -162,7 +163,7 @@ index 000000000000..c37203aff826
 +static NSData* EncodeTransferableImage(nsITransferable* aTransferable) {
 +  nsCOMPtr<nsISupports> supports;
 +  nsresult rv = aTransferable->GetTransferData(kNativeImageMime,
-+                                                getter_AddRefs(supports));
++                                               getter_AddRefs(supports));
 +  if (NS_FAILED(rv)) {
 +    return nil;
 +  }
@@ -316,8 +317,36 @@ index 000000000000..c37203aff826
 +  }
 +
 +  if (aFlavor.EqualsLiteral(kHTMLMime)) {
-+    return PrimitiveFromNSString(
-+        aFlavor, GetStringValue(pasteboard, kUIKitClipboardHTMLType));
++    NSString* html = GetStringValue(pasteboard, kUIKitClipboardHTMLType);
++    if (!html && pasteboard.hasImages) {
++      NSData* png = UIImagePNGRepresentation(pasteboard.image);
++      if (!png) {
++        return nsCOMPtr<nsISupports>{};
++      }
++
++      CGSize size = CGSizeZero;
++      for (NSItemProvider* provider in pasteboard.itemProviders) {
++        if ([provider canLoadObjectOfClass:UIImage.class]) {
++          size = provider.preferredPresentationSize;
++          break;
++        }
++      }
++
++      // Stickers have a display size separate from their pixel size.
++      NSString* dimensions = @"";
++      if (size.width > 0 && size.height > 0) {
++        dimensions = [NSString stringWithFormat:@" width=\"%g\" height=\"%g\"",
++                                                size.width, size.height];
++      }
++      html = [NSString
++          stringWithFormat:@"<img src=\"data:image/png;base64,%@\"%@>",
++                           [png base64EncodedStringWithOptions:0], dimensions];
++    }
++
++    if (aThreshold && html.length * 2 > aThreshold) {
++      return Err(NS_ERROR_CLIPBOARD_TOO_BIG);
++    }
++    return PrimitiveFromNSString(aFlavor, html);
 +  }
 +
 +  return nsCOMPtr<nsISupports>{};
@@ -370,9 +399,11 @@ index 000000000000..c37203aff826
 +      continue;
 +    }
 +
-+    if (flavor.EqualsLiteral(kHTMLMime) &&
-+        GetStringValue(pasteboard, kUIKitClipboardHTMLType)) {
-+      return true;
++    if (flavor.EqualsLiteral(kHTMLMime)) {
++      if (GetStringValue(pasteboard, kUIKitClipboardHTMLType) ||
++          pasteboard.hasImages) {
++        return true;
++      }
 +    }
 +  }
 +

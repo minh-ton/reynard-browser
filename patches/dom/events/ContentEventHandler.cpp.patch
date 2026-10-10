@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index d11a218cd050..73d9bba16b12 100644
+index d11a218cd050..efa10851e3e2 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
 @@ -6,43 +6,60 @@
@@ -63,12 +63,21 @@ index d11a218cd050..73d9bba16b12 100644
  #include "nsTextFrame.h"
  
  // Work around conflicting define in rpcndr.h
-@@ -443,6 +460,1262 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
+@@ -443,6 +460,1270 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
    return rangeInRootElement;
  }
  
 +static nsTextControlFrame* GetFocusedTextControlFrameForRoot(
 +    Element* aRootElement);
++
++static bool IsNativeTextInputImage(const nsIContent& aContent) {
++#ifdef XP_IOS
++  return aContent.IsHTMLElement(nsGkAtoms::img) &&
++         aContent.GetInclusiveEditableAncestor();
++#else
++  return false;
++#endif
++}
 +
 +// Hide native selection UI for hidden inputs
 +static bool ShouldSuppressNativeSelectionDisplay(nsIFrame* aFrame) {
@@ -488,8 +497,7 @@ index d11a218cd050..73d9bba16b12 100644
 +
 +        Text* text = Text::FromNode(content);
 +
-+        // Include breaks so empty lines also have a highlight.
-+        if (!text) {
++        if (!text && !IsNativeTextInputImage(*content)) {
 +          if (!content->IsHTMLElement(nsGkAtoms::br)) {
 +            continue;
 +          }
@@ -563,7 +571,7 @@ index d11a218cd050..73d9bba16b12 100644
 +            } else {
 +              rect.width = frame->PresContext()->AppUnitsPerDevPixel();
 +            }
-+          } else {
++          } else if (!frame->IsImageFrame()) {
 +            continue;
 +          }
 +
@@ -1326,7 +1334,7 @@ index d11a218cd050..73d9bba16b12 100644
  nsresult ContentEventHandler::InitCommon(EventMessage aEventMessage,
                                           SelectionType aSelectionType,
                                           bool aRequireFlush) {
-@@ -628,6 +1901,13 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -628,6 +1909,13 @@ nsresult ContentEventHandler::QueryContentRect(
  
    aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
        resultRect, presContext->AppUnitsPerDevPixel());
@@ -1340,7 +1348,7 @@ index d11a218cd050..73d9bba16b12 100644
    // Returning empty rect may cause native IME confused, let's make sure to
    // return non-empty rect.
    EnsureNonEmptyRect(aEvent->mReply->mRect);
-@@ -635,6 +1915,32 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -635,6 +1923,32 @@ nsresult ContentEventHandler::QueryContentRect(
    return NS_OK;
  }
  
@@ -1373,7 +1381,46 @@ index d11a218cd050..73d9bba16b12 100644
  // Editor places a padding <br> element under its root content if the editor
  // doesn't have any text. This happens even for single line editors.
  // When we get text content and when we change the selection,
-@@ -2525,6 +3831,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -837,6 +2151,8 @@ nsresult ContentEventHandler::GenerateFlatTextContent(
+       }
+     } else if (ShouldBreakLineBefore(*node->AsContent(), mRootElement)) {
+       aString.Append(char16_t('\n'));
++    } else if (IsNativeTextInputImage(*node->AsContent())) {
++      aString.Append(char16_t(0xFFFC));
+     }
+   }
+   return NS_OK;
+@@ -1025,6 +2341,11 @@ nsresult ContentEventHandler::GenerateFlatFontRanges(
+         }
+       }
+       baseOffset += kBRLength;
++    } else if (IsNativeTextInputImage(*content)) {
++      if (aFontRanges.IsEmpty()) {
++        AppendFontRange(aFontRanges, baseOffset);
++      }
++      ++baseOffset;
+     }
+   }
+ 
+@@ -1144,10 +2465,13 @@ ContentEventHandler::ConvertFlatTextOffsetToDOMRangeBase(
+       result.mLastTextNode = contentAsText;
+     }
+ 
+-    uint32_t textLength =
+-        contentAsText
+-            ? GetTextLength(*contentAsText)
+-            : (ShouldBreakLineBefore(*content, mRootElement) ? kBRLength : 0);
++    uint32_t textLength = 0;
++    if (contentAsText) {
++      textLength = GetTextLength(*contentAsText);
++    } else if (ShouldBreakLineBefore(*content, mRootElement) ||
++               IsNativeTextInputImage(*content)) {
++      textLength = kBRLength;
++    }
+     if (!textLength) {
+       continue;
+     }
+@@ -2525,6 +3849,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
    }
    DOMRangeAndAdjustedOffsetInFlattenedText domRangeAndAdjustedOffset =
        domRangeAndAdjustedOffsetOrError.unwrap();
@@ -1381,7 +1428,7 @@ index d11a218cd050..73d9bba16b12 100644
    nsString string;
    if (NS_WARN_IF(NS_FAILED(
            GenerateFlatTextContent(domRangeAndAdjustedOffset.mRange, string)))) {
-@@ -2847,7 +4154,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2847,7 +4172,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
  }
  
  nsresult ContentEventHandler::OnQueryEditorRect(
@@ -1390,7 +1437,7 @@ index d11a218cd050..73d9bba16b12 100644
    nsresult rv = Init(aEvent);
    if (NS_FAILED(rv)) {
      return rv;
-@@ -2862,9 +4169,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
+@@ -2862,9 +4187,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
      }
    }
  
@@ -1404,7 +1451,7 @@ index d11a218cd050..73d9bba16b12 100644
 +          GetFocusedTextControlFrameForRoot(mRootElement)) {
 +    editorContent = control->GetContent();
 +    editorFrame = control->GetScrollTargetFrame();
-   }
++  }
 +#endif
 +  rv = QueryContentRect(editorContent, aEvent);
 +  NS_ENSURE_SUCCESS(rv, rv);
@@ -1460,12 +1507,32 @@ index d11a218cd050..73d9bba16b12 100644
 +
 +    // Preserve an empty clip when the editor is entirely out of view.
 +    aEvent->mReply->mRect = aEvent->mReply->mRect.Intersect(clipRect);
-+  }
+   }
 +#endif
  
    MOZ_ASSERT(aEvent->Succeeded());
    return NS_OK;
-@@ -3407,8 +4777,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
+@@ -3305,15 +4693,14 @@ Result<uint32_t, nsresult> ContentEventHandler::GetFlatTextLengthInRange(
+       } else {
+         length += GetTextLength(*textNode);
+       }
+-    } else if (ShouldBreakLineBefore(*content, aRootElement)) {
+-      // If the start position is start of this node but doesn't include the
+-      // open tag, don't append the line break length.
++    } else if (ShouldBreakLineBefore(*content, aRootElement) ||
++               IsNativeTextInputImage(*content)) {
++      // Don't count the node when the range starts after its opening tag.
+       if (content == aStartPosition.GetContainer() &&
+           !aStartPosition.IsBeforeOpenTag()) {
+         continue;
+       }
+-      // If the end position is before the open tag, don't append the line
+-      // break length.
++      // Don't count the node when the range ends before its opening tag.
+       if (content == endPosition.GetContainer() &&
+           endPosition.IsBeforeOpenTag()) {
+         continue;
+@@ -3407,8 +4794,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
    return NS_OK;
  }
  
@@ -1476,7 +1543,7 @@ index d11a218cd050..73d9bba16b12 100644
    NS_ASSERTION(aFrame, "aFrame must not be null");
  
    nsPresContext* thisPC = aFrame->PresContext();
-@@ -3416,12 +4786,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
+@@ -3416,12 +4803,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
    if (NS_WARN_IF(!rootPC)) {
      return NS_ERROR_FAILURE;
    }
@@ -1555,7 +1622,7 @@ index d11a218cd050..73d9bba16b12 100644
  
    // TransformFrameRectToAncestor returned the rect in the ancestor's appUnits,
    // but we want it in aFrame's units (in case of different full-zoom factors),
-@@ -3481,7 +4915,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
+@@ -3481,7 +4932,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
    }
  }
  
@@ -1565,7 +1632,7 @@ index d11a218cd050..73d9bba16b12 100644
    aEvent->mSucceeded = false;
  
    // Get selection to manipulate
-@@ -3533,6 +4968,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3533,6 +4985,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
      }
    }
  
@@ -1585,7 +1652,7 @@ index d11a218cd050..73d9bba16b12 100644
    if (aEvent->mReversed) {
      nsCOMPtr<nsINode> startNodeStrong(startNode);
      nsCOMPtr<nsINode> endNodeStrong(endNode);
-@@ -3558,7 +5006,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3558,7 +5023,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
    // `ContentEventHandler` is a `MOZ_STACK_CLASS`, so `mSelection` is known to
    // be alive.
    MOZ_KnownLive(mSelection)
