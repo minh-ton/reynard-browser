@@ -51,6 +51,10 @@ enum RuntimePreferences {
         // HTTPS-only mode
         HTTPSOnlyModePolicyController.applyHTTPSOnlyMode()
         
+        // System proxy
+        SystemProxyPreferences.apply()
+        SystemProxyPreferences.observeChanges()
+        
         // DNS over HTTPS
         DNSOverHTTPSPolicyController.applyDNSOverHTTPS()
         
