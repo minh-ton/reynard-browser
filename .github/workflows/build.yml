@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   prepare:
-    if: ${{ github.repository_owner == 'minh-ton' }}
+    if: ${{ github.repository_owner == 'minh-ton' || github.event_name == 'workflow_dispatch' }}
     name: Select build variants
     runs-on: ubuntu-latest
     outputs:
