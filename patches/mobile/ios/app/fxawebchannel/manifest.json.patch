@@ -1,0 +1,33 @@
+diff --git a/mobile/ios/app/fxawebchannel/manifest.json b/mobile/ios/app/fxawebchannel/manifest.json
+new file mode 100644
+index 00000000..44b33e2e
+--- /dev/null
++++ b/mobile/ios/app/fxawebchannel/manifest.json
+@@ -0,0 +1,27 @@
++{
++  "manifest_version": 2,
++  "browser_specific_settings": {
++    "gecko": {
++      "id": "fxawebchannel@reynard"
++    }
++  },
++  "name": "Reynard - Mozilla Account WebChannel",
++  "version": "1.0",
++  "content_scripts": [
++    {
++      "matches": [
++        "https://accounts.firefox.com/*"
++      ],
++      "js": ["fxawebchannel.js"],
++      "run_at": "document_start",
++      "all_frames": false
++    }
++  ],
++  "permissions": [
++    "mozillaAddons",
++    "geckoViewAddons",
++    "nativeMessaging",
++    "nativeMessagingFromContent",
++    "https://accounts.firefox.com/*"
++  ]
++}

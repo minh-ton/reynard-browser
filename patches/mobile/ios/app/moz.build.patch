@@ -1,8 +1,8 @@
 diff --git a/mobile/ios/app/moz.build b/mobile/ios/app/moz.build
-index f3ff8d07c4e8..8aa547db696d 100644
+index f3ff8d07..b842cbc7 100644
 --- a/mobile/ios/app/moz.build
 +++ b/mobile/ios/app/moz.build
-@@ -12,3 +12,18 @@ DEFINES["TARGET_OS_SIMULATOR"] = 1 if CONFIG["IPHONEOS_IS_SIMULATOR"] else 0
+@@ -12,3 +12,23 @@ DEFINES["TARGET_OS_SIMULATOR"] = 1 if CONFIG["IPHONEOS_IS_SIMULATOR"] else 0
  JS_PREFERENCE_PP_FILES += [
      "mobile.js",
  ]
@@ -20,4 +20,9 @@ index f3ff8d07c4e8..8aa547db696d 100644
 +    "../../android/android-components/components/feature/readerview/src/main/assets/extensions/readerview/readability/JSDOMParser-0.4.2.js",
 +    "../../android/android-components/components/feature/readerview/src/main/assets/extensions/readerview/readability/readability-0.4.2.js",
 +    "../../android/android-components/components/feature/readerview/src/main/assets/extensions/readerview/readability/readability-readerable-0.4.2.js",
++]
++
++FINAL_TARGET_FILES.extensions.fxawebchannel += [
++    "fxawebchannel/fxawebchannel.js",
++    "fxawebchannel/manifest.json",
 +]

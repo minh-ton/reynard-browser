@@ -1027,4 +1027,160 @@ final class HistoryStore {
             NotificationCenter.default.post(name: .historyStoreDidChange, object: self)
         }
     }
+
+    // MARK: - Firefox Sync
+    
+    struct SyncedVisits {
+        let url: URL
+        let title: String
+        let visits: [Date]
+    }
+    
+    /// Merges visits downloaded from Firefox Sync. Visits already known locally
+    /// (within a millisecond) are skipped. Returns the number of visits added.
+    func importSyncedVisits(_ entries: [SyncedVisits]) async -> Int {
+        await withCheckedContinuation { continuation in
+            stateQueue.async {
+                let inserted = self.importSyncedVisitsLocked(entries)
+                if inserted > 0 {
+                    self.postDidChange()
+                }
+                continuation.resume(returning: inserted)
+            }
+        }
+    }
+    
+    /// Local, non-redirect visits newer than `date`, grouped by URL.
+    func visitsForSync(since date: Date, limit: Int) async -> [SyncedVisits] {
+        await withCheckedContinuation { continuation in
+            stateQueue.async {
+                continuation.resume(returning: self.visitsForSyncLocked(since: date, limit: limit))
+            }
+        }
+    }
+    
+    private func importSyncedVisitsLocked(_ entries: [SyncedVisits]) -> Int {
+        guard beginTransactionLocked() else {
+            return 0
+        }
+        
+        guard let existsStatement = prepareStatementLocked(
+            "SELECT 1 FROM visits WHERE siteID = ? AND date BETWEEN ? AND ? LIMIT 1;"
+        ) else {
+            rollbackTransactionLocked()
+            return 0
+        }
+        defer {
+            sqlite3_finalize(existsStatement)
+        }
+        
+        guard let upsertStatement = prepareStatementLocked(
+            """
+            INSERT INTO history (url, host, stripped_url, title, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = CASE
+                    WHEN history.title = '' OR history.title = history.host OR history.title = history.url THEN excluded.title
+                    ELSE history.title
+                END,
+                updated_at = MAX(history.updated_at, excluded.updated_at);
+            """
+        ) else {
+            rollbackTransactionLocked()
+            return 0
+        }
+        defer {
+            sqlite3_finalize(upsertStatement)
+        }
+        
+        var insertedCount = 0
+        for entry in entries {
+            guard URLUtils.isWebURL(entry.url),
+                  let newestVisit = entry.visits.max() else {
+                continue
+            }
+            
+            let urlString = entry.url.absoluteString
+            sqlite3_reset(upsertStatement)
+            sqlite3_clear_bindings(upsertStatement)
+            bind(urlString, to: upsertStatement, at: 1)
+            bind(entry.url.host?.lowercased() ?? "", to: upsertStatement, at: 2)
+            bind(URLUtils.normalizedURLStringForMatching(from: urlString), to: upsertStatement, at: 3)
+            bind(pageTitle(entry.title, fallbackURL: entry.url), to: upsertStatement, at: 4)
+            sqlite3_bind_double(upsertStatement, 5, entry.visits.min()?.timeIntervalSince1970 ?? newestVisit.timeIntervalSince1970)
+            sqlite3_bind_double(upsertStatement, 6, newestVisit.timeIntervalSince1970)
+            guard sqlite3_step(upsertStatement) == SQLITE_DONE,
+                  let siteID = siteIDLocked(for: urlString) else {
+                continue
+            }
+            
+            var didInsertVisit = false
+            for visit in entry.visits {
+                let timestamp = visit.timeIntervalSince1970
+                sqlite3_reset(existsStatement)
+                sqlite3_clear_bindings(existsStatement)
+                sqlite3_bind_int64(existsStatement, 1, siteID)
+                sqlite3_bind_double(existsStatement, 2, timestamp - 0.001)
+                sqlite3_bind_double(existsStatement, 3, timestamp + 0.001)
+                if sqlite3_step(existsStatement) == SQLITE_ROW {
+                    continue
+                }
+                if insertVisitLocked(siteID: siteID, timestamp: timestamp, isRedirectSource: false) {
+                    insertedCount += 1
+                    didInsertVisit = true
+                }
+            }
+            
+            if didInsertVisit {
+                _ = updateVisitStatsLocked(siteID: siteID)
+            }
+        }
+        
+        guard commitTransactionLocked() else {
+            rollbackTransactionLocked()
+            return 0
+        }
+        return insertedCount
+    }
+    
+    private func visitsForSyncLocked(since date: Date, limit: Int) -> [SyncedVisits] {
+        guard let statement = prepareStatementLocked(
+            """
+            SELECT history.url, history.title, visits.date
+            FROM visits
+            JOIN history ON history.id = visits.siteID
+            WHERE visits.date > ?
+              AND visits.is_redirect_source = 0
+            ORDER BY visits.date DESC
+            LIMIT ?;
+            """
+        ) else {
+            return []
+        }
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        sqlite3_bind_double(statement, 1, date.timeIntervalSince1970)
+        sqlite3_bind_int64(statement, 2, Int64(limit))
+        
+        var order: [String] = []
+        var titles: [String: String] = [:]
+        var visits: [String: [Date]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let urlString = string(from: statement, at: 0)
+            if visits[urlString] == nil {
+                order.append(urlString)
+                titles[urlString] = string(from: statement, at: 1)
+            }
+            visits[urlString, default: []].append(Date(timeIntervalSince1970: sqlite3_column_double(statement, 2)))
+        }
+        
+        return order.compactMap { urlString in
+            guard let url = URL(string: urlString) else {
+                return nil
+            }
+            return SyncedVisits(url: url, title: titles[urlString] ?? "", visits: visits[urlString] ?? [])
+        }
+    }
 }

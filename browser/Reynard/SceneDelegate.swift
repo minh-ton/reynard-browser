@@ -39,6 +39,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         browserViewController.startScreenOrientationHandling()
         browserViewController.sessionManager.applicationDidBecomeActive()
         browserViewController.tabManager.applicationDidBecomeActive()
+        SyncManager.shared.requestSync(reason: .foreground)
     }
     
     func sceneWillResignActive(_ scene: UIScene) {
@@ -69,6 +70,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         (window?.rootViewController as? BrowserViewController)?
             .sessionManager.setApplicationForeground(false)
+        // Keeps this device's open tabs current for your other Firefoxes.
+        SyncManager.shared.requestSync(reason: .background)
     }
     
     private func handleIncomingURLContexts(_ urlContexts: Set<UIOpenURLContext>) {

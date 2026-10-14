@@ -85,6 +85,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         self.faviconStore = faviconStore
         self.historyStore = historyStore
         super.init()
+        SyncManager.shared.registerTabSource(self)
     }
     
     // MARK: - Application Lifecycle
@@ -719,6 +720,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         let mode: TabMode = isPrivate ? .private : .regular
         sessionManager.adopt(session, asTab: tab.id, url: url, delegates: sessionDelegates)
         readerMode.registerMessageHandlers(for: session)
+        FxAWebChannelController.shared.registerMessageHandlers(for: session)
         applyTransferredState(to: tab, url: url, title: title)
         recordNavigation(url, for: tab)
         
@@ -1247,6 +1249,7 @@ final class TabManagerImplementation: NSObject, TabManager {
             delegates: sessionDelegates
         )
         readerMode.registerMessageHandlers(for: session)
+        FxAWebChannelController.shared.registerMessageHandlers(for: session)
         return session
     }
 }
@@ -1750,5 +1753,23 @@ extension TabManagerImplementation: ProgressDelegate {
         
         tab.state.loadingState = .loading(progress: Float(progress) / 100)
         notifyUpdate(at: location.index, mode: location.mode, reason: .loading)
+    }
+}
+
+// MARK: - Firefox Sync
+
+extension TabManagerImplementation: SyncLocalTabsSource {
+    var syncLocalTabs: [SyncLocalTab] {
+        let selectedID = selectedTab?.id
+        return regularTabs.compactMap { tab in
+            guard let url = tab.url, !url.isEmpty else {
+                return nil
+            }
+            return SyncLocalTab(
+                title: tab.title,
+                url: url,
+                lastUsed: tab.id == selectedID ? Date() : (tab.createdAt ?? Date.distantPast)
+            )
+        }
     }
 }

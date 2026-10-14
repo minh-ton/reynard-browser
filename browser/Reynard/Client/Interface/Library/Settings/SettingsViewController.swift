@@ -10,6 +10,7 @@ import UIKit
 final class SettingsViewController: SettingsTableViewController {
     enum Section: Int, CaseIterable {
         case updates
+        case account
         case jit
         case general
         case privacy
@@ -20,6 +21,8 @@ final class SettingsViewController: SettingsTableViewController {
             switch self {
             case .updates:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Update Available", comment: ""))
+            case .account:
+                return SettingsSectionText(headerTitle: NSLocalizedString("Firefox Sync", comment: ""))
             case .jit:
                 return SettingsSectionText(headerTitle: NSLocalizedString("JIT", comment: ""))
             case .general:
@@ -35,6 +38,7 @@ final class SettingsViewController: SettingsTableViewController {
     }
     
     private let updatesSection = UpdatesSettingsSection()
+    private let accountSection = AccountSettingsSection()
     private let jitSection = JITSettingsSection()
     private let generalSection = GeneralSettingsSection()
     private let privacySection = PrivacySettingsSection()
@@ -75,6 +79,7 @@ final class SettingsViewController: SettingsTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         observeJITMode()
+        observeAccountState()
         jitSection.refreshDisplayedState()
     }
     
@@ -98,6 +103,8 @@ final class SettingsViewController: SettingsTableViewController {
         switch displayedSections[section] {
         case .updates:
             return updatesSection.rowCount(allowUpdate: allowUpdate)
+        case .account:
+            return accountSection.rowCount
         case .jit:
             return jitSection.rowCount
         case .general:
@@ -123,6 +130,8 @@ final class SettingsViewController: SettingsTableViewController {
                 allowUpdate: allowUpdate,
                 tintColor: view.tintColor
             )
+        case .account:
+            return accountSection.cell(at: indexPath.row, tintColor: view.tintColor)
         case .jit:
             return jitSection.cell(at: indexPath.row, tintColor: view.tintColor)
         case .general:
@@ -156,6 +165,8 @@ final class SettingsViewController: SettingsTableViewController {
         switch displayedSections[indexPath.section] {
         case .updates:
             updatesSection.selectRow(at: indexPath.row, allowUpdate: allowUpdate, from: self)
+        case .account:
+            accountSection.selectRow(at: indexPath.row, from: self)
         case .jit:
             jitSection.selectRow(at: indexPath.row, from: self)
         case .general:
@@ -172,6 +183,12 @@ final class SettingsViewController: SettingsTableViewController {
     override func sectionText(for section: Int) -> SettingsSectionText {
         guard displayedSections.indices.contains(section) else {
             return SettingsSectionText()
+        }
+        if displayedSections[section] == .account {
+            return SettingsSectionText(
+                headerTitle: displayedSections[section].text.headerTitle,
+                footerTitle: accountSection.footerTitle
+            )
         }
         return displayedSections[section].text
     }
@@ -216,6 +233,26 @@ final class SettingsViewController: SettingsTableViewController {
             name: .jitlessModeDidActivate,
             object: nil
         )
+    }
+    
+    private func observeAccountState() {
+        for name in [Notification.Name.fxaAccountStateDidChange, .syncStatusDidChange] {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(accountStateDidChange(_:)),
+                name: name,
+                object: nil
+            )
+        }
+    }
+    
+    @objc private func accountStateDidChange(_ notification: Notification) {
+        guard let section = displayedSections.firstIndex(of: .account),
+              section < tableView.numberOfSections else {
+            tableView.reloadData()
+            return
+        }
+        tableView.reloadSections(IndexSet(integer: section), with: .none)
     }
     
     @objc private func syncJITModeBanner(_ notification: Notification) {

@@ -1,0 +1,67 @@
+diff --git a/mobile/ios/app/fxawebchannel/fxawebchannel.js b/mobile/ios/app/fxawebchannel/fxawebchannel.js
+new file mode 100644
+index 00000000..7b44f6df
+--- /dev/null
++++ b/mobile/ios/app/fxawebchannel/fxawebchannel.js
+@@ -0,0 +1,61 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
++ * You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++"use strict";
++
++// Bridges the Mozilla account web content and Reynard.
++//
++// accounts.firefox.com talks to the browser through "WebChannel" DOM events:
++// it dispatches `WebChannelMessageToChrome` and listens for
++// `WebChannelMessageToContent`. Desktop Firefox handles these in chrome code;
++// on Reynard there is no such handler, so the sign-in page waits forever for
++// replies to `fxaccounts:fxa_status` and never hands over the OAuth code.
++// This content script relays both directions over a native messaging port.
++
++(function () {
++  const NATIVE_APP = "reynardFxaWebChannel";
++  let port = null;
++
++  function ensurePort() {
++    if (port) {
++      return port;
++    }
++    port = browser.runtime.connectNative(NATIVE_APP);
++    port.onMessage.addListener(message => {
++      // FxA content accepts a JSON string detail (this is what Android and
++      // iOS send), which also avoids cross-compartment cloning issues.
++      window.dispatchEvent(
++        new CustomEvent("WebChannelMessageToContent", {
++          detail: JSON.stringify(message),
++        })
++      );
++    });
++    port.onDisconnect.addListener(() => {
++      port = null;
++    });
++    return port;
++  }
++
++  window.addEventListener(
++    "WebChannelMessageToChrome",
++    event => {
++      let detail = event.detail;
++      try {
++        detail =
++          typeof detail === "string"
++            ? JSON.parse(detail)
++            : JSON.parse(JSON.stringify(detail));
++      } catch (e) {
++        return;
++      }
++      if (!detail || typeof detail !== "object" || !detail.message) {
++        return;
++      }
++      ensurePort().postMessage(detail);
++    },
++    true
++  );
++
++  ensurePort();
++})();

@@ -1585,4 +1585,148 @@ final class BookmarkStore {
             NotificationCenter.default.post(name: .bookmarkStoreDidChange, object: self)
         }
     }
+
+    // MARK: - Firefox Sync mirror
+    
+    /// A bookmark tree downloaded from Firefox Sync.
+    struct SyncedBookmarkNode {
+        enum Kind {
+            case bookmark(URL)
+            case folder([SyncedBookmarkNode])
+        }
+        
+        let title: String
+        let dateAdded: Date
+        let kind: Kind
+    }
+    
+    static let syncedBookmarksFolderGUID = "fxsynced____"
+    
+    /// Replaces the contents of the "Firefox Bookmarks" folder (created on demand at the
+    /// end of the root folder) with `roots`, in a single transaction.
+    @discardableResult
+    func replaceSyncedBookmarks(folderTitle: String, roots: [SyncedBookmarkNode]) async -> Bool {
+        await withCheckedContinuation { continuation in
+            stateQueue.async {
+                let didReplace = self.replaceSyncedBookmarksLocked(folderTitle: folderTitle, roots: roots)
+                if didReplace {
+                    self.postDidChange()
+                }
+                continuation.resume(returning: didReplace)
+            }
+        }
+    }
+    
+    func removeSyncedBookmarks() {
+        let folderGUID = Self.syncedBookmarksFolderGUID
+        stateQueue.async {
+            _ = self.deleteItemLocked(guid: folderGUID, expectedType: .folder)
+        }
+    }
+    
+    private func replaceSyncedBookmarksLocked(folderTitle: String, roots: [SyncedBookmarkNode]) -> Bool {
+        let folderGUID = Self.syncedBookmarksFolderGUID
+        guard let rootFolder = folderRecordLocked(guid: Constants.rootFolderGUID),
+              beginTransactionLocked() else {
+            return false
+        }
+        
+        if folderRecordLocked(guid: folderGUID) == nil {
+            // A non-folder row could only exist if something else reused the GUID; bail out.
+            guard nodeTypeLocked(guid: folderGUID) == nil,
+                  insertNodeLocked(
+                    guid: folderGUID,
+                    type: .folder,
+                    dateAdded: Date(),
+                    parentGUID: rootFolder.guid,
+                    parentName: rootFolder.title,
+                    title: folderTitle,
+                    url: nil
+                  ),
+                  insertStructureEntryLocked(
+                    parentGUID: rootFolder.guid,
+                    childGUID: folderGUID,
+                    index: nextChildIndexLocked(parentGUID: rootFolder.guid)
+                  ) else {
+                rollbackTransactionLocked()
+                return false
+            }
+        }
+        
+        // Children cascade: deleting direct children removes their subtrees and structure rows.
+        guard let deleteStatement = prepareStatementLocked(
+            "DELETE FROM \(Constants.bookmarkTableName) WHERE parentid = ?;"
+        ) else {
+            rollbackTransactionLocked()
+            return false
+        }
+        bind(folderGUID, to: deleteStatement, at: 1)
+        let deleted = sqlite3_step(deleteStatement) == SQLITE_DONE
+        sqlite3_finalize(deleteStatement)
+        
+        guard deleted,
+              insertSyncedChildrenLocked(roots, parentGUID: folderGUID, parentTitle: folderTitle, depth: 0),
+              commitTransactionLocked() else {
+            rollbackTransactionLocked()
+            return false
+        }
+        return true
+    }
+    
+    private func insertSyncedChildrenLocked(
+        _ nodes: [SyncedBookmarkNode],
+        parentGUID: String,
+        parentTitle: String,
+        depth: Int
+    ) -> Bool {
+        guard depth < 32 else {
+            return true
+        }
+        
+        var index = 0
+        for node in nodes {
+            let guid = makeGUID()
+            switch node.kind {
+            case let .bookmark(url):
+                guard URLUtils.isAbsoluteURL(url) else {
+                    continue
+                }
+                guard insertNodeLocked(
+                    guid: guid,
+                    type: .bookmark,
+                    dateAdded: node.dateAdded,
+                    parentGUID: parentGUID,
+                    parentName: parentTitle,
+                    title: bookmarkTitle(node.title, fallbackURL: url),
+                    url: url
+                ) else {
+                    return false
+                }
+            case let .folder(children):
+                let title = normalizedFolderTitle(node.title).isEmpty
+                    ? NSLocalizedString("Untitled Folder", comment: "")
+                    : normalizedFolderTitle(node.title)
+                guard insertNodeLocked(
+                    guid: guid,
+                    type: .folder,
+                    dateAdded: node.dateAdded,
+                    parentGUID: parentGUID,
+                    parentName: parentTitle,
+                    title: title,
+                    url: nil
+                ) else {
+                    return false
+                }
+                guard insertSyncedChildrenLocked(children, parentGUID: guid, parentTitle: title, depth: depth + 1) else {
+                    return false
+                }
+            }
+            
+            guard insertStructureEntryLocked(parentGUID: parentGUID, childGUID: guid, index: index) else {
+                return false
+            }
+            index += 1
+        }
+        return true
+    }
 }
