@@ -12,10 +12,11 @@ struct AccountSettingsSection {
         case signIn
         case account
         case syncedTabs
+        case debugLog
     }
 
     private var rows: [Row] {
-        FxAAccountManager.shared.isSignedIn ? [.account, .syncedTabs] : [.signIn]
+        FxAAccountManager.shared.isSignedIn ? [.account, .syncedTabs, .debugLog] : [.signIn, .debugLog]
     }
 
     var rowCount: Int {
@@ -50,6 +51,8 @@ struct AccountSettingsSection {
             return cell
         case .syncedTabs:
             return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Tabs From Other Devices", comment: ""))
+        case .debugLog:
+            return SettingsViewUtils.disclosureCell(title: NSLocalizedString("Sync Debug Log", comment: ""))
         }
     }
 
@@ -65,6 +68,8 @@ struct AccountSettingsSection {
             viewController.navigationController?.pushViewController(FirefoxAccountViewController(), animated: true)
         case .syncedTabs:
             viewController.navigationController?.pushViewController(SyncedTabsViewController(), animated: true)
+        case .debugLog:
+            viewController.navigationController?.pushViewController(SyncDebugLogViewController(), animated: true)
         }
     }
 }
@@ -74,6 +79,9 @@ enum FxASignInLauncher {
     static func start(from viewController: UIViewController) {
         Task { @MainActor in
             do {
+                // The sign-in page only works if the bridge extension is already
+                // installed when the page loads, so wait for it first.
+                await FxAWebChannelController.shared.waitUntilInstalled()
                 let url = try await FxAAccountManager.shared.beginSignIn()
                 guard let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: viewController) else {
                     return

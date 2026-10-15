@@ -110,6 +110,7 @@ final class FxAAccountManager {
         }
 
         pendingSignIn = PendingSignIn(state: state, pkce: pkce, keysFlow: keysFlow, startedAt: Date())
+        FxADebugLog.shared.log("sign-in started (auth endpoint \(config.authorizationEndpoint.host ?? "?"))")
         lastSignInError = nil
         postAccountStateDidChange()
         return url
@@ -118,9 +119,11 @@ final class FxAAccountManager {
     /// Called when accounts.firefox.com sends `fxaccounts:oauth_login`.
     func completeSignIn(code: String, state: String, declinedEngines: [String]) async throws {
         guard let pending = pendingSignIn else {
+            FxADebugLog.shared.log("completeSignIn: no pending sign-in")
             throw FxAAccountError.noPendingSignIn
         }
         guard pending.state == state else {
+            FxADebugLog.shared.log("completeSignIn: state mismatch")
             throw FxAAccountError.stateMismatch
         }
         pendingSignIn = nil
@@ -134,6 +137,7 @@ final class FxAAccountManager {
                 "code_verifier": pending.pkce.verifier,
             ])
 
+            FxADebugLog.shared.log("token exchange ok (fields: \(response.keys.sorted().joined(separator: ",")))")
             guard let refreshToken = response["refresh_token"] as? String,
                   let accessToken = response["access_token"] as? String else {
                 throw FxAAccountError.missingTokens
@@ -143,6 +147,7 @@ final class FxAAccountManager {
             }
 
             let syncKey = try Self.extractSyncKey(from: pending.keysFlow.decrypt(jwe: keysJWE))
+            FxADebugLog.shared.log("sync key decrypted")
             let expiresIn = (response["expires_in"] as? NSNumber)?.doubleValue ?? 3_600
 
             var newAccount = FxAAccountState(
@@ -185,6 +190,7 @@ final class FxAAccountManager {
             await registerDevice()
             SyncManager.shared.requestSync(reason: .signIn)
         } catch {
+            FxADebugLog.shared.log("completeSignIn failed: \(error.localizedDescription)")
             lastSignInError = error.localizedDescription
             postAccountStateDidChange()
             throw error
