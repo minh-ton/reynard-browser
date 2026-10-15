@@ -1,5 +1,5 @@
 diff --git a/widget/nsGUIEventIPC.h b/widget/nsGUIEventIPC.h
-index a2a73f583d28..0a0aa2105399 100644
+index 2ecd78035575..a664c20f75b6 100644
 --- a/widget/nsGUIEventIPC.h
 +++ b/widget/nsGUIEventIPC.h
 @@ -16,6 +16,7 @@
@@ -75,23 +75,23 @@ index a2a73f583d28..0a0aa2105399 100644
    }
  };
  
-@@ -664,6 +707,7 @@ struct ParamTraits<mozilla::WidgetSelectionEvent> {
+@@ -677,6 +720,7 @@ struct ParamTraits<mozilla::WidgetSelectionEvent> {
      WriteParam(aWriter, aParam.mLength);
-     WriteParam(aWriter, aParam.mReversed);
+     WriteParam(aWriter, aParam.mDirection);
      WriteParam(aWriter, aParam.mExpandToClusterBoundary);
 +    WriteParam(aWriter, aParam.mAssociateWithNext);
      WriteParam(aWriter, aParam.mSucceeded);
    }
  
-@@ -674,6 +718,7 @@ struct ParamTraits<mozilla::WidgetSelectionEvent> {
+@@ -687,6 +731,7 @@ struct ParamTraits<mozilla::WidgetSelectionEvent> {
             ReadParam(aReader, &aResult->mLength) &&
-            ReadParam(aReader, &aResult->mReversed) &&
+            ReadParam(aReader, &aResult->mDirection) &&
             ReadParam(aReader, &aResult->mExpandToClusterBoundary) &&
 +           ReadParam(aReader, &aResult->mAssociateWithNext) &&
             ReadParam(aReader, &aResult->mSucceeded);
    }
  };
-@@ -802,11 +847,11 @@ struct ParamTraits<mozilla::widget::InputContext::Origin>
+@@ -821,11 +866,11 @@ struct ParamTraits<mozilla::widget::InputContext::Origin>
            mozilla::widget::InputContext::Origin::ORIGIN_MAIN,
            mozilla::widget::InputContext::Origin::ORIGIN_CONTENT> {};
  
@@ -108,7 +108,7 @@ index a2a73f583d28..0a0aa2105399 100644
  
  template <>
  struct ParamTraits<mozilla::widget::InputContextAction::Cause>
-@@ -1009,6 +1054,7 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1028,6 +1073,7 @@ struct ParamTraits<mozilla::PanGestureInput>
      WriteParam(aWriter, aParam.mMayTriggerSwipe);
      WriteParam(aWriter, aParam.mOverscrollBehaviorAllowsSwipe);
      WriteParam(aWriter, aParam.mSimulateMomentum);
@@ -116,7 +116,7 @@ index a2a73f583d28..0a0aa2105399 100644
      WriteParam(aWriter, aParam.mIsNoLineOrPageDelta);
    }
  
-@@ -1032,6 +1078,8 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1051,6 +1097,8 @@ struct ParamTraits<mozilla::PanGestureInput>
                                 &paramType::SetOverscrollBehaviorAllowsSwipe) &&
             ReadBoolForBitfield(aReader, aResult,
                                 &paramType::SetSimulateMomentum) &&

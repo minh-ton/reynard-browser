@@ -1,26 +1,26 @@
 diff --git a/dom/webgpu/SharedTextureMacIOSurface.cpp b/dom/webgpu/SharedTextureMacIOSurface.cpp
-index 342297a85e8b..ce1e90b1d1a8 100644
+index daec97bdc702..68ab02b04250 100644
 --- a/dom/webgpu/SharedTextureMacIOSurface.cpp
 +++ b/dom/webgpu/SharedTextureMacIOSurface.cpp
-@@ -7,6 +7,7 @@
- #include "mozilla/gfx/Logging.h"
+@@ -8,6 +8,7 @@
  #include "mozilla/gfx/MacIOSurface.h"
+ #include "mozilla/layers/CompositeProcessFencesHolderMap.h"
  #include "mozilla/layers/GpuFenceMTLSharedEvent.h"
 +#include "mozilla/layers/IOSurfacePort.h"
  #include "mozilla/webgpu/WebGPUParent.h"
  
  namespace mozilla::webgpu {
-@@ -72,9 +73,10 @@ SharedTextureMacIOSurface::ToSurfaceDescriptor() {
+@@ -95,9 +96,10 @@ SharedTextureMacIOSurface::ToSurfaceDescriptor() {
    }
  
    return Some(layers::SurfaceDescriptorMacIOSurface(
 -      mSurface->GetIOSurfaceID(), !mSurface->HasAlpha(),
 -      mSurface->GetYUVColorSpace(), mSurface->GetTransferFunction(),
--      std::move(gpuFence)));
+-      Some(mFencesHolderId)));
 +      mSurface->GetIOSurfaceID(),
 +      layers::IOSurfacePort::FromSurface(mSurface->GetIOSurfaceRef()),
 +      !mSurface->HasAlpha(), mSurface->GetYUVColorSpace(),
-+      mSurface->GetTransferFunction(), std::move(gpuFence)));
++      mSurface->GetTransferFunction(), Some(mFencesHolderId)));
  }
  
  void SharedTextureMacIOSurface::GetSnapshot(const ipc::Shmem& aDestShmem,

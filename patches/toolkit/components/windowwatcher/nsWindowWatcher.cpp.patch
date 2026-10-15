@@ -1,8 +1,8 @@
 diff --git a/toolkit/components/windowwatcher/nsWindowWatcher.cpp b/toolkit/components/windowwatcher/nsWindowWatcher.cpp
-index 1a7068e4d6e9..9de4c0f373bc 100644
+index a1044338912d..79f233bee5d0 100644
 --- a/toolkit/components/windowwatcher/nsWindowWatcher.cpp
 +++ b/toolkit/components/windowwatcher/nsWindowWatcher.cpp
-@@ -2503,7 +2503,7 @@ bool nsWindowWatcher::IsWindowOpenLocationModified(
+@@ -2505,7 +2505,7 @@ bool nsWindowWatcher::IsWindowOpenLocationModified(
    // toolkit/modules/BrowserUtils.sys.mjs for modifier key handling, and
    // URILoadingHelper.openLinkIn in browser/modules/URILoadingHelper.sys.mjs
    // for loadInBackground pref handling.

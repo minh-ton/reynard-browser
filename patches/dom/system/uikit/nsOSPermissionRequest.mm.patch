@@ -1,6 +1,6 @@
 diff --git a/dom/system/uikit/nsOSPermissionRequest.mm b/dom/system/uikit/nsOSPermissionRequest.mm
 new file mode 100644
-index 000000000000..28cc233b5887
+index 000000000000..73293d4261be
 --- /dev/null
 +++ b/dom/system/uikit/nsOSPermissionRequest.mm
 @@ -0,0 +1,122 @@
@@ -37,7 +37,8 @@ index 000000000000..28cc233b5887
 +  return nsIOSPermissionRequest::PERMISSION_STATE_DENIED;
 +}
 +
-+void ResolvePermissionRequest(Promise* aPromise, AVMediaType aMediaType) {
++void ResolvePermissionRequest(RefPtr<Promise> aPromise,
++                              AVMediaType aMediaType) {
 +  MOZ_ASSERT(NS_IsMainThread());
 +
 +  switch ([AVCaptureDevice authorizationStatusForMediaType:aMediaType]) {
@@ -49,14 +50,13 @@ index 000000000000..28cc233b5887
 +      aPromise->MaybeResolve(false);
 +      return;
 +    case AVAuthorizationStatusNotDetermined:
-+      [AVCaptureDevice
-+          requestAccessForMediaType:aMediaType
-+                  completionHandler:^(BOOL granted) {
-+                    NS_DispatchToMainThread(NS_NewRunnableFunction(
-+                        __func__, [promise = RefPtr{aPromise}, granted]() {
-+                          promise->MaybeResolve(granted);
-+                        }));
-+                  }];
++      [AVCaptureDevice requestAccessForMediaType:aMediaType
++                               completionHandler:^(BOOL granted) {
++                                 NS_DispatchToMainThread(NS_NewRunnableFunction(
++                                     __func__, [promise = aPromise, granted]() {
++                                       promise->MaybeResolve(granted);
++                                     }));
++                               }];
 +      return;
 +  }
 +

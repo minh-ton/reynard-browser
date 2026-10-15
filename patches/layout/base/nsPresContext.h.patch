@@ -1,5 +1,5 @@
 diff --git a/layout/base/nsPresContext.h b/layout/base/nsPresContext.h
-index dd13711ab28e..f07c70e3819f 100644
+index a965fbedc65b..9f22e74573e1 100644
 --- a/layout/base/nsPresContext.h
 +++ b/layout/base/nsPresContext.h
 @@ -395,10 +395,12 @@ class nsPresContext : public nsISupports,
@@ -49,7 +49,7 @@ index dd13711ab28e..f07c70e3819f 100644
  
    /**
     * Returns the state of the dynamic toolbar.
-@@ -1265,6 +1266,8 @@ class nsPresContext : public nsISupports,
+@@ -1275,6 +1276,8 @@ class nsPresContext : public nsISupports,
    nsSize mSizeForViewportUnits;
    // The maximum height of the dynamic toolbar on mobile.
    mozilla::ScreenIntCoord mDynamicToolbarMaxHeight;

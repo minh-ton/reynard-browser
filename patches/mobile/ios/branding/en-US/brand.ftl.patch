@@ -1,0 +1,20 @@
+diff --git a/mobile/ios/branding/en-US/brand.ftl b/mobile/ios/branding/en-US/brand.ftl
+new file mode 100644
+index 000000000000..802eb06b4d43
+--- /dev/null
++++ b/mobile/ios/branding/en-US/brand.ftl
+@@ -0,0 +1,14 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++
++# This source code is introduced during the work of an iOS 13+ browser
++# https://github.com/minh-ton/reynard-browser in Feb 2026.
++
++-brand-shorter-name = Reynard
++-brand-short-name = Reynard
++-brand-shortcut-name = Reynard
++-brand-full-name = Reynard Browser
++-brand-product-name = Reynard
++-vendor-short-name = Mozilla
++trademarkInfo = { " " }

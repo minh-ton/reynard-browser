@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoPointerSupport.mm b/widget/uikit/GeckoPointerSupport.mm
 new file mode 100644
-index 000000000000..f5fd4d35e594
+index 000000000000..e7e5c5eceee2
 --- /dev/null
 +++ b/widget/uikit/GeckoPointerSupport.mm
-@@ -0,0 +1,790 @@
+@@ -0,0 +1,789 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -85,10 +85,6 @@ index 000000000000..f5fd4d35e594
 +static TimeStamp GeckoTimeStampForUIKitTimestamp(NSTimeInterval aTimestamp) {
 +  NSTimeInterval age = NSProcessInfo.processInfo.systemUptime - aTimestamp;
 +  return TimeStamp::Now() - TimeDuration::FromSeconds(age);
-+}
-+
-+static TimeStamp GeckoTimeStampForUIKitEvent(UIEvent* aEvent) {
-+  return GeckoTimeStampForUIKitTimestamp(aEvent.timestamp);
 +}
 +
 +static MouseButton GeckoMouseButtonForUIKitButton(NSInteger aButtonNumber) {
@@ -378,7 +374,8 @@ index 000000000000..f5fd4d35e594
 +                         clickCount:touch.tapCount
 +                          modifiers:GeckoModifiersForUIKitModifiers(
 +                                        event.modifierFlags)
-+                          timestamp:GeckoTimeStampForUIKitEvent(event)
++                          timestamp:GeckoTimeStampForUIKitTimestamp(
++                                        event.timestamp)
 +                         allowClick:YES];
 +  }
 +}
@@ -412,7 +409,8 @@ index 000000000000..f5fd4d35e594
 +                         clickCount:touch.tapCount
 +                          modifiers:GeckoModifiersForUIKitModifiers(
 +                                        event.modifierFlags)
-+                          timestamp:GeckoTimeStampForUIKitEvent(event)
++                          timestamp:GeckoTimeStampForUIKitTimestamp(
++                                        event.timestamp)
 +                         allowClick:YES];
 +  }
 +}
@@ -426,7 +424,7 @@ index 000000000000..f5fd4d35e594
 +  for (UITouch* touch in pointerTouches) {
 +    CGPoint location = [touch locationInView:mView];
 +    Modifiers modifiers = GeckoModifiersForUIKitModifiers(event.modifierFlags);
-+    TimeStamp timestamp = GeckoTimeStampForUIKitEvent(event);
++    TimeStamp timestamp = GeckoTimeStampForUIKitTimestamp(event.timestamp);
 +    [self synchronizePointerButtons:event.buttonMask
 +                           location:location
 +                         clickCount:touch.tapCount
@@ -706,8 +704,9 @@ index 000000000000..f5fd4d35e594
 +        GeckoPointForUIKitPoint(mLastPointerLocation, mView);
 +    PanGestureInput panEvent(
 +        PanGestureInput::PANGESTURE_MAYSTART,
-+        GeckoTimeStampForUIKitEvent(event), ScreenPoint(point.x, point.y),
-+        ScreenPoint(), GeckoModifiersForUIKitModifiers(event.modifierFlags));
++        GeckoTimeStampForUIKitTimestamp(event.timestamp),
++        ScreenPoint(point.x, point.y), ScreenPoint(),
++        GeckoModifiersForUIKitModifiers(event.modifierFlags));
 +    mGeckoChild->DispatchPanGestureInput(panEvent);
 +  }
 +  if (gestureRecognizer == mPinchRecognizer) {

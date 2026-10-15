@@ -1,8 +1,8 @@
 diff --git a/xpcom/ds/StaticAtoms.py b/xpcom/ds/StaticAtoms.py
-index 360b013fe9cf..0d7ca43eddcd 100644
+index 58e292aadf84..42e2748b0707 100644
 --- a/xpcom/ds/StaticAtoms.py
 +++ b/xpcom/ds/StaticAtoms.py
-@@ -1392,6 +1392,7 @@ STATIC_ATOMS = [
+@@ -1393,6 +1393,7 @@ STATIC_ATOMS = [
      Atom("windowtype", "windowtype"),
      Atom("withParam", "with-param"),
      Atom("wrap", "wrap"),

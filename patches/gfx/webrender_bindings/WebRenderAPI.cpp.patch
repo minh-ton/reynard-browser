@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/WebRenderAPI.cpp b/gfx/webrender_bindings/WebRenderAPI.cpp
-index 8f7928c42afc..b9e0c3dc8e2a 100644
+index 5d1d44a87fbc..3392d8dc7a09 100644
 --- a/gfx/webrender_bindings/WebRenderAPI.cpp
 +++ b/gfx/webrender_bindings/WebRenderAPI.cpp
 @@ -198,6 +198,12 @@ void TransactionWrapper::AddMinimapData(const wr::ExternalScrollId& aScrollId,

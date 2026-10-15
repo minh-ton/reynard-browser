@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/all.js b/modules/libpref/init/all.js
-index d740a8988b27..83f5da3539a0 100644
+index c31bb3da8af3..8cba37454e11 100644
 --- a/modules/libpref/init/all.js
 +++ b/modules/libpref/init/all.js
 @@ -66,6 +66,10 @@ pref("security.crash_tracking.js_load_1.maxCrashes", 1);
@@ -13,7 +13,7 @@ index d740a8988b27..83f5da3539a0 100644
  pref("general.config.obscure_value", 13); // for MCD .cfg files
  
  // Whether middle button click with a modifier key starts to autoscroll or
-@@ -1885,7 +1889,7 @@ pref("dom.ipc.processCount.privilegedabout", 1);
+@@ -1883,7 +1887,7 @@ pref("dom.ipc.processCount.privilegedabout", 1);
  pref("dom.ipc.processCount.privilegedmozilla", 1);
  
  // Maximum number of isolated content processes per-origin.
@@ -22,7 +22,7 @@ index d740a8988b27..83f5da3539a0 100644
  pref("dom.ipc.processCount.webIsolated", 1);
  #else
  pref("dom.ipc.processCount.webIsolated", 4);
-@@ -2666,7 +2670,7 @@ pref("font.size.monospace.x-math", 13);
+@@ -2664,7 +2668,7 @@ pref("font.size.monospace.x-math", 13);
    pref("helpers.private_mailcap_file", "~/.mailcap");
  #endif // ANDROID
  
@@ -31,7 +31,7 @@ index d740a8988b27..83f5da3539a0 100644
    // Handled differently under Mac/Windows
    pref("network.protocol-handler.warn-external.file", false);
    pref("browser.drag_out_of_frame_style", 1);
-@@ -2847,7 +2851,7 @@ pref("font.size.monospace.x-math", 13);
+@@ -2845,7 +2849,7 @@ pref("font.size.monospace.x-math", 13);
    // snooper.  So, let's use true for its default value.
    pref("intl.ime.hack.uim.using_key_snooper", true);
  

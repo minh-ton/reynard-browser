@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeChild.cpp b/gfx/layers/ipc/CompositorBridgeChild.cpp
-index 1b0eeeab3b61..f39dae97fa11 100644
+index c30080a72fc7..600f4cb0e4f2 100644
 --- a/gfx/layers/ipc/CompositorBridgeChild.cpp
 +++ b/gfx/layers/ipc/CompositorBridgeChild.cpp
 @@ -206,7 +206,8 @@ void CompositorBridgeChild::ShutDown() {

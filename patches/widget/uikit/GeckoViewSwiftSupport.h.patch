@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/GeckoViewSwiftSupport.h b/widget/uikit/GeckoViewSwiftSupport.h
-index e68fca9134c0..7e0abf0f10fe 100644
+index d91f21ba1ab2..13a7008c15fc 100644
 --- a/widget/uikit/GeckoViewSwiftSupport.h
 +++ b/widget/uikit/GeckoViewSwiftSupport.h
-@@ -21,11 +21,77 @@
+@@ -23,11 +23,77 @@
  #import <UIKit/UIKit.h>
  #import <xpc/xpc.h>
  
@@ -80,7 +80,7 @@ index e68fca9134c0..7e0abf0f10fe 100644
  @end
  
  @protocol GeckoProcessExtension <NSObject>
-@@ -33,38 +99,73 @@
+@@ -35,38 +101,73 @@
  @end
  
  @protocol EventCallback <NSObject>
@@ -153,7 +153,7 @@ index e68fca9134c0..7e0abf0f10fe 100644
  
  MOZ_BEGIN_EXTERN_C
  
- MOZ_EXPORT id<GeckoViewWindow> GeckoViewOpenWindow(
+ MOZ_EXPORT MOZ_CAN_RUN_SCRIPT_BOUNDARY id<GeckoViewWindow> GeckoViewOpenWindow(
 -    NSString* aId, id<SwiftEventDispatcher> aDispatcher,
 +    NSString* _Nullable aId, id<SwiftEventDispatcher> aDispatcher,
      NSDictionary* aInitData, bool aPrivateMode);

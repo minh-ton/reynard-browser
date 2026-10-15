@@ -1,6 +1,6 @@
 diff --git a/widget/uikit/UIKitCompositorWidget.h b/widget/uikit/UIKitCompositorWidget.h
 new file mode 100644
-index 000000000000..49688263b4dd
+index 000000000000..98c87f0968f9
 --- /dev/null
 +++ b/widget/uikit/UIKitCompositorWidget.h
 @@ -0,0 +1,66 @@
@@ -31,8 +31,8 @@ index 000000000000..49688263b4dd
 +
 +class PlatformCompositorWidgetDelegate : public CompositorWidgetDelegate {
 + public:
-+  virtual void NotifyClientSizeChanged(
-+      const LayoutDeviceIntSize& aClientSize) = 0;
++  void NotifyClientSizeChanged(
++      const LayoutDeviceIntSize& aClientSize) override = 0;
 +
 +  PlatformCompositorWidgetDelegate* AsPlatformSpecificDelegate() override {
 +    return this;

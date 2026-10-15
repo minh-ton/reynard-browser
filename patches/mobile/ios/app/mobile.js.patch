@@ -1,8 +1,8 @@
 diff --git a/mobile/ios/app/mobile.js b/mobile/ios/app/mobile.js
-index e835b1c33d86..549984cc4497 100644
+index e835b1c33d86..7872f59aada9 100644
 --- a/mobile/ios/app/mobile.js
 +++ b/mobile/ios/app/mobile.js
-@@ -3,7 +3,100 @@
+@@ -3,7 +3,97 @@
  // License, v. 2.0. If a copy of the MPL was not distributed with this
  // file, You can obtain one at http://mozilla.org/MPL/2.0/.
  
@@ -83,9 +83,6 @@ index e835b1c33d86..549984cc4497 100644
 +// Allow autoplay configuration
 +pref("media.geckoview.autoplay.request", true);
 +
-+// Ask for permission when enumerating WebRTC devices (bug 1369108)
-+pref("media.navigator.permission.device", true);
-+
 +// On mobile we throttle the download once the readahead_limit is hit
 +// if we're using a cellular connection, even if the download is slow,
 +// this is to preserve battery and data (bug 1540573)
@@ -104,7 +101,7 @@ index e835b1c33d86..549984cc4497 100644
  
  // Use software webrender on simulator due to missing APIs.
  #if TARGET_OS_SIMULATOR
-@@ -19,3 +112,5 @@ pref("security.sandbox.content.level", 1);
+@@ -19,3 +109,5 @@ pref("security.sandbox.content.level", 1);
  // 1 complete progressbar at DOMContentLoaded
  // 2 complete progressbar at first MozAfterPaint after DOMContentLoaded
  pref("page_load.progressbar_completion", 2);

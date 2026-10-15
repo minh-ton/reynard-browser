@@ -1,8 +1,8 @@
 diff --git a/toolkit/mozapps/extensions/internal/XPIDatabase.sys.mjs b/toolkit/mozapps/extensions/internal/XPIDatabase.sys.mjs
-index 47fa960b4c36..22e6ce8c74fc 100644
+index e9bab9dccfd5..668135b5437d 100644
 --- a/toolkit/mozapps/extensions/internal/XPIDatabase.sys.mjs
 +++ b/toolkit/mozapps/extensions/internal/XPIDatabase.sys.mjs
-@@ -3707,7 +3707,10 @@ export const XPIDatabaseReconcile = {
+@@ -3698,7 +3698,10 @@ export const XPIDatabaseReconcile = {
          xpiState,
          newAddon
        );

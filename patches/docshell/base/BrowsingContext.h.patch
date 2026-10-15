@@ -1,8 +1,8 @@
 diff --git a/docshell/base/BrowsingContext.h b/docshell/base/BrowsingContext.h
-index e910da61612d..65a69aafb004 100644
+index 9cecca762768..30d2ad493435 100644
 --- a/docshell/base/BrowsingContext.h
 +++ b/docshell/base/BrowsingContext.h
-@@ -230,6 +230,9 @@ struct EmbedderColorSchemes {
+@@ -228,6 +228,9 @@ struct EmbedderColorSchemes {
    FIELD(HasSessionHistory, bool)                                              \
    FIELD(UseErrorPages, bool)                                                  \
    FIELD(PlatformOverride, nsString)                                           \
@@ -12,7 +12,7 @@ index e910da61612d..65a69aafb004 100644
    /* Specifies if this BC has loaded documents besides the initial            \
     * about:blank document. about:privatebrowsing, about:home, about:newtab    \
     * and non-initial about:blank are not considered to be initial             \
-@@ -896,6 +899,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
+@@ -901,6 +904,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
    }
    void SetCustomPlatform(const nsAString& aPlatform, ErrorResult& aRv);
  
@@ -32,7 +32,7 @@ index e910da61612d..65a69aafb004 100644
    JSObject* WrapObject(JSContext* aCx);
  
    static JSObject* ReadStructuredClone(JSContext* aCx,
-@@ -1498,6 +1514,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
+@@ -1500,6 +1516,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
                        const nsString& aPlatformOverride,
                        ContentParent* aSource);
  
@@ -51,4 +51,4 @@ index e910da61612d..65a69aafb004 100644
 +
    void DidSet(FieldIndex<IDX_UserAgentOverride>);
    CanSetResult CanSet(FieldIndex<IDX_UserAgentOverride>,
-                       const nsString& aUserAgent, ContentParent* aSource);
+                       const nsCString& aUserAgent, ContentParent* aSource);

@@ -1,8 +1,8 @@
 diff --git a/layout/ipc/RemoteLayerTreeOwner.cpp b/layout/ipc/RemoteLayerTreeOwner.cpp
-index 33f0b073e093..37485af6f631 100644
+index 5c182cb402c3..d4d4c95bc9a3 100644
 --- a/layout/ipc/RemoteLayerTreeOwner.cpp
 +++ b/layout/ipc/RemoteLayerTreeOwner.cpp
-@@ -84,14 +84,33 @@ void RemoteLayerTreeOwner::Destroy() {
+@@ -109,14 +109,34 @@ void RemoteLayerTreeOwner::Destroy() {
  void RemoteLayerTreeOwner::EnsureLayersConnected(
      Maybe<CompositorOptions>& aCompositorOptions) {
    RefPtr<WindowRenderer> renderer = GetWindowRenderer(mBrowserParent);
@@ -10,17 +10,15 @@ index 33f0b073e093..37485af6f631 100644
 +  PCompositorBridgeChild* compositor =
 +      renderer ? renderer->GetCompositorBridgeChild() : nullptr;
 +  if (!compositor) {
-     aCompositorOptions = Nothing();
-     return;
-   }
- 
++    aCompositorOptions = Nothing();
++    return;
++  }
++
 +  // Do not report compositor options on failed reconnect attempts.
 +  // I found out that BrowserChild::ReinitRendering weirdly treats options
 +  // presence as success.
-   mLayersConnected =
--      renderer->GetCompositorBridgeChild()->SendNotifyChildRecreated(
--          mLayersId, &mCompositorOptions);
-+      compositor->SendNotifyChildRecreated(mLayersId, &mCompositorOptions);
++  mLayersConnected = compositor->SendNotifyChildRecreated(
++      mLayersId, GetEmbedderLayersId(mBrowserParent), &mCompositorOptions);
 +  if (!mLayersConnected) {
 +    aCompositorOptions = Nothing();
 +    return;
@@ -30,12 +28,16 @@ index 33f0b073e093..37485af6f631 100644
 +  // layertree is readopted onto the current root compositor. Without this,
 +  // display lists can flow to the child pipeline while composition targets a
 +  // new root pipeline that has no display list yet.
-+  if (!compositor->SendAdoptChild(mLayersId)) {
++  if (!compositor->SendAdoptChild(mLayersId,
++                                  GetEmbedderLayersId(mBrowserParent))) {
 +    mLayersConnected = false;
-+    aCompositorOptions = Nothing();
-+    return;
-+  }
-+
+     aCompositorOptions = Nothing();
+     return;
+   }
+ 
+-  mLayersConnected =
+-      renderer->GetCompositorBridgeChild()->SendNotifyChildRecreated(
+-          mLayersId, GetEmbedderLayersId(mBrowserParent), &mCompositorOptions);
    aCompositorOptions = Some(mCompositorOptions);
  }
  

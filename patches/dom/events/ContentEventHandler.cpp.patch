@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.cpp b/dom/events/ContentEventHandler.cpp
-index d11a218cd050..1c3438a87b83 100644
+index 8598e3dc3509..d27f630c6768 100644
 --- a/dom/events/ContentEventHandler.cpp
 +++ b/dom/events/ContentEventHandler.cpp
 @@ -6,43 +6,60 @@
@@ -37,6 +37,7 @@ index d11a218cd050..1c3438a87b83 100644
  #include "mozilla/dom/HTMLBRElement.h"
  #include "mozilla/dom/HTMLUnknownElement.h"
 +#include "mozilla/dom/MouseEventBinding.h"
+ #include "mozilla/dom/Range.h"
  #include "mozilla/dom/Selection.h"
  #include "mozilla/dom/StaticRange.h"
  #include "mozilla/dom/Text.h"
@@ -58,12 +59,11 @@ index d11a218cd050..1c3438a87b83 100644
  #include "nsLayoutUtils.h"
  #include "nsPresContext.h"
  #include "nsQueryObject.h"
- #include "nsRange.h"
 +#include "nsTextControlFrame.h"
  #include "nsTextFrame.h"
  
  // Work around conflicting define in rpcndr.h
-@@ -443,6 +460,1302 @@ Result<nsRange*, nsresult> ContentEventHandler::InitRootContent(
+@@ -444,6 +461,1301 @@ Result<dom::Range*, nsresult> ContentEventHandler::InitRootContent(
    return rangeInRootElement;
  }
  
@@ -1125,7 +1125,7 @@ index d11a218cd050..1c3438a87b83 100644
 +      WidgetSelectionEvent selection(true, eSetSelection, widget);
 +      selection.mOffset = aRequest.mOffset;
 +      selection.mLength = aRequest.mLength;
-+      selection.mExpandToClusterBoundary = false;
++      selection.mExpandToClusterBoundary = ExpandToClusterBoundary::No;
 +      selection.mAssociateWithNext = Some(aRequest.mAssociateWithNext);
 +
 +      SelectionBatcher selectionBatch(*mSelection, __FUNCTION__);
@@ -1159,7 +1159,7 @@ index d11a218cd050..1c3438a87b83 100644
 +      WidgetSelectionEvent selection(true, eSetSelection, widget);
 +      selection.mOffset = aRequest.mOffset;
 +      selection.mLength = aRequest.mLength;
-+      selection.mExpandToClusterBoundary = false;
++      selection.mExpandToClusterBoundary = ExpandToClusterBoundary::No;
 +      selection.mAssociateWithNext = Some(aRequest.mAssociateWithNext);
 +
 +      // UIKit selects text before deleting it when holding backspace.
@@ -1181,7 +1181,7 @@ index d11a218cd050..1c3438a87b83 100644
 +      }
 +
 +      auto range = rangeOrError.unwrap();
-+      RefPtr<nsRange> replacement = nsRange::Create(
++      RefPtr<dom::Range> replacement = dom::Range::Create(
 +          range.mRange.Start(), range.mRange.End(), IgnoreErrors());
 +      NS_ENSURE_TRUE(replacement, NS_ERROR_NOT_AVAILABLE);
 +
@@ -1203,9 +1203,8 @@ index d11a218cd050..1c3438a87b83 100644
 +      rv = editor->ReplaceTextAsAction(
 +          aRequest.mText, replacement,
 +          EditorBase::AllowBeforeInputEventCancelable::Yes,
-+          caretInReplacement || replacingSelection
-+              ? EditorBase::PreventSetSelection::No
-+              : EditorBase::PreventSetSelection::Yes);
++          caretInReplacement || replacingSelection ? PreventSetSelection::No
++                                                   : PreventSetSelection::Yes);
 +      NS_ENSURE_SUCCESS(rv, rv);
 +      break;
 +    }
@@ -1217,7 +1216,7 @@ index d11a218cd050..1c3438a87b83 100644
 +      WidgetSelectionEvent selection(true, eSetSelection, widget);
 +      selection.mOffset = aRequest.mOffset;
 +      selection.mLength = aRequest.mLength;
-+      selection.mExpandToClusterBoundary = false;
++      selection.mExpandToClusterBoundary = ExpandToClusterBoundary::No;
 +      {
 +        // Hide the temporary selection, but let the insertion below notify
 +        // listeners normally.
@@ -1366,7 +1365,7 @@ index d11a218cd050..1c3438a87b83 100644
  nsresult ContentEventHandler::InitCommon(EventMessage aEventMessage,
                                           SelectionType aSelectionType,
                                           bool aRequireFlush) {
-@@ -628,6 +1941,13 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -629,6 +1941,13 @@ nsresult ContentEventHandler::QueryContentRect(
  
    aEvent->mReply->mRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
        resultRect, presContext->AppUnitsPerDevPixel());
@@ -1380,7 +1379,7 @@ index d11a218cd050..1c3438a87b83 100644
    // Returning empty rect may cause native IME confused, let's make sure to
    // return non-empty rect.
    EnsureNonEmptyRect(aEvent->mReply->mRect);
-@@ -635,6 +1955,32 @@ nsresult ContentEventHandler::QueryContentRect(
+@@ -636,6 +1955,32 @@ nsresult ContentEventHandler::QueryContentRect(
    return NS_OK;
  }
  
@@ -1413,7 +1412,7 @@ index d11a218cd050..1c3438a87b83 100644
  // Editor places a padding <br> element under its root content if the editor
  // doesn't have any text. This happens even for single line editors.
  // When we get text content and when we change the selection,
-@@ -837,6 +2183,8 @@ nsresult ContentEventHandler::GenerateFlatTextContent(
+@@ -838,6 +2183,8 @@ nsresult ContentEventHandler::GenerateFlatTextContent(
        }
      } else if (ShouldBreakLineBefore(*node->AsContent(), mRootElement)) {
        aString.Append(char16_t('\n'));
@@ -1422,7 +1421,7 @@ index d11a218cd050..1c3438a87b83 100644
      }
    }
    return NS_OK;
-@@ -1025,6 +2373,11 @@ nsresult ContentEventHandler::GenerateFlatFontRanges(
+@@ -1026,6 +2373,11 @@ nsresult ContentEventHandler::GenerateFlatFontRanges(
          }
        }
        baseOffset += kBRLength;
@@ -1434,7 +1433,7 @@ index d11a218cd050..1c3438a87b83 100644
      }
    }
  
-@@ -1144,10 +2497,13 @@ ContentEventHandler::ConvertFlatTextOffsetToDOMRangeBase(
+@@ -1146,10 +2498,13 @@ ContentEventHandler::ConvertFlatTextOffsetToDOMRangeBase(
        result.mLastTextNode = contentAsText;
      }
  
@@ -1452,7 +1451,7 @@ index d11a218cd050..1c3438a87b83 100644
      if (!textLength) {
        continue;
      }
-@@ -2525,6 +3881,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2527,6 +3882,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
    }
    DOMRangeAndAdjustedOffsetInFlattenedText domRangeAndAdjustedOffset =
        domRangeAndAdjustedOffsetOrError.unwrap();
@@ -1460,7 +1459,7 @@ index d11a218cd050..1c3438a87b83 100644
    nsString string;
    if (NS_WARN_IF(NS_FAILED(
            GenerateFlatTextContent(domRangeAndAdjustedOffset.mRange, string)))) {
-@@ -2847,7 +4204,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
+@@ -2849,7 +4205,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
  }
  
  nsresult ContentEventHandler::OnQueryEditorRect(
@@ -1469,7 +1468,7 @@ index d11a218cd050..1c3438a87b83 100644
    nsresult rv = Init(aEvent);
    if (NS_FAILED(rv)) {
      return rv;
-@@ -2862,9 +4219,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
+@@ -2864,9 +4220,72 @@ nsresult ContentEventHandler::OnQueryEditorRect(
      }
    }
  
@@ -1544,7 +1543,7 @@ index d11a218cd050..1c3438a87b83 100644
  
    MOZ_ASSERT(aEvent->Succeeded());
    return NS_OK;
-@@ -3305,15 +4725,14 @@ Result<uint32_t, nsresult> ContentEventHandler::GetFlatTextLengthInRange(
+@@ -3307,15 +4726,14 @@ Result<uint32_t, nsresult> ContentEventHandler::GetFlatTextLengthInRange(
        } else {
          length += GetTextLength(*textNode);
        }
@@ -1564,7 +1563,7 @@ index d11a218cd050..1c3438a87b83 100644
        if (content == endPosition.GetContainer() &&
            endPosition.IsBeforeOpenTag()) {
          continue;
-@@ -3407,8 +4826,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
+@@ -3409,8 +4827,8 @@ nsresult ContentEventHandler::AdjustCollapsedRangeMaybeIntoTextNode(
    return NS_OK;
  }
  
@@ -1575,7 +1574,7 @@ index d11a218cd050..1c3438a87b83 100644
    NS_ASSERTION(aFrame, "aFrame must not be null");
  
    nsPresContext* thisPC = aFrame->PresContext();
-@@ -3416,12 +4835,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
+@@ -3418,12 +4836,76 @@ nsresult ContentEventHandler::ConvertToRootRelativeOffset(nsIFrame* aFrame,
    if (NS_WARN_IF(!rootPC)) {
      return NS_ERROR_FAILURE;
    }
@@ -1654,7 +1653,7 @@ index d11a218cd050..1c3438a87b83 100644
  
    // TransformFrameRectToAncestor returned the rect in the ancestor's appUnits,
    // but we want it in aFrame's units (in case of different full-zoom factors),
-@@ -3481,7 +4964,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
+@@ -3483,7 +4965,8 @@ static void AdjustRangeForSelection(const Element* aRootElement,
    }
  }
  
@@ -1664,7 +1663,7 @@ index d11a218cd050..1c3438a87b83 100644
    aEvent->mSucceeded = false;
  
    // Get selection to manipulate
-@@ -3533,6 +5017,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3535,6 +5018,19 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
      }
    }
  
@@ -1681,10 +1680,10 @@ index d11a218cd050..1c3438a87b83 100644
 +                                : CaretAssociationHint::Before);
 +  }
 +
-   if (aEvent->mReversed) {
+   if (aEvent->IsReversed()) {
      nsCOMPtr<nsINode> startNodeStrong(startNode);
      nsCOMPtr<nsINode> endNodeStrong(endNode);
-@@ -3558,7 +5055,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
+@@ -3560,7 +5056,8 @@ nsresult ContentEventHandler::OnSelectionEvent(WidgetSelectionEvent* aEvent) {
    // `ContentEventHandler` is a `MOZ_STACK_CLASS`, so `mSelection` is known to
    // be alive.
    MOZ_KnownLive(mSelection)

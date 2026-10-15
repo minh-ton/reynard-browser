@@ -1,8 +1,8 @@
 diff --git a/dom/media/systemservices/PCameras.ipdl b/dom/media/systemservices/PCameras.ipdl
-index c9652718acde..95d3a219749d 100644
+index 5e7a0add5260..9409962e06dd 100644
 --- a/dom/media/systemservices/PCameras.ipdl
 +++ b/dom/media/systemservices/PCameras.ipdl
-@@ -8,12 +8,18 @@ include protocol PBackground;
+@@ -8,6 +8,7 @@ include protocol PBackground;
  include PBackgroundSharedTypes;
  
  include "mozilla/dom/MediaIPCUtils.h";
@@ -10,7 +10,8 @@ index c9652718acde..95d3a219749d 100644
  
  using mozilla::camera::CaptureEngine from "mozilla/media/CamerasTypes.h";
  using mozilla::dom::VideoResizeModeEnum from "mozilla/dom/MediaStreamTrackBinding.h";
- using mozilla::TimeStamp from "mozilla/TimeStamp.h";
+@@ -15,6 +16,11 @@ using mozilla::TimeStamp from "mozilla/TimeStamp.h";
+ using mozilla::VideoRotation from "MediaInfo.h";
  using mozilla::media::TimeUnit from "TimeUnits.h";
  using mozilla::NormalizedConstraints from "MediaTrackConstraints.h";
 +using mozilla::gfx::IntRect from "mozilla/gfx/Rect.h";
@@ -21,7 +22,7 @@ index c9652718acde..95d3a219749d 100644
  using webrtc::VideoType from "mozilla/media/CamerasTypes.h";
  
  namespace mozilla {
-@@ -24,6 +30,7 @@ struct VideoCaptureCapability
+@@ -25,6 +31,7 @@ struct VideoCaptureCapability
  {
    int width;
    int height;
@@ -29,7 +30,7 @@ index c9652718acde..95d3a219749d 100644
    int maxFPS;
    VideoType videoType;
    bool interlaced;
-@@ -65,12 +72,19 @@ child:
+@@ -72,12 +79,19 @@ child:
    async CaptureEnded(int[] streamIds);
    // transfers ownership of |buffer| from parent to child
    async DeliverFrame(int captureId, int[] streamIds, Shmem buffer, VideoFrameProperties props);
@@ -50,7 +51,7 @@ index c9652718acde..95d3a219749d 100644
    async ReplyFailure();
    async ReplySuccess();
    async __delete__();
-@@ -95,6 +109,7 @@ parent:
+@@ -102,6 +116,7 @@ parent:
    async StopCapture(CaptureEngine engine, int streamId);
    // transfers frame back
    async ReleaseFrame(int captureId, Shmem s);

@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerChild.cpp b/gfx/layers/ipc/UiCompositorControllerChild.cpp
-index 89dc6497e3cb..9d4e36a3c417 100644
+index 94a9b3093944..7bc27937f95f 100644
 --- a/gfx/layers/ipc/UiCompositorControllerChild.cpp
 +++ b/gfx/layers/ipc/UiCompositorControllerChild.cpp
 @@ -22,8 +22,10 @@
@@ -14,7 +14,7 @@ index 89dc6497e3cb..9d4e36a3c417 100644
    MOZ_CRASH("Platform does not support UiCompositorController");
    return nullptr;
  }
-@@ -111,7 +113,19 @@ bool UiCompositorControllerChild::SetMaxToolbarHeight(const int32_t& aHeight) {
+@@ -102,7 +104,19 @@ bool UiCompositorControllerChild::InvalidateAndRender() {
  }
  
  bool UiCompositorControllerChild::SetFixedBottomOffset(int32_t aOffset) {
@@ -35,7 +35,7 @@ index 89dc6497e3cb..9d4e36a3c417 100644
  }
  
  bool UiCompositorControllerChild::ToolbarAnimatorMessageFromUI(
-@@ -193,32 +207,51 @@ bool UiCompositorControllerChild::EnableLayerUpdateNotifications(
+@@ -184,32 +198,51 @@ bool UiCompositorControllerChild::EnableLayerUpdateNotifications(
    return SendEnableLayerUpdateNotifications(aEnable);
  }
  
@@ -107,9 +107,9 @@ index 89dc6497e3cb..9d4e36a3c417 100644
        }));
  
    task.Wait();
-@@ -358,6 +391,12 @@ void UiCompositorControllerChild::SendCachedValues() {
-     SendMaxToolbarHeight(mMaxToolbarHeight.ref());
-     mMaxToolbarHeight.reset();
+@@ -345,6 +378,12 @@ void UiCompositorControllerChild::SendCachedValues() {
+                         mResize.ref().height, &resumed);
+     mResize.reset();
    }
 +  if (mFixedLayerMargins) {
 +    const auto& margins = mFixedLayerMargins.ref();
@@ -120,7 +120,7 @@ index 89dc6497e3cb..9d4e36a3c417 100644
    if (mDefaultClearColor) {
      SendDefaultClearColor(mDefaultClearColor.ref());
      mDefaultClearColor.reset();
-@@ -366,6 +405,15 @@ void UiCompositorControllerChild::SendCachedValues() {
+@@ -353,6 +392,15 @@ void UiCompositorControllerChild::SendCachedValues() {
      SendEnableLayerUpdateNotifications(mLayerUpdateEnabled.ref());
      mLayerUpdateEnabled.reset();
    }

@@ -1,8 +1,38 @@
 diff --git a/widget/InputData.cpp b/widget/InputData.cpp
-index 57b8f8cd4b90..4d90e562a680 100644
+index 57b8f8cd4b90..2138e7c09fe7 100644
 --- a/widget/InputData.cpp
 +++ b/widget/InputData.cpp
-@@ -507,6 +507,7 @@ PanGestureInput::PanGestureInput()
+@@ -164,7 +164,11 @@ MultiTouchInput::MultiTouchInput(const WidgetTouchEvent& aTouchEvent)
+ }
+ 
+ void MultiTouchInput::Translate(const ScreenPoint& aTranslation) {
++#ifdef MOZ_WIDGET_UIKIT
++  const ScreenPoint& translation = aTranslation;
++#else
+   ScreenIntPoint translation = RoundedToInt(aTranslation);
++#endif
+ 
+   for (auto& touchData : mTouches) {
+     for (auto& historicalData : touchData.mHistoricalData) {
+@@ -235,15 +239,14 @@ bool MultiTouchInput::TransformToLocal(
+     const ScreenToParentLayerMatrix4x4& aTransform) {
+   for (auto& touchData : mTouches) {
+     for (auto& historicalData : touchData.mHistoricalData) {
+-      Maybe<ParentLayerIntPoint> historicalPoint =
++      auto historicalPoint =
+           UntransformBy(aTransform, historicalData.mScreenPoint);
+       if (!historicalPoint) {
+         return false;
+       }
+       historicalData.mLocalScreenPoint = *historicalPoint;
+     }
+-    Maybe<ParentLayerIntPoint> point =
+-        UntransformBy(aTransform, touchData.mScreenPoint);
++    auto point = UntransformBy(aTransform, touchData.mScreenPoint);
+     if (!point) {
+       return false;
+     }
+@@ -507,6 +510,7 @@ PanGestureInput::PanGestureInput()
        mHandledByAPZ(false),
        mOverscrollBehaviorAllowsSwipe(false),
        mSimulateMomentum(false),
@@ -10,7 +40,7 @@ index 57b8f8cd4b90..4d90e562a680 100644
        mIsNoLineOrPageDelta(true),
        mMayTriggerSwipe(false) {}
  
-@@ -525,6 +526,7 @@ PanGestureInput::PanGestureInput(PanGestureType aType, TimeStamp aTimeStamp,
+@@ -525,6 +529,7 @@ PanGestureInput::PanGestureInput(PanGestureType aType, TimeStamp aTimeStamp,
        mHandledByAPZ(false),
        mOverscrollBehaviorAllowsSwipe(false),
        mSimulateMomentum(false),

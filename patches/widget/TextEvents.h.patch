@@ -1,13 +1,13 @@
 diff --git a/widget/TextEvents.h b/widget/TextEvents.h
-index 71796496bcf0..b52c751297af 100644
+index bccec5a150d4..1559f07ff4c1 100644
 --- a/widget/TextEvents.h
 +++ b/widget/TextEvents.h
-@@ -1446,6 +1446,8 @@ class WidgetSelectionEvent final : public WidgetGUIEvent {
-   bool mReversed = false;
+@@ -1471,6 +1471,8 @@ class WidgetSelectionEvent final : public WidgetGUIEvent {
    // Cluster-based or character-based
-   bool mExpandToClusterBoundary = true;
+   ExpandToClusterBoundary mExpandToClusterBoundary =
+       ExpandToClusterBoundary::Yes;
 +  // At a line wrap, native text controls can choose which line gets the caret.
 +  Maybe<bool> mAssociateWithNext;
    // true if setting selection succeeded.
    bool mSucceeded = false;
-   // Fennec provides eSetSelection reason codes for downstream
+   // true if TextEventDispatcher dispatches this event.

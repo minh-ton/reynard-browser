@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index 13436918ecd2..592fd9317012 100644
+index c412407b112a..d17130583648 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -3,17 +3,25 @@
@@ -28,7 +28,7 @@ index 13436918ecd2..592fd9317012 100644
  #include "mozilla/widget/ScreenManager.h"
  #include "nsAppRunner.h"
  #include "nsAppShell.h"
-@@ -42,25 +50,150 @@
+@@ -42,25 +50,145 @@
    fprintf(stderr, "\n")
  
  static void ApplicationWillTerminate(bool aCallExit);
@@ -62,19 +62,14 @@ index 13436918ecd2..592fd9317012 100644
 +  MOZ_ASSERT(NS_IsMainThread());
 +
 +  IOSMemoryPressureLevel pressureLevel;
-+  switch (aPressureFlags) {
-+    case DISPATCH_MEMORYPRESSURE_NORMAL:
-+      pressureLevel = IOSMemoryPressureLevel::Value::eNormal;
-+      break;
-+    case DISPATCH_MEMORYPRESSURE_WARN:
-+      pressureLevel = IOSMemoryPressureLevel::Value::eWarning;
-+      break;
-+    case DISPATCH_MEMORYPRESSURE_CRITICAL:
-+      pressureLevel = IOSMemoryPressureLevel::Value::eCritical;
-+      break;
-+    default:
-+      pressureLevel = IOSMemoryPressureLevel::Value::eUnexpected;
-+      break;
++  if (aPressureFlags & DISPATCH_MEMORYPRESSURE_CRITICAL) {
++    pressureLevel = IOSMemoryPressureLevel::Value::eCritical;
++  } else if (aPressureFlags & DISPATCH_MEMORYPRESSURE_WARN) {
++    pressureLevel = IOSMemoryPressureLevel::Value::eWarning;
++  } else if (aPressureFlags & DISPATCH_MEMORYPRESSURE_NORMAL) {
++    pressureLevel = IOSMemoryPressureLevel::Value::eNormal;
++  } else {
++    pressureLevel = IOSMemoryPressureLevel::Value::eUnexpected;
 +  }
 +
 +  RefPtr<nsAvailableMemoryWatcherBase> watcher =
@@ -180,7 +175,7 @@ index 13436918ecd2..592fd9317012 100644
  - (void)applicationWillTerminate:(UIApplication*)application {
    ALOG("[AppShellDelegate applicationWillTerminate:]");
    ApplicationWillTerminate(/* aCallExit */ false);
-@@ -68,15 +201,129 @@ - (void)applicationWillTerminate:(UIApplication*)application {
+@@ -68,15 +196,129 @@ - (void)applicationWillTerminate:(UIApplication*)application {
  
  - (void)applicationDidBecomeActive:(UIApplication*)application {
    ALOG("[AppShellDelegate applicationDidBecomeActive:]");
@@ -311,7 +306,7 @@ index 13436918ecd2..592fd9317012 100644
  }
  @end
  
-@@ -112,6 +359,7 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -112,6 +354,7 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
    }
  
    gAppShell = NULL;
@@ -319,7 +314,7 @@ index 13436918ecd2..592fd9317012 100644
  }
  
  // Init
-@@ -154,6 +402,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -154,6 +397,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
  
    nsresult rv = nsBaseAppShell::Init();
  
@@ -330,7 +325,7 @@ index 13436918ecd2..592fd9317012 100644
    nsCOMPtr<nsIObserverService> obsServ =
        mozilla::services::GetObserverService();
    if (obsServ) {
-@@ -281,7 +533,12 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -281,7 +528,12 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
    ALOG("nsAppShell::Run");
  
    nsresult rv = NS_OK;
@@ -344,7 +339,7 @@ index 13436918ecd2..592fd9317012 100644
      char argv[1][4] = {"app"};
      UIApplicationMain(1, (char**)argv, nil, @"AppShellDelegate");
      // UIApplicationMain doesn't exit. :-(
-@@ -298,7 +555,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -298,7 +550,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
  
    mTerminated = true;
  
@@ -356,7 +351,7 @@ index 13436918ecd2..592fd9317012 100644
      // Dispatch a native event to the main queue to terminate. XPCOM doesn't
      // like being shut down from within an XPCOM runnable, so we cannot use
      // `NS_DispatchToMainThread` here.
-@@ -318,6 +578,11 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -318,6 +573,11 @@ static void ApplicationWillTerminate(bool aCallExit) {
      return;
    }
  
@@ -368,7 +363,7 @@ index 13436918ecd2..592fd9317012 100644
    // Perform the steps which would normally happen after nsAppShell::Run, such
    // as `~ScopedXPCOMStartup`, as UIApplicationMain will never shutdown.
    if (nsCOMPtr<nsIAppStartup> appStartup = components::AppStartup::Service()) {
-@@ -331,12 +596,19 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -330,12 +590,19 @@ static void ApplicationWillTerminate(bool aCallExit) {
  
    gDirServiceProvider->DoShutdown();
  

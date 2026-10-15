@@ -1,5 +1,5 @@
 diff --git a/dom/media/MediaManager.cpp b/dom/media/MediaManager.cpp
-index beb1d3b8c628..ad9d5d4354c7 100644
+index a3d6a13aa50e..1dbe66cfcae7 100644
 --- a/dom/media/MediaManager.cpp
 +++ b/dom/media/MediaManager.cpp
 @@ -991,7 +991,8 @@ NS_IMPL_ISUPPORTS(LocalMediaDevice, nsIMediaDevice)
@@ -45,7 +45,7 @@ index beb1d3b8c628..ad9d5d4354c7 100644
  }
  
  MediaDevice::~MediaDevice() = default;
-@@ -2229,6 +2232,12 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
+@@ -2265,6 +2268,12 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
        aParams.mFlags.contains(EnumerationFlag::EnumerateAudioOutputs);
    const bool hasFakeCams = aParams.HasFakeCams();
    const bool hasFakeMics = aParams.HasFakeMics();
@@ -58,7 +58,7 @@ index beb1d3b8c628..ad9d5d4354c7 100644
    // True if at least one of video input or audio input is a real device
    // or there is audio output.
    const bool realDeviceRequested = (!hasFakeCams && hasVideo) ||
-@@ -2258,12 +2267,12 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
+@@ -2294,12 +2303,12 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
          });
      obs->NotifyObservers(static_cast<nsIRunnable*>(task),
                           "getUserMedia:ask-device-permission", type);
@@ -74,7 +74,7 @@ index beb1d3b8c628..ad9d5d4354c7 100644
    }
  
    if (!deviceAccessPromise) {
-@@ -2275,7 +2284,8 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
+@@ -2311,7 +2320,8 @@ MediaManager::MaybeRequestPermissionAndEnumerateRawDevices(
      // allowing a permission request does exactly what we need in this case.
      ipc::PBackgroundChild* backgroundChild =
          ipc::BackgroundChild::GetOrCreateForCurrentThread();

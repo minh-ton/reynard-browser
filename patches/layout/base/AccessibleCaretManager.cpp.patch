@@ -1,5 +1,5 @@
 diff --git a/layout/base/AccessibleCaretManager.cpp b/layout/base/AccessibleCaretManager.cpp
-index 77684060c1d7..afc2c9393314 100644
+index 9ffc195a651c..0aae53938e35 100644
 --- a/layout/base/AccessibleCaretManager.cpp
 +++ b/layout/base/AccessibleCaretManager.cpp
 @@ -245,6 +245,9 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(

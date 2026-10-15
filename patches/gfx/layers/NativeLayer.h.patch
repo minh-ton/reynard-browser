@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/NativeLayer.h b/gfx/layers/NativeLayer.h
-index 60ca4cfccd37..e844882cfd0d 100644
+index a4c85ed8fba9..921f17ccc9c1 100644
 --- a/gfx/layers/NativeLayer.h
 +++ b/gfx/layers/NativeLayer.h
-@@ -16,6 +16,10 @@
+@@ -17,6 +17,10 @@
  
  namespace mozilla {
  
@@ -13,7 +13,7 @@ index 60ca4cfccd37..e844882cfd0d 100644
  namespace gl {
  class GLContext;
  class MozFramebuffer;
-@@ -78,6 +82,10 @@ class NativeLayerRoot {
+@@ -79,6 +83,10 @@ class NativeLayerRoot {
    // has processed any previous commits.
    virtual void WaitUntilCommitToScreenHasBeenProcessed() {}
  

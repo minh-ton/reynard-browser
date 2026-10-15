@@ -1,14 +1,16 @@
 diff --git a/dom/media/systemservices/VideoFrameUtils.cpp b/dom/media/systemservices/VideoFrameUtils.cpp
-index 7ce3a4cbe3eb..d85efbaeef9b 100644
+index bdc21e1c265a..93dc717f8565 100644
 --- a/dom/media/systemservices/VideoFrameUtils.cpp
 +++ b/dom/media/systemservices/VideoFrameUtils.cpp
-@@ -6,11 +6,17 @@
+@@ -6,6 +6,7 @@
  
  #include "api/video/video_frame.h"
  #include "mozilla/ShmemPool.h"
 +#include "objc_video_capture/native_video_frame.h"
  
  namespace mozilla {
+ 
+@@ -26,6 +27,11 @@ static VideoRotation ToVideoRotation(webrtc::VideoRotation aRotation) {
  
  uint32_t VideoFrameUtils::TotalRequiredBufferSize(
      const webrtc::VideoFrame& aVideoFrame) {
@@ -20,9 +22,9 @@ index 7ce3a4cbe3eb..d85efbaeef9b 100644
    auto i420 = aVideoFrame.video_frame_buffer()->ToI420();
    auto height = i420->height();
    size_t size = height * i420->StrideY() +
-@@ -34,6 +40,19 @@ void VideoFrameUtils::InitFrameBufferProperties(
-   aDestProps.renderTimeMs() = aVideoFrame.render_time_ms();
-   aDestProps.rotation() = aVideoFrame.rotation();
+@@ -52,6 +58,19 @@ void VideoFrameUtils::InitFrameBufferProperties(
+       ToVideoRotation(aOriginalRotationRequired);
+   aDestProps.rotationApplied() = aRotationApplied;
  
 +  if (auto info =
 +          webrtc::videocapturemodule::GetNativeI420FrameInfo(aVideoFrame)) {
@@ -40,7 +42,7 @@ index 7ce3a4cbe3eb..d85efbaeef9b 100644
    auto i420 = aVideoFrame.video_frame_buffer()->ToI420();
    auto height = i420->height();
    aDestProps.yAllocatedSize() = height * i420->StrideY();
-@@ -51,6 +70,11 @@ void VideoFrameUtils::InitFrameBufferProperties(
+@@ -69,6 +88,11 @@ void VideoFrameUtils::InitFrameBufferProperties(
  void VideoFrameUtils::CopyVideoFrameBuffers(uint8_t* aDestBuffer,
                                              const size_t aDestBufferSize,
                                              const webrtc::VideoFrame& aFrame) {

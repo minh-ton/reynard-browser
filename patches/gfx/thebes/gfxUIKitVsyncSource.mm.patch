@@ -1,9 +1,9 @@
 diff --git a/gfx/thebes/gfxUIKitVsyncSource.mm b/gfx/thebes/gfxUIKitVsyncSource.mm
 new file mode 100644
-index 000000000000..6494ff02528f
+index 000000000000..44917704b733
 --- /dev/null
 +++ b/gfx/thebes/gfxUIKitVsyncSource.mm
-@@ -0,0 +1,334 @@
+@@ -0,0 +1,320 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -22,14 +22,13 @@ index 000000000000..6494ff02528f
 +#include "nsObjCExceptions.h"
 +#include "nsThreadUtils.h"
 +
-+#import <Foundation/NSInvocation.h>
-+#import <QuartzCore/CAFrameRateRange.h>
 +#import <QuartzCore/CADisplayLink.h>
++#import <QuartzCore/CAFrameRateRange.h>
 +#import <UIKit/UIScreen.h>
 +
++#include <mach/mach_time.h>
 +#include <algorithm>
 +#include <cmath>
-+#include <mach/mach_time.h>
 +
 +using mozilla::TimeDuration;
 +using mozilla::TimeStamp;
@@ -238,22 +237,9 @@ index 000000000000..6494ff02528f
 +
 +    mMaxFPS = MaxFPS(screen);
 +
-+    if ([mDisplayLink
-+            respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
-+#pragma clang diagnostic push
-+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
-+      CAFrameRateRange frameRateRange =
++    if (@available(iOS 15.0, *)) {
++      mDisplayLink.preferredFrameRateRange =
 +          CAFrameRateRangeMake(kMinFPS, mMaxFPS, mMaxFPS);
-+#pragma clang diagnostic pop
-+      NSInvocation* invocation = [NSInvocation
-+          invocationWithMethodSignature:
-+              [mDisplayLink
-+                  methodSignatureForSelector:@selector(
-+                                                 setPreferredFrameRateRange:)]];
-+      [invocation setSelector:@selector(setPreferredFrameRateRange:)];
-+      [invocation setTarget:mDisplayLink];
-+      [invocation setArgument:&frameRateRange atIndex:2];
-+      [invocation invoke];
 +    } else {
 +      mDisplayLink.preferredFramesPerSecond = mMaxFPS;
 +    }

@@ -1,5 +1,5 @@
 diff --git a/gfx/ipc/GPUProcessManager.h b/gfx/ipc/GPUProcessManager.h
-index 0bf1d2272b4b..4e373f677444 100644
+index b3bea5eed575..98686e2ce894 100644
 --- a/gfx/ipc/GPUProcessManager.h
 +++ b/gfx/ipc/GPUProcessManager.h
 @@ -123,7 +123,8 @@ class GPUProcessManager final : public GPUProcessHost::Listener {
@@ -12,7 +12,7 @@ index 0bf1d2272b4b..4e373f677444 100644
  
    nsresult CreateRddVideoBridge(RDDProcessManager* aRDD, RDDChild* aChild);
  #ifdef MOZ_WMF_MEDIA_ENGINE
-@@ -334,10 +335,10 @@ class GPUProcessManager final : public GPUProcessHost::Listener {
+@@ -335,10 +336,10 @@ class GPUProcessManager final : public GPUProcessHost::Listener {
    void SetProcessIsForeground();
  #endif
  

@@ -1,8 +1,39 @@
 diff --git a/widget/InputData.h b/widget/InputData.h
-index 2ad458dad89f..0afedb961e20 100644
+index 2ad458dad89f..c09c00a0ff12 100644
 --- a/widget/InputData.h
 +++ b/widget/InputData.h
-@@ -444,6 +444,9 @@ class PanGestureInput : public InputData {
+@@ -135,6 +135,12 @@ class InputData {
+  */
+ class SingleTouchData {
+  public:
++#ifdef MOZ_WIDGET_UIKIT
++  using ScreenPointType = ScreenPoint;
++#else
++  using ScreenPointType = ScreenIntPoint;
++#endif
++
+   // Construct a SingleTouchData from a Screen point.
+   // mLocalScreenPoint remains (0,0) unless it's set later.
+   SingleTouchData(int32_t aIdentifier, ScreenIntPoint aScreenPoint,
+@@ -169,7 +175,7 @@ class SingleTouchData {
+     TimeStamp mTimeStamp;
+ 
+     // The touch data of this historical sample.
+-    ScreenIntPoint mScreenPoint;
++    ScreenPointType mScreenPoint;
+     ParentLayerPoint mLocalScreenPoint;
+     ScreenSize mRadius;
+     float mRotationAngle = 0.0f;
+@@ -184,7 +190,7 @@ class SingleTouchData {
+ 
+   // Point on the screen that the touch hit, in device pixels. They are
+   // coordinates on the screen.
+-  ScreenIntPoint mScreenPoint;
++  ScreenPointType mScreenPoint;
+ 
+   // |mScreenPoint| transformed to the local coordinates of the APZC targeted
+   // by the hit. This is set and used by APZ.
+@@ -444,6 +450,9 @@ class PanGestureInput : public InputData {
      mOverscrollBehaviorAllowsSwipe = aAllows;
    }
    void SetSimulateMomentum(bool aSimulate) { mSimulateMomentum = aSimulate; }
@@ -12,7 +43,7 @@ index 2ad458dad89f..0afedb961e20 100644
    void SetIsNoLineOrPageDelta(bool aIsNoLineOrPageDelta) {
      mIsNoLineOrPageDelta = aIsNoLineOrPageDelta;
    }
-@@ -500,6 +503,8 @@ class PanGestureInput : public InputData {
+@@ -500,6 +509,8 @@ class PanGestureInput : public InputData {
    // events.)
    bool mSimulateMomentum : 1;
  

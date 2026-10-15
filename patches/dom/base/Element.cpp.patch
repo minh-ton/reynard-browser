@@ -1,8 +1,8 @@
 diff --git a/dom/base/Element.cpp b/dom/base/Element.cpp
-index 8a333bb3c32d..32d331b6111f 100644
+index 2ebd57e6ea8b..83f22d23439f 100644
 --- a/dom/base/Element.cpp
 +++ b/dom/base/Element.cpp
-@@ -4870,8 +4870,14 @@ nsresult Element::PostHandleEventForLinks(EventChainPostVisitor& aVisitor) {
+@@ -4880,8 +4880,14 @@ nsresult Element::PostHandleEventForLinks(EventChainPostVisitor& aVisitor) {
      case ePointerClick: {
        WidgetMouseEvent* mouseEvent = aVisitor.mEvent->AsMouseEvent();
        if (mouseEvent->IsLeftClickEvent()) {

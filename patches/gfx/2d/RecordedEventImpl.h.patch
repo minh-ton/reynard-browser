@@ -1,5 +1,5 @@
 diff --git a/gfx/2d/RecordedEventImpl.h b/gfx/2d/RecordedEventImpl.h
-index c815cbff1a67..14dc9403007a 100644
+index 6ba0fb68575f..a562a99bd1c0 100644
 --- a/gfx/2d/RecordedEventImpl.h
 +++ b/gfx/2d/RecordedEventImpl.h
 @@ -1521,6 +1521,9 @@ class RecordedFontDescriptor

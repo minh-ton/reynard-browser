@@ -1,5 +1,5 @@
 diff --git a/gfx/2d/ScaledFontMac.cpp b/gfx/2d/ScaledFontMac.cpp
-index 1e440d7352fe..88a95ec6ed4a 100644
+index fe012a0d210e..161106945bb8 100644
 --- a/gfx/2d/ScaledFontMac.cpp
 +++ b/gfx/2d/ScaledFontMac.cpp
 @@ -372,7 +372,7 @@ bool UnscaledFontMac::GetFontFileData(FontFileDataOutput aDataCallback,

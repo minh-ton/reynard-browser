@@ -1,5 +1,5 @@
 diff --git a/parser/expat/moz.build b/parser/expat/moz.build
-index feb72d773ae6..496972d31893 100644
+index c50b19f40de9..e00fd8098da5 100644
 --- a/parser/expat/moz.build
 +++ b/parser/expat/moz.build
 @@ -19,10 +19,18 @@ EXPORTS += [

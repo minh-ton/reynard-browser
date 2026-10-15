@@ -1,8 +1,8 @@
 diff --git a/layout/painting/nsDisplayList.h b/layout/painting/nsDisplayList.h
-index db095b0449e6..bf37dc0d011d 100644
+index 25d51c383ab8..f050c10d398d 100644
 --- a/layout/painting/nsDisplayList.h
 +++ b/layout/painting/nsDisplayList.h
-@@ -5935,6 +5935,7 @@ class nsDisplayAsyncZoom final : public nsDisplayOwnLayer {
+@@ -5917,6 +5917,7 @@ class nsDisplayAsyncZoom final : public nsDisplayOwnLayer {
  
    NS_DISPLAY_DECL_NAME("AsyncZoom", TYPE_ASYNC_ZOOM)
  

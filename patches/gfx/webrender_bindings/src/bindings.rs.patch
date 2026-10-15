@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/src/bindings.rs b/gfx/webrender_bindings/src/bindings.rs
-index e71a9dbe516c..0e5c3ca5189b 100644
+index 340bc2abb103..06774278205e 100644
 --- a/gfx/webrender_bindings/src/bindings.rs
 +++ b/gfx/webrender_bindings/src/bindings.rs
 @@ -1128,7 +1128,11 @@ impl AsyncPropertySampler for SamplerCallback {

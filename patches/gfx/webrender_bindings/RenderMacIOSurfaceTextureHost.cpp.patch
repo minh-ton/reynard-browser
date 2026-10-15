@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp b/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
-index 80665d5001f7..3db50a7281c3 100644
+index 54388b6bffb9..8ede8dd130e8 100644
 --- a/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
 +++ b/gfx/webrender_bindings/RenderMacIOSurfaceTextureHost.cpp
 @@ -6,8 +6,6 @@
@@ -43,7 +43,7 @@ index 80665d5001f7..3db50a7281c3 100644
  
    gfx::SurfaceFormat readFormat = gfx::SurfaceFormat::UNKNOWN;
    bool result = aSurface->BindTexImage(aGL, aPlaneID, &readFormat);
-@@ -93,18 +101,20 @@ wr::WrExternalImage RenderMacIOSurfaceTextureHost::Lock(uint8_t aChannelIndex,
+@@ -113,18 +121,20 @@ wr::WrExternalImage RenderMacIOSurfaceTextureHost::Lock(uint8_t aChannelIndex,
  
    if (!mTextureHandles[0]) {
  #ifdef XP_MACOSX

@@ -1,8 +1,8 @@
 diff --git a/editor/libeditor/EditorBase.cpp b/editor/libeditor/EditorBase.cpp
-index 07a22bd5d06b..c85f2ae3ee7d 100644
+index 3573aae3579b..49ac1cb9042b 100644
 --- a/editor/libeditor/EditorBase.cpp
 +++ b/editor/libeditor/EditorBase.cpp
-@@ -4195,6 +4195,36 @@ nsresult EditorBase::OnCompositionChange(
+@@ -4412,6 +4412,36 @@ nsresult EditorBase::OnCompositionChange(
    MOZ_ASSERT(!aCompositionChangeEvent.mData.IsVoid());
    editActionData.SetData(aCompositionChangeEvent.mData);
  
@@ -39,7 +39,7 @@ index 07a22bd5d06b..c85f2ae3ee7d 100644
    // If we're an `HTMLEditor` and this is second or later composition change,
    // we should set target range to the range of composition string.
    // Otherwise, set target ranges to selection ranges (will be done by
-@@ -4921,6 +4951,9 @@ nsresult EditorBase::DeleteSelectionAsAction(
+@@ -5138,6 +5168,9 @@ nsresult EditorBase::DeleteSelectionAsAction(
      case nsIEditor::eToEndOfLine:
        editAction = EditAction::eDeleteToEndOfSoftLine;
        break;
@@ -49,7 +49,7 @@ index 07a22bd5d06b..c85f2ae3ee7d 100644
    }
  
    AutoEditActionDataSetter editActionData(*this, editAction, aPrincipal);
-@@ -4938,7 +4971,8 @@ nsresult EditorBase::DeleteSelectionAsAction(
+@@ -5155,7 +5188,8 @@ nsresult EditorBase::DeleteSelectionAsAction(
        case eNextWord:
        case ePreviousWord:
        case eToBeginningOfLine:
@@ -59,7 +59,7 @@ index 07a22bd5d06b..c85f2ae3ee7d 100644
          if (mCaretStyle != 1) {
            aDirectionAndAmount = eNone;
            break;
-@@ -4977,6 +5011,7 @@ nsresult EditorBase::DeleteSelectionAsAction(
+@@ -5194,6 +5228,7 @@ nsresult EditorBase::DeleteSelectionAsAction(
          break;
        case EditAction::eDeleteWordForward:
        case EditAction::eDeleteToEndOfSoftLine:

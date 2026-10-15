@@ -1,0 +1,13 @@
+diff --git a/gfx/layers/apz/src/InputBlockState.h b/gfx/layers/apz/src/InputBlockState.h
+index 29d193a4888c..8ca8ec7dc756 100644
+--- a/gfx/layers/apz/src/InputBlockState.h
++++ b/gfx/layers/apz/src/InputBlockState.h
+@@ -625,7 +625,7 @@ class TouchBlockState : public CancelableBlockState {
+   // triggering a long-press event.
+   bool mNeedsWaitTouchMove;
+   apz::SingleTapState mSingleTapState;
+-  ScreenIntPoint mSlopOrigin;
++  SingleTouchData::ScreenPointType mSlopOrigin;
+   // A reference to the InputQueue's touch counter
+   TouchCounter& mTouchCounter;
+   TimeStamp mStartTime;

@@ -1,17 +1,8 @@
 diff --git a/dom/media/webrtc/MediaEngineRemoteVideoSource.cpp b/dom/media/webrtc/MediaEngineRemoteVideoSource.cpp
-index bc8a6317e8f5..57f05c31b388 100644
+index c7878d081c91..1d5932cb8c64 100644
 --- a/dom/media/webrtc/MediaEngineRemoteVideoSource.cpp
 +++ b/dom/media/webrtc/MediaEngineRemoteVideoSource.cpp
-@@ -105,7 +105,7 @@ static gfx::IntSize CalculateDesiredSize(DesiredSizeInput aInput) {
-     // This frame is rotated, so what was negotiated as width is now height,
-     // and vice versa.
-     std::swap(aInput.mConstraints.mWidth, aInput.mConstraints.mHeight);
--    std::swap(aInput.mCapabilityWidth, aInput.mCapabilityWidth);
-+    std::swap(aInput.mCapabilityWidth, aInput.mCapabilityHeight);
-   }
- 
-   // Account for a shared camera giving us higher resolution than we asked for.
-@@ -192,9 +192,10 @@ MediaEngineRemoteVideoSource::MediaEngineRemoteVideoSource(
+@@ -184,9 +184,10 @@ MediaEngineRemoteVideoSource::MediaEngineRemoteVideoSource(
        mDeviceUUID(NS_ConvertUTF16toUTF8(aMediaDevice->mRawID)) {
    LOG("{}", __PRETTY_FUNCTION__);
    if (mCapEngine == camera::CameraEngine) {
@@ -25,10 +16,18 @@ index bc8a6317e8f5..57f05c31b388 100644
      if (facingMode.isSome()) {
        mFacingMode.emplace(
            NS_ConvertASCIItoUTF16(dom::GetEnumString(*facingMode)));
-@@ -647,32 +648,7 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
+@@ -637,49 +638,7 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
      uint8_t* aBuffer, const camera::VideoFrameProperties& aProps) {
    // Cameras IPC thread - take great care with accessing members!
  
+-  // media.webrtc.capture.apply-rotation makes the parent straighten a quarter
+-  // turn, leaving the frame with its dimensions swapped relative to the
+-  // capability it was negotiated against.
+-  const bool dimensionsSwapped =
+-      aProps.rotationApplied() &&
+-      (aProps.originalRotationRequired() == VideoRotation::kDegree_90 ||
+-       aProps.originalRotationRequired() == VideoRotation::kDegree_270);
+-
 -  DesiredSizeInput input{};
 -  {
 -    MutexAutoLock lock(mMutex);
@@ -45,9 +44,11 @@ index bc8a6317e8f5..57f05c31b388 100644
 -        .mCapabilityWidth = cw ? Some(cw) : Nothing(),
 -        .mCapabilityHeight = ch ? Some(ch) : Nothing(),
 -        .mCapEngine = mCapEngine,
--        .mInputWidth = aProps.width(),
--        .mInputHeight = aProps.height(),
--        .mRotation = aProps.rotation(),
+-        // mediacapture-main: width, height and aspectRatio constraints and
+-        // capabilities are considered in the primary orientation only, so
+-        // normalise the delivered frame to it.
+-        .mInputWidth = dimensionsSwapped ? aProps.height() : aProps.width(),
+-        .mInputHeight = dimensionsSwapped ? aProps.width() : aProps.height(),
 -    };
 -    if (!mFrameDeliveringTrackingId) {
 -      mFrameDeliveringTrackingId = Some(mTrackingId);
@@ -55,11 +56,18 @@ index bc8a6317e8f5..57f05c31b388 100644
 -  }
 -
 -  gfx::IntSize dstSize = CalculateDesiredSize(input);
+-
+-  // mediacapture-main: getSettings() must report the dimensions of the video
+-  // actually delivered, so flip back out of the primary orientation. This is
+-  // also the orientation the delivered buffer is cropped and scaled in.
+-  if (dimensionsSwapped) {
+-    std::swap(dstSize.width, dstSize.height);
+-  }
 +  gfx::IntSize dstSize = PrepareFrame(aProps);
  
    std::function<void()> callback_unused = []() {};
    webrtc::scoped_refptr<webrtc::I420BufferInterface> buffer =
-@@ -727,23 +703,67 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
+@@ -734,25 +693,96 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
      rec.Record();
    }
  
@@ -73,6 +81,14 @@ index bc8a6317e8f5..57f05c31b388 100644
 +
 +gfx::IntSize MediaEngineRemoteVideoSource::PrepareFrame(
 +    const camera::VideoFrameProperties& aProps) {
++  // media.webrtc.capture.apply-rotation makes the parent straighten a quarter
++  // turn, leaving the frame with its dimensions swapped relative to the
++  // capability it was negotiated against.
++  bool dimensionsSwapped =
++      aProps.rotationApplied() &&
++      (aProps.originalRotationRequired() == VideoRotation::kDegree_90 ||
++       aProps.originalRotationRequired() == VideoRotation::kDegree_270);
++
 +  DesiredSizeInput input{};
 +  {
 +    MutexAutoLock lock(mMutex);
@@ -80,6 +96,15 @@ index bc8a6317e8f5..57f05c31b388 100644
 +    mIncomingImageSize = {aProps.width(), aProps.height()};
 +    const int32_t& cw = mCapability.width;
 +    const int32_t& ch = mCapability.height;
++
++#ifdef MOZ_WIDGET_UIKIT
++    // AVFoundation rotates camera buffers before delivering them.
++    if (mCapEngine == camera::CameraEngine && cw && ch) {
++      dimensionsSwapped =
++          (cw > ch && aProps.width() < aProps.height()) ||
++          (cw < ch && aProps.width() > aProps.height());
++    }
++#endif
 +
 +    input = {
 +        .mConstraints = *mConstraints,
@@ -89,9 +114,11 @@ index bc8a6317e8f5..57f05c31b388 100644
 +        .mCapabilityWidth = cw ? Some(cw) : Nothing(),
 +        .mCapabilityHeight = ch ? Some(ch) : Nothing(),
 +        .mCapEngine = mCapEngine,
-+        .mInputWidth = aProps.width(),
-+        .mInputHeight = aProps.height(),
-+        .mRotation = aProps.rotation(),
++        // mediacapture-main: width, height and aspectRatio constraints and
++        // capabilities are considered in the primary orientation only, so
++        // normalise the delivered frame to it.
++        .mInputWidth = dimensionsSwapped ? aProps.height() : aProps.width(),
++        .mInputHeight = dimensionsSwapped ? aProps.width() : aProps.height(),
 +    };
 +
 +    if (!mFrameDeliveringTrackingId) {
@@ -99,7 +126,15 @@ index bc8a6317e8f5..57f05c31b388 100644
 +    }
 +  }
 +
-+  return CalculateDesiredSize(input);
++  gfx::IntSize dstSize = CalculateDesiredSize(input);
++
++  // mediacapture-main: getSettings() must report the dimensions of the video
++  // actually delivered, so flip back out of the primary orientation. This is
++  // also the orientation the delivered buffer is cropped and scaled in.
++  if (dimensionsSwapped) {
++    std::swap(dstSize.width, dstSize.height);
++  }
++  return dstSize;
 +}
 +
 +int MediaEngineRemoteVideoSource::DeliverImage(
@@ -110,18 +145,20 @@ index bc8a6317e8f5..57f05c31b388 100644
  #ifdef DEBUG
    static uint32_t frame_num = 0;
    LOG_FRAME(
-       "frame {} ({}x{})->({}x{}); rotation {}, rtpTimeStamp {}, ntpTimeMs "
-       "{}, renderTimeMs {}",
+       "frame {} ({}x{})->({}x{}); rotation {} (applied {}), rtpTimeStamp {}, "
+       "ntpTimeMs {}, renderTimeMs {}",
 -      frame_num++, aProps.width(), aProps.height(), dstSize.width,
--      dstSize.height, aProps.rotation(), aProps.rtpTimeStamp(),
--      aProps.ntpTimeMs(), aProps.renderTimeMs());
+-      dstSize.height, static_cast<int>(aProps.originalRotationRequired()),
 +      frame_num++, aProps.width(), aProps.height(), aSize.width, aSize.height,
-+      aProps.rotation(), aProps.rtpTimeStamp(), aProps.ntpTimeMs(),
-+      aProps.renderTimeMs());
++      static_cast<int>(aProps.originalRotationRequired()),
+       aProps.rotationApplied(), aProps.rtpTimeStamp(), aProps.ntpTimeMs(),
+       aProps.renderTimeMs());
  #endif
  
--  if (mScaledImageSize != dstSize) {
-+  if (mScaledImageSize != aSize) {
+-  if (mLastReportedSize != Some(dstSize)) {
+-    mLastReportedSize = Some(dstSize);
++  if (mLastReportedSize != Some(aSize)) {
++    mLastReportedSize = Some(aSize);
      NS_DispatchToMainThread(NS_NewRunnableFunction(
          "MediaEngineRemoteVideoSource::FrameSizeChange",
          [settings = mSettings, updated = mSettingsUpdatedByFrame,
@@ -134,16 +171,16 @@ index bc8a6317e8f5..57f05c31b388 100644
            updated->mValue = true;
            // Since mImageSize was initialized to (0,0), we end up here on the
            // arrival of the first frame. We resolve the promise representing
-@@ -757,7 +777,7 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
+@@ -766,7 +796,7 @@ int MediaEngineRemoteVideoSource::DeliverFrame(
      MutexAutoLock lock(mMutex);
      MOZ_ASSERT(mState == kStarted);
      VideoSegment segment;
 -    mScaledImageSize = image->GetSize();
 +    mScaledImageSize = aSize;
-     segment.AppendWebrtcLocalFrame(image.forget(), mScaledImageSize, mPrincipal,
-                                    /* aForceBlack */ false, TimeStamp::Now(),
-                                    aProps.captureTime());
-@@ -777,6 +797,54 @@ uint32_t MediaEngineRemoteVideoSource::GetDistance(
+     segment.AppendWebrtcLocalFrame(
+         image.forget(), mScaledImageSize, mPrincipal,
+         /* aForceBlack */ false, TimeStamp::Now(), aProps.captureTime(),
+@@ -788,6 +818,54 @@ uint32_t MediaEngineRemoteVideoSource::GetDistance(
    return GetFitnessDistance(aCandidate, aConstraints);
  }
  
@@ -198,7 +235,7 @@ index bc8a6317e8f5..57f05c31b388 100644
  uint32_t MediaEngineRemoteVideoSource::GetFitnessDistance(
      const webrtc::CaptureCapability& aCandidate,
      const NormalizedConstraintSet& aConstraints) const {
-@@ -795,9 +863,7 @@ uint32_t MediaEngineRemoteVideoSource::GetFitnessDistance(
+@@ -806,9 +884,7 @@ uint32_t MediaEngineRemoteVideoSource::GetFitnessDistance(
                     ? H::FitnessDistance(int32_t(aCandidate.height),
                                          aConstraints.mHeight)
                     : 0) +
@@ -209,7 +246,7 @@ index bc8a6317e8f5..57f05c31b388 100644
    return uint32_t(std::min(distance, uint64_t(UINT32_MAX)));
  }
  
-@@ -820,10 +886,8 @@ uint32_t MediaEngineRemoteVideoSource::GetFeasibilityDistance(
+@@ -831,10 +907,8 @@ uint32_t MediaEngineRemoteVideoSource::GetFeasibilityDistance(
                     ? H::FeasibilityDistance(int32_t(aCandidate.height),
                                              aConstraints.mHeight)
                     : 0) +
@@ -222,7 +259,7 @@ index bc8a6317e8f5..57f05c31b388 100644
    return uint32_t(std::min(distance, uint64_t(UINT32_MAX)));
  }
  
-@@ -1142,6 +1206,13 @@ bool MediaEngineRemoteVideoSource::ChooseCapability(
+@@ -1153,6 +1227,13 @@ bool MediaEngineRemoteVideoSource::ChooseCapability(
  
    aCapability = candidateSet[0].mCapability;
  

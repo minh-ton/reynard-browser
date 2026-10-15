@@ -1,9 +1,9 @@
 diff --git a/dom/media/systemservices/objc_video_capture/capture_access.mm b/dom/media/systemservices/objc_video_capture/capture_access.mm
 new file mode 100644
-index 000000000000..9fa548821181
+index 000000000000..a5f1f77db87a
 --- /dev/null
 +++ b/dom/media/systemservices/objc_video_capture/capture_access.mm
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,110 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this file,
 + * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -22,113 +22,40 @@ index 000000000000..9fa548821181
 +using mozilla::camera::CamerasAccessStatus;
 +using mozilla::camera::CaptureAccessPromise;
 +
-+@interface CaptureAccessRequest : NSObject {
-+ @private
-+  mozilla::MozPromiseHolder<CaptureAccessPromise> _holder;
-+  bool _requestCamera;
-+  bool _requestMicrophone;
-+}
++namespace {
 +
-+- (instancetype)initWithCamera:(bool)aRequestCamera
-+                    microphone:(bool)aRequestMicrophone;
-+- (void)finishWithStatus:(CamerasAccessStatus)aStatus;
-+- (void)requestMediaType:(AVMediaType)aMediaType
-+               onGranted:(dispatch_block_t)aOnGranted;
-+- (void)requestMicrophoneIfNeeded;
-+- (void)requestCameraIfNeeded;
-+- (RefPtr<CaptureAccessPromise>)start;
-+
-+@end
-+
-+@implementation CaptureAccessRequest
-+
-+- (instancetype)initWithCamera:(bool)aRequestCamera
-+                    microphone:(bool)aRequestMicrophone {
-+  self = [super init];
-+  if (self) {
-+    _requestCamera = aRequestCamera;
-+    _requestMicrophone = aRequestMicrophone;
-+  }
-+  return self;
-+}
-+
-+- (void)finishWithStatus:(CamerasAccessStatus)aStatus {
-+  _holder.Resolve(aStatus, __func__);
-+}
-+
-+- (void)requestMediaType:(AVMediaType)aMediaType
-+               onGranted:(dispatch_block_t)aOnGranted {
++RefPtr<CaptureAccessPromise> RequestMediaAccess(AVMediaType aMediaType) {
 +  MOZ_ASSERT(NS_IsMainThread());
 +
-+  AVAuthorizationStatus status =
-+      [AVCaptureDevice authorizationStatusForMediaType:aMediaType];
-+
-+  if (status == AVAuthorizationStatusAuthorized) {
-+    aOnGranted();
-+    return;
++  switch ([AVCaptureDevice authorizationStatusForMediaType:aMediaType]) {
++    case AVAuthorizationStatusAuthorized:
++      return CaptureAccessPromise::CreateAndResolve(
++          CamerasAccessStatus::Granted, __func__);
++    case AVAuthorizationStatusDenied:
++    case AVAuthorizationStatusRestricted:
++      return CaptureAccessPromise::CreateAndResolve(
++          CamerasAccessStatus::Rejected, __func__);
++    case AVAuthorizationStatusNotDetermined: {
++      RefPtr<CaptureAccessPromise::Private> promise =
++          new CaptureAccessPromise::Private(__func__);
++      [AVCaptureDevice
++          requestAccessForMediaType:aMediaType
++                  completionHandler:^(BOOL granted) {
++                    dispatch_async(dispatch_get_main_queue(), ^{
++                      promise->Resolve(granted ? CamerasAccessStatus::Granted
++                                               : CamerasAccessStatus::Rejected,
++                                       __func__);
++                    });
++                  }];
++      return promise;
++    }
 +  }
 +
-+  if (status == AVAuthorizationStatusNotDetermined) {
-+    [AVCaptureDevice
-+        requestAccessForMediaType:aMediaType
-+                completionHandler:^(BOOL granted) {
-+                  dispatch_async(dispatch_get_main_queue(), ^{
-+                    if (granted) {
-+                      aOnGranted();
-+                    } else {
-+                      [self finishWithStatus:CamerasAccessStatus::Rejected];
-+                    }
-+                  });
-+                }];
-+    return;
-+  }
-+
-+  if (status == AVAuthorizationStatusDenied ||
-+      status == AVAuthorizationStatusRestricted) {
-+    [self finishWithStatus:CamerasAccessStatus::Rejected];
-+    return;
-+  }
-+
-+  [self finishWithStatus:CamerasAccessStatus::Error];
++  return CaptureAccessPromise::CreateAndResolve(CamerasAccessStatus::Error,
++                                                __func__);
 +}
 +
-+- (void)requestMicrophoneIfNeeded {
-+  MOZ_ASSERT(NS_IsMainThread());
-+
-+  if (!_requestMicrophone) {
-+    [self finishWithStatus:CamerasAccessStatus::Granted];
-+    return;
-+  }
-+
-+  [self requestMediaType:AVMediaTypeAudio
-+               onGranted:^{
-+                 [self finishWithStatus:CamerasAccessStatus::Granted];
-+               }];
-+}
-+
-+- (void)requestCameraIfNeeded {
-+  MOZ_ASSERT(NS_IsMainThread());
-+
-+  if (!_requestCamera) {
-+    [self requestMicrophoneIfNeeded];
-+    return;
-+  }
-+
-+  [self requestMediaType:AVMediaTypeVideo
-+               onGranted:^{
-+                 [self requestMicrophoneIfNeeded];
-+               }];
-+}
-+
-+- (RefPtr<CaptureAccessPromise>)start {
-+  MOZ_ASSERT(NS_IsMainThread());
-+
-+  RefPtr<CaptureAccessPromise> promise = _holder.Ensure(__func__);
-+  [self requestCameraIfNeeded];
-+  return promise;
-+}
-+
-+@end
++}  // namespace
 +
 +RefPtr<CaptureAccessPromise> mozilla::camera::RequestAVCaptureAccess(
 +    bool aRequestCamera, bool aRequestMicrophone) {
@@ -145,10 +72,26 @@ index 000000000000..9fa548821181
 +                       });
 +  }
 +
-+  CaptureAccessRequest* request =
-+      [[CaptureAccessRequest alloc] initWithCamera:aRequestCamera
-+                                        microphone:aRequestMicrophone];
-+  return [request start];
++  if (!aRequestCamera) {
++    return RequestMediaAccess(AVMediaTypeAudio);
++  }
++
++  RefPtr<CaptureAccessPromise> cameraAccess =
++      RequestMediaAccess(AVMediaTypeVideo);
++  if (!aRequestMicrophone) {
++    return cameraAccess;
++  }
++
++  return cameraAccess->Then(
++      GetMainThreadSerialEventTarget(), __func__,
++      [](const CaptureAccessPromise::ResolveOrRejectValue& aResult) {
++        MOZ_ASSERT(aResult.IsResolve());
++        CamerasAccessStatus status = aResult.ResolveValue();
++        if (status != CamerasAccessStatus::Granted) {
++          return CaptureAccessPromise::CreateAndResolve(status, __func__);
++        }
++        return RequestMediaAccess(AVMediaTypeAudio);
++      });
 +}
 +
 +mozilla::camera::CaptureDeviceFacingMode

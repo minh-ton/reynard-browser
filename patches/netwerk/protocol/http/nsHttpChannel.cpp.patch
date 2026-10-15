@@ -1,8 +1,8 @@
 diff --git a/netwerk/protocol/http/nsHttpChannel.cpp b/netwerk/protocol/http/nsHttpChannel.cpp
-index 0dc74fdcc642..78e5808bc3ba 100644
+index 63df4c9dfa2a..73baff6edd51 100644
 --- a/netwerk/protocol/http/nsHttpChannel.cpp
 +++ b/netwerk/protocol/http/nsHttpChannel.cpp
-@@ -1257,9 +1257,10 @@ nsresult nsHttpChannel::ContinueOnBeforeConnect(bool aShouldUpgrade,
+@@ -1264,9 +1264,10 @@ nsresult nsHttpChannel::ContinueOnBeforeConnect(bool aShouldUpgrade,
      NS_ENSURE_SUCCESS(rv, rv);
  
      wtconSettings->GetServerCertificateHashes(aServerCertHashes);

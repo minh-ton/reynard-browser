@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserChild.h b/dom/ipc/BrowserChild.h
-index 81398b5c1312..f5e41aefec66 100644
+index 4d2ca4101a5a..4f9409abed5d 100644
 --- a/dom/ipc/BrowserChild.h
 +++ b/dom/ipc/BrowserChild.h
 @@ -10,6 +10,7 @@
@@ -10,7 +10,7 @@ index 81398b5c1312..f5e41aefec66 100644
  #include "mozilla/dom/CoalescedMouseData.h"
  #include "mozilla/dom/CoalescedTouchData.h"
  #include "mozilla/dom/CoalescedWheelData.h"
-@@ -274,7 +275,8 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -275,7 +276,8 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
  
    MOZ_CAN_RUN_SCRIPT_BOUNDARY
    mozilla::ipc::IPCResult RecvDynamicToolbarMaxHeightChanged(
@@ -20,7 +20,7 @@ index 81398b5c1312..f5e41aefec66 100644
  
    mozilla::ipc::IPCResult RecvDynamicToolbarOffsetChanged(
        const mozilla::ScreenIntCoord& aOffset);
-@@ -342,6 +344,10 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -343,6 +345,10 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    mozilla::ipc::IPCResult RecvNormalPriorityRealKeyEvent(
        const mozilla::WidgetKeyboardEvent& aEvent, const nsID& aUUID);
  
@@ -31,7 +31,7 @@ index 81398b5c1312..f5e41aefec66 100644
    mozilla::ipc::IPCResult RecvMouseWheelEvent(
        const mozilla::WidgetWheelEvent& aEvent, const ScrollableLayerGuid& aGuid,
        const uint64_t& aInputBlockId);
-@@ -391,18 +397,37 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -392,18 +398,37 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    mozilla::ipc::IPCResult RecvNormalPriorityCompositionEvent(
        const mozilla::WidgetCompositionEvent& aEvent);
  
@@ -69,16 +69,16 @@ index 81398b5c1312..f5e41aefec66 100644
    mozilla::ipc::IPCResult RecvInsertText(const nsAString& aStringToInsert);
  
    mozilla::ipc::IPCResult RecvUpdateRemoteStyle(
-@@ -411,6 +436,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
+@@ -412,6 +437,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
    mozilla::ipc::IPCResult RecvNormalPriorityInsertText(
        const nsAString& aStringToInsert);
  
 +  mozilla::ipc::IPCResult RecvNativeInsertText(
 +      const nsAString& aStringToInsert);
 +
-   mozilla::ipc::IPCResult RecvReplaceText(const nsString& aReplaceSrcString,
-                                           const nsString& aStringToInsert,
-                                           uint32_t aOffset,
+   mozilla::ipc::IPCResult RecvReplaceText(
+       const nsString& aReplaceSrcString, const nsString& aStringToInsert,
+       uint32_t aOffset, PreventSetSelection aPreventSetSelection);
 @@ -448,7 +476,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
  
    const EffectsInfo& GetEffectsInfo() const { return mEffectsInfo; }

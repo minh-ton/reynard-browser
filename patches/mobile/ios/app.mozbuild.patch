@@ -1,0 +1,11 @@
+diff --git a/mobile/ios/app.mozbuild b/mobile/ios/app.mozbuild
+index d30a92d4073b..1acfef7154e1 100644
+--- a/mobile/ios/app.mozbuild
++++ b/mobile/ios/app.mozbuild
+@@ -5,5 +5,6 @@
+ include("/toolkit/toolkit.mozbuild")
+ 
+ DIRS += [
++    "/%s" % CONFIG["MOZ_BRANDING_DIRECTORY"],
+     "/mobile/ios",
+ ]

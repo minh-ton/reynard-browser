@@ -1,0 +1,13 @@
+diff --git a/dom/ipc/PProcessHangMonitor.ipdl b/dom/ipc/PProcessHangMonitor.ipdl
+index 350aada6dfb9..27c727a42162 100644
+--- a/dom/ipc/PProcessHangMonitor.ipdl
++++ b/dom/ipc/PProcessHangMonitor.ipdl
+@@ -41,6 +41,8 @@ child:
+       TabId tabId, NavigationType aNavigationType,
+       int32_t aNavigationIndex, nsCString? aNavigationURI, int32_t aEpoch);
+ 
++  async SetProcessBackground(bool isBackground);
++
+  // For MacOS QoS use
+  async SetMainThreadQoSPriority(QoSPriority qosPriority);
+ 

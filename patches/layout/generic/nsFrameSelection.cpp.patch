@@ -1,5 +1,5 @@
 diff --git a/layout/generic/nsFrameSelection.cpp b/layout/generic/nsFrameSelection.cpp
-index 91d2715b0cbc..48ff1fde154b 100644
+index 828c174039a3..c5d696e50b43 100644
 --- a/layout/generic/nsFrameSelection.cpp
 +++ b/layout/generic/nsFrameSelection.cpp
 @@ -2197,7 +2197,7 @@ nsFrameSelection::CreateRangeExtendedToSomewhere(

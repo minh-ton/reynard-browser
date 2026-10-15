@@ -1,5 +1,5 @@
 diff --git a/xpcom/base/moz.build b/xpcom/base/moz.build
-index 4ae093061f5f..be5030f4868c 100644
+index 191798f85f24..0eaef2bea566 100644
 --- a/xpcom/base/moz.build
 +++ b/xpcom/base/moz.build
 @@ -225,11 +225,22 @@ if CONFIG["OS_TARGET"] == "WINNT":

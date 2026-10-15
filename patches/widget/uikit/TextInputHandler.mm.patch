@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
-index e8f05ad59f6f..eba83ae052d4 100644
+index e8f05ad59f6f..589903c02da7 100644
 --- a/widget/uikit/TextInputHandler.mm
 +++ b/widget/uikit/TextInputHandler.mm
 @@ -2,16 +2,22 @@
@@ -769,7 +769,7 @@ index e8f05ad59f6f..eba83ae052d4 100644
 +    WidgetSelectionEvent event(true, eSetSelection, mWidget);
 +    event.mOffset = selection->location;
 +    event.mLength = selection->length;
-+    event.mExpandToClusterBoundary = false;
++    event.mExpandToClusterBoundary = ExpandToClusterBoundary::No;
 +    mWidget->DispatchWindowEvent(event);
 +  }
 +  return !Destroyed();

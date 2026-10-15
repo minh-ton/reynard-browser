@@ -14,6 +14,7 @@ final class AddressBarTextField: UITextField {
     }
     
     var isAutocompleteActive = false
+    var isFocusPreviewActive = false
     var isSuggestionNavigationEnabled: (() -> Bool)?
     var onMoveSuggestionSelection: ((Int) -> Void)?
     var onSubmit: (() -> Void)?
@@ -124,11 +125,39 @@ final class AddressBarTextField: UITextField {
             action == #selector(moveCursorToEnd(_:)) {
             return isAutocompleteActive
         }
+        if isFocusPreviewActive,
+           action == #selector(copy(_:)) ||
+            action == #selector(cut(_:)) {
+            return !(text ?? "").isEmpty
+        }
+        if action == #selector(paste(_:)) {
+            return super.canPerformAction(action, withSender: sender)
+        }
         if isAutocompleteActive || suppressTextActions {
             return false
         }
         
         return super.canPerformAction(action, withSender: sender)
+    }
+    
+    override func copy(_ sender: Any?) {
+        guard isFocusPreviewActive else {
+            super.copy(sender)
+            return
+        }
+        
+        UIPasteboard.general.string = text
+    }
+    
+    override func cut(_ sender: Any?) {
+        guard isFocusPreviewActive else {
+            super.cut(sender)
+            return
+        }
+        
+        copy(sender)
+        let range = NSRange(location: 0, length: (text ?? "").utf16.count)
+        _ = delegate?.textField?(self, shouldChangeCharactersIn: range, replacementString: "")
     }
     
     private func makeKeyCommand(input: String, action: Selector) -> UIKeyCommand {

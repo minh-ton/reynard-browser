@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/FrameMetrics.h b/gfx/layers/FrameMetrics.h
-index 088df11f73b7..d44ab3d96bd9 100644
+index e141d9b9e7f8..39ff203bf298 100644
 --- a/gfx/layers/FrameMetrics.h
 +++ b/gfx/layers/FrameMetrics.h
 @@ -115,6 +115,9 @@ struct FrameMetrics {

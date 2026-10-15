@@ -1,5 +1,5 @@
 diff --git a/dom/base/Navigator.h b/dom/base/Navigator.h
-index f5b5c3d9e64f..fceeaaca9928 100644
+index 3ff67f4b54c4..230467c7f80e 100644
 --- a/dom/base/Navigator.h
 +++ b/dom/base/Navigator.h
 @@ -159,6 +159,12 @@ class Navigator final : public nsISupports, public nsWrapperCache {

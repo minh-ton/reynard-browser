@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/wr/WebRenderBridgeChild.cpp b/gfx/layers/wr/WebRenderBridgeChild.cpp
-index c059d535e310..751567f3277b 100644
+index f31169880337..d2794e9b4b95 100644
 --- a/gfx/layers/wr/WebRenderBridgeChild.cpp
 +++ b/gfx/layers/wr/WebRenderBridgeChild.cpp
 @@ -221,6 +221,8 @@ struct FontFileDataSink {
@@ -20,7 +20,7 @@ index c059d535e310..751567f3277b 100644
  }
  
  void WebRenderBridgeChild::PushGlyphs(
-@@ -305,7 +307,11 @@ Maybe<wr::FontKey> WebRenderBridgeChild::GetFontKeyForUnscaledFont(
+@@ -306,7 +308,11 @@ Maybe<wr::FontKey> WebRenderBridgeChild::GetFontKeyForUnscaledFont(
        aUnscaled, [&](auto&& entry) -> Maybe<wr::FontKey> {
          if (!entry) {
            wr::FontKey fontKey = {wr::IdNamespace{0}, 0};

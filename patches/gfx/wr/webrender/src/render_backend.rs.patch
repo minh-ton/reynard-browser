@@ -1,8 +1,8 @@
 diff --git a/gfx/wr/webrender/src/render_backend.rs b/gfx/wr/webrender/src/render_backend.rs
-index f5d82e208c4c..a6edd227f3e5 100644
+index cfc70843032a..703cc77392b0 100644
 --- a/gfx/wr/webrender/src/render_backend.rs
 +++ b/gfx/wr/webrender/src/render_backend.rs
-@@ -2009,7 +2009,10 @@ impl RenderBackend {
+@@ -2011,7 +2011,10 @@ impl RenderBackend {
          // async transforms.
          if requested_frame {
              if let Some(ref sampler) = win.sampler {

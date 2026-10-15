@@ -1,0 +1,41 @@
+diff --git a/widget/TouchResampler.h b/widget/TouchResampler.h
+index 4cabf06ff115..0ded5b7184d5 100644
+--- a/widget/TouchResampler.h
++++ b/widget/TouchResampler.h
+@@ -84,6 +84,8 @@ class TouchResampler final {
+   }
+ 
+  private:
++  using TouchPoint = SingleTouchData::ScreenPointType;
++
+   // Add the event to the outgoing queue.
+   void EmitEvent(MultiTouchInput&& aInput, uint64_t aEventId) {
+     mLastEmittedEventTime = aInput.mTimeStamp;
+@@ -111,13 +113,13 @@ class TouchResampler final {
+ 
+   struct DataPoint {
+     TimeStamp mTimeStamp;
+-    ScreenIntPoint mPosition;
++    TouchPoint mPosition;
+   };
+ 
+   struct TouchInfo {
+     void Update(const SingleTouchData& aTouch, const TimeStamp& aEventTime);
+-    ScreenIntPoint ResampleAtTime(const ScreenIntPoint& aLastObservedPosition,
+-                                  const TimeStamp& aTimeStamp);
++    TouchPoint ResampleAtTime(const TouchPoint& aLastObservedPosition,
++                              const TimeStamp& aTimeStamp);
+ 
+     int32_t mIdentifier = 0;
+     Maybe<DataPoint> mBaseDataPoint;
+@@ -129,8 +131,8 @@ class TouchResampler final {
+     bool HasTouch() const { return !mTouches.IsEmpty(); }
+     TimeStamp LatestDataPointTime() { return mLatestDataPointTime; }
+ 
+-    ScreenIntPoint ResampleTouchPositionAtTime(
+-        int32_t aIdentifier, const ScreenIntPoint& aLastObservedPosition,
++    TouchPoint ResampleTouchPositionAtTime(
++        int32_t aIdentifier, const TouchPoint& aLastObservedPosition,
+         const TimeStamp& aTimeStamp);
+ 
+     void ClearDataPoints() {

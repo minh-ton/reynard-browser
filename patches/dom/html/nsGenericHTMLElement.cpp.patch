@@ -1,8 +1,8 @@
 diff --git a/dom/html/nsGenericHTMLElement.cpp b/dom/html/nsGenericHTMLElement.cpp
-index 1a77c71f0521..1bbcd7ea63be 100644
+index 87f74d2dbc83..8f04d9d72627 100644
 --- a/dom/html/nsGenericHTMLElement.cpp
 +++ b/dom/html/nsGenericHTMLElement.cpp
-@@ -915,15 +915,30 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
+@@ -945,15 +945,30 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
        } else {
          ClearHasName();
        }
@@ -39,7 +39,7 @@ index 1a77c71f0521..1bbcd7ea63be 100644
                // If the TextControlState does not have a bound frame,
                // TextEditor::GetPreferredIMEState() may fail.  In such case,
                // TextEditor will update IME state when it's (re)initialized
-@@ -933,7 +948,7 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
+@@ -963,7 +978,7 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
                if (MOZ_LIKELY(newStateOrError.isOk())) {
                  OwningNonNull<nsGenericHTMLElement> kungFuDeathGrip(*this);
                  IMEStateManager::UpdateIMEState(
@@ -48,7 +48,7 @@ index 1a77c71f0521..1bbcd7ea63be 100644
                      {IMEStateManager::UpdateIMEStateOption::ForceUpdate,
                       IMEStateManager::UpdateIMEStateOption::
                           DontCommitComposition});
-@@ -2580,12 +2595,23 @@ EditorBase* nsGenericHTMLElement::GetAssociatedExtantEditor() const {
+@@ -2610,12 +2625,23 @@ EditorBase* nsGenericHTMLElement::GetAssociatedExtantEditor() const {
  void nsGenericHTMLElement::SyncSpellCheckerStateOfExtantEditorsOnSubtree(
      nsIContent& aContent) {
    /* Sync this node */

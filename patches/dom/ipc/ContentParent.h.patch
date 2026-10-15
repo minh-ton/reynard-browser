@@ -1,8 +1,18 @@
 diff --git a/dom/ipc/ContentParent.h b/dom/ipc/ContentParent.h
-index 630641d87277..42a54f1dc5d8 100644
+index d313dd619bb0..e0b3e4f68478 100644
 --- a/dom/ipc/ContentParent.h
 +++ b/dom/ipc/ContentParent.h
-@@ -733,6 +733,9 @@ class ContentParent final : public PContentParent,
+@@ -640,6 +640,9 @@ class ContentParent final : public PContentParent,
+       nsIRemoteTab::NavigationType aNavigationType,
+       const CancelContentJSOptions& aCancelContentJSOptions);
+ 
++#ifdef XP_IOS
++  void SetProcessBackground(bool aIsBackground);
++#endif
+   void SetMainThreadQoSPriority(nsIThread::QoSPriority aQoSPriority);
+ 
+   // This is called when we are about to load a document for a content process.
+@@ -733,6 +736,9 @@ class ContentParent final : public PContentParent,
  
    bool WasA11yEverActivated() const { return mWasA11yEverActivated; }
  

@@ -1,5 +1,5 @@
 diff --git a/docshell/base/nsDocShell.h b/docshell/base/nsDocShell.h
-index 0568cbf7f78b..c63c0a5d3ed3 100644
+index 27d9e920d135..48f0573c68d0 100644
 --- a/docshell/base/nsDocShell.h
 +++ b/docshell/base/nsDocShell.h
 @@ -69,16 +69,18 @@ class nsIDocShellTreeOwner;
@@ -23,7 +23,7 @@ index 0568cbf7f78b..c63c0a5d3ed3 100644
  
  class nsBrowserStatusFilter;
  class nsCommandManager;
-@@ -524,10 +526,9 @@ class nsDocShell final : public nsDocLoader,
+@@ -525,10 +527,9 @@ class nsDocShell final : public nsDocLoader,
  
    // Overridden from nsDocLoader, this provides more information than the
    // normal OnStateChange with flags STATE_REDIRECTING
@@ -37,7 +37,7 @@ index 0568cbf7f78b..c63c0a5d3ed3 100644
  
    // Override the parent setter from nsDocLoader
    virtual nsresult SetDocLoaderParent(nsDocLoader* aLoader) override;
-@@ -634,6 +635,11 @@ class nsDocShell final : public nsDocLoader,
+@@ -635,6 +636,11 @@ class nsDocShell final : public nsDocLoader,
    // URI Load
    //
  

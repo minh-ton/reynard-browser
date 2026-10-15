@@ -1,5 +1,5 @@
 diff --git a/dom/media/webrtc/MediaEngineRemoteVideoSource.h b/dom/media/webrtc/MediaEngineRemoteVideoSource.h
-index cbf7ea2722b9..3ac99a4eccd5 100644
+index 3e20a7eb0cc7..82ec6e6498f5 100644
 --- a/dom/media/webrtc/MediaEngineRemoteVideoSource.h
 +++ b/dom/media/webrtc/MediaEngineRemoteVideoSource.h
 @@ -97,6 +97,8 @@ class MediaEngineRemoteVideoSource : public MediaEngineSource,

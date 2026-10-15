@@ -1,8 +1,8 @@
 diff --git a/layout/generic/nsFrameSelection.h b/layout/generic/nsFrameSelection.h
-index ba8d11fb29da..31b40da00d8d 100644
+index f05153087e03..5c6e33c426be 100644
 --- a/layout/generic/nsFrameSelection.h
 +++ b/layout/generic/nsFrameSelection.h
-@@ -899,6 +899,21 @@ class nsFrameSelection final {
+@@ -901,6 +901,21 @@ class nsFrameSelection final {
          eSelectEndLine, eLogical);
    }
  

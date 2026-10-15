@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoTouchSupport.mm b/widget/uikit/GeckoTouchSupport.mm
 new file mode 100644
-index 000000000000..a1463181f0dc
+index 000000000000..7623d054b11d
 --- /dev/null
 +++ b/widget/uikit/GeckoTouchSupport.mm
-@@ -0,0 +1,336 @@
+@@ -0,0 +1,469 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -18,9 +18,14 @@ index 000000000000..a1463181f0dc
 +#include "GeckoEditableSupport.h"
 +#include "GeckoPencilSupport.h"
 +#include "GeckoPointerSupport.h"
++#include "InputData.h"
++#include "TouchResampler.h"
++#include "gfxPlatform.h"
++#include "nsThreadUtils.h"
 +#include "nsWindow.h"
 +
 +#include "mozilla/TouchEvents.h"
++#include "mozilla/VsyncDispatcher.h"
 +
 +using namespace mozilla;
 +using namespace mozilla::widget;
@@ -40,7 +45,12 @@ index 000000000000..a1463181f0dc
 +@interface GeckoTouchSupport ()
 +- (NSSet<UITouch*>*)directTouchesFromTouches:(NSSet<UITouch*>*)touches;
 +- (NSSet<UITouch*>*)indirectPointerTouchesFromTouches:(NSSet<UITouch*>*)touches;
-+- (void)sendTouchEvent:(EventMessage)type touches:(NSSet<UITouch*>*)touches;
++- (void)sendTouchEvent:(EventMessage)type
++               touches:(NSSet<UITouch*>*)touches
++             withEvent:(UIEvent*)uiEvent;
++- (void)consumeTouchEvents;
++- (void)notifyFrame:(TimeStamp)timestamp;
++- (void)stopVsyncObserver;
 +- (void)touchesBegan:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event;
 +- (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event;
 +- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event;
@@ -55,11 +65,41 @@ index 000000000000..a1463181f0dc
 +  return [NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:version];
 +}
 +
++static TimeStamp GeckoTimeStampForUIKitTimestamp(NSTimeInterval aTimestamp) {
++  NSTimeInterval age = NSProcessInfo.processInfo.systemUptime - aTimestamp;
++  return TimeStamp::Now() - TimeDuration::FromSeconds(age);
++}
++
 +static bool IsIndirectPointerTouch(UITouch* aTouch) {
 +  return SupportsPointerInput() && aTouch.type == UITouchTypeIndirectPointer;
 +}
 +
 +#pragma clang diagnostic pop
++
++class GeckoTouchVsyncObserver final : public VsyncObserver {
++  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(GeckoTouchVsyncObserver, override)
++
++ public:
++  explicit GeckoTouchVsyncObserver(GeckoTouchSupport* aTouchSupport)
++      : mTouchSupport(aTouchSupport) {}
++
++  void NotifyVsync(const VsyncEvent& aVsync) override {
++    MOZ_ASSERT(NS_IsMainThread());
++    GeckoTouchSupport* touchSupport = [mTouchSupport retain];
++    [touchSupport notifyFrame:aVsync.mTime];
++    [touchSupport release];
++  }
++
++  void ClearOwner() {
++    MOZ_ASSERT(NS_IsMainThread());
++    mTouchSupport = nil;
++  }
++
++ private:
++  ~GeckoTouchVsyncObserver() = default;
++
++  GeckoTouchSupport* mTouchSupport;  // Main thread only.
++};
 +
 +@implementation GeckoTouchSupport {
 +  ChildView* mView;
@@ -70,6 +110,9 @@ index 000000000000..a1463181f0dc
 +  NSMapTable<UITouch*, NSNumber*>* mTouches;
 +  int mNextTouchID;
 +  uint64_t mTouchSequenceID;
++  TouchResampler mTouchResampler;
++  RefPtr<VsyncDispatcher> mVsyncDispatcher;
++  RefPtr<GeckoTouchVsyncObserver> mVsyncObserver;
 +}
 +
 +- (instancetype)initWithView:(ChildView*)view
@@ -121,15 +164,17 @@ index 000000000000..a1463181f0dc
 +  return pointerTouches;
 +}
 +
-+- (void)sendTouchEvent:(EventMessage)type touches:(NSSet<UITouch*>*)touches {
++- (void)sendTouchEvent:(EventMessage)type
++               touches:(NSSet<UITouch*>*)touches
++             withEvent:(UIEvent*)uiEvent {
 +  if (!mGeckoChild) {
 +    return;
 +  }
 +
 +  WidgetTouchEvent event(true, type, mGeckoChild);
-+  // XXX: I think nativeEvent.timestamp * 1000 is probably usable here but
-+  // I don't care that much right now.
++  event.mTimeStamp = GeckoTimeStampForUIKitTimestamp(uiEvent.timestamp);
 +  event.mTouches.SetCapacity(touches.count);
++
 +  for (UITouch* touch in touches) {
 +    LayoutDeviceIntPoint location = UIKitPointsToDevPixels(
 +        [touch locationInView:mView], mView.contentScaleFactor);
@@ -138,7 +183,6 @@ index 000000000000..a1463181f0dc
 +        mView.contentScaleFactor);
 +    NSNumber* value = [mTouches objectForKey:touch];
 +    if (!value) {
-+      NS_ASSERTION(false, "Got a touch that we didn't know about");
 +      continue;
 +    }
 +
@@ -148,10 +192,94 @@ index 000000000000..a1463181f0dc
 +    event.mTouches.AppendElement(touchPoint);
 +  }
 +
-+  if (type == eTouchStart) {
-+    mGeckoChild->DispatchTouchStart(&event, mTouchSequenceID);
-+  } else {
-+    mGeckoChild->DispatchInputEvent(&event);
++  MultiTouchInput input(event);
++  for (UITouch* touch in touches) {
++    NSNumber* value = [mTouches objectForKey:touch];
++    if (!value) {
++      continue;
++    }
++
++    SingleTouchData& touchData =
++        input.mTouches[input.IndexOfTouch(value.intValue)];
++    CGPoint location = [touch locationInView:mView];
++    touchData.mScreenPoint = ScreenPoint(location.x * mView.contentScaleFactor,
++                                         location.y * mView.contentScaleFactor);
++
++    if (type != eTouchMove) {
++      continue;
++    }
++
++    NSArray<UITouch*>* coalescedTouches =
++        [uiEvent coalescedTouchesForTouch:touch];
++
++    for (NSUInteger i = 0; i + 1 < coalescedTouches.count; i++) {
++      UITouch* sample = coalescedTouches[i];
++      CGPoint location = [sample locationInView:mView];
++      LayoutDeviceIntPoint radius = UIKitPointsToDevPixels(
++          CGPointMake(sample.majorRadius, sample.majorRadius),
++          mView.contentScaleFactor);
++      touchData.mHistoricalData.AppendElement(
++          SingleTouchData::HistoricalTouchData{
++              GeckoTimeStampForUIKitTimestamp(sample.timestamp),
++              ScreenPoint(location.x * mView.contentScaleFactor,
++                          location.y * mView.contentScaleFactor),
++              {},  // mLocalScreenPoint will be computed later by APZ
++              ScreenSize(float(radius.x), float(radius.y)),
++              0.0f,
++              1.0f});
++    }
++  }
++
++  if (input.mTouches.IsEmpty()) {
++    return;
++  }
++
++  if (type == eTouchCancel) {
++    // Gecko cancels the whole gesture, including fingers still down in UIKit.
++    [mTouches removeAllObjects];
++    mNextTouchID = 0;
++  }
++
++  mTouchResampler.ProcessEvent(std::move(input));
++  if (mTouchResampler.InTouchingState() && !mVsyncObserver) {
++    mVsyncObserver = new GeckoTouchVsyncObserver(self);
++    mVsyncDispatcher = gfxPlatform::GetPlatform()->GetGlobalVsyncDispatcher();
++    mVsyncDispatcher->AddInputObserver(mVsyncObserver);
++  }
++  [self consumeTouchEvents];
++
++  if (!mTouchResampler.InTouchingState()) {
++    [self stopVsyncObserver];
++  }
++}
++
++- (void)consumeTouchEvents {
++  auto outgoing = mTouchResampler.ConsumeOutgoingEvents();
++  while (!outgoing.empty() && mGeckoChild) {
++    MultiTouchInput input = std::move(outgoing.front().mEvent);
++    outgoing.pop();
++    if (input.mType == MultiTouchInput::MULTITOUCH_START) {
++      mGeckoChild->DispatchTouchStart(input, mTouchSequenceID);
++    } else {
++      mGeckoChild->DispatchTouchInput(input);
++    }
++  }
++}
++
++- (void)notifyFrame:(TimeStamp)timestamp {
++  MOZ_ASSERT(NS_IsMainThread());
++
++  // Sample slightly in the past to account for delayed touch delivery.
++  mTouchResampler.NotifyFrame(timestamp - TimeDuration::FromMilliseconds(5));
++  [self consumeTouchEvents];
++}
++
++- (void)stopVsyncObserver {
++  if (mVsyncObserver) {
++    mVsyncObserver->ClearOwner();
++    mVsyncDispatcher->RemoveInputObserver(mVsyncObserver);
++    mVsyncObserver = nullptr;
++    mVsyncDispatcher = nullptr;
 +  }
 +}
 +
@@ -174,7 +302,8 @@ index 000000000000..a1463181f0dc
 +    [mTouches setObject:[NSNumber numberWithInt:mNextTouchID++] forKey:touch];
 +  }
 +  [self sendTouchEvent:eTouchStart
-+               touches:[self directTouchesFromTouches:event.allTouches]];
++               touches:[self directTouchesFromTouches:event.allTouches]
++             withEvent:event];
 +}
 +
 +- (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
@@ -189,14 +318,15 @@ index 000000000000..a1463181f0dc
 +    return;
 +  }
 +
-+  [self sendTouchEvent:eTouchCancel touches:directTouches];
-+  for (UITouch* touch in directTouches) {
-+    [mTouches removeObjectForKey:touch];
++  NSSet<UITouch*>* activeTouches =
++      [NSSet setWithArray:mTouches.keyEnumerator.allObjects];
++  if (![activeTouches intersectsSet:directTouches]) {
++    return;
 +  }
-+  if (mTouches.count == 0) {
-+    mNextTouchID = 0;
-+    [mInteractionDelegate touchSequenceDidEnd:mTouchSequenceID];
-+  }
++
++  const uint64_t sequenceID = mTouchSequenceID;
++  [self sendTouchEvent:eTouchCancel touches:activeTouches withEvent:event];
++  [mInteractionDelegate touchSequenceDidEnd:sequenceID];
 +}
 +
 +- (void)touchesEnded:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
@@ -207,11 +337,11 @@ index 000000000000..a1463181f0dc
 +                    withEvent:event];
 +
 +  NSSet<UITouch*>* directTouches = [self directTouchesFromTouches:touches];
-+  if (directTouches.count == 0 || !mGeckoChild) {
++  if (directTouches.count == 0 || !mGeckoChild || mTouches.count == 0) {
 +    return;
 +  }
 +
-+  [self sendTouchEvent:eTouchEnd touches:directTouches];
++  [self sendTouchEvent:eTouchEnd touches:directTouches withEvent:event];
 +  for (UITouch* touch in directTouches) {
 +    [mTouches removeObjectForKey:touch];
 +  }
@@ -234,7 +364,7 @@ index 000000000000..a1463181f0dc
 +    return;
 +  }
 +
-+  [self sendTouchEvent:eTouchMove touches:directTouches];
++  [self sendTouchEvent:eTouchMove touches:directTouches withEvent:event];
 +}
 +
 +- (void)resolveTouchSequence:(uint64_t)sequenceId
@@ -262,6 +392,8 @@ index 000000000000..a1463181f0dc
 +}
 +
 +- (void)widgetDestroyed {
++  [self stopVsyncObserver];
++  mTouchResampler = TouchResampler();
 +  mGeckoChild = nullptr;
 +  mInteractionDelegate = nil;
 +  mNextTouchID = 0;
@@ -270,6 +402,7 @@ index 000000000000..a1463181f0dc
 +}
 +
 +- (void)dealloc {
++  [self stopVsyncObserver];
 +  [mTouches release];
 +  mView = nil;
 +  mPointerSupport = nil;

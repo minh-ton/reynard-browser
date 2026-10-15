@@ -1,8 +1,8 @@
 diff --git a/widget/CompositorWidget.h b/widget/CompositorWidget.h
-index 33c907d6444a..05c85543e8ff 100644
+index 9c24034d2b06..db85305cb2c2 100644
 --- a/widget/CompositorWidget.h
 +++ b/widget/CompositorWidget.h
-@@ -58,8 +58,9 @@ class CompositorWidgetDelegate {
+@@ -61,8 +61,9 @@ class CompositorWidgetDelegate {
  };
  
  // Platforms that support out-of-process widgets.

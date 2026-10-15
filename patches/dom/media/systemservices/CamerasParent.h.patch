@@ -1,5 +1,5 @@
 diff --git a/dom/media/systemservices/CamerasParent.h b/dom/media/systemservices/CamerasParent.h
-index 18fe4aba162e..ca6a89c2686f 100644
+index 18fe4aba162e..2514101db58f 100644
 --- a/dom/media/systemservices/CamerasParent.h
 +++ b/dom/media/systemservices/CamerasParent.h
 @@ -5,6 +5,8 @@
@@ -19,7 +19,7 @@ index 18fe4aba162e..ca6a89c2686f 100644
  
  class CamerasParent : public PCamerasParent {
   public:
-@@ -165,6 +168,7 @@ class CamerasParent : public PCamerasParent {
+@@ -165,12 +168,13 @@ class CamerasParent : public PCamerasParent {
        : public media::Refcountable<nsTArray<RefPtr<VideoEngine>>> {};
  
    friend DeliverFrameRunnable;
@@ -27,6 +27,14 @@ index 18fe4aba162e..ca6a89c2686f 100644
  
    static already_AddRefed<CamerasParent> Create();
  
+   /**
+-   * Request camera access
+-   *   Currently only used on desktop. If @value
++   * Request camera access and, on iOS, microphone access
++   *   If @value
+    *   aAllowPermissionRequest is true, a request for full camera access may be
+    *   made and the returned promise may be blocked on user input on a modal
+    *   dialog. If @value aAllowPermissionRequest is false, only a request to
 @@ -180,7 +184,8 @@ class CamerasParent : public PCamerasParent {
     *   The returned promise will never be rejected.
     */

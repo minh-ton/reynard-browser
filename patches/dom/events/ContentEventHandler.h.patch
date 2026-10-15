@@ -1,5 +1,5 @@
 diff --git a/dom/events/ContentEventHandler.h b/dom/events/ContentEventHandler.h
-index e383b6c7c97d..2b0e46946def 100644
+index 563dbc15cbdc..211e85ccc7b8 100644
 --- a/dom/events/ContentEventHandler.h
 +++ b/dom/events/ContentEventHandler.h
 @@ -11,6 +11,7 @@
@@ -10,7 +10,7 @@ index e383b6c7c97d..2b0e46946def 100644
  #include "nsCOMPtr.h"
  #include "nsIFrame.h"
  #include "nsINode.h"
-@@ -22,6 +23,9 @@ struct nsRect;
+@@ -20,6 +21,9 @@ struct nsRect;
  
  namespace mozilla {
  
@@ -19,8 +19,8 @@ index e383b6c7c97d..2b0e46946def 100644
 +
  namespace dom {
  class Element;
- }  // namespace dom
-@@ -128,6 +132,9 @@ class MOZ_STACK_CLASS ContentEventHandler {
+ class Range;
+@@ -127,6 +131,9 @@ class MOZ_STACK_CLASS ContentEventHandler {
  
    explicit ContentEventHandler(nsPresContext* aPresContext);
  
@@ -30,7 +30,7 @@ index e383b6c7c97d..2b0e46946def 100644
    // Handle aEvent in the current process.
    MOZ_CAN_RUN_SCRIPT nsresult
    HandleQueryContentEvent(WidgetQueryContentEvent* aEvent);
-@@ -147,7 +154,8 @@ class MOZ_STACK_CLASS ContentEventHandler {
+@@ -146,7 +153,8 @@ class MOZ_STACK_CLASS ContentEventHandler {
    OnQueryTextRectArray(WidgetQueryContentEvent* aEvent);
    // eQueryEditorRect event handler
    MOZ_CAN_RUN_SCRIPT nsresult
@@ -40,7 +40,7 @@ index e383b6c7c97d..2b0e46946def 100644
    // eQueryContentState event handler
    MOZ_CAN_RUN_SCRIPT nsresult
    OnQueryContentState(WidgetQueryContentEvent* aEvent);
-@@ -165,7 +173,9 @@ class MOZ_STACK_CLASS ContentEventHandler {
+@@ -164,7 +172,9 @@ class MOZ_STACK_CLASS ContentEventHandler {
    OnQueryDropTargetHittest(WidgetQueryContentEvent* aEvent);
  
    // NS_SELECTION_* event
@@ -51,7 +51,7 @@ index e383b6c7c97d..2b0e46946def 100644
  
   protected:
    RefPtr<dom::Document> mDocument;
-@@ -472,7 +482,11 @@ class MOZ_STACK_CLASS ContentEventHandler {
+@@ -474,7 +484,11 @@ class MOZ_STACK_CLASS ContentEventHandler {
    nsresult AdjustCollapsedRangeMaybeIntoTextNode(SimpleRange& aSimpleRange);
    // Convert the frame relative offset to be relative to the root frame of the
    // root presContext (but still measured in appUnits of aFrame's presContext).

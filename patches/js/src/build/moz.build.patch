@@ -1,5 +1,5 @@
 diff --git a/js/src/build/moz.build b/js/src/build/moz.build
-index 2d5343a58ef4..9a2e42e146a3 100644
+index 0cb0a2a5d35c..5e7cd05d427f 100644
 --- a/js/src/build/moz.build
 +++ b/js/src/build/moz.build
 @@ -90,9 +90,6 @@ if CONFIG["OS_ARCH"] == "WINNT":

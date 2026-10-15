@@ -1,8 +1,8 @@
 diff --git a/dom/media/webrtc/transport/third_party/nICEr/src/stun/addrs-bsd.cpp b/dom/media/webrtc/transport/third_party/nICEr/src/stun/addrs-bsd.cpp
-index ec2d084445be..21e78a32e95a 100644
+index ec2d084445be..7e8dfbb4a946 100644
 --- a/dom/media/webrtc/transport/third_party/nICEr/src/stun/addrs-bsd.cpp
 +++ b/dom/media/webrtc/transport/third_party/nICEr/src/stun/addrs-bsd.cpp
-@@ -3,26 +3,27 @@
+@@ -3,26 +3,25 @@
   * You can obtain one at http://mozilla.org/MPL/2.0/. */
  
  #if defined(BSD) || defined(DARWIN)
@@ -14,8 +14,7 @@ index ec2d084445be..21e78a32e95a 100644
 -#include "stun_util.h"
 -#include "util.h"
 -#include <r_macros.h>
-+#  include "addrs-bsd.h"
- 
+-
 -#include <sys/types.h> /* getifaddrs */
 -#include <ifaddrs.h> /* getifaddrs */
 -#include <sys/socket.h>
@@ -23,6 +22,12 @@ index ec2d084445be..21e78a32e95a 100644
 -#include <errno.h>
 -#include <netinet/in.h>
 -#include <netinet6/in6_var.h>
+-
+-static int
+-stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
+-{
++#  include "addrs-bsd.h"
++
 +#  include <assert.h>
 +#  include <csi_platform.h>
 +#  include <errno.h>
@@ -33,22 +38,17 @@ index ec2d084445be..21e78a32e95a 100644
 +#  include <sys/ioctl.h>
 +#  include <sys/socket.h>
 +#  include <sys/types.h> /* getifaddrs */
- 
--static int
--stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
--{
++
 +#  include "stun_util.h"
 +#  include "util.h"
 +#  ifndef MOZ_WIDGET_UIKIT
 +#    include <netinet6/in6_var.h>
-+#  endif
 +
-+#  ifndef MOZ_WIDGET_UIKIT
 +static int stun_ifaddr_get_v6_flags(struct ifaddrs* ifaddr) {
    if (ifaddr->ifa_addr->sa_family != AF_INET6) {
      return 0;
    }
-@@ -30,7 +31,8 @@ stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
+@@ -30,7 +29,8 @@ stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
    int flags = 0;
    int s = socket(AF_INET6, SOCK_DGRAM, 0);
    if (!s) {
@@ -58,7 +58,7 @@ index ec2d084445be..21e78a32e95a 100644
      assert(0);
      return 0;
    }
-@@ -38,33 +40,37 @@ stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
+@@ -38,33 +38,38 @@ stun_ifaddr_get_v6_flags(struct ifaddrs *ifaddr)
    memset(&ifr6, 0, sizeof(ifr6));
    strncpy(ifr6.ifr_name, ifaddr->ifa_name, sizeof(ifr6.ifr_name));
    /* ifr_addr is a sockaddr_in6, ifa_addr is a sockaddr* */
@@ -84,16 +84,17 @@ index ec2d084445be..21e78a32e95a 100644
 +  return flags & (IN6_IFF_ANYCAST | IN6_IFF_TENTATIVE | IN6_IFF_DUPLICATED |
 +                  IN6_IFF_DETACHED | IN6_IFF_DEPRECATED);
  }
-+#  else
-+static int stun_ifaddr_get_v6_flags(struct ifaddrs* ifaddr) { return 0; }
-+
-+static int stun_ifaddr_is_disallowed_v6(int flags) { return 0; }
-+#  endif
  
 -int stun_getaddrs_filtered(nr_local_addr addrs[], int maxaddrs, int *count)
 -{
 -  int r,_status,flags;
 -  struct ifaddrs* if_addrs_head=NULL;
++#  else
++static int stun_ifaddr_get_v6_flags(struct ifaddrs* ifaddr) { return 0; }
++
++static int stun_ifaddr_is_disallowed_v6(int flags) { return 0; }
++#  endif
++
 +int stun_getaddrs_filtered(nr_local_addr addrs[], int maxaddrs, int* count) {
 +  int r, _status, flags;
 +  struct ifaddrs* if_addrs_head = NULL;
@@ -107,7 +108,7 @@ index ec2d084445be..21e78a32e95a 100644
  
    if (getifaddrs(&if_addrs_head) == -1) {
      r_log(NR_LOG_STUN, LOG_ERR, "getifaddrs error e = %d", errno);
-@@ -81,30 +87,38 @@ int stun_getaddrs_filtered(nr_local_addr addrs[], int maxaddrs, int *count)
+@@ -81,30 +86,34 @@ int stun_getaddrs_filtered(nr_local_addr addrs[], int maxaddrs, int *count)
          case AF_INET6:
            flags = stun_ifaddr_get_v6_flags(if_addr);
            if (!stun_ifaddr_is_disallowed_v6(flags)) {
@@ -118,17 +119,12 @@ index ec2d084445be..21e78a32e95a 100644
 +              r_log(NR_LOG_STUN, LOG_ERR,
 +                    "nr_sockaddr_to_transport_addr error r = %d", r);
              } else {
--              if (flags & IN6_IFF_TEMPORARY) {
-+              if (
 +#  ifndef MOZ_WIDGET_UIKIT
-+                  flags & IN6_IFF_TEMPORARY
-+#  else
-+                  false
-+#  endif
-+              ) {
+               if (flags & IN6_IFF_TEMPORARY) {
                  addrs[*count].flags |= NR_ADDR_FLAG_TEMPORARY;
                }
 -              (void)strlcpy(addrs[*count].addr.ifname, if_addr->ifa_name, sizeof(addrs[*count].addr.ifname));
++#  endif
 +              (void)strlcpy(addrs[*count].addr.ifname, if_addr->ifa_name,
 +                            sizeof(addrs[*count].addr.ifname));
                ++(*count);

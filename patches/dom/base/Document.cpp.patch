@@ -1,8 +1,8 @@
 diff --git a/dom/base/Document.cpp b/dom/base/Document.cpp
-index 5e997a5de559..1b05ccc3edce 100644
+index 360645185a5a..0271cbcf72c3 100644
 --- a/dom/base/Document.cpp
 +++ b/dom/base/Document.cpp
-@@ -17286,9 +17286,29 @@ void Document::AddPendingFullscreenEvent(
+@@ -17385,9 +17385,29 @@ void Document::AddPendingFullscreenEvent(
  // https://fullscreen.spec.whatwg.org/#run-the-fullscreen-steps
  void Document::RunFullscreenSteps() {
    auto events = std::move(mPendingFullscreenEvents);

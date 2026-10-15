@@ -1,8 +1,8 @@
 diff --git a/widget/nsIWidget.h b/widget/nsIWidget.h
-index 031a63b997c3..f29e38f888b0 100644
+index 93ec79999d07..c115a2156581 100644
 --- a/widget/nsIWidget.h
 +++ b/widget/nsIWidget.h
-@@ -1606,8 +1606,8 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -1607,8 +1607,8 @@ class nsIWidget : public nsSupportsWeakReference {
      NUMERIC_KEY_PAD = 0x01000000,  // when the key is coming from the keypad
  
      ALL_BITS = CAPS_LOCK | NUM_LOCK | SHIFT_L | SHIFT_R | CTRL_L | CTRL_R |
@@ -13,7 +13,7 @@ index 031a63b997c3..f29e38f888b0 100644
    };
  
    /**
-@@ -2305,6 +2305,8 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -2306,6 +2306,8 @@ class nsIWidget : public nsSupportsWeakReference {
    virtual void NotifyCompositorScrollUpdates(
        const nsTArray<mozilla::layers::CompositorScrollUpdate>& aUpdates) {}
  
@@ -22,7 +22,7 @@ index 031a63b997c3..f29e38f888b0 100644
  #if defined(MOZ_WIDGET_ANDROID)
    /**
     * RecvToolbarAnimatorMessageFromCompositor receive message from compositor
-@@ -2313,12 +2315,16 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -2314,12 +2316,16 @@ class nsIWidget : public nsSupportsWeakReference {
     * @param aMessage message being sent to Android UI thread.
     */
    virtual void RecvToolbarAnimatorMessageFromCompositor(int32_t aMessage) {}

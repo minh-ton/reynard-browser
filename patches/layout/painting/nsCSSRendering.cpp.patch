@@ -1,8 +1,8 @@
 diff --git a/layout/painting/nsCSSRendering.cpp b/layout/painting/nsCSSRendering.cpp
-index cf48a951cf8c..ffbe0e671a17 100644
+index 3d676fd401f1..1d903f2c9d8a 100644
 --- a/layout/painting/nsCSSRendering.cpp
 +++ b/layout/painting/nsCSSRendering.cpp
-@@ -2821,11 +2821,11 @@ nsRect nsCSSRendering::ComputeImageLayerPositioningArea(
+@@ -2818,11 +2818,11 @@ nsRect nsCSSRendering::ComputeImageLayerPositioningArea(
        }
  
        // If we have the dynamic toolbar, we need to expand the image area to

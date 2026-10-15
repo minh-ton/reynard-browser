@@ -1,0 +1,13 @@
+diff --git a/gfx/layers/ipc/ImageBridgeParent.cpp b/gfx/layers/ipc/ImageBridgeParent.cpp
+index 771980203047..e4c73629a968 100644
+--- a/gfx/layers/ipc/ImageBridgeParent.cpp
++++ b/gfx/layers/ipc/ImageBridgeParent.cpp
+@@ -322,7 +322,7 @@ already_AddRefed<PTextureParent> ImageBridgeParent::AllocPTextureParent(
+ #ifdef MOZ_WIDGET_ANDROID
+     case SurfaceDescriptor::TSurfaceTextureDescriptor:
+       break;
+-#elif defined(XP_MACOSX)
++#elif defined(XP_MACOSX) || defined(XP_IOS)
+     case SurfaceDescriptor::TSurfaceDescriptorMacIOSurface:
+       break;
+ #endif

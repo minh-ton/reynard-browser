@@ -1,0 +1,97 @@
+diff --git a/widget/TouchResampler.cpp b/widget/TouchResampler.cpp
+index 990eb532f24f..86406d1fd3e7 100644
+--- a/widget/TouchResampler.cpp
++++ b/widget/TouchResampler.cpp
+@@ -24,6 +24,11 @@ namespace widget {
+ // Values between 1x and 5x of the touch sampling interval are reasonable.
+ static const double kTouchResampleWindowSize = 40.0;
+ 
++#ifdef MOZ_WIDGET_UIKIT
++// Keep slow UIKit drags from moving back when a prediction is corrected.
++// TODO: See if we can workaround this...?
++static const double kTouchResampleMaxPredictMs = 0.0;
++#else
+ // These next two values constrain the sampling timestamp.
+ // Our caller will usually adjust frame timestamps to be slightly in the past,
+ // for example by 5ms. This means that, during normal operation, we will
+@@ -31,6 +36,8 @@ static const double kTouchResampleWindowSize = 40.0;
+ // So we would like kTouchResampleMaxPredictMs to satisfy the following:
+ // kTouchResampleMaxPredictMs + [frame time adjust] > [touch sampling rate]
+ static const double kTouchResampleMaxPredictMs = 8.0;
++#endif
++
+ // This one is a protection against very outdated frame timestamps.
+ // Values larger than the touch sampling interval and less than 3x of the vsync
+ // interval are reasonable.
+@@ -124,12 +131,11 @@ void TouchResampler::NotifyFrame(const TimeStamp& aTimeStamp) {
+   mOriginalOfResampledTouchMove = Nothing();
+ 
+   // Compute the resampled touch positions.
+-  nsTArray<ScreenIntPoint> resampledPositions;
++  nsTArray<TouchPoint> resampledPositions;
+   bool anyPositionDifferentFromOriginal = false;
+   for (const auto& touch : input.mTouches) {
+-    ScreenIntPoint resampledPosition =
+-        mCurrentTouches.ResampleTouchPositionAtTime(
+-            touch.mIdentifier, touch.mScreenPoint, sampleTime);
++    TouchPoint resampledPosition = mCurrentTouches.ResampleTouchPositionAtTime(
++        touch.mIdentifier, touch.mScreenPoint, sampleTime);
+     if (resampledPosition != touch.mScreenPoint) {
+       anyPositionDifferentFromOriginal = true;
+     }
+@@ -267,8 +273,8 @@ void TouchResampler::TouchInfo::Update(const SingleTouchData& aTouch,
+   mLatestDataPoint = Some(DataPoint{aEventTime, aTouch.mScreenPoint});
+ }
+ 
+-ScreenIntPoint TouchResampler::TouchInfo::ResampleAtTime(
+-    const ScreenIntPoint& aLastObservedPosition, const TimeStamp& aTimeStamp) {
++TouchResampler::TouchPoint TouchResampler::TouchInfo::ResampleAtTime(
++    const TouchPoint& aLastObservedPosition, const TimeStamp& aTimeStamp) {
+   TimeStamp cutoff =
+       aTimeStamp - TimeDuration::FromMilliseconds(kTouchResampleWindowSize);
+   if (!mBaseDataPoint || !mLatestDataPoint ||
+@@ -288,9 +294,13 @@ ScreenIntPoint TouchResampler::TouchInfo::ResampleAtTime(
+   double y1 = mBaseDataPoint->mPosition.y;
+   double y2 = mLatestDataPoint->mPosition.y;
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  return ScreenPoint(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
++#else
+   int32_t resampledX = round(x1 + t * (x2 - x1));
+   int32_t resampledY = round(y1 + t * (y2 - y1));
+   return ScreenIntPoint(resampledX, resampledY);
++#endif
+ }
+ 
+ void TouchResampler::CurrentTouches::UpdateFromEvent(
+@@ -333,12 +343,12 @@ void TouchResampler::CurrentTouches::UpdateFromEvent(
+     }
+ 
+     case MultiTouchInput::MULTITOUCH_END: {
+-      // A touch has been removed.
+-      MOZ_RELEASE_ASSERT(aInput.mTouches.Length() == 1);
+-      const auto touchInfo = TouchByIdentifier(aInput.mTouches[0].mIdentifier);
+-      MOZ_ASSERT(touchInfo != mTouches.end());
+-      if (touchInfo != mTouches.end()) {
+-        mTouches.RemoveElementAt(touchInfo);
++      for (const auto& touch : aInput.mTouches) {
++        const auto touchInfo = TouchByIdentifier(touch.mIdentifier);
++        MOZ_ASSERT(touchInfo != mTouches.end());
++        if (touchInfo != mTouches.end()) {
++          mTouches.RemoveElementAt(touchInfo);
++        }
+       }
+       break;
+     }
+@@ -358,8 +368,9 @@ TouchResampler::CurrentTouches::TouchByIdentifier(int32_t aIdentifier) {
+                       });
+ }
+ 
+-ScreenIntPoint TouchResampler::CurrentTouches::ResampleTouchPositionAtTime(
+-    int32_t aIdentifier, const ScreenIntPoint& aLastObservedPosition,
++TouchResampler::TouchPoint
++TouchResampler::CurrentTouches::ResampleTouchPositionAtTime(
++    int32_t aIdentifier, const TouchPoint& aLastObservedPosition,
+     const TimeStamp& aTimeStamp) {
+   const auto touchInfo = TouchByIdentifier(aIdentifier);
+   MOZ_ASSERT(touchInfo != mTouches.end());

@@ -1,0 +1,19 @@
+diff --git a/gfx/layers/apz/src/GestureEventListener.cpp b/gfx/layers/apz/src/GestureEventListener.cpp
+index 9c4f4b9e3ba5..6b1d8ab0d2ec 100644
+--- a/gfx/layers/apz/src/GestureEventListener.cpp
++++ b/gfx/layers/apz/src/GestureEventListener.cpp
+@@ -66,8 +66,12 @@ ScreenCoord GestureEventListener::GetYSpanFromGestureStartPoint() {
+ 
+ static TapGestureInput CreateTapEvent(const MultiTouchInput& aTouch,
+                                       TapGestureInput::TapGestureType aType) {
+-  return TapGestureInput(aType, aTouch.mTimeStamp,
+-                         aTouch.mTouches[0].mScreenPoint, aTouch.modifiers);
++#ifdef MOZ_WIDGET_UIKIT
++  const ScreenIntPoint point = RoundedToInt(aTouch.mTouches[0].mScreenPoint);
++#else
++  const ScreenIntPoint& point = aTouch.mTouches[0].mScreenPoint;
++#endif
++  return TapGestureInput(aType, aTouch.mTimeStamp, point, aTouch.modifiers);
+ }
+ 
+ GestureEventListener::GestureEventListener(

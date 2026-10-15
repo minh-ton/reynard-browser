@@ -1,16 +1,16 @@
 diff --git a/gfx/layers/ipc/LayersSurfaces.ipdlh b/gfx/layers/ipc/LayersSurfaces.ipdlh
-index 105941b51604..ad510c81bcc6 100644
+index e9ffb339c2b7..cb2f9507e3c1 100644
 --- a/gfx/layers/ipc/LayersSurfaces.ipdlh
 +++ b/gfx/layers/ipc/LayersSurfaces.ipdlh
-@@ -31,6 +31,7 @@ using mozilla::layers::RemoteTextureOwnerId from "mozilla/layers/LayersTypes.h";
- [RefCounted] using mozilla::layers::GpuFence from "mozilla/layers/GpuFence.h";
+@@ -30,6 +30,7 @@ using mozilla::layers::RemoteTextureId from "mozilla/layers/LayersTypes.h";
+ using mozilla::layers::RemoteTextureOwnerId from "mozilla/layers/LayersTypes.h";
  using mozilla::layers::GpuProcessTextureId from "mozilla/layers/LayersTypes.h";
  using mozilla::layers::CompositeProcessFencesHolderId from "mozilla/layers/LayersTypes.h";
 +using mozilla::layers::IOSurfacePort from "mozilla/layers/IOSurfacePort.h";
  using mozilla::wr::ExternalImageSource from "mozilla/webrender/WebRenderTypes.h";
  using mozilla::wr::ExternalImageId from "mozilla/webrender/WebRenderTypes.h";
  using mozilla::layers::SurfaceDescriptorRemoteDecoderId from "mozilla/layers/LayersTypes.h";
-@@ -73,6 +74,7 @@ namespace layers {
+@@ -72,6 +73,7 @@ namespace layers {
  
  [Comparable] struct SurfaceDescriptorMacIOSurface {
    uint32_t surfaceId;

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index c1c4c3deb341..f81526c83ab5 100644
+index c1c4c3deb341..24e3d5f658a8 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,12 +11,14 @@
@@ -698,7 +698,7 @@ index c1c4c3deb341..f81526c83ab5 100644
    // Set defaults which can be overriden from aInitData in BaseCreate
    mWindowType = WindowType::TopLevel;
    mBorderStyle = BorderStyle::Default;
-@@ -808,6 +812,10 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -808,6 +812,24 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    mNativeLayerRoot =
        NativeLayerRootCA::CreateForCALayer([mNativeView rootCALayer]);
    mNativeLayerRoot->SetBackingScale(scaleFactor);
@@ -706,10 +706,24 @@ index c1c4c3deb341..f81526c83ab5 100644
 +      [this](mozilla::ipc::ByteBuf&& aData) {
 +        NotifyNativeTextInputScrollUpdates(std::move(aData));
 +      });
++
++  nsWeakPtr weakWindow = do_GetWeakReference(this);
++  RefPtr<Runnable> commitTask =
++      NS_NewRunnableFunction("nsWindow::CommitToScreen", [weakWindow]() {
++        nsCOMPtr<nsWindow> window = do_QueryReferent(weakWindow);
++        if (!window || window->Destroyed() || !window->mNativeLayerRoot) {
++          return;
++        }
++
++        RefPtr<NativeLayerRootCA> root = window->mNativeLayerRoot;
++        root->CommitToScreen();
++      });
++  mNativeLayerRoot->SetMainThreadCommitCallback(
++      [commitTask]() { NS_DispatchToMainThread(commitTask); });
  
    mTextInputHandler = new widget::TextInputHandler(this);
  
-@@ -827,6 +835,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -827,6 +849,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
    mTextInputHandler = nullptr;
  
@@ -718,7 +732,7 @@ index c1c4c3deb341..f81526c83ab5 100644
    [mNativeView widgetDestroyed];
  
    nsCOMPtr<nsIWidget> kungFuDeathGrip(this);
-@@ -835,14 +845,85 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -835,14 +859,86 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  
    // ReportDestroyEvent();
  
@@ -777,6 +791,7 @@ index c1c4c3deb341..f81526c83ab5 100644
 +  }
 +
 +  mNativeLayerRoot->SetOnscreenCommitCallback(nullptr);
++  mNativeLayerRoot->SetMainThreadCommitCallback(nullptr);
 +  mNativeLayerRoot->SetLayers({});
 +  mNativeLayerRoot = nullptr;
 +}
@@ -804,7 +819,7 @@ index c1c4c3deb341..f81526c83ab5 100644
      if (aState) {
        if (mParent) {
          [mParent->mNativeView bringSubviewToFront:mNativeView];
-@@ -853,6 +934,27 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -853,6 +949,27 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
@@ -832,7 +847,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  void nsWindow::Move(const DesktopPoint& aPoint) {
    if (!mNativeView || (mBounds.x == aPoint.x && mBounds.y == aPoint.y)) {
      return;
-@@ -941,22 +1043,28 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -941,22 +1058,28 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    ReportSizeModeEvent(aMode);
  }
  
@@ -874,7 +889,7 @@ index c1c4c3deb341..f81526c83ab5 100644
    }
  }
  
-@@ -983,6 +1091,10 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -983,6 +1106,10 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  void nsWindow::ReportSizeEvent() {
    LayoutDeviceIntRect innerBounds = GetClientBounds();
  
@@ -885,7 +900,7 @@ index c1c4c3deb341..f81526c83ab5 100644
    if (mWidgetListener) {
      mWidgetListener->WindowResized(this, innerBounds.Size());
    }
-@@ -993,45 +1105,169 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -993,45 +1120,169 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
  }
  
  LayoutDeviceIntRect nsWindow::GetScreenBounds() {
@@ -1067,7 +1082,7 @@ index c1c4c3deb341..f81526c83ab5 100644
      // TODO(m_kato):
      // It is unnecessary to call reloadInputViews with changingEnabledState if
      // virtual keyboard is disappeared.
-@@ -1051,16 +1287,65 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1051,16 +1302,65 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return mInputContext;
  }
  
@@ -1133,7 +1148,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  void nsWindow::SetBackgroundColor(const nscolor& aColor) {
    mNativeView.backgroundColor = [UIColor colorWithRed:NS_GET_R(aColor)
                                                  green:NS_GET_G(aColor)
-@@ -1068,6 +1353,13 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1068,6 +1368,13 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
                                                  alpha:NS_GET_A(aColor)];
  }
  
@@ -1147,7 +1162,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  void* nsWindow::GetNativeData(uint32_t aDataType) {
    void* retVal = nullptr;
  
-@@ -1111,6 +1403,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1111,6 +1418,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return [UIScreen mainScreen].scale;
  }
  
@@ -1156,7 +1171,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  int32_t nsWindow::RoundsWidgetCoordinatesTo() {
    if (BackingScaleFactor() == 2.0) {
      return 2;
-@@ -1118,10 +1412,202 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1118,10 +1427,202 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return 1;
  }
  
@@ -1359,7 +1374,21 @@ index c1c4c3deb341..f81526c83ab5 100644
  void nsWindow::HandleMainThreadCATransaction() {
    // Trigger a synchronous OMTC composite. This will call NextSurface and
    // NotifySurfaceReady on the compositor thread to update mNativeLayerRoot's
-@@ -1199,6 +1685,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1132,11 +1633,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+   {
+     // Apply the changes inside mNativeLayerRoot to the underlying CALayers. Now
+     // is a good time to call this because we know we're currently inside a main
+-    // thread CATransaction, and the lock makes sure that no composition is
+-    // currently in progress, so we won't present half-composited state to the
+-    // screen.
+-    // TODO: We don't have a lock oops
+-    // MutexAutoLock lock(mCompositingLock);
++    // thread CATransaction. The lock in CommitToScreen() prevents us from
++    // presenting an incomplete layer update batch.
+     mNativeLayerRoot->CommitToScreen();
+   }
+ 
+@@ -1199,6 +1697,8 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    }
  }
  
@@ -1368,7 +1397,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  EventDispatcher* nsWindow::GetEventDispatcher() const {
    if (mIOSView) {
      return mIOSView->mEventDispatcher;
-@@ -1206,28 +1694,131 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1206,28 +1706,133 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return nullptr;
  }
  
@@ -1430,12 +1459,13 @@ index c1c4c3deb341..f81526c83ab5 100644
 -already_AddRefed<nsWindow> nsWindow::From(nsPIDOMWindowOuter* aDOMWindow) {
 -  nsCOMPtr<nsIWidget> widget = WidgetUtils::DOMWindowToWidget(aDOMWindow);
 -  return From(widget);
-+void nsWindow::DispatchTouchStart(WidgetTouchEvent* aEvent,
++void nsWindow::DispatchTouchStart(MultiTouchInput& aInput,
 +                                  uint64_t aSequenceId) {
 +  MOZ_ASSERT(NS_IsMainThread());
 +
 +  if (!mAPZC) {
-+    DispatchEvent(aEvent);
++    WidgetTouchEvent event = aInput.ToWidgetEvent(this);
++    DispatchEvent(&event);
 +    return;
 +  }
 +
@@ -1445,10 +1475,11 @@ index c1c4c3deb341..f81526c83ab5 100644
 +        window->NotifyAPZInputResult(aSequenceId, aHandledResult);
 +      };
 +  APZEventResult result =
-+      mAPZC->InputBridge()->ReceiveInputEvent(*aEvent, std::move(callback));
++      mAPZC->InputBridge()->ReceiveInputEvent(aInput, std::move(callback));
 +
 +  if (result.GetStatus() != nsEventStatus_eConsumeNoDefault) {
-+    ProcessUntransformedAPZEvent(aEvent, result);
++    WidgetTouchEvent event = aInput.ToWidgetEvent(this);
++    ProcessUntransformedAPZEvent(&event, result);
 +  }
 +
 +  if (result.GetHandledResult()) {
@@ -1514,7 +1545,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  NS_IMPL_ISUPPORTS(IOSView, nsIGeckoViewEventDispatcher, nsIGeckoViewView)
  
  nsresult IOSView::GetInitData(JSContext* aCx,
-@@ -1248,6 +1839,88 @@ - (UIView*)view {
+@@ -1248,6 +1853,88 @@ - (UIView*)view {
    return mWindow ? (UIView*)mWindow->GetNativeData(NS_NATIVE_WIDGET) : nil;
  }
  
@@ -1603,7 +1634,7 @@ index c1c4c3deb341..f81526c83ab5 100644
  - (void)close {
    if (mWindow) {
      if (IOSView* iosView = mWindow->GetIOSView()) {
-@@ -1261,6 +1934,7 @@ - (void)close {
+@@ -1261,6 +1948,7 @@ - (void)close {
      outerWin->ForceClose();
    }
  }

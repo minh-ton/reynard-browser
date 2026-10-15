@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerCA.h b/gfx/layers/NativeLayerCA.h
-index 1456d03f8962..6341c875ec85 100644
+index 712e1cbbd116..b3aa93e51c03 100644
 --- a/gfx/layers/NativeLayerCA.h
 +++ b/gfx/layers/NativeLayerCA.h
 @@ -10,6 +10,11 @@
@@ -14,7 +14,7 @@ index 1456d03f8962..6341c875ec85 100644
  #include "mozilla/Mutex.h"
  #include "mozilla/TimeStamp.h"
  
-@@ -143,6 +148,13 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -143,6 +148,19 @@ class NativeLayerRootCA final : public NativeLayerRoot {
  
    bool AreOffMainThreadCommitsSuspended();
  
@@ -23,12 +23,18 @@ index 1456d03f8962..6341c875ec85 100644
 +
 +  void SetOnscreenCommitCallback(
 +      std::function<void(mozilla::ipc::ByteBuf&&)> aCallback);
++
++  // Schedule a main-thread commit when onscreen commit data is pending.
++  void SetMainThreadCommitCallback(std::function<void()> aCallback);
++
++  // Prevent onscreen commits from applying an incomplete remote update batch.
++  Mutex& LayerUpdateMutex() { return mLayerUpdateMutex; }
 +#endif
 +
    void DumpLayerTreeToFile(const char* aPath,
                             const MutexAutoLock& aProofOfLock);
  
-@@ -157,6 +169,12 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -157,6 +175,12 @@ class NativeLayerRootCA final : public NativeLayerRoot {
    void SetLayers(const nsTArray<RefPtr<NativeLayer>>& aLayers) override;
    UniquePtr<NativeLayerRootSnapshotter> CreateSnapshotter() override;
  
@@ -41,12 +47,13 @@ index 1456d03f8962..6341c875ec85 100644
    void SetBackingScale(float aBackingScale);
    float BackingScale();
  
-@@ -214,7 +232,11 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -214,7 +238,12 @@ class NativeLayerRootCA final : public NativeLayerRoot {
      RefPtr<NativeLayerRootCA> mLayerRoot;
    };
  
 -  Mutex mMutex MOZ_UNANNOTATED;              // protects all other fields
 +#ifdef MOZ_WIDGET_UIKIT
++  Mutex mLayerUpdateMutex{"NativeLayerRootCA::mLayerUpdateMutex"};
 +  std::function<void(mozilla::ipc::ByteBuf&&)> mOnscreenCommitCallback;
 +#endif
 +
@@ -54,18 +61,20 @@ index 1456d03f8962..6341c875ec85 100644
    CALayer* mOnscreenRootCALayer = nullptr;   // strong
    CALayer* mOffscreenRootCALayer = nullptr;  // strong
    NativeLayerRootSnapshotterCA* mWeakSnapshotter = nullptr;
-@@ -234,6 +256,10 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -234,6 +263,12 @@ class NativeLayerRootCA final : public NativeLayerRoot {
    // opportunity.
    bool mCommitPending = false;
  
 +#ifdef MOZ_WIDGET_UIKIT
++  std::function<void()> mMainThreadCommitCallback;
++  bool mMainThreadCommitScheduled = false;
 +  Maybe<mozilla::ipc::ByteBuf> mOnscreenCommitData;
 +#endif
 +
    // Updated by the layer's view's window to match the fullscreen state
    // of that window.
    bool mWindowIsFullscreen = false;
-@@ -242,6 +268,10 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -242,6 +277,10 @@ class NativeLayerRootCA final : public NativeLayerRoot {
    bool mMutatedOnscreenLayerStructure = false;
    bool mMutatedOffscreenLayerStructure = false;
  
@@ -76,7 +85,7 @@ index 1456d03f8962..6341c875ec85 100644
    // How many times have we committed since the last time we emitted
    // telemetry?
    unsigned int mTelemetryCommitCount = 0;
-@@ -438,6 +468,10 @@ class NativeLayerCA : public NativeLayer {
+@@ -438,6 +477,10 @@ class NativeLayerCA : public NativeLayer {
    bool ApplyChanges(WhichRepresentation aRepresentation, UpdateType aUpdate,
                      bool* aMustRebuild);
  

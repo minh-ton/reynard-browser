@@ -1,0 +1,50 @@
+diff --git a/widget/VsyncDispatcher.h b/widget/VsyncDispatcher.h
+index 51dccaf04cfe..d0530370b1d6 100644
+--- a/widget/VsyncDispatcher.h
++++ b/widget/VsyncDispatcher.h
+@@ -7,6 +7,7 @@
+ 
+ #include "VsyncSource.h"
+ #include "mozilla/DataMutex.h"
++#include "mozilla/Maybe.h"
+ #include "mozilla/RefPtr.h"
+ #include "mozilla/TimeStamp.h"
+ #include "nsISupportsImpl.h"
+@@ -108,6 +109,13 @@ class VsyncDispatcher final {
+   // observer is not registered. Can be called from any thread.
+   void RemoveVsyncObserver(VsyncObserver* aVsyncObserver);
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  // Deliver touch input to APZ before scheduling composition for the frame.
++  // These observers must be added, removed, and notified on the main thread.
++  void AddInputObserver(VsyncObserver* aObserver);
++  void RemoveInputObserver(VsyncObserver* aObserver);
++#endif
++
+   // Add and remove an observer for vsync which can only be notified on the
+   // main thread. Note that keeping an observer registered means vsync will keep
+   // firing, which may impact power usage. So this is intended only for "short
+@@ -123,6 +131,11 @@ class VsyncDispatcher final {
+   // Can be called on any thread.
+   void UpdateVsyncStatus();
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  void NotifyVsyncObservers(const VsyncEvent& aVsync);
++  void NotifyVsyncOnMainThread();
++#endif
++
+   // Can only be called on the main thread.
+   void NotifyMainThreadObservers(VsyncEvent aEvent);
+ 
+@@ -133,6 +146,11 @@ class VsyncDispatcher final {
+     ~State() = default;
+ 
+     nsTArray<RefPtr<VsyncObserver>> mObservers;
++#ifdef MOZ_WIDGET_UIKIT
++    nsTArray<RefPtr<VsyncObserver>> mInputObservers;
++    Maybe<VsyncEvent> mPendingVsync;
++    bool mVsyncTaskQueued = false;
++#endif
+     nsTArray<RefPtr<VsyncObserver>> mMainThreadObservers;
+     VsyncId mLastVsyncIdSentToMainThread;
+     VsyncId mLastMainThreadProcessedVsyncId;

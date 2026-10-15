@@ -1,5 +1,5 @@
 diff --git a/dom/canvas/WebGLExtensions.cpp b/dom/canvas/WebGLExtensions.cpp
-index 0cd6f8726d01..afafd80c008f 100644
+index 2b5b05f499bd..4f2f19e5eb94 100644
 --- a/dom/canvas/WebGLExtensions.cpp
 +++ b/dom/canvas/WebGLExtensions.cpp
 @@ -140,7 +140,9 @@ void WebGLExtensionColorBufferHalfFloat::OnSetExplicit() {

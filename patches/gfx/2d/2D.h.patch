@@ -1,8 +1,8 @@
 diff --git a/gfx/2d/2D.h b/gfx/2d/2D.h
-index d697d4dcbe85..649eff2c247e 100644
+index 25d41394834a..e16e0be50df2 100644
 --- a/gfx/2d/2D.h
 +++ b/gfx/2d/2D.h
-@@ -1279,6 +1279,12 @@ class SharedFTFace : public external::AtomicRefCounted<SharedFTFace> {
+@@ -1327,6 +1327,12 @@ class SharedFTFace : public external::AtomicRefCounted<SharedFTFace> {
  
  class UnscaledFont : public SupportsThreadSafeWeakPtr<UnscaledFont> {
   public:
@@ -15,7 +15,7 @@ index d697d4dcbe85..649eff2c247e 100644
    MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(UnscaledFont)
  
    virtual ~UnscaledFont();
-@@ -1302,6 +1308,12 @@ class UnscaledFont : public SupportsThreadSafeWeakPtr<UnscaledFont> {
+@@ -1350,6 +1356,12 @@ class UnscaledFont : public SupportsThreadSafeWeakPtr<UnscaledFont> {
  
    virtual bool GetFontDescriptor(FontDescriptorOutput, void*) { return false; }
  
@@ -27,8 +27,8 @@ index d697d4dcbe85..649eff2c247e 100644
 +
    virtual already_AddRefed<ScaledFont> CreateScaledFont(
        Float aGlyphSize, const uint8_t* aInstanceData,
-       uint32_t aInstanceDataLength, const FontVariation* aVariations,
-@@ -2279,7 +2291,8 @@ class GFX2D_API Factory {
+       uint32_t aInstanceDataLength, const wr::FontVariation* aVariations,
+@@ -2329,7 +2341,8 @@ class GFX2D_API Factory {
     */
    static already_AddRefed<UnscaledFont> CreateUnscaledFontFromFontDescriptor(
        FontType aType, const uint8_t* aData, uint32_t aDataLength,

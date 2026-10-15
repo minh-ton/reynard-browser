@@ -1,8 +1,8 @@
 diff --git a/xpcom/threads/nsThread.cpp b/xpcom/threads/nsThread.cpp
-index c9410cb57fb0..76dab67d3a4a 100644
+index 40e83edd1989..e2a1e05cd3fa 100644
 --- a/xpcom/threads/nsThread.cpp
 +++ b/xpcom/threads/nsThread.cpp
-@@ -80,10 +80,15 @@ using GetCurrentThreadStackLimitsFn = void(WINAPI*)(PULONG_PTR LowLimit,
+@@ -86,10 +86,15 @@ using GetCurrentThreadStackLimitsFn = void(WINAPI*)(PULONG_PTR LowLimit,
  #  define HAVE_SCHED_SETAFFINITY
  #endif
  
@@ -19,7 +19,7 @@ index c9410cb57fb0..76dab67d3a4a 100644
  
  #  include "nsCocoaFeatures.h"
  #endif
-@@ -976,14 +981,11 @@ NS_IMETHODIMP nsThread::SetThreadQoS(nsIThread::QoSPriority aPriority) {
+@@ -1118,14 +1123,11 @@ NS_IMETHODIMP nsThread::SetThreadQoS(nsIThread::QoSPriority aPriority) {
    // so we assert if we aren't on the current thread.
    MOZ_ASSERT(IsOnCurrentThread(), "Can only change the current thread's QoS");
  
@@ -36,7 +36,7 @@ index c9410cb57fb0..76dab67d3a4a 100644
      // the USER_INTERACTIVE priority, so when we restore thread priorities the
      // main thread should be setting itself to this.
      pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-@@ -1278,6 +1280,22 @@ nsThread::SetPriority(int32_t aPriority) {
+@@ -1420,6 +1422,22 @@ nsThread::SetPriority(int32_t aPriority) {
    // If chaos mode is active, retain the randomly chosen priority
    if (!ChaosMode::isActive(ChaosFeature::ThreadScheduling)) {
      PR_SetThreadPriority(mThread, pri);

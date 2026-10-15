@@ -1,5 +1,5 @@
 diff --git a/hal/moz.build b/hal/moz.build
-index bb486ec1e411..5134be85a48c 100644
+index bb486ec1e411..b40be52eaeff 100644
 --- a/hal/moz.build
 +++ b/hal/moz.build
 @@ -85,6 +85,19 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
@@ -8,10 +8,10 @@ index bb486ec1e411..5134be85a48c 100644
      ]
 +elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
 +    UNIFIED_SOURCES += [
++        "fallback/FallbackProcessPriority.cpp",
 +        "fallback/FallbackVibration.cpp",
 +        "uikit/UIKitBattery.mm",
 +        "uikit/UIKitHeterogeneousCpuInfo.cpp",
-+        "uikit/UIKitProcessPriority.mm",
 +        "uikit/UIKitSensor.mm",
 +    ]
 +    # UIKitScreenConfiguration.mm cannot be built in unified mode because it

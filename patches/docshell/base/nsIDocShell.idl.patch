@@ -1,8 +1,8 @@
 diff --git a/docshell/base/nsIDocShell.idl b/docshell/base/nsIDocShell.idl
-index 7cbed1af77c9..a3a8e80c0f20 100644
+index 011f9aef571f..e1d668ef4e60 100644
 --- a/docshell/base/nsIDocShell.idl
 +++ b/docshell/base/nsIDocShell.idl
-@@ -334,6 +334,12 @@ interface nsIDocShell : nsIDocShellTreeItem
+@@ -335,6 +335,12 @@ interface nsIDocShell : nsIDocShellTreeItem
  
    void clearCachedPlatform();
  

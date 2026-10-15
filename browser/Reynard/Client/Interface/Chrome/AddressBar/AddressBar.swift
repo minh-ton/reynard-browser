@@ -1314,6 +1314,11 @@ final class AddressBar: UIView {
     
     private func updateAutocompletePresentation() {
         textField.isAutocompleteActive = isShowingOverlay
+        if case .focusPreview = autocompleteState {
+            textField.isFocusPreviewActive = true
+        } else {
+            textField.isFocusPreviewActive = false
+        }
         textField.textColor = isShowingOverlay ? .clear : .label
         textField.tintColor = isShowingOverlay ? .clear : tintColor
         autocompleteButton.isHidden = !isShowingOverlay
@@ -1487,6 +1492,8 @@ extension AddressBar: UITextFieldDelegate {
         shouldChangeCharactersIn range: NSRange,
         replacementString string: String
     ) -> Bool {
+        restoreEditingLayout()
+        
         if case .focusPreview = autocompleteState {
             clearFocusPreview()
             let previousText = lastEditingText

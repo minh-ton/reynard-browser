@@ -1,12 +1,11 @@
 diff --git a/mobile/ios/moz.configure b/mobile/ios/moz.configure
-index 3919d4b3a4f7..9cde8f7185ce 100644
+index 3919d4b3a4f7..01cec191bda5 100644
 --- a/mobile/ios/moz.configure
 +++ b/mobile/ios/moz.configure
-@@ -3,6 +3,8 @@
+@@ -3,6 +3,7 @@
  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
  
  imply_option("MOZ_GECKOVIEW_HISTORY", True)
-+imply_option("--enable-printing", True)
 +imply_option("--enable-webrtc", True)
  
  imply_option("MOZ_APP_VENDOR", "Mozilla")

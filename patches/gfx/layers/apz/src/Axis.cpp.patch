@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/Axis.cpp b/gfx/layers/apz/src/Axis.cpp
-index 1e31c6b37af3..c34304f69304 100644
+index 276ef251ac44..0815dbe098b6 100644
 --- a/gfx/layers/apz/src/Axis.cpp
 +++ b/gfx/layers/apz/src/Axis.cpp
 @@ -405,33 +405,17 @@ ParentLayerCoord Axis::DisplacementWillOverscrollAmount(

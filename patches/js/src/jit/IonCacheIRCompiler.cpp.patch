@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/IonCacheIRCompiler.cpp b/js/src/jit/IonCacheIRCompiler.cpp
-index a65ffdd2d061..ebe05ae3af20 100644
+index 950181be43c5..9f8e7147e22c 100644
 --- a/js/src/jit/IonCacheIRCompiler.cpp
 +++ b/js/src/jit/IonCacheIRCompiler.cpp
 @@ -52,6 +52,7 @@ IonCacheIRCompiler::IonCacheIRCompiler(JSContext* cx, TempAllocator& alloc,

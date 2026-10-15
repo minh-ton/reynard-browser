@@ -1,9 +1,9 @@
 diff --git a/gfx/thebes/gfxPlatform.cpp b/gfx/thebes/gfxPlatform.cpp
-index 18afa458763f..ec8665b8251d 100644
+index 1432529c98d7..7f8caa5ddaed 100644
 --- a/gfx/thebes/gfxPlatform.cpp
 +++ b/gfx/thebes/gfxPlatform.cpp
-@@ -45,6 +45,7 @@
- #include "mozilla/image/ImageMemoryReporter.h"
+@@ -46,6 +46,7 @@
+ #include "mozilla/layers/CompositeProcessFencesHolderMap.h"
  #include "mozilla/layers/CompositorBridgeChild.h"
  #include "mozilla/layers/CompositorManagerChild.h"
 +#include "mozilla/layers/CompositorManagerParent.h"
@@ -33,7 +33,7 @@ index 18afa458763f..ec8665b8251d 100644
      layers::CompositorManagerChild* manager =
          CompositorManagerChild::GetInstance();
      if (manager) {
-@@ -3402,7 +3418,7 @@ void gfxPlatform::InitWebGPUConfig() {
+@@ -3407,7 +3423,7 @@ void gfxPlatform::InitWebGPUConfig() {
      featureExternalTexture.Disable(FeatureStatus::Blocklisted, message.get(),
                                     failureId);
    }

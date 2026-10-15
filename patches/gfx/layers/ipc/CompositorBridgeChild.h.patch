@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeChild.h b/gfx/layers/ipc/CompositorBridgeChild.h
-index c2051f3c355e..38b5d448b9ca 100644
+index 4289a14e3503..198c9d465854 100644
 --- a/gfx/layers/ipc/CompositorBridgeChild.h
 +++ b/gfx/layers/ipc/CompositorBridgeChild.h
 @@ -62,7 +62,7 @@ class CompositorBridgeChild final : public PCompositorBridgeChild,

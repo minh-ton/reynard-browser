@@ -1,5 +1,5 @@
 diff --git a/gfx/wgpu_bindings/Cargo.toml b/gfx/wgpu_bindings/Cargo.toml
-index 966a310059a8..b94288b046cc 100644
+index 818ad8a05c12..12fde3276b59 100644
 --- a/gfx/wgpu_bindings/Cargo.toml
 +++ b/gfx/wgpu_bindings/Cargo.toml
 @@ -69,7 +69,7 @@ windows = { version = "0.62", default-features = false, features = [

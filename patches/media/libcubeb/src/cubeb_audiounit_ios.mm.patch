@@ -1,9 +1,9 @@
 diff --git a/media/libcubeb/src/cubeb_audiounit_ios.mm b/media/libcubeb/src/cubeb_audiounit_ios.mm
 new file mode 100644
-index 000000000000..39461c54048a
+index 000000000000..b178694aa188
 --- /dev/null
 +++ b/media/libcubeb/src/cubeb_audiounit_ios.mm
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,298 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -13,9 +13,8 @@ index 000000000000..39461c54048a
 +
 +#include <string.h>
 +
-+#if defined(__IPHONE_14_0) && (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0)
-+#  import <AVFoundation/AVFoundation.h>
-+#  include "cubeb/cubeb.h"
++#import <AVFoundation/AVFoundation.h>
++#include "cubeb/cubeb.h"
 +
 +namespace {
 +
@@ -153,7 +152,6 @@ index 000000000000..39461c54048a
 +extern "C" void cubeb_ios_activate_audio_session(
 +    bool aRecording, uint32_t aPreferredOutputChannels) {
 +  AVAudioSession* session = [AVAudioSession sharedInstance];
-+  NSError* error = nil;
 +  NSString* category = aRecording ? AVAudioSessionCategoryPlayAndRecord
 +                                  : AVAudioSessionCategoryPlayback;
 +  NSString* mode =
@@ -166,7 +164,7 @@ index 000000000000..39461c54048a
 +              AVAudioSessionCategoryOptionAllowAirPlay;
 +  }
 +
-+  [session setCategory:category mode:mode options:options error:&error];
++  [session setCategory:category mode:mode options:options error:nil];
 +  if (aPreferredOutputChannels && session.maximumOutputNumberOfChannels > 0) {
 +    NSInteger channels = MIN(static_cast<NSInteger>(aPreferredOutputChannels),
 +                             session.maximumOutputNumberOfChannels);
@@ -174,7 +172,7 @@ index 000000000000..39461c54048a
 +      [session setPreferredOutputNumberOfChannels:channels error:nil];
 +    }
 +  }
-+  [session setActive:YES error:&error];
++  [session setActive:YES error:nil];
 +}
 +
 +extern "C" uint32_t cubeb_ios_session_sample_rate(void) {
@@ -302,76 +300,5 @@ index 000000000000..39461c54048a
 +    }
 +  }
 +
-+  NSError* error = nil;
-+  BOOL success = [session setPreferredInput:preferredInput error:&error];
-+  if (!success) {
-+    return false;
-+  }
-+  return true;
++  return [session setPreferredInput:preferredInput error:nil];
 +}
-+#else
-+#  import <AudioToolbox/AudioToolbox.h>
-+
-+static void cubeb_ios_ensure_audio_session_initialized() {
-+  static bool sInitialized = false;
-+  if (sInitialized) {
-+    return;
-+  }
-+  AudioSessionInitialize(nullptr, nullptr, nullptr, nullptr);
-+  sInitialized = true;
-+}
-+
-+extern "C" void cubeb_ios_activate_audio_session(bool aRecording, uint32_t) {
-+  cubeb_ios_ensure_audio_session_initialized();
-+  UInt32 category = aRecording ? kAudioSessionCategory_PlayAndRecord
-+                               : kAudioSessionCategory_MediaPlayback;
-+  AudioSessionSetProperty(kAudioSessionProperty_AudioCategory, sizeof(category),
-+                          &category);
-+  AudioSessionSetActive(true);
-+}
-+
-+extern "C" uint32_t cubeb_ios_session_sample_rate(void) {
-+  cubeb_ios_ensure_audio_session_initialized();
-+  Float64 sample_rate = 0.0;
-+  UInt32 size = sizeof(sample_rate);
-+  if (AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate,
-+                              &size, &sample_rate) != noErr ||
-+      sample_rate <= 0.0) {
-+    return 44100;
-+  }
-+  return static_cast<uint32_t>(sample_rate);
-+}
-+
-+extern "C" uint32_t cubeb_ios_copy_available_inputs(
-+    cubeb_device_info** aDevices) {
-+  if (aDevices) {
-+    *aDevices = nullptr;
-+  }
-+  return 0;
-+}
-+
-+extern "C" uint32_t cubeb_ios_copy_available_outputs(
-+    cubeb_device_info** aDevices) {
-+  if (aDevices) {
-+    *aDevices = nullptr;
-+  }
-+  return 0;
-+}
-+
-+extern "C" uint32_t cubeb_ios_max_output_channel_count(void) { return 2; }
-+
-+extern "C" uint32_t cubeb_ios_output_latency_frames(void) { return 0; }
-+
-+extern "C" bool cubeb_ios_copy_current_device_names(char** aInputName,
-+                                                    char** aOutputName) {
-+  if (aInputName) {
-+    *aInputName = nullptr;
-+  }
-+  if (aOutputName) {
-+    *aOutputName = nullptr;
-+  }
-+  return true;
-+}
-+
-+extern "C" bool cubeb_ios_set_preferred_input(cubeb_devid) { return true; }
-+#endif

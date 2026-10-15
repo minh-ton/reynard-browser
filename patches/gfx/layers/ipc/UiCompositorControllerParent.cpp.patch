@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerParent.cpp b/gfx/layers/ipc/UiCompositorControllerParent.cpp
-index b04c706d6845..f99ded3b0cdd 100644
+index c3f47a1eab28..47dfa98f2b6f 100644
 --- a/gfx/layers/ipc/UiCompositorControllerParent.cpp
 +++ b/gfx/layers/ipc/UiCompositorControllerParent.cpp
 @@ -14,6 +14,7 @@
@@ -10,7 +10,7 @@ index b04c706d6845..f99ded3b0cdd 100644
  #include "mozilla/layers/Compositor.h"
  #include "mozilla/layers/CompositorBridgeParent.h"
  #include "mozilla/layers/CompositorThread.h"
-@@ -112,16 +113,17 @@ mozilla::ipc::IPCResult UiCompositorControllerParent::RecvMaxToolbarHeight(
+@@ -105,16 +106,17 @@ UiCompositorControllerParent::RecvInvalidateAndRender() {
    return IPC_OK();
  }
  
@@ -33,7 +33,7 @@ index b04c706d6845..f99ded3b0cdd 100644
  
    return IPC_OK();
  }
-@@ -189,6 +191,25 @@ UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(
+@@ -182,6 +184,25 @@ UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(
    return IPC_OK();
  }
  

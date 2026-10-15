@@ -1,5 +1,5 @@
 diff --git a/dom/webidl/Navigator.webidl b/dom/webidl/Navigator.webidl
-index 00c1d6089082..e2334e2d472a 100644
+index 1e476941114f..af0f392b85c4 100644
 --- a/dom/webidl/Navigator.webidl
 +++ b/dom/webidl/Navigator.webidl
 @@ -48,7 +48,7 @@ interface mixin NavigatorID {

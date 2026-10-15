@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.h b/dom/ipc/BrowserParent.h
-index 876f0c6bc0b5..83ce854eb4be 100644
+index 3d6b83a8fe0f..1ea7f89c9d35 100644
 --- a/dom/ipc/BrowserParent.h
 +++ b/dom/ipc/BrowserParent.h
 @@ -11,6 +11,7 @@
@@ -18,7 +18,7 @@ index 876f0c6bc0b5..83ce854eb4be 100644
  
    mozilla::ipc::IPCResult RecvSetLinkStatus(const nsString& aStatus);
  
-@@ -612,6 +614,10 @@ class BrowserParent final : public PBrowserParent,
+@@ -607,6 +609,10 @@ class BrowserParent final : public PBrowserParent,
  
    bool HandleQueryContentEvent(mozilla::WidgetQueryContentEvent& aEvent);
  
@@ -29,7 +29,7 @@ index 876f0c6bc0b5..83ce854eb4be 100644
    bool SendSimpleContentCommandEvent(
        const mozilla::WidgetContentCommandEvent& aEvent);
    bool SendInsertText(const mozilla::WidgetContentCommandEvent& aEvent);
-@@ -674,7 +680,7 @@ class BrowserParent final : public PBrowserParent,
+@@ -669,7 +675,7 @@ class BrowserParent final : public PBrowserParent,
  
    void LayerTreeUpdate(bool aActive);
  

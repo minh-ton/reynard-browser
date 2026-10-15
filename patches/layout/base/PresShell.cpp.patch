@@ -1,5 +1,5 @@
 diff --git a/layout/base/PresShell.cpp b/layout/base/PresShell.cpp
-index 431379c241b6..18e679edb281 100644
+index c88f6f63f050..35b7853b975e 100644
 --- a/layout/base/PresShell.cpp
 +++ b/layout/base/PresShell.cpp
 @@ -47,6 +47,7 @@
@@ -31,7 +31,7 @@ index 431379c241b6..18e679edb281 100644
  }
  
  bool PresShell::SimpleResizeReflow(const nsSize& aSize) {
-@@ -5772,7 +5785,32 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() const {
+@@ -5775,7 +5788,32 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() const {
  }
  
  void PresShell::UpdateCanvasBackground() {
@@ -65,7 +65,7 @@ index 431379c241b6..18e679edb281 100644
  }
  
  static SingleCanvasBackground ComputeSingleCanvasBackground(nsIFrame* aCanvas) {
-@@ -12484,6 +12522,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
+@@ -12512,6 +12550,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
    return GetVisualViewportOffset() - GetLayoutViewportOffset();
  }
  
@@ -83,7 +83,7 @@ index 431379c241b6..18e679edb281 100644
  nsPoint PresShell::GetLayoutViewportOffset() const {
    nsPoint result;
    if (ScrollContainerFrame* sf = GetRootScrollContainerFrame()) {
-@@ -12529,7 +12578,7 @@ nsSize PresShell::GetFixedViewportSize() const {
+@@ -12557,7 +12606,7 @@ nsSize PresShell::GetFixedViewportSize() const {
      return layoutViewportSize;
    }
    layoutViewportSize.height +=

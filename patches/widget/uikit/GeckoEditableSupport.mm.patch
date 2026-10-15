@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..0daf073decea
+index 000000000000..dc4f34ab1b15
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4213 @@
+@@ -0,0 +1,4215 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -676,7 +676,7 @@ index 000000000000..0daf073decea
 +    WidgetSelectionEvent event(true, eSetSelection, mWidget);
 +    event.mOffset = static_cast<uint32_t>(aRange.location);
 +    event.mLength = static_cast<uint32_t>(aRange.length);
-+    event.mExpandToClusterBoundary = false;
++    event.mExpandToClusterBoundary = ExpandToClusterBoundary::No;
 +    event.mAssociateWithNext = Some(aAssociateWithNext);
 +    mWidget->DispatchWindowEvent(event);
 +    if (!event.mSucceeded) {
@@ -767,7 +767,9 @@ index 000000000000..0daf073decea
 +    return false;
 +  }
 +
-+  WidgetContentCommandEvent event(true, aMessage, mWidget, aOnlyEnabledCheck);
++  WidgetContentCommandEvent event(
++      true, aMessage, mWidget,
++      aOnlyEnabledCheck ? OnlyEnabledCheck::Yes : OnlyEnabledCheck::No);
 +  mWidget->DispatchWindowEvent(event);
 +  if (aIsEnabled) {
 +    *aIsEnabled = event.mIsEnabled;

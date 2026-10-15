@@ -1,5 +1,5 @@
 diff --git a/gfx/wr/webrender/src/renderer/init.rs b/gfx/wr/webrender/src/renderer/init.rs
-index d64a8a2a9f20..18da8cfd66df 100644
+index 367a2a13cb4b..877329ebc172 100644
 --- a/gfx/wr/webrender/src/renderer/init.rs
 +++ b/gfx/wr/webrender/src/renderer/init.rs
 @@ -4,7 +4,7 @@
@@ -11,7 +11,7 @@ index d64a8a2a9f20..18da8cfd66df 100644
  use api::units::*;
  use api::channel::unbounded_channel;
  pub use api::DebugFlags;
-@@ -112,9 +112,13 @@ pub trait AsyncPropertySampler {
+@@ -111,9 +111,13 @@ pub trait AsyncPropertySampler {
      /// and before it processes anything.
      fn register(&self);
      /// This is called for each transaction with the generate_frame flag set

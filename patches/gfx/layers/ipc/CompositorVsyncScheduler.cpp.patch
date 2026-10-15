@@ -1,0 +1,14 @@
+diff --git a/gfx/layers/ipc/CompositorVsyncScheduler.cpp b/gfx/layers/ipc/CompositorVsyncScheduler.cpp
+index 042beb0744bf..d0afaedce91d 100644
+--- a/gfx/layers/ipc/CompositorVsyncScheduler.cpp
++++ b/gfx/layers/ipc/CompositorVsyncScheduler.cpp
+@@ -184,7 +184,9 @@ void CompositorVsyncScheduler::NotifyVsync(const VsyncEvent& aVsync) {
+   {
+     MOZ_ASSERT_IF(XRE_IsParentProcess(),
+                   !CompositorThreadHolder::IsInCompositorThread());
++#  ifndef MOZ_WIDGET_UIKIT
+     MOZ_ASSERT(!NS_IsMainThread());
++#  endif
+   }
+ 
+   MOZ_ASSERT_IF(XRE_GetProcessType() == GeckoProcessType_GPU,

@@ -1,8 +1,8 @@
 diff --git a/gfx/2d/moz.build b/gfx/2d/moz.build
-index 4b4c014bbb6f..e5da3f308095 100644
+index 2abc9c45814d..55c3a01e69bc 100644
 --- a/gfx/2d/moz.build
 +++ b/gfx/2d/moz.build
-@@ -75,6 +75,10 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("cocoa", "uikit"):
+@@ -73,6 +73,10 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("cocoa", "uikit"):
          "NativeFontResourceMac.cpp",
          "ScaledFontMac.cpp",
      ]

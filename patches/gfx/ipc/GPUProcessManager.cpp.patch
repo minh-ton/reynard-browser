@@ -1,5 +1,5 @@
 diff --git a/gfx/ipc/GPUProcessManager.cpp b/gfx/ipc/GPUProcessManager.cpp
-index f47c3c2753f5..33c7db5d1dfb 100644
+index 2e9b1ceb4c3b..3cd7c9594e9a 100644
 --- a/gfx/ipc/GPUProcessManager.cpp
 +++ b/gfx/ipc/GPUProcessManager.cpp
 @@ -63,9 +63,11 @@

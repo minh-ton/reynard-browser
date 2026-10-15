@@ -1,8 +1,8 @@
 diff --git a/dom/base/Navigator.cpp b/dom/base/Navigator.cpp
-index 498f48138cee..500899514bf4 100644
+index f822db52921c..a19b1cdbc1fa 100644
 --- a/dom/base/Navigator.cpp
 +++ b/dom/base/Navigator.cpp
-@@ -317,6 +317,19 @@ void Navigator::GetAppCodeName(nsAString& aAppCodeName, ErrorResult& aRv) {
+@@ -309,6 +309,19 @@ void Navigator::GetAppCodeName(nsAString& aAppCodeName, ErrorResult& aRv) {
  
  void Navigator::GetAppVersion(nsAString& aAppVersion, CallerType aCallerType,
                                ErrorResult& aRv) const {
@@ -22,7 +22,7 @@ index 498f48138cee..500899514bf4 100644
    nsCOMPtr<Document> doc = mWindow->GetExtantDoc();
  
    nsresult rv = GetAppVersion(
-@@ -457,6 +470,19 @@ void Navigator::GetPlatform(nsAString& aPlatform, CallerType aCallerType,
+@@ -449,6 +462,19 @@ void Navigator::GetPlatform(nsAString& aPlatform, CallerType aCallerType,
  
  void Navigator::GetOscpu(nsAString& aOSCPU, CallerType aCallerType,
                           ErrorResult& aRv) const {
@@ -42,7 +42,7 @@ index 498f48138cee..500899514bf4 100644
    if (aCallerType != CallerType::System) {
      // If fingerprinting resistance is on, we will spoof this value. See
      // nsRFPService.h for details about spoofed values.
-@@ -620,6 +646,19 @@ bool Navigator::OnLine() {
+@@ -612,6 +638,19 @@ bool Navigator::OnLine() {
  
  void Navigator::GetBuildID(nsAString& aBuildID, CallerType aCallerType,
                             ErrorResult& aRv) const {
@@ -62,7 +62,7 @@ index 498f48138cee..500899514bf4 100644
    if (aCallerType != CallerType::System) {
      // If fingerprinting resistance is on, we will spoof this value. See
      // nsRFPService.h for details about spoofed values.
-@@ -2022,6 +2061,18 @@ void Navigator::ClearPlatformCache() {
+@@ -2035,6 +2074,18 @@ void Navigator::ClearPlatformCache() {
    Navigator_Binding::ClearCachedPlatformValue(this);
  }
  
@@ -81,7 +81,7 @@ index 498f48138cee..500899514bf4 100644
  void Navigator::ClearLanguageCache() {
    Navigator_Binding::ClearCachedLanguageValue(this);
    Navigator_Binding::ClearCachedLanguagesValue(this);
-@@ -2051,6 +2102,8 @@ nsresult Navigator::GetPlatform(nsAString& aPlatform, Document* aCallerDoc,
+@@ -2064,6 +2115,8 @@ nsresult Navigator::GetPlatform(nsAString& aPlatform, Document* aCallerDoc,
  #elif defined(XP_MACOSX)
    // Always return "MacIntel", even on ARM64 macOS like Safari does.
    aPlatform.AssignLiteral("MacIntel");

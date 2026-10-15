@@ -1,0 +1,20 @@
+diff --git a/mobile/ios/branding/jar.mn b/mobile/ios/branding/jar.mn
+new file mode 100644
+index 000000000000..e021f9fb0bbc
+--- /dev/null
++++ b/mobile/ios/branding/jar.mn
+@@ -0,0 +1,14 @@
++#filter substitution
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++
++# This source code is introduced during the work of an iOS 13+ browser
++# https://github.com/minh-ton/reynard-browser in Feb 2026.
++
++[localization] @AB_CD@.jar:
++  branding (en-US/**/*.ftl)
++
++@AB_CD@.jar:
++% locale branding @AB_CD@ %locale/branding/
++  locale/branding/brand.properties (en-US/brand.properties)

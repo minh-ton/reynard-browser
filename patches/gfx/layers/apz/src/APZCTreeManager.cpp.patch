@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.cpp b/gfx/layers/apz/src/APZCTreeManager.cpp
-index b17a25de70dc..35c5902ef746 100644
+index bed763449ed3..9746a372e215 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.cpp
 +++ b/gfx/layers/apz/src/APZCTreeManager.cpp
 @@ -4,11 +4,13 @@
@@ -28,7 +28,7 @@ index b17a25de70dc..35c5902ef746 100644
  mozilla::LazyLogModule mozilla::layers::APZCTreeManager::sLog("apz.manager");
  
  // Shared with the content-side EventListenerManager.cpp.
-@@ -807,7 +814,8 @@ void APZCTreeManager::UpdateFocusState(LayersId aRootLayerTreeId,
+@@ -810,7 +817,8 @@ void APZCTreeManager::UpdateFocusState(LayersId aRootLayerTreeId,
    mFocusState.Update(aRootLayerTreeId, aOriginatingLayersId, aFocusTarget);
  }
  
@@ -38,7 +38,7 @@ index b17a25de70dc..35c5902ef746 100644
                                           wr::TransactionWrapper& aTxn,
                                           const SampleTime& aSampleTime) {
    AssertOnSamplerThread();
-@@ -978,16 +986,20 @@ void APZCTreeManager::SampleForWebRender(const Maybe<VsyncId>& aVsyncId,
+@@ -981,16 +989,20 @@ void APZCTreeManager::SampleForWebRender(const Maybe<VsyncId>& aVsyncId,
  
    for (const FixedPositionInfo& info : mFixedPositionInfo) {
      MOZ_ASSERT(info.mFixedPositionAnimationId.isSome());
@@ -63,7 +63,7 @@ index b17a25de70dc..35c5902ef746 100644
  
      transforms.AppendElement(
          wr::ToWrTransformProperty(*info.mFixedPositionAnimationId, transform));
-@@ -995,25 +1007,51 @@ void APZCTreeManager::SampleForWebRender(const Maybe<VsyncId>& aVsyncId,
+@@ -998,25 +1010,51 @@ void APZCTreeManager::SampleForWebRender(const Maybe<VsyncId>& aVsyncId,
  
    for (const StickyPositionInfo& info : mStickyPositionInfo) {
      MOZ_ASSERT(info.mStickyPositionAnimationId.isSome());
@@ -124,7 +124,7 @@ index b17a25de70dc..35c5902ef746 100644
  
  ParentLayerRect APZCTreeManager::ComputeClippedCompositionBounds(
      const MutexAutoLock& aProofOfMapLock, ClippedCompositionBoundsMap& aDestMap,
-@@ -1379,9 +1417,23 @@ HitTestingTreeNode* APZCTreeManager::PrepareNodeForLayer(
+@@ -1382,9 +1420,23 @@ HitTestingTreeNode* APZCTreeManager::PrepareNodeForLayer(
        node->SetLastChild(nullptr);
      }
  
@@ -148,7 +148,7 @@ index b17a25de70dc..35c5902ef746 100644
      }
  
      APZCTM_LOG("Using APZC %p for layer %p with identifiers %" PRIx64
-@@ -1390,10 +1442,11 @@ HitTestingTreeNode* APZCTreeManager::PrepareNodeForLayer(
+@@ -1393,10 +1445,11 @@ HitTestingTreeNode* APZCTreeManager::PrepareNodeForLayer(
                 aMetrics.GetScrollId());
  
      apzc->NotifyMainThreadTransaction(
@@ -164,7 +164,7 @@ index b17a25de70dc..35c5902ef746 100644
  
      // Since this is the first time we are encountering an APZC with this guid,
      // the node holding it must be the primary holder. It may be newly-created
-@@ -1686,12 +1739,9 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
+@@ -1689,12 +1742,9 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
            // like we do for other content. Scrollbars are "special" because they
            // have special handling in AsyncCompositionManager when resolution is
            // applied. TODO: we should find a better way to deal with this.
@@ -179,7 +179,7 @@ index b17a25de70dc..35c5902ef746 100644
            Maybe<ScreenPoint> untransformedRefPoint =
                UntransformBy(outTransform, mouseInput.mOrigin);
            if (untransformedRefPoint) {
-@@ -1752,8 +1802,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
+@@ -1755,8 +1805,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
          // events). Since we just flushed the pending repaints the transform to
          // gecko space should only consist of overscroll-cancelling transforms.
          ScreenToScreenMatrix4x4 transformToGecko =
@@ -189,7 +189,7 @@ index b17a25de70dc..35c5902ef746 100644
          Maybe<ScreenPoint> untransformedOrigin =
              UntransformBy(transformToGecko, wheelInput.mOrigin);
  
-@@ -1827,8 +1876,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
+@@ -1830,8 +1879,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
          // transform to gecko space should only consist of overscroll-cancelling
          // transforms.
          ScreenToScreenMatrix4x4 transformToGecko =
@@ -199,7 +199,7 @@ index b17a25de70dc..35c5902ef746 100644
          Maybe<ScreenPoint> untransformedStartPoint =
              UntransformBy(transformToGecko, panInput.mPanStartPoint);
          Maybe<ScreenPoint> untransformedDisplacement =
-@@ -1875,8 +1923,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
+@@ -1878,8 +1926,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
  
        if (state.mHit.mTargetApzc) {
          ScreenToScreenMatrix4x4 outTransform =
@@ -209,7 +209,7 @@ index b17a25de70dc..35c5902ef746 100644
          Maybe<ScreenPoint> untransformedFocusPoint =
              UntransformBy(outTransform, pinchInput.mFocusPoint);
  
-@@ -1901,8 +1948,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
+@@ -1904,8 +1951,7 @@ APZEventResult APZCTreeManager::ReceiveInputEvent(
          MOZ_ASSERT(state.mHit.mHitResult != CompositorHitTestInvisibleToHit);
  
          ScreenToScreenMatrix4x4 outTransform =
@@ -219,7 +219,7 @@ index b17a25de70dc..35c5902ef746 100644
          Maybe<ScreenIntPoint> untransformedPoint =
              UntransformBy(outTransform, tapInput.mPoint);
  
-@@ -2151,7 +2197,8 @@ void APZCTreeManager::ProcessTouchInput(InputHandlingState& aState,
+@@ -2154,7 +2200,8 @@ void APZCTreeManager::ProcessTouchInput(InputHandlingState& aState,
      // (By contrast, if we're in overscroll but not panning, such as after
      // putting two fingers down during an overscroll animation, we process the
      // second touch and proceed to pinch.)
@@ -229,7 +229,7 @@ index b17a25de70dc..35c5902ef746 100644
          mTouchBlockHitResult.mTargetApzc->IsInPanningState() &&
          BuildOverscrollHandoffChain(mTouchBlockHitResult.mTargetApzc)
              ->HasOverscrolledApzc()) {
-@@ -2251,17 +2298,8 @@ void APZCTreeManager::ProcessTouchInput(InputHandlingState& aState,
+@@ -2254,63 +2301,31 @@ void APZCTreeManager::ProcessTouchInput(InputHandlingState& aState,
                                     : Some(std::move(touchBehaviors)),
            initialTouchMove);
  
@@ -249,7 +249,11 @@ index b17a25de70dc..35c5902ef746 100644
  
        for (size_t i = 0; i < aInput.mTouches.Length(); i++) {
          SingleTouchData& touchData = aInput.mTouches[i];
-@@ -2272,42 +2310,19 @@ void APZCTreeManager::ProcessTouchInput(InputHandlingState& aState,
+-        Maybe<ScreenIntPoint> untransformedScreenPoint =
++        auto untransformedScreenPoint =
+             UntransformBy(outTransform, touchData.mScreenPoint);
+         if (!untransformedScreenPoint) {
+           aState.mResult.SetStatusAsIgnore();
            return;
          }
          touchData.mScreenPoint = *untransformedScreenPoint;
@@ -293,7 +297,7 @@ index b17a25de70dc..35c5902ef746 100644
  static MouseInput::MouseType MultiTouchTypeToMouseType(
      MultiTouchInput::MultiTouchType aType) {
    switch (aType) {
-@@ -2581,11 +2596,8 @@ void APZCTreeManager::ProcessUnhandledEvent(LayoutDeviceIntPoint* aRefPoint,
+@@ -2584,11 +2599,8 @@ void APZCTreeManager::ProcessUnhandledEvent(LayoutDeviceIntPoint* aRefPoint,
    if (hit.mTargetApzc) {
      MOZ_ASSERT(hit.mHitResult != CompositorHitTestInvisibleToHit);
      hit.mTargetApzc->GetGuid(aOutTargetGuid);
@@ -307,7 +311,7 @@ index b17a25de70dc..35c5902ef746 100644
      Maybe<ScreenIntPoint> untransformedRefPoint =
          UntransformBy(outTransform, refPointAsScreen);
      if (untransformedRefPoint) {
-@@ -2832,8 +2844,11 @@ void APZCTreeManager::ClearTree() {
+@@ -2835,8 +2847,11 @@ void APZCTreeManager::ClearTree() {
    // Ensure that no references to APZCs are alive in any lingering input
    // blocks. This breaks cycles from InputBlockState::mTargetApzc back to
    // the InputQueue.
@@ -321,7 +325,7 @@ index b17a25de70dc..35c5902ef746 100644
  
    RecursiveMutexAutoLock lock(mTreeLock);
  
-@@ -3554,15 +3569,89 @@ ParentLayerToScreenMatrix4x4 APZCTreeManager::GetApzcToGeckoTransform(
+@@ -3572,15 +3587,89 @@ ParentLayerToScreenMatrix4x4 APZCTreeManager::GetApzcToGeckoTransform(
        PixelCastJustification::ScreenIsParentLayerForRoot);
  }
  
@@ -415,7 +419,7 @@ index b17a25de70dc..35c5902ef746 100644
  }
  
  CSSToCSSMatrix4x4 APZCTreeManager::GetOopifToRootContentTransform(
-@@ -3676,19 +3765,7 @@ Maybe<ScreenIntPoint> APZCTreeManager::ConvertToGecko(
+@@ -3694,19 +3783,7 @@ Maybe<ScreenIntPoint> APZCTreeManager::ConvertToGecko(
    const HitTestResult& hit = mInputQueue->GetCurrentTouchBlock()
                                   ? mTouchBlockHitResult
                                   : mTapGestureHitResult;
@@ -436,7 +440,7 @@ index b17a25de70dc..35c5902ef746 100644
  }
  
  already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
-@@ -3738,68 +3815,70 @@ already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
+@@ -3756,68 +3833,70 @@ already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
    return ancestor.forget();
  }
  
@@ -560,7 +564,7 @@ index b17a25de70dc..35c5902ef746 100644
  }
  
  LayerToParentLayerMatrix4x4 APZCTreeManager::ComputeTransformForScrollThumbNode(
-@@ -3915,6 +3994,23 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3933,6 +4012,23 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
        // Note, mRootNode needs to be checked with mTreeLock held.
        return;
      }
@@ -584,7 +588,7 @@ index b17a25de70dc..35c5902ef746 100644
      // This formulation duplicates matrix multiplications closer
      // to the root of the tree. For now, aiming for separation
      // of concerns rather than minimum number of multiplications.
-@@ -3922,7 +4018,7 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3940,7 +4036,7 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
          mRootNode.get(),
          [&](HitTestingTreeNode* aNode) {
            mTreeLock.AssertCurrentThreadIn();
@@ -593,7 +597,7 @@ index b17a25de70dc..35c5902ef746 100644
            MOZ_ASSERT(!(underAncestor && atAncestor));
            underAncestor |= atAncestor;
            if (!underAncestor) {
-@@ -3941,14 +4037,26 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3959,14 +4055,26 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
                // It's important to pass aRemoteLayersId=layersId here (not
                // parent->GetLayersId()). layersId is the LayersId of the
                // remote content for which this transform is being computed.
@@ -623,7 +627,7 @@ index b17a25de70dc..35c5902ef746 100644
            if (atAncestor) {
              MOZ_ASSERT(underAncestor);
              underAncestor = false;
-@@ -3965,11 +4073,17 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3983,11 +4091,17 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
  }
  
  void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
@@ -643,7 +647,7 @@ index b17a25de70dc..35c5902ef746 100644
    }
    {
      RecursiveMutexAutoLock lock(mTreeLock);
-@@ -3979,9 +4093,20 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
+@@ -3997,9 +4111,20 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
  
  void APZCTreeManager::SetFixedLayerMarginsOnRootContentApzcs(
      const RecursiveMutexAutoLock& aProofOfTreeLock) {
@@ -666,7 +670,7 @@ index b17a25de70dc..35c5902ef746 100644
    }
  }
  
-@@ -4108,11 +4233,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
+@@ -4130,11 +4255,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
  APZCTreeManager::StickyPositionInfo::StickyPositionInfo(
      const HitTestingTreeNode* aNode) {
    mStickyPositionAnimationId = aNode->GetStickyPositionAnimationId();

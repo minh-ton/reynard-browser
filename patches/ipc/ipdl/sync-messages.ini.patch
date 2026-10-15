@@ -1,8 +1,8 @@
 diff --git a/ipc/ipdl/sync-messages.ini b/ipc/ipdl/sync-messages.ini
-index d56225567094..534c3f808920 100644
+index 53fb309d088d..a7b11a275632 100644
 --- a/ipc/ipdl/sync-messages.ini
 +++ b/ipc/ipdl/sync-messages.ini
-@@ -124,6 +124,18 @@ description = legacy sync IPC - please add detailed description
+@@ -126,6 +126,18 @@ description = legacy sync IPC - please add detailed description
  description = legacy sync IPC - please add detailed description
  [PBrowser::GetInputContext]
  description = legacy sync IPC - please add detailed description

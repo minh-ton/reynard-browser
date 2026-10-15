@@ -1,0 +1,146 @@
+diff --git a/widget/VsyncDispatcher.cpp b/widget/VsyncDispatcher.cpp
+index 1b765196166f..5b417ff42451 100644
+--- a/widget/VsyncDispatcher.cpp
++++ b/widget/VsyncDispatcher.cpp
+@@ -139,25 +139,100 @@ static int32_t ComputeFrameRateDivisor(gfx::VsyncSource* aCurrentVsyncSource) {
+                   int32_t(floor(1000.0 / frameDuration / maxRate)));
+ }
+ 
++#ifdef MOZ_WIDGET_UIKIT
+ void VsyncDispatcher::NotifyVsync(const VsyncEvent& aVsync) {
++  bool dispatchToMainThread = false;
++  {
++    auto state = mState.Lock();
++    if (++state->mVsyncSkipCounter <
++        ComputeFrameRateDivisor(state->mCurrentVsyncSource)) {
++      return;
++    }
++    state->mVsyncSkipCounter = 0;
++
++    if (!state->mInputObservers.IsEmpty() || state->mVsyncTaskQueued) {
++      state->mPendingVsync = Some(aVsync);
++      if (state->mVsyncTaskQueued) {
++        return;
++      }
++      state->mVsyncTaskQueued = true;
++      dispatchToMainThread = true;
++    }
++  }
++
++  if (dispatchToMainThread) {
++    NS_DispatchToMainThread(
++        NewRunnableMethod("VsyncDispatcher::NotifyVsyncOnMainThread", this,
++                          &VsyncDispatcher::NotifyVsyncOnMainThread));
++    return;
++  }
++
++  NotifyVsyncObservers(aVsync);
++}
++
++void VsyncDispatcher::NotifyVsyncOnMainThread() {
++  MOZ_ASSERT(NS_IsMainThread());
++  VsyncEvent vsync;
++  {
++    auto state = mState.Lock();
++    vsync = *state->mPendingVsync;
++    state->mPendingVsync.reset();
++  }
++
++  NotifyVsyncObservers(vsync);
++
++  bool dispatchAgain;
++  {
++    auto state = mState.Lock();
++    dispatchAgain = state->mPendingVsync.isSome();
++    state->mVsyncTaskQueued = dispatchAgain;
++  }
++  if (dispatchAgain) {
++    NS_DispatchToMainThread(
++        NewRunnableMethod("VsyncDispatcher::NotifyVsyncOnMainThread", this,
++                          &VsyncDispatcher::NotifyVsyncOnMainThread));
++  }
++}
++
++void VsyncDispatcher::NotifyVsyncObservers(const VsyncEvent& aVsync) {
++#else
++void VsyncDispatcher::NotifyVsync(const VsyncEvent& aVsync) {
++#endif
+   nsTArray<RefPtr<VsyncObserver>> observers;
++#ifdef MOZ_WIDGET_UIKIT
++  nsTArray<RefPtr<VsyncObserver>> inputObservers;
++#endif
+   bool shouldDispatchToMainThread = false;
+   {
+     auto state = mState.Lock();
++
++#ifndef MOZ_WIDGET_UIKIT
+     if (++state->mVsyncSkipCounter <
+         ComputeFrameRateDivisor(state->mCurrentVsyncSource)) {
+       return;
+     }
+     state->mVsyncSkipCounter = 0;
++#endif
+ 
+     // Copy out the observers so that we don't keep the mutex
+     // locked while notifying vsync.
+     observers = state->mObservers.Clone();
++#ifdef MOZ_WIDGET_UIKIT
++    if (NS_IsMainThread()) {
++      inputObservers = state->mInputObservers.Clone();
++    }
++#endif
+     shouldDispatchToMainThread = !state->mMainThreadObservers.IsEmpty() &&
+                                  (state->mLastVsyncIdSentToMainThread ==
+                                   state->mLastMainThreadProcessedVsyncId);
+   }
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  for (const auto& observer : inputObservers) {
++    observer->NotifyVsync(aVsync);
++  }
++#endif
++
+   for (const auto& observer : observers) {
+     observer->NotifyVsync(aVsync);
+   }
+@@ -213,6 +288,30 @@ void VsyncDispatcher::RemoveVsyncObserver(VsyncObserver* aVsyncObserver) {
+   UpdateVsyncStatus();
+ }
+ 
++#ifdef MOZ_WIDGET_UIKIT
++void VsyncDispatcher::AddInputObserver(VsyncObserver* aObserver) {
++  MOZ_ASSERT(NS_IsMainThread());
++  MOZ_ASSERT(aObserver);
++  {
++    auto state = mState.Lock();
++    state->mInputObservers.AppendElement(aObserver);
++  }
++
++  UpdateVsyncStatus();
++}
++
++void VsyncDispatcher::RemoveInputObserver(VsyncObserver* aObserver) {
++  MOZ_ASSERT(NS_IsMainThread());
++  MOZ_ASSERT(aObserver);
++  {
++    auto state = mState.Lock();
++    state->mInputObservers.RemoveElement(aObserver);
++  }
++
++  UpdateVsyncStatus();
++}
++#endif
++
+ void VsyncDispatcher::AddMainThreadObserver(VsyncObserver* aObserver) {
+   MOZ_ASSERT(NS_IsMainThread());
+   MOZ_ASSERT(aObserver);
+@@ -245,6 +344,9 @@ void VsyncDispatcher::UpdateVsyncStatus() {
+     wasObservingVsync = state->mIsObservingVsync;
+     needVsync =
+         !state->mObservers.IsEmpty() || !state->mMainThreadObservers.IsEmpty();
++#ifdef MOZ_WIDGET_UIKIT
++    needVsync = needVsync || !state->mInputObservers.IsEmpty();
++#endif
+     state->mIsObservingVsync = needVsync;
+     vsyncSource = state->mCurrentVsyncSource;
+   }

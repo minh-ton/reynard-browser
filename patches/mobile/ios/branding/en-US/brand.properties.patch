@@ -1,0 +1,16 @@
+diff --git a/mobile/ios/branding/en-US/brand.properties b/mobile/ios/branding/en-US/brand.properties
+new file mode 100644
+index 000000000000..ed4e9b2a9383
+--- /dev/null
++++ b/mobile/ios/branding/en-US/brand.properties
+@@ -0,0 +1,10 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++
++# This source code is introduced during the work of an iOS 13+ browser
++# https://github.com/minh-ton/reynard-browser in Feb 2026.
++
++brandShorterName=Reynard
++brandShortName=Reynard
++brandFullName=Reynard Browser

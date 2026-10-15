@@ -1,17 +1,17 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerChild.h b/gfx/layers/ipc/UiCompositorControllerChild.h
-index 5ac77de4fbbd..8084f279252e 100644
+index c368c038cc69..5aaea5daee17 100644
 --- a/gfx/layers/ipc/UiCompositorControllerChild.h
 +++ b/gfx/layers/ipc/UiCompositorControllerChild.h
-@@ -42,6 +42,8 @@ class UiCompositorControllerChild final
+@@ -41,6 +41,8 @@ class UiCompositorControllerChild final
+                        const int32_t& aHeight, const int32_t& aWidth);
    bool InvalidateAndRender();
-   bool SetMaxToolbarHeight(const int32_t& aHeight);
    bool SetFixedBottomOffset(int32_t aOffset);
 +  bool SetFixedLayerMargins(int32_t aTop, int32_t aBottom, int32_t aTopInset,
 +                            int32_t aBottomInset);
    bool ToolbarAnimatorMessageFromUI(const int32_t& aMessage);
    bool SetDefaultClearColor(const uint32_t& aColor);
  #ifdef MOZ_WIDGET_ANDROID
-@@ -52,6 +54,14 @@ class UiCompositorControllerChild final
+@@ -51,6 +53,14 @@ class UiCompositorControllerChild final
  #endif
    bool EnableLayerUpdateNotifications(const bool& aEnable);
  
@@ -26,7 +26,7 @@ index 5ac77de4fbbd..8084f279252e 100644
    void Destroy();
  
  #ifdef MOZ_WIDGET_ANDROID
-@@ -87,6 +97,13 @@ class UiCompositorControllerChild final
+@@ -86,6 +96,13 @@ class UiCompositorControllerChild final
        Maybe<ipc::FileDescriptor>&& aAcquireFence);
  
   private:
@@ -40,10 +40,10 @@ index 5ac77de4fbbd..8084f279252e 100644
    explicit UiCompositorControllerChild(const uint64_t& aProcessToken,
                                         nsIWidget* aWidget);
    virtual ~UiCompositorControllerChild();
-@@ -101,8 +118,14 @@ class UiCompositorControllerChild final
+@@ -99,8 +116,14 @@ class UiCompositorControllerChild final
+   bool mIsOpen;
    uint64_t mProcessToken;
    Maybe<gfx::IntRect> mResize;
-   Maybe<int32_t> mMaxToolbarHeight;
 +  Maybe<FixedLayerMargins> mFixedLayerMargins;
    Maybe<uint32_t> mDefaultClearColor;
    Maybe<bool> mLayerUpdateEnabled;

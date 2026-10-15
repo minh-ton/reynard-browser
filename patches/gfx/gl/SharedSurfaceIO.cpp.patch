@@ -1,25 +1,25 @@
 diff --git a/gfx/gl/SharedSurfaceIO.cpp b/gfx/gl/SharedSurfaceIO.cpp
-index 91eeefe1b801..3b95f4cebdab 100644
+index 081138b5acc3..784a7a4f6ad3 100644
 --- a/gfx/gl/SharedSurfaceIO.cpp
 +++ b/gfx/gl/SharedSurfaceIO.cpp
-@@ -10,6 +10,7 @@
- #include "ScopedGLHelpers.h"
- #include "mozilla/gfx/MacIOSurface.h"
+@@ -12,6 +12,7 @@
+ #include "mozilla/layers/CompositeProcessFencesHolderMap.h"
+ #include "mozilla/layers/GpuFence.h"
  #include "mozilla/layers/GpuFenceMTLSharedEvent.h"
 +#include "mozilla/layers/IOSurfacePort.h"
  #include "mozilla/layers/LayersSurfaces.h"  // for SurfaceDescriptor, etc
  #include "mozilla/layers/LayersTypes.h"
  
-@@ -140,8 +141,10 @@ Maybe<layers::SurfaceDescriptor>
+@@ -189,8 +190,10 @@ Maybe<layers::SurfaceDescriptor>
  SharedSurface_IOSurface::ToSurfaceDescriptor() {
    const bool isOpaque = false;  // RGBA
    return Some(layers::SurfaceDescriptorMacIOSurface(
 -      mIOSurf->GetIOSurfaceID(), isOpaque, mIOSurf->GetYUVColorSpace(),
--      mIOSurf->GetTransferFunction(), (layers::GpuFence*)nullptr));
+-      mIOSurf->GetTransferFunction(), mFencesHolderId));
 +      mIOSurf->GetIOSurfaceID(),
 +      layers::IOSurfacePort::FromSurface(mIOSurf->GetIOSurfaceRef()), isOpaque,
 +      mIOSurf->GetYUVColorSpace(), mIOSurf->GetTransferFunction(),
-+      (layers::GpuFence*)nullptr));
++      mFencesHolderId));
  }
  
  }  // namespace gl

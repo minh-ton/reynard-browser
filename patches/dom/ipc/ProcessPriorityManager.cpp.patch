@@ -1,30 +1,43 @@
 diff --git a/dom/ipc/ProcessPriorityManager.cpp b/dom/ipc/ProcessPriorityManager.cpp
-index e59fce862c1b..09775f0480ff 100644
+index ed04a4a6d8a4..764f5c9ef0ef 100644
 --- a/dom/ipc/ProcessPriorityManager.cpp
 +++ b/dom/ipc/ProcessPriorityManager.cpp
-@@ -46,6 +46,11 @@ using namespace mozilla::hal;
- #  include <unistd.h>
+@@ -60,9 +60,9 @@ using namespace mozilla::hal;
+ 
+ #if defined(ANDROID) && defined(ENABLE_LOGGING)
+ #  include <android/log.h>
+-#  define LOG(fmt, ...)                                                        \
+-    __android_log_print(ANDROID_LOG_INFO, "Gecko:ProcessPriorityManager", fmt, \
+-                        ##__VA_ARGS__)
++#  define LOG(fmt, ...)                                                   \
++    __android_log_print(ANDROID_LOG_INFO, "Gecko:ProcessPriorityManager", \
++                        fmt, ##__VA_ARGS__)
+ #  define LOGP(fmt, ...)                                                \
+     __android_log_print(                                                \
+         ANDROID_LOG_INFO, "Gecko:ProcessPriorityManager",               \
+@@ -75,8 +75,8 @@ using namespace mozilla::hal;
+ #  define LOGP(fmt, ...)                                                   \
+     printf("ProcessPriorityManager[%schild-id=%" PRIu64 ", pid=%d] - " fmt \
+            "\n",                                                           \
+-           NameWithComma().get(), static_cast<uint64_t>(ChildID()), Pid(), \
+-           ##__VA_ARGS__)
++           NameWithComma().get(), static_cast<uint64_t>(ChildID()),        \
++           Pid(), ##__VA_ARGS__)
+ #else
+ static LogModule* GetPPMLog() {
+   static LazyLogModule sLog("ProcessPriorityManager");
+@@ -88,8 +88,8 @@ static LogModule* GetPPMLog() {
+ #  define LOGP(fmt, ...)                                                      \
+     MOZ_LOG(GetPPMLog(), LogLevel::Debug,                                     \
+             ("ProcessPriorityManager[%schild-id=%" PRIu64 ", pid=%d] - " fmt, \
+-             NameWithComma().get(), static_cast<uint64_t>(ChildID()), Pid(),  \
+-             ##__VA_ARGS__))
++             NameWithComma().get(), static_cast<uint64_t>(ChildID()),         \
++             Pid(), ##__VA_ARGS__))
  #endif
  
-+#ifdef XP_IOS
-+#  include <errno.h>
-+#  include <sys/resource.h>
-+#endif
-+
- #ifdef LOG
- #  undef LOG
- #endif
-@@ -256,6 +261,9 @@ class ProcessPriorityManagerChild final : public nsIObserver {
-   ~ProcessPriorityManagerChild() = default;
- 
-   void Init();
-+#ifdef XP_IOS
-+  void SetIOSBackgroundState(ProcessPriority aPriority);
-+#endif
- 
-   hal::ProcessPriority mCachedPriority;
- };
-@@ -761,7 +769,7 @@ ProcessPriority ParticularProcessPriorityManager::ComputePriority() {
+ namespace geckoprofiler::markers {
+@@ -749,7 +749,7 @@ ProcessPriority ParticularProcessPriorityManager::ComputePriority() {
    return PROCESS_PRIORITY_BACKGROUND;
  }
  
@@ -33,7 +46,7 @@ index e59fce862c1b..09775f0480ff 100644
  // Method used for setting QoS levels on background main threads.
  static bool PriorityUsesLowPowerMainThread(
      const hal::ProcessPriority& aPriority) {
-@@ -819,8 +827,8 @@ void ParticularProcessPriorityManager::SetPriorityNow(
+@@ -807,8 +807,8 @@ void ParticularProcessPriorityManager::SetPriorityNow(
      ProcessPriorityManagerImpl::GetSingleton()->NotifyProcessPriorityChanged(
          this, oldPriority);
  
@@ -44,48 +57,15 @@ index e59fce862c1b..09775f0480ff 100644
      // can go ahead and put the main thread in the background here. If the new
      // priority is the background priority, we can tell the OS to put the main
      // thread on low-power cores. Alternately, if we are changing from the
-@@ -961,6 +969,34 @@ void ProcessPriorityManagerChild::Init() {
-   }
- }
- 
-+#ifdef XP_IOS
-+void ProcessPriorityManagerChild::SetIOSBackgroundState(
-+    ProcessPriority aPriority) {
-+  int priority = 0;
-+  switch (aPriority) {
-+    case PROCESS_PRIORITY_BACKGROUND:
-+    case PROCESS_PRIORITY_PREALLOC:
-+      priority = PRIO_DARWIN_BG;
-+      break;
-+    case PROCESS_PRIORITY_BACKGROUND_PERCEIVABLE:
-+    case PROCESS_PRIORITY_FOREGROUND_KEYBOARD:
-+    case PROCESS_PRIORITY_FOREGROUND:
-+    case PROCESS_PRIORITY_FOREGROUND_HIGH:
-+      break;
-+    case PROCESS_PRIORITY_UNKNOWN:
-+    case PROCESS_PRIORITY_PARENT_PROCESS:
-+    default:
-+      return;
-+  }
+@@ -822,6 +822,11 @@ void ParticularProcessPriorityManager::SetPriorityNow(
+     if (!mContentParent->IsShuttingDown() &&
+         PriorityUsesLowPowerMainThread(mPriority) !=
+             PriorityUsesLowPowerMainThread(oldPriority)) {
++#  ifdef XP_IOS
++      mContentParent->SetProcessBackground(
++          PriorityUsesLowPowerMainThread(mPriority));
++#  endif
 +
-+  errno = 0;
-+  if (setpriority(PRIO_DARWIN_PROCESS, 0, priority) == -1) {
-+    LOG("setpriority(PRIO_DARWIN_PROCESS, 0, %d) failed for %s: errno=%d",
-+        priority, ProcessPriorityToString(aPriority), errno);
-+  }
-+}
-+#endif
-+
- NS_IMETHODIMP
- ProcessPriorityManagerChild::Observe(nsISupports* aSubject, const char* aTopic,
-                                      const char16_t* aData) {
-@@ -974,6 +1010,9 @@ ProcessPriorityManagerChild::Observe(nsISupports* aSubject, const char* aTopic,
-   NS_ENSURE_TRUE(ProcessPriority(priority) != PROCESS_PRIORITY_UNKNOWN, NS_OK);
- 
-   mCachedPriority = static_cast<ProcessPriority>(priority);
-+#ifdef XP_IOS
-+  SetIOSBackgroundState(mCachedPriority);
-+#endif
- 
-   return NS_OK;
- }
+       if (PriorityUsesLowPowerMainThread(mPriority) &&
+           PrefsUseLowPriorityThreads()) {
+         mContentParent->SetMainThreadQoSPriority(nsIThread::QOS_PRIORITY_LOW);
