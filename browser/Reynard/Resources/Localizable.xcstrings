@@ -8546,6 +8546,26 @@
         }
       }
     },
+    "Copy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "Copy Contents" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Contents"
+          }
+        }
+      }
+    },
     "Copy Image" : {
       "localizations" : {
         "cs" : {
@@ -18986,6 +19006,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在新標籤頁中開啟"
+          }
+        }
+      }
+    },
+    "Open in New Tabs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open in New Tabs"
           }
         }
       }

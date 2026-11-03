@@ -356,10 +356,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
                 return
             }
             
-            let viewController = EditBookmarkViewController(bookmark: bookmark, store: self.store)
-            let navigationController = UINavigationController(rootViewController: viewController)
-            navigationController.modalPresentationStyle = .pageSheet
-            self.present(navigationController, animated: true)
+            self.editBookmark(bookmark)
             completion(true)
         }
         editAction.backgroundColor = .systemBlue
@@ -387,6 +384,107 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         return didDelete
     }
     
+    func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard !isEditing,
+              let item = item(at: indexPath) else {
+            return nil
+        }
+        
+        let urls: [URL]
+        let copyTitle: String
+        let openTitle: String
+        let canDelete: Bool
+        
+        switch item {
+        case let .bookmark(bookmark):
+            urls = [bookmark.url]
+            copyTitle = NSLocalizedString("Copy", comment: "")
+            openTitle = NSLocalizedString("Open in New Tab", comment: "")
+            canDelete = true
+        case let .folder(folder):
+            urls = bookmarkURLs(in: folder.guid)
+            copyTitle = NSLocalizedString("Copy Contents", comment: "")
+            openTitle = NSLocalizedString("Open in New Tabs", comment: "")
+            canDelete = !folder.isProtected
+        }
+        
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let copy = UIAction(
+                title: copyTitle,
+                image: UIImage(named: "reynard.document.on.document")
+            ) { _ in
+                UIPasteboard.general.string = urls.map(\.absoluteString).joined(separator: "\n")
+            }
+            
+            let open = UIAction(
+                title: openTitle,
+                image: UIImage(named: "reynard.plus.square.on.square")
+            ) { [weak self] _ in
+                guard let self,
+                      let browser = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
+                    return
+                }
+                
+                browser.loadViewIfNeeded()
+                browser.exitFullscreenIfNeeded()
+                
+                for url in urls {
+                    browser.tabManager.createTab(selecting: true)
+                    browser.tabManager.browse(to: url.absoluteString)
+                }
+                
+                if self.navigationController?.presentingViewController is BrowserViewController {
+                    self.navigationController?.dismiss(animated: true)
+                }
+            }
+            
+            var actions: [UIMenuElement] = []
+            if case let .bookmark(bookmark) = item {
+                actions.append(UIAction(
+                    title: NSLocalizedString("Edit", comment: ""),
+                    image: UIImage(named: "reynard.pencil")
+                ) { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.editBookmark(bookmark)
+                })
+            }
+            
+            if canDelete {
+                actions.append(UIAction(
+                    title: NSLocalizedString("Delete", comment: ""),
+                    image: UIImage(named: "reynard.trash"),
+                    attributes: .destructive
+                ) { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    
+                    switch item {
+                    case let .bookmark(bookmark):
+                        _ = self.store.removeBookmark(guid: bookmark.guid)
+                    case let .folder(folder):
+                        _ = self.store.removeFolder(guid: folder.guid)
+                    }
+                    
+                    self.reloadBookmarkRows()
+                })
+            }
+            
+            return UIMenu(title: "", children: [
+                UIMenu(title: "", options: .displayInline, children: [copy]),
+                UIMenu(title: "", options: .displayInline, children: [open]),
+                UIMenu(title: "", options: .displayInline, children: actions),
+            ])
+        }
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
@@ -405,6 +503,24 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
     }
     
     // MARK: - Actions
+    
+    private func editBookmark(_ bookmark: BookmarkSnapshot) {
+        let viewController = EditBookmarkViewController(bookmark: bookmark, store: store)
+        let navigationController = UINavigationController(rootViewController: viewController)
+        navigationController.modalPresentationStyle = .pageSheet
+        present(navigationController, animated: true)
+    }
+    
+    private func bookmarkURLs(in folderID: String) -> [URL] {
+        store.contents(of: folderID).items.flatMap { item in
+            switch item {
+            case let .bookmark(bookmark):
+                return [bookmark.url]
+            case let .folder(folder):
+                return bookmarkURLs(in: folder.guid)
+            }
+        }
+    }
     
     @objc private func reloadChangedBookmarks() {
         reloadBookmarkRows()

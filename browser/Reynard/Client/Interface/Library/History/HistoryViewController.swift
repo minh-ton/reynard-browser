@@ -564,6 +564,60 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         return configuration
     }
     
+    func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard !isEditing,
+              let item = item(at: indexPath) else {
+            return nil
+        }
+        
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            let copy = UIAction(
+                title: NSLocalizedString("Copy", comment: ""),
+                image: UIImage(named: "reynard.document.on.document")
+            ) { _ in
+                UIPasteboard.general.string = item.url.absoluteString
+            }
+            
+            let open = UIAction(
+                title: NSLocalizedString("Open in New Tab", comment: ""),
+                image: UIImage(named: "reynard.plus.square.on.square")
+            ) { [weak self] _ in
+                guard let self,
+                      let browser = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
+                    return
+                }
+                
+                browser.loadViewIfNeeded()
+                browser.exitFullscreenIfNeeded()
+                
+                browser.tabManager.createTab(selecting: true)
+                browser.tabManager.browse(to: item.url.absoluteString)
+                
+                if self.navigationController?.presentingViewController is BrowserViewController {
+                    self.navigationController?.dismiss(animated: true)
+                }
+            }
+            
+            let delete = UIAction(
+                title: NSLocalizedString("Delete", comment: ""),
+                image: UIImage(named: "reynard.trash"),
+                attributes: .destructive
+            ) { _ in
+                HistoryStore.shared.removeSite(id: item.id)
+            }
+            
+            return UIMenu(title: "", children: [
+                UIMenu(title: "", options: .displayInline, children: [copy]),
+                UIMenu(title: "", options: .displayInline, children: [open]),
+                UIMenu(title: "", options: .displayInline, children: [delete]),
+            ])
+        }
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard let item = item(at: indexPath) else {
             return
