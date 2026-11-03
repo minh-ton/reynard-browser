@@ -49,6 +49,9 @@ func parsePromptRequest(_ data: [String: Any]) -> PromptRequest? {
             password: options["password"] as? String ?? ""
         ))
         
+    case "beforeUnload":
+        return .beforeUnload(BeforeUnloadPromptRequest(id: promptID))
+        
     case "folderUpload":
         return .folderUpload(FolderUploadPromptRequest(
             id: promptID,

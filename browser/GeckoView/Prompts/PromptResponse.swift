@@ -25,6 +25,10 @@ public struct PromptResponse {
         ])
     }
     
+    public static func beforeUnload(allowed: Bool) -> PromptResponse {
+        return PromptResponse(geckoMessage: ["allow": allowed])
+    }
+    
     public static func folderUpload(allowed: Bool) -> PromptResponse {
         return PromptResponse(geckoMessage: ["allow": allowed])
     }

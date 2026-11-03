@@ -26,6 +26,7 @@ public enum PromptRequest {
     case button(ButtonPromptRequest)
     case text(TextPromptRequest)
     case auth(AuthPromptRequest)
+    case beforeUnload(BeforeUnloadPromptRequest)
     case folderUpload(FolderUploadPromptRequest)
     case color(ColorPromptRequest)
     case dateTime(DateTimePromptRequest)
@@ -42,6 +43,8 @@ public enum PromptRequest {
         case .text(let request):
             return request.id
         case .auth(let request):
+            return request.id
+        case .beforeUnload(let request):
             return request.id
         case .folderUpload(let request):
             return request.id
