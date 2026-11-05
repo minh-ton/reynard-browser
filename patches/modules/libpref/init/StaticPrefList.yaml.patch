@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 80be46d83cc0..8ef9297c9f68 100644
+index 80be46d83cc0..daf4cfa88c8e 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -3397,13 +3397,13 @@
@@ -271,21 +271,7 @@ index 80be46d83cc0..8ef9297c9f68 100644
    value: false # see bug 1641427
  #else
    value: true
-@@ -15652,7 +15683,13 @@
- - name: network.http.network_access_on_socket_process.enabled
-   type: RelaxedAtomicBool
-   mirror: always
-+  #  value: false
-+# Enable socket process networking on iOS.
-+#if defined(XP_IOS)
-+  value: true
-+#else
-   value: false
-+#endif
- 
- # Telemetry of traffic categories. Whether or not to enable HttpTrafficAnalyzer.
- - name: network.traffic_analyzer.enabled
-@@ -19819,7 +19856,7 @@
+@@ -19819,7 +19850,7 @@
  # If the service is available, set threads to low-power mode when in the background.
  - name: threads.use_low_power.enabled
    type: RelaxedAtomicBool
@@ -294,7 +280,7 @@ index 80be46d83cc0..8ef9297c9f68 100644
    value: true
  #else
    value: @IS_NIGHTLY_BUILD@
-@@ -19828,10 +19865,10 @@
+@@ -19828,10 +19859,10 @@
  
  
  # If the process priority is set to background, put the main thread in the background.
@@ -307,7 +293,7 @@ index 80be46d83cc0..8ef9297c9f68 100644
    value: true
  #else
    value: @IS_NIGHTLY_BUILD@
-@@ -19996,7 +20033,7 @@
+@@ -19996,7 +20027,7 @@
  # Use 17 for Ctrl, 18 for Alt, 91 or 224 for Meta, 0 for none.
  - name: ui.key.accelKey
    type: uint32_t
@@ -316,7 +302,7 @@ index 80be46d83cc0..8ef9297c9f68 100644
    value: 224
  #else
    value: 17
-@@ -20656,7 +20693,7 @@
+@@ -20656,7 +20687,7 @@
  # on a platform that supports the GPU process, else true.
  - name: webgl.allow-in-parent
    type: bool
