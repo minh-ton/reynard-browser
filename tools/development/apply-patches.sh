@@ -53,7 +53,7 @@ if [[ -n "$(git -C "$SUBMODULE_PATH" status --porcelain)" ]]; then
 fi
 
 setopt null_glob
-patch_files=("$PATCH_DIR"/**/*.patch)
+patch_files=("$PATCH_DIR"/**/*.patch(D))
 
 if (( ${#patch_files[@]} == 0 )); then
 	echo "No patch files found in $PATCH_DIR."
