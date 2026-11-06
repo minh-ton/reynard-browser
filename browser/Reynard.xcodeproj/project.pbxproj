@@ -517,6 +517,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth access lets websites in this browser connect to nearby Bluetooth devices.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access lets websites in this browser scan QR codes, capture photos, and start video calls.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location access lets websites in this browser provide location-based content such as maps, directions, and nearby places.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access lets websites in this browser capture your voice for calls and audio recordings.";
@@ -587,6 +588,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth access lets websites in this browser connect to nearby Bluetooth devices.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access lets websites in this browser scan QR codes, capture photos, and start video calls.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location access lets websites in this browser provide location-based content such as maps, directions, and nearby places.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access lets websites in this browser capture your voice for calls and audio recordings.";

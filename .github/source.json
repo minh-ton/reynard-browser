@@ -33,7 +33,8 @@
           "NSMicrophoneUsageDescription": "Microphone access lets websites in this browser capture your voice for calls and audio recordings.",
           "NSPhotoLibraryAddUsageDescription": "Photo library access lets this browser save images and other media you download from websites to Photos.",
           "NSPhotoLibraryUsageDescription": "Photo library access lets this browser upload photos and videos from your library and save images and other media you download from websites to Photos.",
-          "NSLocationWhenInUseUsageDescription": "Location access lets websites in this browser provide location-based content such as maps, directions, and nearby places."
+          "NSLocationWhenInUseUsageDescription": "Location access lets websites in this browser provide location-based content such as maps, directions, and nearby places.",
+          "NSBluetoothAlwaysUsageDescription": "Bluetooth access lets websites in this browser connect to nearby Bluetooth devices."
         }
       },
       "versions": []
