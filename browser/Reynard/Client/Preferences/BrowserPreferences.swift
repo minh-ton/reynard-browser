@@ -125,6 +125,7 @@ final class BrowserPreferences {
             key("SitePermissionSettings", "defaultCrossOriginStorageAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalDeviceAccessPermission"): SitePermissionAction.askToAllow.rawValue,
             key("SitePermissionSettings", "defaultLocalNetworkAccessPermission"): SitePermissionAction.askToAllow.rawValue,
+            key("SitePermissionSettings", "defaultMidiPermission"): SitePermissionAction.askToAllow.rawValue,
             
             // Clear Browsing Data
             key("ClearBrowsingData", "clearsBrowsingHistory"): true,
@@ -881,6 +882,20 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultLocalNetworkAccessPermission")
+            }
+        }
+        
+        static var defaultMidiPermission: SitePermissionAction {
+            get {
+                let rawValue = prefs.string(forSetting: "SitePermissionSettings", key: "defaultMidiPermission")
+                guard let rawValue,
+                      let action = SitePermissionAction(rawValue: rawValue) else {
+                    return .askToAllow
+                }
+                return action
+            }
+            set {
+                prefs.set(newValue.rawValue, forSetting: "SitePermissionSettings", key: "defaultMidiPermission")
             }
         }
     }

@@ -5,6 +5,7 @@
 //  Created by Minh Ton on 18/6/26.
 //
 
+import CoreAudioKit
 import UIKit
 
 final class SitePermissionDetailsViewController: SettingsTableViewController {
@@ -20,6 +21,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
     
     private enum Section {
         case defaultBehavior
+        case bluetoothDevices
         case allowedSiteEntries
         case blockedSiteEntries
         case customSiteActions
@@ -28,6 +30,8 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
             switch self {
             case .defaultBehavior:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Default Setting", comment: ""))
+            case .bluetoothDevices:
+                return SettingsSectionText(footerTitle: NSLocalizedString("Connect a Bluetooth MIDI keyboard or controller to use it with websites.", comment: ""))
             case .allowedSiteEntries:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Allowed Websites", comment: ""))
             case .blockedSiteEntries:
@@ -77,6 +81,8 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         switch displayedSections[section] {
         case .defaultBehavior:
             return defaultActionOptions.count
+        case .bluetoothDevices:
+            return 1
         case .allowedSiteEntries:
             return allowedSiteEntries.count
         case .blockedSiteEntries:
@@ -101,6 +107,11 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         switch displayedSections[indexPath.section] {
         case .defaultBehavior:
             return defaultActionCell(for: indexPath)
+        case .bluetoothDevices:
+            let cell = SettingsTableViewCell(style: .default, reuseIdentifier: nil)
+            cell.textLabel?.text = NSLocalizedString("Bluetooth MIDI Devices", comment: "")
+            cell.accessoryType = .disclosureIndicator
+            return cell
         case .allowedSiteEntries:
             return allowedSiteEntryCell(for: indexPath)
         case .blockedSiteEntries:
@@ -112,8 +123,18 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         defer { tableView.deselectRow(at: indexPath, animated: true) }
-        guard displayedSections.indices.contains(indexPath.section),
-              displayedSections[indexPath.section] == .defaultBehavior,
+        guard displayedSections.indices.contains(indexPath.section) else {
+            return
+        }
+        
+        if displayedSections[indexPath.section] == .bluetoothDevices {
+            let controller = CABTMIDICentralViewController()
+            controller.title = NSLocalizedString("Bluetooth MIDI Devices", comment: "")
+            navigationController?.pushViewController(controller, animated: true)
+            return
+        }
+        
+        guard displayedSections[indexPath.section] == .defaultBehavior,
               defaultActionOptions.indices.contains(indexPath.row) else {
             return
         }
@@ -144,7 +165,7 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
                 return nil
             }
             return clearSiteActionSwipeConfiguration(for: customSiteActions[indexPath.row].host)
-        case .defaultBehavior:
+        case .defaultBehavior, .bluetoothDevices:
             return nil
         }
     }
@@ -163,6 +184,9 @@ final class SitePermissionDetailsViewController: SettingsTableViewController {
         }
         
         var sections: [Section] = [.defaultBehavior]
+        if permission == .midi {
+            sections.append(.bluetoothDevices)
+        }
         if !allowedSiteEntries.isEmpty {
             sections.append(.allowedSiteEntries)
         }

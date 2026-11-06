@@ -1,12 +1,13 @@
 diff --git a/toolkit/library/moz.build b/toolkit/library/moz.build
-index 671c32b2d8e2..4f878f24d8f3 100644
+index 671c32b2d8e2..0ae7767856a0 100644
 --- a/toolkit/library/moz.build
 +++ b/toolkit/library/moz.build
-@@ -243,11 +243,18 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
+@@ -243,11 +243,19 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
  
  if CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
      OS_LIBS += [
 +        "-framework CoreLocation",
++        "-framework CoreMIDI",
 +        "-framework CoreMotion",
          "-framework CoreGraphics",
          "-framework CoreText",

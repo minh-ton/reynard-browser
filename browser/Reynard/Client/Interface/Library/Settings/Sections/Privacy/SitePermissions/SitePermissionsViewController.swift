@@ -49,6 +49,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
+        case midi
         
         var title: String {
             switch self {
@@ -68,6 +69,8 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return NSLocalizedString("Apps and Services", comment: "")
             case .localNetworkAccess:
                 return NSLocalizedString("Local Network", comment: "")
+            case .midi:
+                return NSLocalizedString("MIDI Devices", comment: "")
             }
         }
         
@@ -89,6 +92,8 @@ final class SitePermissionsViewController: SettingsTableViewController {
                 return .localDeviceAccess
             case .localNetworkAccess:
                 return .localNetworkAccess
+            case .midi:
+                return .midi
             }
         }
     }
@@ -97,6 +102,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         .camera,
         .microphone,
         .location,
+        .midi,
     ]
     private let advancedPermissionOptions: [Row] = [
         .persistentStorage,

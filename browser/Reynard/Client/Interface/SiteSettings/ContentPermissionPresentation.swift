@@ -26,6 +26,8 @@ extension ContentPermission {
             return String(format: NSLocalizedString("Allow %@ to access other apps and services on this device?", comment: "Website host"), host)
         case .localNetworkAccess:
             return String(format: NSLocalizedString("Allow %@ to access apps and services on devices connected to your local network?", comment: "Website host"), host)
+        case .midi:
+            return String(format: NSLocalizedString("Allow %@ to access your MIDI devices?", comment: "Website host"), host)
         case .camera,
                 .microphone,
                 .webxr,
@@ -51,6 +53,7 @@ extension ContentPermission {
                 .tracking,
                 .localDeviceAccess,
                 .localNetworkAccess,
+                .midi,
             nil:
             return nil
         }

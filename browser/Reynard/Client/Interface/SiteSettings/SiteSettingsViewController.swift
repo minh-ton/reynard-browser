@@ -31,6 +31,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
         case crossOriginStorageAccess
         case localDeviceAccess
         case localNetworkAccess
+        case midi
         
         var title: String {
             switch self {
@@ -48,6 +49,8 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
                 return NSLocalizedString("Device Apps and Services", comment: "")
             case .localNetworkAccess:
                 return NSLocalizedString("Local Network Devices", comment: "")
+            case .midi:
+                return NSLocalizedString("MIDI Devices", comment: "")
             case .autoplay:
                 return NSLocalizedString("Autoplay", comment: "")
             }
@@ -69,6 +72,8 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
                 return .localDeviceAccess
             case .localNetworkAccess:
                 return .localNetworkAccess
+            case .midi:
+                return .midi
             case .autoplay:
                 return .autoplay
             }
@@ -85,6 +90,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
         .camera,
         .microphone,
         .location,
+        .midi,
     ]
     private let host: String
     private let origin: String

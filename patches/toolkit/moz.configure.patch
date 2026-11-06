@@ -1,7 +1,16 @@
 diff --git a/toolkit/moz.configure b/toolkit/moz.configure
-index a16fc0e924c6..ce5f445ffc6b 100644
+index a16fc0e924c6..b9e778e1b417 100644
 --- a/toolkit/moz.configure
 +++ b/toolkit/moz.configure
+@@ -366,7 +366,7 @@ def midir_linux_support(target):
+ 
+ @depends(target, midir_linux_support)
+ def midir_support(target, midir_linux_support):
+-    if target.os in ("WINNT", "OSX") or midir_linux_support:
++    if target.os in ("WINNT", "OSX", "iOS") or midir_linux_support:
+         return True
+ 
+ 
 @@ -2863,7 +2863,7 @@ def wasm_sandboxing_libraries():
  @depends(dependable(wasm_sandboxing_libraries), build_project, target)
  def default_wasm_sandboxing_libraries(libraries, build_project, target):
