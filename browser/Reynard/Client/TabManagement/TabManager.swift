@@ -14,6 +14,16 @@ enum TabMode: String, Codable {
     case `private`
 }
 
+extension TabMode {
+    static var defaultBrowsingMode: TabMode {
+        return Prefs.PrivateBrowsingSettings.alwaysUsePrivateBrowsing ? .private : .regular
+    }
+    
+    func defaultingToPrivateBrowsing() -> TabMode {
+        return Prefs.PrivateBrowsingSettings.alwaysUsePrivateBrowsing ? .private : self
+    }
+}
+
 enum TabRemovalBehavior {
     case recent     // activate the most recently used tab
     case adjacent   // activate the tab adjacent to the one being removed
@@ -29,6 +39,7 @@ protocol TabManager: AnyObject {
     
     func applicationDidBecomeActive()
     func createInitialTab()
+    func applyDefaultBrowsingMode()
     @discardableResult
     func addTab(selecting: Bool, windowId: String?, at index: Int?, isPrivate: Bool) -> Int
     @discardableResult

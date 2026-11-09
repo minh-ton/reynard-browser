@@ -236,7 +236,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
             if shouldCloseTabs {
                 browserViewController?.tabManager.removeAllTabs(mode: .regular)
                 browserViewController?.tabManager.removeAllTabs(mode: .private)
-                browserViewController?.tabManager.createTab(selecting: true, mode: .regular)
+                browserViewController?.tabManager.createTab(selecting: true, mode: .defaultBrowsingMode)
             }
         }
         let navigationController = UINavigationController(rootViewController: viewController)

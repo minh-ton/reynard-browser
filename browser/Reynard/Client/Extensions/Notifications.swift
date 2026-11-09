@@ -13,6 +13,7 @@ extension Notification.Name {
     static let showFullWebsiteAddressDidChange = Notification.Name("Chrome.ShowFullWebsiteAddressDidChange")
     static let appearanceGestureSettingsDidChange = Notification.Name("Appearance.GestureSettingsDidChange")
     static let newTabDisplayOptionDidChange = Notification.Name("Browsing.NewTabDisplayOptionDidChange")
+    static let privateBrowsingSettingsDidChange = Notification.Name("Browsing.PrivateBrowsingSettingsDidChange")
     static let homepageSettingsDidChange = Notification.Name("Homepage.SettingsDidChange")
     static let appUpdateAvailable = Notification.Name("Settings.AppUpdateAvailable")
     static let bookmarkStoreDidChange = Notification.Name("BookmarkStore.DidChange")

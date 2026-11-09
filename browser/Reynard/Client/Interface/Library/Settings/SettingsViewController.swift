@@ -79,11 +79,14 @@ final class SettingsViewController: SettingsTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         observeJITMode()
+        privacySection.configureSwitch()
+        privacySection.refreshDisplayedState()
         jitSection.refreshDisplayedState()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        privacySection.refreshDisplayedState()
         jitSection.refreshDisplayedState()
         tableView.reloadData()
     }

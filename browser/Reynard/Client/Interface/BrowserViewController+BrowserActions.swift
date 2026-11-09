@@ -128,7 +128,10 @@ extension BrowserViewController {
     }
     
     func createNewTab(mode: TabMode? = nil) {
-        let targetMode = mode ?? (tabOverview.isPresented ? tabOverview.mode.tabMode : tabManager.selectedTabMode)
+        let defaultMode = tabOverview.isPresented
+            ? tabOverview.mode.tabMode
+            : tabManager.selectedTabMode.defaultingToPrivateBrowsing()
+        let targetMode = mode ?? defaultMode
         toolbarController.reset()
         dismissAddressBarEditingAndOverlays()
         

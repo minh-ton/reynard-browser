@@ -76,6 +76,9 @@ final class BrowserPreferences {
             key("BrowsingSettings", "readerViewFontSizeStep"): 3,
             key("BrowsingSettings", "readerViewFontType"): ReaderViewFontType.serif.rawValue,
             
+            // Private Browsing
+            key("PrivateBrowsingSettings", "alwaysUsePrivateBrowsing"): false,
+            
             // New Tab
             key("NewTabSettings", "newTabDisplayOption"): NewTabDisplayOption.homepage.rawValue,
             key("NewTabSettings", "customNewTabURL"): "",
@@ -394,6 +397,19 @@ final class BrowserPreferences {
             }
             set {
                 prefs.set(newValue.rawValue, forSetting: "BrowsingSettings", key: "readerViewColorScheme")
+            }
+        }
+    }
+    
+    // MARK: - Private Browsing
+    struct PrivateBrowsingSettings {
+        static var alwaysUsePrivateBrowsing: Bool {
+            get {
+                return prefs.bool(forSetting: "PrivateBrowsingSettings", key: "alwaysUsePrivateBrowsing")
+            }
+            set {
+                prefs.set(newValue, forSetting: "PrivateBrowsingSettings", key: "alwaysUsePrivateBrowsing")
+                NotificationCenter.default.post(name: .privateBrowsingSettingsDidChange, object: nil)
             }
         }
     }

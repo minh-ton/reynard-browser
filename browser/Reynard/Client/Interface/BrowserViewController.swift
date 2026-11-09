@@ -416,7 +416,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
                 self?.createNewTabAnimated(mode: .private)
             },
             onNewTab: { [weak self] in
-                self?.createNewTabAnimated(mode: .regular)
+                self?.createNewTabAnimated(mode: .defaultBrowsingMode)
             }
         )
         browserChrome.onShare = { [weak self] in
@@ -871,11 +871,23 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             name: .newTabDisplayOptionDidChange,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(privateBrowsingSettingsDidChange),
+            name: .privateBrowsingSettingsDidChange,
+            object: nil
+        )
     }
     
     @objc private func newTabDisplayOptionDidChange() {
         homepageOverlayCoordinator.updatePresentation(animated: true)
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+    }
+    
+    @objc private func privateBrowsingSettingsDidChange() {
+        tabManager.applyDefaultBrowsingMode()
+        refreshAddressBar()
+        homepageOverlayCoordinator.updatePresentation(animated: true)
     }
     
     @objc func addressBarPositionDidChange() {

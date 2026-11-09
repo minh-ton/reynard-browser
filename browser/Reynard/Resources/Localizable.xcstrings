@@ -5375,6 +5375,70 @@
         }
       }
     },
+    "Always Use Private Browsing" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vždy používat anonymní režim"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer im privaten Modus surfen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always Use Private Browsing"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours utiliser la navigation privée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常にプライベートブラウジングを使用"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze używaj prywatnego przeglądania"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда использовать частный доступ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luôn dùng duyệt riêng tư"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终使用无痕浏览"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一律使用私密瀏覽"
+          }
+        }
+      }
+    },
     "Always uses your selected secure DNS provider. If it’s unavailable, websites may not load." : {
       "localizations" : {
         "cs" : {
@@ -16945,6 +17009,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增標籤頁"
+          }
+        }
+      }
+    },
+    "New tabs open in Private Browsing by default, and Reynard starts in Private Browsing every time." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nové karty se otevírají v anonymním režimu a Reynard se v něm vždy spustí."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Tabs öffnen sich standardmäßig im privaten Modus und Reynard startet immer darin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New tabs open in Private Browsing by default, and Reynard starts in Private Browsing every time."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les nouveaux onglets s'ouvrent par défaut en navigation privée et Reynard démarre toujours dans ce mode."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいタブは既定でプライベートブラウジングで開き、Reynard も常にこのモードで起動します。"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowe karty otwierają się domyślnie w przeglądaniu prywatnym i Reynard zawsze uruchamia się w tym trybie."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новые вкладки по умолчанию открываются в частном доступе, и Reynard всегда запускается в этом режиме."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các thẻ mới mở ở chế độ duyệt riêng tư theo mặc định và Reynard luôn khởi động ở chế độ này."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新标签页默认以无痕浏览打开，并且 Reynard 每次启动都会进入无痕模式。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新標籤頁預設以私密瀏覽開啟，且 Reynard 每次啟動都會進入私密模式。"
           }
         }
       }

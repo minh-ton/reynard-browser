@@ -405,7 +405,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         }
     }
     
-    private func restoreTabsIfNeeded() -> Bool {
+    private func restoreTabsIfNeeded(restoringLastSession: Bool = true) -> Bool {
         guard regularTabs.isEmpty && privateTabs.isEmpty else {
             return true
         }
@@ -487,7 +487,8 @@ final class TabManagerImplementation: NSObject, TabManager {
         let selectedIndex = max(selectedIndex(for: selectedTabMode), 0)
         let selectedTab = tabs(for: selectedTabMode)[selectedIndex]
         
-        if Prefs.HomepageSettings.openingScreen == .lastTab,
+        if restoringLastSession,
+           Prefs.HomepageSettings.openingScreen == .lastTab,
            sessionManager.isForeground {
             restoreTabIfNeeded(selectedTab)
             sessionManager.open(selectedTab.session)
@@ -634,6 +635,11 @@ final class TabManagerImplementation: NSObject, TabManager {
     }
     
     func createInitialTab() {
+        if Prefs.PrivateBrowsingSettings.alwaysUsePrivateBrowsing {
+            createInitialPrivateTab()
+            return
+        }
+        
         switch Prefs.HomepageSettings.openingScreen {
         case .lastTab:
             if !restoreTabsIfNeeded() {
@@ -641,6 +647,43 @@ final class TabManagerImplementation: NSObject, TabManager {
             }
         case .homepage:
             createHomepageInitialTab()
+        }
+    }
+    
+    private func createInitialPrivateTab() {
+        let didRestoreTabs = restoreTabsIfNeeded(restoringLastSession: false)
+        
+        if didRestoreTabs, !privateTabs.isEmpty {
+            if selectedTabMode != .private {
+                selectTab(at: max(selectedPrivateTabIndex, 0), mode: .private)
+            }
+            if Prefs.HomepageSettings.openingScreen == .homepage,
+               let selectedTab,
+               displayedURL(for: selectedTab) == nil {
+                selectedTab.state.showsStartupHomepage = true
+            }
+            return
+        }
+        
+        let index = addTab(selecting: true, windowId: nil, at: nil, isPrivate: true)
+        if Prefs.HomepageSettings.openingScreen == .homepage {
+            privateTabs[index].state.showsStartupHomepage = true
+        }
+    }
+    
+    func applyDefaultBrowsingMode() {
+        guard Prefs.PrivateBrowsingSettings.alwaysUsePrivateBrowsing else {
+            return
+        }
+        
+        guard selectedTabMode != .private || privateTabs.isEmpty else {
+            return
+        }
+        
+        if privateTabs.isEmpty {
+            addTab(selecting: true, windowId: nil, at: nil, isPrivate: true)
+        } else {
+            selectTab(at: max(selectedPrivateTabIndex, 0), mode: .private)
         }
     }
     

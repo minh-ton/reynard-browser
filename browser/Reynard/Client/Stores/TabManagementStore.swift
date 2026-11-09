@@ -132,6 +132,10 @@ final class TabManagementStore {
     }
     
     func preferredRestoredMode() -> TabMode {
+        if Prefs.PrivateBrowsingSettings.alwaysUsePrivateBrowsing {
+            return .private
+        }
+        
         let snapshot = currentSnapshot()
         if snapshot.selectedTabMode == .private, !snapshot.privateTabs.isEmpty {
             return .private

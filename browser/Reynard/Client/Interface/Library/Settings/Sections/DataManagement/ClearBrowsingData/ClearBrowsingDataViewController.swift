@@ -238,7 +238,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
         
         browserViewController.tabManager.removeAllTabs(mode: .regular)
         browserViewController.tabManager.removeAllTabs(mode: .private)
-        browserViewController.tabManager.createTab(selecting: true, mode: .regular)
+        browserViewController.tabManager.createTab(selecting: true, mode: .defaultBrowsingMode)
     }
     
     private func clearSelectedEngineData(for selectedCategories: Set<BrowsingDataCategory>) async {

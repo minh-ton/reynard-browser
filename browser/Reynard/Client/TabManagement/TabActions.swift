@@ -16,7 +16,7 @@ extension TabManager {
         target: TabInsertionTarget = .end,
         mode: TabMode? = nil
     ) -> Int {
-        let mode = mode ?? selectedTabMode
+        let mode = mode ?? selectedTabMode.defaultingToPrivateBrowsing()
         return addTab(
             selecting: selecting,
             windowId: windowId,
