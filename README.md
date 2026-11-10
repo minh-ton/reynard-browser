@@ -12,7 +12,7 @@ Besides providing an **alternative, up-to-date browser engine**[^1], Reynard sup
 
 ## Installation
 
-The latest builds are available for download on the [Releases](https://github.com/minh-ton/reynard-browser/releases) page. Please note that this project is still in an early experimental state, so expect bugs and missing features.
+The latest builds are available for download on the [Releases](https://github.com/minh-ton/reynard-browser/releases) page. Please note that this project is still in beta, so expect bugs and missing features.
 
 For common questions and troubleshooting, see the [FAQ](https://github.com/minh-ton/reynard-browser/issues/130).
 
