@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/wr/IpcResourceUpdateQueue.cpp b/gfx/layers/wr/IpcResourceUpdateQueue.cpp
-index 490d26f66eef..e521106ee15d 100644
+index 2796129937ea..302d208ba37c 100644
 --- a/gfx/layers/wr/IpcResourceUpdateQueue.cpp
 +++ b/gfx/layers/wr/IpcResourceUpdateQueue.cpp
-@@ -411,12 +411,15 @@ bool IpcResourceUpdateQueue::AddRawFont(wr::FontKey aKey, Range<uint8_t> aBytes,
+@@ -416,12 +416,15 @@ bool IpcResourceUpdateQueue::AddRawFont(wr::FontKey aKey, Range<uint8_t> aBytes,
  
  bool IpcResourceUpdateQueue::AddFontDescriptor(wr::FontKey aKey,
                                                 Range<uint8_t> aBytes,

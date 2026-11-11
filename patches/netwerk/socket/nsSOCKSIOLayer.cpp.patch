@@ -1,5 +1,5 @@
 diff --git a/netwerk/socket/nsSOCKSIOLayer.cpp b/netwerk/socket/nsSOCKSIOLayer.cpp
-index de33c4c1c034..29a517f52432 100644
+index e169d1e4ffdb..84d2dc49da34 100644
 --- a/netwerk/socket/nsSOCKSIOLayer.cpp
 +++ b/netwerk/socket/nsSOCKSIOLayer.cpp
 @@ -22,6 +22,10 @@
@@ -13,10 +13,10 @@ index de33c4c1c034..29a517f52432 100644
  using mozilla::LogLevel;
  using namespace mozilla::net;
  
-@@ -500,6 +504,16 @@ PRStatus nsSOCKSSocketInfo::ConnectToProxy(PRFileDesc* fd) {
-     FixupAddressFamily(fd, &proxy);
+@@ -518,6 +522,16 @@ PRStatus nsSOCKSSocketInfo::ConnectToProxy(PRFileDesc* fd) {
      PRNetAddr prProxy;
      NetAddrToPRNetAddr(&proxy, &prProxy);
+     mProxyConnectAttempted = true;
 +
 +#ifdef MOZ_WIDGET_UIKIT
 +    if (!IsLocalProxy()) {

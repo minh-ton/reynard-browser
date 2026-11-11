@@ -1,5 +1,5 @@
 diff --git a/layout/generic/ScrollContainerFrame.cpp b/layout/generic/ScrollContainerFrame.cpp
-index 6bdde062c687..9bf5d89b6616 100644
+index ce5c07b18b91..1fe13a33c58d 100644
 --- a/layout/generic/ScrollContainerFrame.cpp
 +++ b/layout/generic/ScrollContainerFrame.cpp
 @@ -3381,6 +3381,9 @@ void ScrollContainerFrame::ScrollToImpl(

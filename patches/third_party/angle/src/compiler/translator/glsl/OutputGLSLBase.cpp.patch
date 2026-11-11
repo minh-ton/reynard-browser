@@ -1,8 +1,8 @@
 diff --git a/third_party/angle/src/compiler/translator/glsl/OutputGLSLBase.cpp b/third_party/angle/src/compiler/translator/glsl/OutputGLSLBase.cpp
-index 51c53c068fc7..10255e2f39e7 100644
+index 90e12e41869f..88377680e3fd 100644
 --- a/third_party/angle/src/compiler/translator/glsl/OutputGLSLBase.cpp
 +++ b/third_party/angle/src/compiler/translator/glsl/OutputGLSLBase.cpp
-@@ -361,6 +361,21 @@ void TOutputGLSLBase::writeQualifier(TQualifier qualifier, const TType &type, co
+@@ -359,6 +359,21 @@ void TOutputGLSLBase::writeQualifier(TQualifier qualifier, const TType &type, co
  
  const char *TOutputGLSLBase::mapQualifierToString(TQualifier qualifier)
  {

@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/moz.build b/widget/uikit/moz.build
-index f5d8821773c0..ac52f3229b87 100644
+index 3f86e230427a..fd216e214f72 100644
 --- a/widget/uikit/moz.build
 +++ b/widget/uikit/moz.build
 @@ -8,35 +8,61 @@ with Files("**"):
@@ -64,7 +64,7 @@ index f5d8821773c0..ac52f3229b87 100644
      "UIKitUtils.mm",
  ]
  
-@@ -55,5 +81,8 @@ XPCOM_MANIFESTS += [
+@@ -55,6 +81,9 @@ XPCOM_MANIFESTS += [
  ]
  
  OS_LIBS += [
@@ -73,3 +73,4 @@ index f5d8821773c0..ac52f3229b87 100644
 +    "-framework GameController",
      "-framework UIKit",
  ]
+ 

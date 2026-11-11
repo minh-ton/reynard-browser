@@ -1,8 +1,8 @@
 diff --git a/layout/base/AccessibleCaretManager.cpp b/layout/base/AccessibleCaretManager.cpp
-index 9ffc195a651c..0aae53938e35 100644
+index 7f557d35840d..6e283712b007 100644
 --- a/layout/base/AccessibleCaretManager.cpp
 +++ b/layout/base/AccessibleCaretManager.cpp
-@@ -245,6 +245,9 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
+@@ -258,6 +258,9 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
      const UpdateCaretsHintSet& aHints) {
    AC_LOG("%s, selection: %p", __FUNCTION__, GetSelection());
  
@@ -12,16 +12,16 @@ index 9ffc195a651c..0aae53938e35 100644
    int32_t offset = 0;
    nsIFrame* frame = nullptr;
    if (!IsCaretDisplayableInCursorMode(&frame, &offset)) {
-@@ -252,6 +255,8 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
+@@ -265,6 +268,8 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
      return;
    }
  
 +  mCarets.GetFirst()->SetVisuallyHiddenForNativeSelection(true);
 +
-   PositionChangedResult result = mCarets.GetFirst()->SetPosition(frame, offset);
- 
-   switch (result) {
-@@ -333,6 +338,14 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
+   auto result = PositionChangedResult::NotChanged;
+   {
+     // Mutating the caret elements may run scripts that destroy the PresShell
+@@ -359,6 +364,14 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
      return;
    }
  
@@ -33,13 +33,13 @@ index 9ffc195a651c..0aae53938e35 100644
 +  mCarets.GetSecond()->SetVisuallyHiddenForNativeSelection(
 +      hideForNativeSelection);
 +
-   auto updateSingleCaret = [aHints](AccessibleCaret* aCaret, nsIFrame* aFrame,
+   auto UpdateSingleCaret = [aHints](AccessibleCaret* aCaret, nsIFrame* aFrame,
                                      int32_t aOffset) -> PositionChangedResult {
      PositionChangedResult result = aCaret->SetPosition(aFrame, aOffset);
-@@ -396,15 +409,8 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
-   }
- 
+@@ -436,15 +449,8 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
    if (!aHints.contains(UpdateCaretsHint::RespectOldAppearance)) {
+     nsAutoScriptBlocker scriptBlocker;
+ 
 -    // Only check for tilt carets when the caller doesn't ask us to preserve
 -    // old appearance. Otherwise we might override the appearance set by the
 -    // caller.

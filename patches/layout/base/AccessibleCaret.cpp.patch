@@ -1,5 +1,5 @@
 diff --git a/layout/base/AccessibleCaret.cpp b/layout/base/AccessibleCaret.cpp
-index 68d751bf8006..770135554c4d 100644
+index ad10aebbf16c..38ce44b55771 100644
 --- a/layout/base/AccessibleCaret.cpp
 +++ b/layout/base/AccessibleCaret.cpp
 @@ -38,6 +38,7 @@ NS_IMPL_ISUPPORTS(AccessibleCaret::DummyTouchListener, nsIDOMEventListener)

@@ -1,8 +1,8 @@
 diff --git a/gfx/webrender_bindings/WebRenderAPI.h b/gfx/webrender_bindings/WebRenderAPI.h
-index 2c7831f07d00..df61611789a9 100644
+index 4c3b7e0644d6..5aa16ae9fcb8 100644
 --- a/gfx/webrender_bindings/WebRenderAPI.h
 +++ b/gfx/webrender_bindings/WebRenderAPI.h
-@@ -211,7 +211,8 @@ class TransactionBuilder final {
+@@ -218,7 +218,8 @@ class TransactionBuilder final {
    void AddRawFont(wr::FontKey aKey, wr::Vec<uint8_t>& aBytes, uint32_t aIndex);
  
    void AddFontDescriptor(wr::FontKey aKey, wr::Vec<uint8_t>& aBytes,
@@ -12,7 +12,7 @@ index 2c7831f07d00..df61611789a9 100644
  
    void DeleteFont(wr::FontKey aKey);
  
-@@ -264,6 +265,8 @@ class TransactionWrapper final {
+@@ -271,6 +272,8 @@ class TransactionWrapper final {
    void AddMinimapData(const wr::ExternalScrollId& aScrollId,
                        const MinimapData& aMinimapData);
  

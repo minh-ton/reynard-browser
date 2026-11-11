@@ -1,5 +1,5 @@
 diff --git a/xpcom/base/nsMemoryReporterManager.cpp b/xpcom/base/nsMemoryReporterManager.cpp
-index 73acf40c5420..fe1dc70b0015 100644
+index ceb971189b9e..a0a3f1c09e04 100644
 --- a/xpcom/base/nsMemoryReporterManager.cpp
 +++ b/xpcom/base/nsMemoryReporterManager.cpp
 @@ -401,13 +401,15 @@ static void XMappingIter(int64_t& aVsize, int64_t& aResident,

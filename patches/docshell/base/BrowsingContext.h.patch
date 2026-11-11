@@ -1,5 +1,5 @@
 diff --git a/docshell/base/BrowsingContext.h b/docshell/base/BrowsingContext.h
-index 5ad1e3b3d3e3..8bb4e9e4ba5a 100644
+index ba4d98522b7c..7eb02d5add24 100644
 --- a/docshell/base/BrowsingContext.h
 +++ b/docshell/base/BrowsingContext.h
 @@ -262,6 +262,12 @@ struct EmbedderColorSchemes {
@@ -15,7 +15,7 @@ index 5ad1e3b3d3e3..8bb4e9e4ba5a 100644
    /* Specifies if this BC has loaded documents besides the initial             \
     * about:blank document. about:privatebrowsing, about:home, about:newtab     \
     * and non-initial about:blank are not considered to be initial              \
-@@ -958,6 +964,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
+@@ -961,6 +967,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
    }
    void SetCustomPlatform(const nsAString& aPlatform, ErrorResult& aRv);
  
@@ -35,7 +35,7 @@ index 5ad1e3b3d3e3..8bb4e9e4ba5a 100644
    JSObject* WrapObject(JSContext* aCx);
  
    static JSObject* ReadStructuredClone(JSContext* aCx,
-@@ -1451,6 +1470,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
+@@ -1462,6 +1481,19 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
                        const nsString& aPlatformOverride,
                        ContentParent* aSource);
  

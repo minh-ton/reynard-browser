@@ -1,8 +1,8 @@
 diff --git a/gfx/ipc/GPUProcessManager.cpp b/gfx/ipc/GPUProcessManager.cpp
-index e3feb20f1f3d..728484fbacf1 100644
+index 4364cc84482a..ccbd8a3fab48 100644
 --- a/gfx/ipc/GPUProcessManager.cpp
 +++ b/gfx/ipc/GPUProcessManager.cpp
-@@ -63,9 +63,11 @@
+@@ -65,9 +65,11 @@
  
  #if defined(MOZ_WIDGET_ANDROID)
  #  include "mozilla/java/SurfaceControlManagerWrappers.h"
@@ -15,7 +15,7 @@ index e3feb20f1f3d..728484fbacf1 100644
  
  #if defined(XP_WIN)
  #  include "gfxWindowsPlatform.h"
-@@ -556,7 +558,7 @@ bool GPUProcessManager::EnsureVRManager() {
+@@ -558,7 +560,7 @@ bool GPUProcessManager::EnsureVRManager() {
    return true;
  }
  
@@ -24,7 +24,7 @@ index e3feb20f1f3d..728484fbacf1 100644
  RefPtr<UiCompositorControllerChild>
  GPUProcessManager::CreateUiCompositorController(nsIWidget* aWidget,
                                                  const LayersId aId) {
-@@ -582,12 +584,14 @@ GPUProcessManager::CreateUiCompositorController(nsIWidget* aWidget,
+@@ -584,12 +586,14 @@ GPUProcessManager::CreateUiCompositorController(nsIWidget* aWidget,
            mProcessToken, std::move(childPipe), aWidget);
  
    if (result) {
@@ -40,16 +40,16 @@ index e3feb20f1f3d..728484fbacf1 100644
  
  void GPUProcessManager::OnProcessLaunchComplete(GPUProcessHost* aHost) {
    MOZ_ASSERT(mProcess && mProcess == aHost);
-@@ -1295,7 +1299,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
-         aSurfaceSize, AllocateNamespace(), aInnerWindowId);
-   }
+@@ -1326,7 +1330,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
+   LAYERTREE_LOG("Created {} compositor for root layer tree {:x}",
+                 mGPUChild ? "remote" : "in-process", layerTreeId);
  
 -#if defined(MOZ_WIDGET_ANDROID)
 +#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_UIKIT)
    if (session) {
      // Nothing to do if controller gets a nullptr
      auto controller =
-@@ -1303,7 +1307,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
+@@ -1334,7 +1338,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
      MOZ_ASSERT(controller);
      session->SetUiCompositorControllerChild(std::move(controller));
    }
@@ -58,7 +58,7 @@ index e3feb20f1f3d..728484fbacf1 100644
  
    *aRetryOut = false;
    return session.forget();
-@@ -1384,7 +1388,9 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1415,7 +1419,9 @@ bool GPUProcessManager::CreateContentBridges(
      ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
      ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
      ipc::Endpoint<PRemoteMediaManagerChild>* aOutVideoManager,
@@ -69,8 +69,8 @@ index e3feb20f1f3d..728484fbacf1 100644
    const uint32_t compositorManagerNamespace = AllocateNamespace();
    const uint32_t compositorBridgeNamespace = AllocateNamespace();
    const uint32_t imageBridgeNamespace = AllocateNamespace();
-@@ -1398,6 +1404,7 @@ bool GPUProcessManager::CreateContentBridges(
-                               aOutVRBridge)) {
+@@ -1431,6 +1437,7 @@ bool GPUProcessManager::CreateContentBridges(
+                   aChildId);
      return false;
    }
 +  *aOutProcessToken = mProcessToken;

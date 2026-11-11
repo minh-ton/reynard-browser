@@ -1,8 +1,8 @@
 diff --git a/config/recurse.mk b/config/recurse.mk
-index b1766a7ac41a..6f82d6ec6efa 100644
+index a5da73d175ff..5c0a9e0d0b9d 100644
 --- a/config/recurse.mk
 +++ b/config/recurse.mk
-@@ -195,6 +195,12 @@ endif
+@@ -190,6 +190,12 @@ endif
  
  # Interdependencies that moz.build world don't know about yet for compilation.
  # Note some others are hardcoded or "guessed" in recursivemake.py and emitter.py

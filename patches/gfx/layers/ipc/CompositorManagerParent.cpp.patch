@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorManagerParent.cpp b/gfx/layers/ipc/CompositorManagerParent.cpp
-index 4f67e9d7d9fe..9fa69490b911 100644
+index db5602bdb40d..4681ad9f0201 100644
 --- a/gfx/layers/ipc/CompositorManagerParent.cpp
 +++ b/gfx/layers/ipc/CompositorManagerParent.cpp
-@@ -15,6 +15,7 @@
+@@ -16,6 +16,7 @@
  #include "mozilla/layers/RemoteTextureMap.h"
  #include "mozilla/layers/SharedSurfacesParent.h"
  #include "mozilla/webrender/RenderThread.h"
@@ -10,7 +10,7 @@ index 4f67e9d7d9fe..9fa69490b911 100644
  
  namespace mozilla {
  namespace layers {
-@@ -346,13 +347,42 @@ mozilla::ipc::IPCResult CompositorManagerParent::RecvReportSharedSurfacesMemory(
+@@ -352,13 +353,42 @@ mozilla::ipc::IPCResult CompositorManagerParent::RecvReportSharedSurfacesMemory(
    return IPC_OK();
  }
  

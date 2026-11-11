@@ -1,8 +1,8 @@
 diff --git a/toolkit/mozapps/extensions/internal/XPIProvider.sys.mjs b/toolkit/mozapps/extensions/internal/XPIProvider.sys.mjs
-index 74d738e46fe5..afbd1427d568 100644
+index f448b259154d..c850964f93a5 100644
 --- a/toolkit/mozapps/extensions/internal/XPIProvider.sys.mjs
 +++ b/toolkit/mozapps/extensions/internal/XPIProvider.sys.mjs
-@@ -1626,6 +1626,19 @@ var XPIStates = {
+@@ -1627,6 +1627,19 @@ var XPIStates = {
            startupScanScopes |= AddonManager.SCOPE_PROFILE;
          }
        }
@@ -22,7 +22,7 @@ index 74d738e46fe5..afbd1427d568 100644
      }
  
      for (let loc of XPIStates.locations()) {
-@@ -1694,9 +1707,13 @@ var XPIStates = {
+@@ -1695,9 +1708,13 @@ var XPIStates = {
          } else {
            let addonChanged = false;
            if (entry instanceof Ci.nsIFile) {

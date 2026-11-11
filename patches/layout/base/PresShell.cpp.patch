@@ -1,5 +1,5 @@
 diff --git a/layout/base/PresShell.cpp b/layout/base/PresShell.cpp
-index ca58605fd207..dfaf6326f9c1 100644
+index f22d9718cbab..0e8b1fb4f154 100644
 --- a/layout/base/PresShell.cpp
 +++ b/layout/base/PresShell.cpp
 @@ -47,6 +47,7 @@
@@ -65,7 +65,7 @@ index ca58605fd207..dfaf6326f9c1 100644
  }
  
  static SingleCanvasBackground ComputeSingleCanvasBackground(nsIFrame* aCanvas) {
-@@ -12518,6 +12556,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
+@@ -12532,6 +12570,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
    return GetVisualViewportOffset() - GetLayoutViewportOffset();
  }
  
@@ -83,7 +83,7 @@ index ca58605fd207..dfaf6326f9c1 100644
  nsPoint PresShell::GetLayoutViewportOffset() const {
    nsPoint result;
    if (ScrollContainerFrame* sf = GetRootScrollContainerFrame()) {
-@@ -12563,7 +12612,7 @@ nsSize PresShell::GetFixedViewportSize() const {
+@@ -12577,7 +12626,7 @@ nsSize PresShell::GetFixedViewportSize() const {
      return layoutViewportSize;
    }
    layoutViewportSize.height +=

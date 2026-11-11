@@ -1,5 +1,5 @@
 diff --git a/build/moz.configure/toolchain.configure b/build/moz.configure/toolchain.configure
-index 96e7ef764ac0..ed6791595608 100644
+index 7e1270fa43cb..07539b04bd00 100644
 --- a/build/moz.configure/toolchain.configure
 +++ b/build/moz.configure/toolchain.configure
 @@ -443,6 +443,17 @@ with only_when(target_is_ios):

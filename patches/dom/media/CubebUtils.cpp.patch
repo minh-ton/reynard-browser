@@ -1,5 +1,5 @@
 diff --git a/dom/media/CubebUtils.cpp b/dom/media/CubebUtils.cpp
-index 72551b795af3..87d93ecdf91b 100644
+index 959ce56d65fd..3bbcebc82d94 100644
 --- a/dom/media/CubebUtils.cpp
 +++ b/dom/media/CubebUtils.cpp
 @@ -71,7 +71,8 @@
@@ -20,7 +20,7 @@ index 72551b795af3..87d93ecdf91b 100644
  
  static bool StartAudioIPCServer() {
    if (sCubebSandbox) {
-@@ -576,6 +578,14 @@ void InitBrandName() {
+@@ -566,6 +568,14 @@ void InitBrandName() {
  #ifdef MOZ_CUBEB_REMOTING
  void InitAudioIPCConnection() {
    MOZ_ASSERT(NS_IsMainThread());

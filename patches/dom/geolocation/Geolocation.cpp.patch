@@ -1,5 +1,5 @@
 diff --git a/dom/geolocation/Geolocation.cpp b/dom/geolocation/Geolocation.cpp
-index d74eb0f28865..abc58f5c5112 100644
+index 140b14aa5388..c001363a57b1 100644
 --- a/dom/geolocation/Geolocation.cpp
 +++ b/dom/geolocation/Geolocation.cpp
 @@ -323,6 +323,12 @@ NS_IMPL_ISUPPORTS0(CancelSystemGeolocationPermissionRequest)

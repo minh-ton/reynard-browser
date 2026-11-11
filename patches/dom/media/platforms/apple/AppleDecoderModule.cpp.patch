@@ -1,8 +1,8 @@
 diff --git a/dom/media/platforms/apple/AppleDecoderModule.cpp b/dom/media/platforms/apple/AppleDecoderModule.cpp
-index 27c25b050d7e..dd379444766c 100644
+index c5068774fcba..3828ad710438 100644
 --- a/dom/media/platforms/apple/AppleDecoderModule.cpp
 +++ b/dom/media/platforms/apple/AppleDecoderModule.cpp
-@@ -109,8 +109,9 @@ DecodeSupportSet AppleDecoderModule::SupportsMimeType(
+@@ -102,8 +102,9 @@ DecodeSupportSet AppleDecoderModule::SupportsMimeType(
      const nsACString& aMimeType, DecoderDoctorDiagnostics* aDiagnostics) const {
    bool checkSupport =
        aMimeType.EqualsLiteral("audio/mp4a-latm") ||

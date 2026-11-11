@@ -1,5 +1,5 @@
 diff --git a/widget/moz.build b/widget/moz.build
-index 67a8082de98e..bfad4dcda3f1 100644
+index 5aaa7796e1f5..44f68f9fbc69 100644
 --- a/widget/moz.build
 +++ b/widget/moz.build
 @@ -193,6 +193,7 @@ EXPORTS.mozilla += [
@@ -10,7 +10,7 @@ index 67a8082de98e..bfad4dcda3f1 100644
      "SwipeTracker.h",
      "TextEventDispatcher.h",
      "TextEventDispatcherListener.h",
-@@ -383,7 +384,7 @@ elif toolkit == "android":
+@@ -391,7 +392,7 @@ elif toolkit == "android":
          "android/PlatformWidgetTypes.ipdlh",
          "headless/HeadlessWidgetTypes.ipdlh",
      ]

@@ -1,5 +1,5 @@
 diff --git a/gfx/2d/Factory.cpp b/gfx/2d/Factory.cpp
-index 20929977927a..270807221d51 100644
+index 44e181a20373..e9a6ce879342 100644
 --- a/gfx/2d/Factory.cpp
 +++ b/gfx/2d/Factory.cpp
 @@ -407,8 +407,13 @@ already_AddRefed<NativeFontResource> Factory::CreateNativeFontResource(

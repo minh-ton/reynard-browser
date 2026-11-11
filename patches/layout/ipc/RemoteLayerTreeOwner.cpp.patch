@@ -1,8 +1,8 @@
 diff --git a/layout/ipc/RemoteLayerTreeOwner.cpp b/layout/ipc/RemoteLayerTreeOwner.cpp
-index 5c182cb402c3..d4d4c95bc9a3 100644
+index 577c9aa49ab6..27c6230bc744 100644
 --- a/layout/ipc/RemoteLayerTreeOwner.cpp
 +++ b/layout/ipc/RemoteLayerTreeOwner.cpp
-@@ -109,14 +109,34 @@ void RemoteLayerTreeOwner::Destroy() {
+@@ -116,14 +116,34 @@ void RemoteLayerTreeOwner::Destroy() {
  void RemoteLayerTreeOwner::EnsureLayersConnected(
      Maybe<CompositorOptions>& aCompositorOptions) {
    RefPtr<WindowRenderer> renderer = GetWindowRenderer(mBrowserParent);
@@ -38,6 +38,6 @@ index 5c182cb402c3..d4d4c95bc9a3 100644
 -  mLayersConnected =
 -      renderer->GetCompositorBridgeChild()->SendNotifyChildRecreated(
 -          mLayersId, GetEmbedderLayersId(mBrowserParent), &mCompositorOptions);
+   LAYERTREE_LOG("Layer tree {:x} reconnected {}", mLayersId, mLayersConnected);
    aCompositorOptions = Some(mCompositorOptions);
  }
- 

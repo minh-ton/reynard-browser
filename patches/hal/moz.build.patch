@@ -1,5 +1,5 @@
 diff --git a/hal/moz.build b/hal/moz.build
-index 22e0f81deb53..38eed772863d 100644
+index 50af526f9acb..697a2c66897c 100644
 --- a/hal/moz.build
 +++ b/hal/moz.build
 @@ -85,6 +85,19 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":

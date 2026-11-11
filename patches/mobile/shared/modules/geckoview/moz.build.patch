@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/modules/geckoview/moz.build b/mobile/shared/modules/geckoview/moz.build
-index 8bbf8d5aca64..53bd0fa7f946 100644
+index 296b1c5a4f9a..3106df77f097 100644
 --- a/mobile/shared/modules/geckoview/moz.build
 +++ b/mobile/shared/modules/geckoview/moz.build
 @@ -6,6 +6,8 @@ EXTRA_JS_MODULES += [

@@ -1,8 +1,8 @@
 diff --git a/dom/ipc/ProcessIsolation.cpp b/dom/ipc/ProcessIsolation.cpp
-index a1b725eafb33..4c650b41870b 100644
+index 4e02df9672c5..f418ca6272b9 100644
 --- a/dom/ipc/ProcessIsolation.cpp
 +++ b/dom/ipc/ProcessIsolation.cpp
-@@ -706,8 +706,8 @@ Result<NavigationIsolationOptions, nsresult> IsolationOptionsForNavigation(
+@@ -723,8 +723,8 @@ Result<NavigationIsolationOptions, nsresult> IsolationOptionsForNavigation(
      }
    }
  

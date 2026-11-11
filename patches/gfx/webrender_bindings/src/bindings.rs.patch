@@ -1,8 +1,8 @@
 diff --git a/gfx/webrender_bindings/src/bindings.rs b/gfx/webrender_bindings/src/bindings.rs
-index fb367358bef4..bb86c0e45034 100644
+index 3df82deffa48..1f1724c56b8d 100644
 --- a/gfx/webrender_bindings/src/bindings.rs
 +++ b/gfx/webrender_bindings/src/bindings.rs
-@@ -1129,7 +1129,11 @@ impl AsyncPropertySampler for SamplerCallback {
+@@ -1143,7 +1143,11 @@ impl AsyncPropertySampler for SamplerCallback {
          }
      }
  
@@ -15,7 +15,7 @@ index fb367358bef4..bb86c0e45034 100644
          let generated_frame_id_value;
          let generated_frame_id: *const u64 = match generated_frame_id {
              Some(id) => {
-@@ -1146,7 +1150,7 @@ impl AsyncPropertySampler for SamplerCallback {
+@@ -1160,7 +1164,7 @@ impl AsyncPropertySampler for SamplerCallback {
              apz_sample_transforms(self.window_id, generated_frame_id, &mut transaction);
              omta_sample(self.window_id, &mut transaction);
          };
@@ -24,7 +24,7 @@ index fb367358bef4..bb86c0e45034 100644
      }
  
      fn deregister(&self) {
-@@ -3006,7 +3010,12 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
+@@ -3045,7 +3049,12 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
  }
  
  #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -38,7 +38,7 @@ index fb367358bef4..bb86c0e45034 100644
      // On macOS, the descriptor string is a concatenation of the PostScript name
      // and the font file path (to disambiguate cases where there are multiple
      // faces with the same psname present). The index is the length of the psname
-@@ -3016,6 +3025,8 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
+@@ -3055,6 +3064,8 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
      NativeFontHandle {
          name: String::from_utf8(chars[..index as usize].to_vec()).unwrap_or("".to_string()),
          path: String::from_utf8(chars[index as usize..].to_vec()).unwrap_or("".to_string()),
@@ -47,7 +47,7 @@ index fb367358bef4..bb86c0e45034 100644
      }
  }
  
-@@ -3034,8 +3045,18 @@ pub extern "C" fn wr_resource_updates_add_font_descriptor(
+@@ -3073,8 +3084,18 @@ pub extern "C" fn wr_resource_updates_add_font_descriptor(
      key: WrFontKey,
      bytes: &mut WrVecU8,
      index: u32,

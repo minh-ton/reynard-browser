@@ -1,5 +1,5 @@
 diff --git a/layout/base/nsLayoutUtils.cpp b/layout/base/nsLayoutUtils.cpp
-index ef125f0123d9..11e251e73c6f 100644
+index e06c75c7862d..5c1d73dec8cc 100644
 --- a/layout/base/nsLayoutUtils.cpp
 +++ b/layout/base/nsLayoutUtils.cpp
 @@ -1352,6 +1352,11 @@ SideBits nsLayoutUtils::GetSideBitsForFixedPositionContent(
@@ -14,7 +14,7 @@ index ef125f0123d9..11e251e73c6f 100644
    }
    return sides;
  }
-@@ -8943,14 +8948,7 @@ ScrollMetadata nsLayoutUtils::ComputeScrollMetadata(
+@@ -8938,14 +8943,7 @@ ScrollMetadata nsLayoutUtils::ComputeScrollMetadata(
              presContext, viewport.Size()));
          metrics.SetLayoutViewport(viewport);
  

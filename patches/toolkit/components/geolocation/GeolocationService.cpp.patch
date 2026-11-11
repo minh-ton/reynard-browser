@@ -1,5 +1,5 @@
 diff --git a/toolkit/components/geolocation/GeolocationService.cpp b/toolkit/components/geolocation/GeolocationService.cpp
-index 70af7ec0c238..65b47894268a 100644
+index 28f8b38e2fde..7365db55c0bb 100644
 --- a/toolkit/components/geolocation/GeolocationService.cpp
 +++ b/toolkit/components/geolocation/GeolocationService.cpp
 @@ -20,7 +20,7 @@
@@ -11,7 +11,7 @@ index 70af7ec0c238..65b47894268a 100644
  #  include "CoreLocationLocationProvider.h"
  #endif
  
-@@ -102,7 +102,7 @@ nsresult GeolocationService::Init() {
+@@ -109,7 +109,7 @@ nsresult GeolocationService::Init(bool aIsOverride) {
  #  endif
  #endif
  

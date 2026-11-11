@@ -1,8 +1,8 @@
 diff --git a/gfx/wr/webrender/src/render_api.rs b/gfx/wr/webrender/src/render_api.rs
-index c55fec97ee47..e392a81163d3 100644
+index 711b90bbe9a0..337c01e79801 100644
 --- a/gfx/wr/webrender/src/render_api.rs
 +++ b/gfx/wr/webrender/src/render_api.rs
-@@ -442,9 +442,9 @@ impl Transaction {
+@@ -462,9 +462,9 @@ impl Transaction {
          self.frame_ops.push(FrameMsg::AppendDynamicTransformProperties(transforms));
      }
  

@@ -1,8 +1,8 @@
 diff --git a/gfx/2d/RecordedEventImpl.h b/gfx/2d/RecordedEventImpl.h
-index 88ec520156fc..8b47e94c5ec3 100644
+index f3bc1c0badaa..5141f8eb45e5 100644
 --- a/gfx/2d/RecordedEventImpl.h
 +++ b/gfx/2d/RecordedEventImpl.h
-@@ -1521,6 +1521,9 @@ class RecordedFontDescriptor
+@@ -1531,6 +1531,9 @@ class RecordedFontDescriptor
        : RecordedEventDerived(FONTDESC),
          mType(aUnscaledFont->GetType()),
          mIndex(0),
@@ -12,7 +12,7 @@ index 88ec520156fc..8b47e94c5ec3 100644
          mRefPtr(aUnscaledFont) {
      mHasDesc = aUnscaledFont->GetFontDescriptor(FontDescCb, this);
    }
-@@ -1547,6 +1550,9 @@ class RecordedFontDescriptor
+@@ -1557,6 +1560,9 @@ class RecordedFontDescriptor
    FontType mType = FontType::UNKNOWN;
    RecordedEventArray<uint8_t> mData;
    uint32_t mIndex = 0;
@@ -22,7 +22,7 @@ index 88ec520156fc..8b47e94c5ec3 100644
    ReferencePtr mRefPtr;
  
    template <class S>
-@@ -4221,8 +4227,17 @@ RecordedFontData::RecordedFontData(S& aStream)
+@@ -4322,8 +4328,17 @@ RecordedFontData::RecordedFontData(S& aStream)
  inline RecordedFontDescriptor::~RecordedFontDescriptor() = default;
  
  inline bool RecordedFontDescriptor::PlayEvent(Translator* aTranslator) const {
@@ -41,7 +41,7 @@ index 88ec520156fc..8b47e94c5ec3 100644
    if (!font) {
      gfxCriticalNote << "Failed creating UnscaledFont of type " << int(mType)
                      << " from font descriptor";
-@@ -4239,6 +4254,8 @@ void RecordedFontDescriptor::Record(S& aStream) const {
+@@ -4340,6 +4355,8 @@ void RecordedFontDescriptor::Record(S& aStream) const {
    WriteElement(aStream, mType);
    WriteElement(aStream, mRefPtr);
    WriteElement(aStream, mIndex);
@@ -50,7 +50,7 @@ index 88ec520156fc..8b47e94c5ec3 100644
    WriteElement(aStream, mData.size());
    mData.Write(aStream);
  }
-@@ -4261,6 +4278,8 @@ RecordedFontDescriptor::RecordedFontDescriptor(S& aStream)
+@@ -4362,6 +4379,8 @@ RecordedFontDescriptor::RecordedFontDescriptor(S& aStream)
    ReadElementConstrained(aStream, mType, FontType::DWRITE, FontType::UNKNOWN);
    ReadElement(aStream, mRefPtr);
    ReadElement(aStream, mIndex);

@@ -1,8 +1,8 @@
 diff --git a/dom/ipc/BrowserParent.cpp b/dom/ipc/BrowserParent.cpp
-index 8b4018fefdf9..231966459542 100644
+index 4538bc60edb5..7fad82eef5a8 100644
 --- a/dom/ipc/BrowserParent.cpp
 +++ b/dom/ipc/BrowserParent.cpp
-@@ -143,6 +143,10 @@
+@@ -144,6 +144,10 @@
  #  include "FxRWindowManager.h"
  #endif
  
@@ -13,7 +13,7 @@ index 8b4018fefdf9..231966459542 100644
  #if defined(XP_WIN) && defined(ACCESSIBILITY)
  #  include "mozilla/a11y/AccessibleWrap.h"
  #  include "mozilla/a11y/Compatibility.h"
-@@ -796,6 +800,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
+@@ -797,6 +801,21 @@ mozilla::ipc::IPCResult BrowserParent::RecvEnsureLayersConnected(
      Maybe<CompositorOptions>* aCompositorOptions) {
    if (mRemoteLayerTreeOwner.IsInitialized()) {
      mRemoteLayerTreeOwner.EnsureLayersConnected(*aCompositorOptions);
@@ -35,7 +35,7 @@ index 8b4018fefdf9..231966459542 100644
    }
    return IPC_OK();
  }
-@@ -1038,13 +1057,20 @@ void BrowserParent::InitRendering() {
+@@ -1039,13 +1058,20 @@ void BrowserParent::InitRendering() {
          widget->SupportsUnadjustedMovement());
    }
  
@@ -58,7 +58,7 @@ index 8b4018fefdf9..231966459542 100644
  #endif
  }
  
-@@ -1211,7 +1237,10 @@ void BrowserParent::SizeModeChanged(const nsSizeMode& aSizeMode) {
+@@ -1212,7 +1238,10 @@ void BrowserParent::SizeModeChanged(const nsSizeMode& aSizeMode) {
  
  void BrowserParent::DynamicToolbarMaxHeightChanged(ScreenIntCoord aHeight) {
    if (!mIsDestroyed) {
@@ -70,7 +70,7 @@ index 8b4018fefdf9..231966459542 100644
    }
  }
  
-@@ -2111,19 +2140,33 @@ void BrowserParent::SendRealKeyEvent(WidgetKeyboardEvent& aEvent) {
+@@ -2100,19 +2129,33 @@ void BrowserParent::SendRealKeyEvent(WidgetKeyboardEvent& aEvent) {
    } else {
      aEvent.PreventNativeKeyBindings();
    }
@@ -105,7 +105,7 @@ index 8b4018fefdf9..231966459542 100644
      // Although mAlternativeCharCodes contains only 3 items at most and each
      // item is small, but let's assign it only when we actually store the data
      // for avoiding unnecessary allocation.
-@@ -2394,6 +2437,16 @@ mozilla::ipc::IPCResult BrowserParent::RecvSetCursor(
+@@ -2383,6 +2426,16 @@ mozilla::ipc::IPCResult BrowserParent::RecvSetCursor(
    return IPC_OK();
  }
  
@@ -122,7 +122,7 @@ index 8b4018fefdf9..231966459542 100644
  mozilla::ipc::IPCResult BrowserParent::RecvSetLinkStatus(
      const nsString& aStatus) {
    nsCOMPtr<nsIXULBrowserWindow> xulBrowserWindow = GetXULBrowserWindow();
-@@ -3235,6 +3288,76 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
+@@ -3224,6 +3277,76 @@ bool BrowserParent::HandleQueryContentEvent(WidgetQueryContentEvent& aEvent) {
    return true;
  }
  
@@ -199,7 +199,7 @@ index 8b4018fefdf9..231966459542 100644
  bool BrowserParent::SendCompositionEvent(WidgetCompositionEvent& aEvent,
                                           uint32_t aCompositionId) {
    if (mIsDestroyed) {
-@@ -3252,9 +3375,15 @@ bool BrowserParent::SendCompositionEvent(WidgetCompositionEvent& aEvent,
+@@ -3241,9 +3364,15 @@ bool BrowserParent::SendCompositionEvent(WidgetCompositionEvent& aEvent,
      return true;
    }
  
@@ -215,7 +215,7 @@ index 8b4018fefdf9..231966459542 100644
    if (NS_WARN_IF(!ret)) {
      return false;
    }
-@@ -3271,14 +3400,20 @@ bool BrowserParent::SendSelectionEvent(WidgetSelectionEvent& aEvent) {
+@@ -3260,14 +3389,20 @@ bool BrowserParent::SendSelectionEvent(WidgetSelectionEvent& aEvent) {
      return true;
    }
    mContentCache.OnSelectionEvent(aEvent);
@@ -237,7 +237,7 @@ index 8b4018fefdf9..231966459542 100644
    return true;
  }
  
-@@ -3294,6 +3429,14 @@ bool BrowserParent::SendSimpleContentCommandEvent(
+@@ -3283,6 +3418,14 @@ bool BrowserParent::SendSimpleContentCommandEvent(
      return false;
    }
    mContentCache.OnContentCommandEvent(aEvent);
@@ -252,7 +252,7 @@ index 8b4018fefdf9..231966459542 100644
    return Manager()->IsInputPriorityEventEnabled()
               ? PBrowserParent::SendSimpleContentCommandEvent(aEvent.mMessage)
               : PBrowserParent::SendNormalPrioritySimpleContentCommandEvent(
-@@ -3305,10 +3448,15 @@ bool BrowserParent::SendInsertText(const WidgetContentCommandEvent& aEvent) {
+@@ -3294,10 +3437,15 @@ bool BrowserParent::SendInsertText(const WidgetContentCommandEvent& aEvent) {
      return false;
    }
    mContentCache.OnContentCommandEvent(aEvent);
@@ -268,7 +268,7 @@ index 8b4018fefdf9..231966459542 100644
  }
  
  bool BrowserParent::SendReplaceText(const WidgetContentCommandEvent& aEvent) {
-@@ -3469,7 +3617,20 @@ mozilla::ipc::IPCResult BrowserParent::RecvGetInputContext(
+@@ -3458,7 +3606,20 @@ mozilla::ipc::IPCResult BrowserParent::RecvGetInputContext(
  
  mozilla::ipc::IPCResult BrowserParent::RecvSetInputContext(
      const InputContext& aContext, const InputContextAction& aAction) {
@@ -289,7 +289,7 @@ index 8b4018fefdf9..231966459542 100644
    return IPC_OK();
  }
  
-@@ -3934,7 +4095,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
+@@ -3923,7 +4084,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
      const MaybeDiscarded<WindowContext>& aSourceTopWindowContext) {
    nsCOMPtr<nsIDragService> dragService =
        do_GetService("@mozilla.org/widget/dragservice;1");
@@ -299,7 +299,7 @@ index 8b4018fefdf9..231966459542 100644
    const bool isValidRemoteDrag = [&]() {
      if (!dragService || !presContext) {
        return false;
-@@ -3997,6 +4159,10 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
+@@ -3986,6 +4148,10 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
    presContext->EventStateManager()->BeginTrackingRemoteDragGesture(
        mFrameElement, dragStartData);
  

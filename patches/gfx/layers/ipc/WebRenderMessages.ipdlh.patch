@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/WebRenderMessages.ipdlh b/gfx/layers/ipc/WebRenderMessages.ipdlh
-index 212594007ab3..96df56cb144f 100644
+index 5902fad97178..7ab53b6fbc80 100644
 --- a/gfx/layers/ipc/WebRenderMessages.ipdlh
 +++ b/gfx/layers/ipc/WebRenderMessages.ipdlh
-@@ -162,6 +162,8 @@ struct OpAddRawFont {
+@@ -170,6 +170,8 @@ struct OpAddRawFont {
  struct OpAddFontDescriptor {
    OffsetRange bytes;
    uint32_t fontIndex;

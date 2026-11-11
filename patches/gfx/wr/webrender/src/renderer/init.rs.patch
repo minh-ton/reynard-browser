@@ -1,17 +1,17 @@
 diff --git a/gfx/wr/webrender/src/renderer/init.rs b/gfx/wr/webrender/src/renderer/init.rs
-index fef7eb28009a..d8356a95791d 100644
+index f29a6b9f3098..e7e128b4efa1 100644
 --- a/gfx/wr/webrender/src/renderer/init.rs
 +++ b/gfx/wr/webrender/src/renderer/init.rs
 @@ -4,7 +4,7 @@
  
  use api::{BlobImageHandler, ColorF, CrashAnnotator, DocumentId, IdNamespace};
  use api::{RenderBackendId, VoidPtrToSizeFn, FontRenderMode, ImageFormat};
--use api::{RenderNotifier, ImageBufferKind};
-+use api::{RenderNotifier, ImageBufferKind, NotificationRequest};
+-use api::{RenderNotifier, ImageBufferKind, PipelineId};
++use api::{RenderNotifier, ImageBufferKind, PipelineId, NotificationRequest};
  use api::units::*;
  use api::channel::unbounded_channel;
  pub use api::DebugFlags;
-@@ -111,9 +111,13 @@ pub trait AsyncPropertySampler {
+@@ -114,9 +114,13 @@ pub trait AsyncPropertySampler {
      /// and before it processes anything.
      fn register(&self);
      /// This is called for each transaction with the generate_frame flag set

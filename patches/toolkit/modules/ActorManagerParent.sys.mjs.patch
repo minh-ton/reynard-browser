@@ -1,8 +1,8 @@
 diff --git a/toolkit/modules/ActorManagerParent.sys.mjs b/toolkit/modules/ActorManagerParent.sys.mjs
-index c63bcb4c3bb2..a6ee91eca26b 100644
+index 4b6ed27171be..75146cb98940 100644
 --- a/toolkit/modules/ActorManagerParent.sys.mjs
 +++ b/toolkit/modules/ActorManagerParent.sys.mjs
-@@ -713,7 +713,9 @@ if (AppConstants.platform != "android") {
+@@ -714,7 +714,9 @@ if (AppConstants.platform != "android") {
      allFrames: true,
      safeForUntrustedWebProcess: true,
    };

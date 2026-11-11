@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/ContentParent.h b/dom/ipc/ContentParent.h
-index cffb55b774c4..dc38719d9502 100644
+index 6f7d40c2a898..bffbb7be24c0 100644
 --- a/dom/ipc/ContentParent.h
 +++ b/dom/ipc/ContentParent.h
 @@ -638,6 +638,9 @@ class ContentParent final : public PContentParent,

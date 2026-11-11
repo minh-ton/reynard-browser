@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index c412407b112a..2daa707a687f 100644
+index c412407b112a..6b29e2048325 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -3,17 +3,25 @@
@@ -432,7 +432,7 @@ index c412407b112a..2daa707a687f 100644
    // Perform the steps which would normally happen after nsAppShell::Run, such
    // as `~ScopedXPCOMStartup`, as UIApplicationMain will never shutdown.
    if (nsCOMPtr<nsIAppStartup> appStartup = components::AppStartup::Service()) {
-@@ -330,12 +640,19 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -330,12 +640,18 @@ static void ApplicationWillTerminate(bool aCallExit) {
  
    gDirServiceProvider->DoShutdown();
  
@@ -448,10 +448,9 @@ index c412407b112a..2daa707a687f 100644
 +
 +  // So we skip those entirely, force invalidates these extensions
 +  // manually and terminate them.
-+  mozilla::ipc::GeckoChildProcessHost::GetAll(
-+      [](mozilla::ipc::GeckoChildProcessHost* aHost) {
-+        aHost->ForceInvalidateForTermination();
-+      });
++  for (const auto& host : mozilla::ipc::GeckoChildProcessHost::GetAll()) {
++    host->ForceInvalidateForTermination();
++  }
 +
 +  WriteConsoleLog();
  

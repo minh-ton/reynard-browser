@@ -1,8 +1,8 @@
 diff --git a/dom/chrome-webidl/BrowsingContext.webidl b/dom/chrome-webidl/BrowsingContext.webidl
-index 38fd39f06618..ce72abc0f215 100644
+index f400fbc28978..f63c0303e9be 100644
 --- a/dom/chrome-webidl/BrowsingContext.webidl
 +++ b/dom/chrome-webidl/BrowsingContext.webidl
-@@ -122,6 +122,12 @@ interface BrowsingContext {
+@@ -133,6 +133,12 @@ interface BrowsingContext {
  
    [SetterThrows] attribute [LegacyNullToEmptyString] DOMString customPlatform;
  

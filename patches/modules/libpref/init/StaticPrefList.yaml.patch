@@ -1,8 +1,8 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 80be46d83cc0..daf4cfa88c8e 100644
+index 17f9237d1f05..651e4c61397e 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
-@@ -3397,13 +3397,13 @@
+@@ -3414,13 +3414,13 @@
  # Is LightIndicator API enabled in Gamepad Extension API?
  - name: dom.gamepad.extensions.lightindicator
    type: bool
@@ -18,7 +18,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    mirror: always
  
  # Is Gamepad vibrate haptic feedback function enabled?
-@@ -3740,6 +3740,8 @@
+@@ -3763,6 +3763,8 @@
  #ifdef ANDROID
    # Bug 1999950: Prelaunch 1 process on Android due to a performance regression.
    value: 1
@@ -27,7 +27,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #else
    value: 3
  #endif
-@@ -6091,7 +6093,7 @@
+@@ -6152,7 +6154,7 @@
  # document.createEvent("TouchEvent").
  - name: dom.w3c_touch_events.legacy_apis.enabled
    type: bool
@@ -36,7 +36,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    mirror: always
  
  # W3C touch events
-@@ -6102,6 +6104,8 @@
+@@ -6163,6 +6165,8 @@
    type: int32_t
  #if defined(XP_MACOSX)
    value: 0
@@ -45,7 +45,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #else
    value: 2
  #endif
-@@ -6187,7 +6191,7 @@
+@@ -6248,7 +6252,7 @@
  # on aarch64 (Apple Silicon) MacOS.
  - name: dom.webgpu.enabled
    type: RelaxedAtomicBool
@@ -54,7 +54,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: @IS_EARLY_BETA_OR_EARLIER@
-@@ -6198,7 +6202,7 @@
+@@ -6259,7 +6263,7 @@
  # on a platform that supports the GPU process, else true.
  - name: dom.webgpu.allow-in-parent
    type: bool
@@ -63,7 +63,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: false
  #else
    value: true
-@@ -6208,7 +6212,7 @@
+@@ -6269,7 +6273,7 @@
  # Is support for the Web GPU API enabled on service workers?
  - name: dom.webgpu.service-workers.enabled
    type: RelaxedAtomicBool
@@ -72,7 +72,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: @IS_EARLY_BETA_OR_EARLIER@
-@@ -6235,7 +6239,7 @@
+@@ -6296,7 +6300,7 @@
  
  - name: dom.webgpu.allow-present-without-readback
    type: RelaxedAtomicBool
@@ -81,7 +81,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: false
-@@ -6245,7 +6249,7 @@
+@@ -6306,7 +6310,7 @@
  # Whether WebGPU's GPUExternalTexture API is enabled.
  - name: dom.webgpu.external-texture.enabled
    type: bool
@@ -90,7 +90,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: false
-@@ -6467,7 +6471,7 @@
+@@ -6528,7 +6532,7 @@
  # Whether we should suspend inactive tabs or not
  - name: dom.suspend_inactive.enabled
    type: bool
@@ -99,7 +99,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    mirror: always
  
  # The following three prefs control the maximum script run time before slow
-@@ -6774,7 +6778,7 @@
+@@ -6830,7 +6834,7 @@
  # or the parent/main process (false)
  - name: extensions.webextensions.remote
    type: RelaxedAtomicBool
@@ -108,7 +108,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    mirror: always
  
  # Whether to expose the MockExtensionAPI test interface in tests.
-@@ -7389,6 +7393,8 @@
+@@ -7445,6 +7449,8 @@
    type: bool
  #if defined(XP_MACOSX) || defined(XP_LINUX) && !defined(ANDROID)
    value: true
@@ -117,7 +117,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(MOZ_WIDGET_ANDROID)
    value: true
  #elif defined(XP_WIN)
-@@ -7400,7 +7406,7 @@
+@@ -7456,7 +7462,7 @@
  
  - name: gfx.canvas.accelerated.allow-in-parent
    type: bool
@@ -126,7 +126,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: false
  #else
    value: true
-@@ -7713,6 +7719,8 @@
+@@ -7775,6 +7781,8 @@
      type: RelaxedAtomicBool
  #if defined(MOZ_AARCH64) && defined(XP_MACOSX)
      value: true
@@ -135,7 +135,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #else
      value: false
  #endif
-@@ -7963,7 +7971,13 @@
+@@ -8038,7 +8046,13 @@
    # backend.
  -   name: gfx.font_rendering.coretext.enabled
      type: RelaxedAtomicBool
@@ -149,7 +149,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
      mirror: always
  #endif
  
-@@ -10353,7 +10367,7 @@
+@@ -10528,7 +10542,7 @@
  # or executable but never both at the same time. OpenBSD defaults to W^X.
  - name: javascript.options.content_process_write_protect_code
    type: bool
@@ -158,7 +158,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: false
-@@ -10509,7 +10523,9 @@
+@@ -10690,7 +10704,9 @@
  
  - name: layers.gpu-process.enabled
    type: bool
@@ -169,7 +169,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #elif defined(MOZ_X11)
    value: false  # we'd like this to be @IS_NIGHTLY_BUILD@, see Bug 1927058
-@@ -10737,7 +10753,7 @@
+@@ -10911,7 +10927,7 @@
  
  - name: layout.accessiblecaret.margin-left
    type: float
@@ -178,7 +178,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    mirror: always
  
  - name: layout.accessiblecaret.transition-duration
-@@ -12311,7 +12327,7 @@
+@@ -12499,7 +12515,7 @@
  - name: media.cubeb.sandbox
    type: bool
    mirror: always
@@ -187,7 +187,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: false
-@@ -12719,6 +12735,8 @@
+@@ -12921,6 +12937,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -196,7 +196,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12763,6 +12781,8 @@
+@@ -12965,6 +12983,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -205,7 +205,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12796,6 +12816,8 @@
+@@ -12998,6 +13018,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -214,7 +214,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12815,6 +12837,8 @@
+@@ -13017,6 +13039,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -223,7 +223,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12834,6 +12858,8 @@
+@@ -13036,6 +13060,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -232,7 +232,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12853,6 +12879,8 @@
+@@ -13055,6 +13081,8 @@
    value: true
  #elif defined(XP_MACOSX)
    value: true
@@ -241,7 +241,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
  #elif defined(XP_LINUX) && !defined(ANDROID)
    value: true
  #elif defined(XP_FREEBSD)
-@@ -12879,7 +12907,7 @@
+@@ -13081,7 +13109,7 @@
    type: RelaxedAtomicBool
  #if defined(XP_WIN)
    value: true
@@ -250,7 +250,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #elif defined(XP_LINUX) || defined(ANDROID)
    value: true
-@@ -12944,7 +12972,7 @@
+@@ -13146,7 +13174,7 @@
  #ifdef MOZ_FFMPEG
  -   name: media.ffmpeg.enabled
      type: RelaxedAtomicBool
@@ -259,7 +259,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
      value: false
    #else
      value: true
-@@ -15594,7 +15622,10 @@
+@@ -15811,7 +15839,10 @@
  - name: network.process.enabled
    type: RelaxedAtomicBool
    mirror: always
@@ -271,7 +271,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: false # see bug 1641427
  #else
    value: true
-@@ -19819,7 +19850,7 @@
+@@ -20081,7 +20112,7 @@
  # If the service is available, set threads to low-power mode when in the background.
  - name: threads.use_low_power.enabled
    type: RelaxedAtomicBool
@@ -280,7 +280,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: @IS_NIGHTLY_BUILD@
-@@ -19828,10 +19859,10 @@
+@@ -20090,10 +20121,10 @@
  
  
  # If the process priority is set to background, put the main thread in the background.
@@ -293,7 +293,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: true
  #else
    value: @IS_NIGHTLY_BUILD@
-@@ -19996,7 +20027,7 @@
+@@ -20258,7 +20289,7 @@
  # Use 17 for Ctrl, 18 for Alt, 91 or 224 for Meta, 0 for none.
  - name: ui.key.accelKey
    type: uint32_t
@@ -302,7 +302,7 @@ index 80be46d83cc0..daf4cfa88c8e 100644
    value: 224
  #else
    value: 17
-@@ -20656,7 +20687,7 @@
+@@ -20897,7 +20928,7 @@
  # on a platform that supports the GPU process, else true.
  - name: webgl.allow-in-parent
    type: bool

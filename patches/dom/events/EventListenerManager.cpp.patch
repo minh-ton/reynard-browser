@@ -1,8 +1,8 @@
 diff --git a/dom/events/EventListenerManager.cpp b/dom/events/EventListenerManager.cpp
-index 50bc794e2975..b33a96b6b834 100644
+index 4688618ccc87..6eb16555c07f 100644
 --- a/dom/events/EventListenerManager.cpp
 +++ b/dom/events/EventListenerManager.cpp
-@@ -708,8 +708,13 @@ void EventListenerManager::EnableDevice(nsAtom* aTypeAtom) {
+@@ -709,8 +709,13 @@ void EventListenerManager::EnableDevice(nsAtom* aTypeAtom) {
    }
  
    if (aTypeAtom == nsGkAtoms::ondeviceorientation) {
@@ -17,7 +17,7 @@ index 50bc794e2975..b33a96b6b834 100644
  #else
      window->EnableDeviceSensor(SENSOR_ORIENTATION);
  #endif
-@@ -717,9 +722,11 @@ void EventListenerManager::EnableDevice(nsAtom* aTypeAtom) {
+@@ -718,9 +723,11 @@ void EventListenerManager::EnableDevice(nsAtom* aTypeAtom) {
    }
  
    if (aTypeAtom == nsGkAtoms::ondeviceorientationabsolute) {
@@ -30,7 +30,7 @@ index 50bc794e2975..b33a96b6b834 100644
  #else
      window->EnableDeviceSensor(SENSOR_ORIENTATION);
  #endif
-@@ -760,19 +767,25 @@ void EventListenerManager::DisableDevice(nsAtom* aTypeAtom) {
+@@ -761,19 +768,25 @@ void EventListenerManager::DisableDevice(nsAtom* aTypeAtom) {
    }
  
    if (aTypeAtom == nsGkAtoms::ondeviceorientation) {

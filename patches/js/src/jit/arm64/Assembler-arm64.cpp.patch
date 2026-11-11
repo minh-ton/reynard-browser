@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/arm64/Assembler-arm64.cpp b/js/src/jit/arm64/Assembler-arm64.cpp
-index 77e7acba4673..fc880a24e281 100644
+index 3042fca212e3..5e509ab129c2 100644
 --- a/js/src/jit/arm64/Assembler-arm64.cpp
 +++ b/js/src/jit/arm64/Assembler-arm64.cpp
 @@ -13,9 +13,14 @@
@@ -92,7 +92,7 @@ index 77e7acba4673..fc880a24e281 100644
  }
  
  BufferOffset Assembler::immPool(ARMRegister dest, uint8_t* value,
-@@ -322,22 +353,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
+@@ -321,22 +352,27 @@ void Assembler::addPendingJump(BufferOffset src, ImmPtr target,
  
  void Assembler::PatchWrite_NearCall(CodeLocationLabel start,
                                      CodeLocationLabel toCall) {
@@ -124,7 +124,7 @@ index 77e7acba4673..fc880a24e281 100644
  }
  
  void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
-@@ -347,21 +383,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
+@@ -346,21 +382,24 @@ void Assembler::PatchDataWithValueCheck(CodeLocationLabel label,
  }
  
  void Assembler::ToggleToJmp(CodeLocationLabel inst_) {
@@ -156,7 +156,7 @@ index 77e7acba4673..fc880a24e281 100644
    // bit 23 is reserved, and the simulator throws an assertion when this happens
    // It'll be messy to decode, but we can steal bit 30 or bit 31.
    MOZ_ASSERT(vixl::IsInt18(imm19));
-@@ -375,68 +414,81 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
+@@ -374,68 +413,81 @@ void Assembler::ToggleToCmp(CodeLocationLabel inst_) {
    // 0:4 - Destination Register. Must be xzr.
  
    // From the above, there is a safe 19-bit contiguous region from 5:23.
@@ -256,7 +256,7 @@ index 77e7acba4673..fc880a24e281 100644
  }
  
  class RelocationIterator {
-@@ -541,7 +593,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
+@@ -540,7 +592,8 @@ void Assembler::TraceDataRelocations(JSTracer* trc, JitCode* code,
      // Refer to movePatchablePtr() for generation.
      MOZ_ASSERT(load->Mask(vixl::LoadLiteralMask) == vixl::LDR_x_lit);
  

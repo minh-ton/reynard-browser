@@ -1,5 +1,5 @@
 diff --git a/xpfe/appshell/AppWindow.cpp b/xpfe/appshell/AppWindow.cpp
-index 30846e962723..ad8929dabc21 100644
+index 33bd818a970d..341cc8c3bf64 100644
 --- a/xpfe/appshell/AppWindow.cpp
 +++ b/xpfe/appshell/AppWindow.cpp
 @@ -4,6 +4,7 @@

@@ -1,8 +1,8 @@
 diff --git a/xpcom/base/moz.build b/xpcom/base/moz.build
-index 191798f85f24..0eaef2bea566 100644
+index 8b108982c1dd..789bae9fbad1 100644
 --- a/xpcom/base/moz.build
 +++ b/xpcom/base/moz.build
-@@ -225,11 +225,22 @@ if CONFIG["OS_TARGET"] == "WINNT":
+@@ -236,11 +236,22 @@ if CONFIG["OS_TARGET"] == "WINNT":
      ]
  
  if CONFIG["OS_TARGET"] == "Darwin":

@@ -1,5 +1,5 @@
 diff --git a/layout/base/AccessibleCaret.h b/layout/base/AccessibleCaret.h
-index 9b0c33a1df1a..611abcff6bc0 100644
+index 6fbba2373305..a6dfe3521d8e 100644
 --- a/layout/base/AccessibleCaret.h
 +++ b/layout/base/AccessibleCaret.h
 @@ -80,6 +80,8 @@ class AccessibleCaret {

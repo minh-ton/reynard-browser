@@ -1,5 +1,5 @@
 diff --git a/ipc/glue/moz.build b/ipc/glue/moz.build
-index e7c40334dc7e..fc642c81753f 100644
+index 72c6bb55fb5f..6386509eafbd 100644
 --- a/ipc/glue/moz.build
 +++ b/ipc/glue/moz.build
 @@ -151,10 +151,10 @@ if CONFIG["OS_ARCH"] != "WINNT":

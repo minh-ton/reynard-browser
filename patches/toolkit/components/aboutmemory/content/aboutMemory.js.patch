@@ -1,5 +1,5 @@
 diff --git a/toolkit/components/aboutmemory/content/aboutMemory.js b/toolkit/components/aboutmemory/content/aboutMemory.js
-index 16f94f6733f3..f0825a77064e 100644
+index 124ccc67bdc2..6f802d90e768 100644
 --- a/toolkit/components/aboutmemory/content/aboutMemory.js
 +++ b/toolkit/components/aboutmemory/content/aboutMemory.js
 @@ -175,6 +175,7 @@ function squarify(items, rect) {
@@ -10,7 +10,7 @@ index 16f94f6733f3..f0825a77064e 100644
        });
        offset += itemWidth;
      }
-@@ -2386,7 +2387,7 @@ function appendAboutMemoryMain(
+@@ -2392,7 +2393,7 @@ function appendAboutMemoryMain(
          content,
          "div",
          "treemapEntryText treemapEntryMemoryUsed",

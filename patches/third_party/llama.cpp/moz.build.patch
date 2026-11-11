@@ -1,5 +1,5 @@
 diff --git a/third_party/llama.cpp/moz.build b/third_party/llama.cpp/moz.build
-index e4f9cff747d2..47c5b4993fac 100644
+index 719333c0b9b6..22cc42db7596 100644
 --- a/third_party/llama.cpp/moz.build
 +++ b/third_party/llama.cpp/moz.build
 @@ -169,6 +169,12 @@ if CONFIG['OS_TARGET'] == 'Darwin':

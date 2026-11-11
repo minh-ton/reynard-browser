@@ -1,8 +1,8 @@
 diff --git a/netwerk/ipc/SocketProcessHost.cpp b/netwerk/ipc/SocketProcessHost.cpp
-index 710de656a8e4..98763d54e613 100644
+index 987d3c0096c2..ea9498ae5db4 100644
 --- a/netwerk/ipc/SocketProcessHost.cpp
 +++ b/netwerk/ipc/SocketProcessHost.cpp
-@@ -72,7 +72,7 @@ bool SocketProcessHost::Launch() {
+@@ -71,7 +71,7 @@ bool SocketProcessHost::Launch() {
    ProcessChild::AddPlatformBuildID(extraArgs);
  
    SharedPreferenceSerializer prefSerializer;

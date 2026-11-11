@@ -1,5 +1,5 @@
 diff --git a/widget/InputData.h b/widget/InputData.h
-index e1bcfe5354dd..a52dc03866f2 100644
+index dd8521e054c4..04a3c0d7d4a2 100644
 --- a/widget/InputData.h
 +++ b/widget/InputData.h
 @@ -135,6 +135,12 @@ class InputData {
@@ -33,7 +33,7 @@ index e1bcfe5354dd..a52dc03866f2 100644
  
    // |mScreenPoint| transformed to the local coordinates of the APZC targeted
    // by the hit. This is set and used by APZ.
-@@ -444,6 +450,9 @@ class PanGestureInput : public InputData {
+@@ -443,6 +449,9 @@ class PanGestureInput : public InputData {
      mOverscrollBehaviorAllowsSwipe = aAllows;
    }
    void SetSimulateMomentum(bool aSimulate) { mSimulateMomentum = aSimulate; }
@@ -43,7 +43,7 @@ index e1bcfe5354dd..a52dc03866f2 100644
    void SetIsNoLineOrPageDelta(bool aIsNoLineOrPageDelta) {
      mIsNoLineOrPageDelta = aIsNoLineOrPageDelta;
    }
-@@ -496,6 +505,8 @@ class PanGestureInput : public InputData {
+@@ -495,6 +504,8 @@ class PanGestureInput : public InputData {
    // events.)
    bool mSimulateMomentum : 1;
  

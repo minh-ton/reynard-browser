@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/JitOptions.cpp b/js/src/jit/JitOptions.cpp
-index 64a142b36174..562e36349328 100644
+index bcbcc93e97fd..a62bc4531a52 100644
 --- a/js/src/jit/JitOptions.cpp
 +++ b/js/src/jit/JitOptions.cpp
 @@ -312,7 +312,7 @@ DefaultJitOptions::DefaultJitOptions() {
@@ -11,7 +11,7 @@ index 64a142b36174..562e36349328 100644
    SET_DEFAULT(writeProtectCode, false);
  #else
    SET_DEFAULT(writeProtectCode, true);
-@@ -470,7 +470,7 @@ void DefaultJitOptions::resetNormalIonWarmUpThreshold() {
+@@ -471,7 +471,7 @@ void DefaultJitOptions::resetNormalIonWarmUpThreshold() {
  }
  
  void DefaultJitOptions::maybeSetWriteProtectCode(bool val) {

@@ -1,8 +1,8 @@
 diff --git a/gfx/thebes/gfxFontEntry.h b/gfx/thebes/gfxFontEntry.h
-index b4bb5867fdf5..3751e91f242a 100644
+index a17fb01e67cf..ca2a76078bc4 100644
 --- a/gfx/thebes/gfxFontEntry.h
 +++ b/gfx/thebes/gfxFontEntry.h
-@@ -832,7 +832,7 @@ class gfxFontEntry {
+@@ -838,7 +838,7 @@ class gfxFontEntry {
        FontInfoData* aFontInfoData, uint32_t& aUVSOffset);
  
    // helper for HasCharacter(), which is what client code should call

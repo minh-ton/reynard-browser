@@ -1,8 +1,8 @@
 diff --git a/toolkit/components/extensions/ExtensionChild.sys.mjs b/toolkit/components/extensions/ExtensionChild.sys.mjs
-index f0c8b871036e..facabed0ad3c 100644
+index c597806f3985..1a04b6c81c7b 100644
 --- a/toolkit/components/extensions/ExtensionChild.sys.mjs
 +++ b/toolkit/components/extensions/ExtensionChild.sys.mjs
-@@ -215,7 +215,11 @@ export class MessageEvent extends SimpleEventAPI {
+@@ -238,7 +238,11 @@ export class MessageEvent extends SimpleEventAPI {
  }
  
  function holdMessage(name, anonymizedName, data, native = null) {

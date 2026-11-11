@@ -1,8 +1,8 @@
 diff --git a/ipc/glue/GeckoChildProcessHost.h b/ipc/glue/GeckoChildProcessHost.h
-index fa485ce76d36..a2be1dbdb91e 100644
+index 5c8a527ab75d..bb353df9d991 100644
 --- a/ipc/glue/GeckoChildProcessHost.h
 +++ b/ipc/glue/GeckoChildProcessHost.h
-@@ -34,7 +34,7 @@
+@@ -32,7 +32,7 @@
  #include "nsString.h"
  
  #if defined(XP_IOS)
@@ -11,7 +11,7 @@ index fa485ce76d36..a2be1dbdb91e 100644
  #endif
  
  #if defined(XP_WIN) && defined(MOZ_SANDBOX)
-@@ -200,6 +200,8 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
+@@ -190,6 +190,8 @@ class GeckoChildProcessHost
  
  #ifdef XP_MACOSX
    task_t GetChildTask();
@@ -20,7 +20,7 @@ index fa485ce76d36..a2be1dbdb91e 100644
  #endif
  
  #ifdef ALLOW_GECKO_CHILD_PROCESS_ARCH
-@@ -209,6 +211,10 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
+@@ -199,6 +201,10 @@ class GeckoChildProcessHost
    // For bug 943174: Skip the EnsureProcessTerminated call in the destructor.
    void SetAlreadyDead();
  
@@ -31,7 +31,7 @@ index fa485ce76d36..a2be1dbdb91e 100644
  #if defined(MOZ_SANDBOX) && defined(XP_MACOSX)
    // Start the sandbox from the child process.
    static bool StartMacSandbox(int aArgc, char** aArgv,
-@@ -307,7 +313,7 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
+@@ -294,7 +300,7 @@ class GeckoChildProcessHost
    task_t mChildTask MOZ_GUARDED_BY(mHandleLock);
  #endif
  #if defined(MOZ_WIDGET_UIKIT)
