@@ -102,13 +102,13 @@ final class SitePermissionsViewController: SettingsTableViewController {
         .camera,
         .microphone,
         .location,
-        .midi,
     ]
     private let advancedPermissionOptions: [Row] = [
         .persistentStorage,
         .crossOriginStorageAccess,
         .localDeviceAccess,
         .localNetworkAccess,
+        .midi,
     ]
     
     private var displayedSections: [Section] {
