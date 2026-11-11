@@ -1,0 +1,14 @@
+diff --git a/gfx/layers/CanvasRenderer.cpp b/gfx/layers/CanvasRenderer.cpp
+index f763dc04a80d..bd5fd8ddae04 100644
+--- a/gfx/layers/CanvasRenderer.cpp
++++ b/gfx/layers/CanvasRenderer.cpp
+@@ -109,6 +109,9 @@ TextureType TexTypeForWebgl(KnowsCompositor* const knowsCompositor,
+   if (kIsMacOS) {
+     return TextureType::MacIOSurface;
+   }
++#ifdef XP_IOS
++  return TextureType::MacIOSurface;
++#endif
+ 
+ #ifdef MOZ_WIDGET_GTK
+   if (kIsLinux) {

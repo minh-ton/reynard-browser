@@ -1,0 +1,18 @@
+diff --git a/gfx/gl/moz.build b/gfx/gl/moz.build
+index d3da2796aaef..debe496e1a42 100644
+--- a/gfx/gl/moz.build
++++ b/gfx/gl/moz.build
+@@ -99,6 +99,13 @@ elif gl_provider == "EAGL":
+     ]
+     EXPORTS += [
+         "GLContextEAGL.h",
++        "SharedSurfaceIO.h",
++    ]
++    SOURCES += [
++        "SharedSurfaceIO.cpp",
++    ]
++    OS_LIBS += [
++        "-framework IOSurface",
+     ]
+ 
+ elif gl_provider == "Linux":

@@ -1,0 +1,14 @@
+diff --git a/widget/uikit/GfxInfo.cpp b/widget/uikit/GfxInfo.cpp
+index fee105480ec6..2724eed5614c 100644
+--- a/widget/uikit/GfxInfo.cpp
++++ b/widget/uikit/GfxInfo.cpp
+@@ -177,7 +177,8 @@ nsresult GfxInfo::GetFeatureStatusImpl(
+   // This early return is so we avoid potentially slow
+   // GLStrings initialization on startup when we initialize GL layers.
+   if (aFeature == nsIGfxInfo::FEATURE_OPENGL_LAYERS ||
+-      aFeature == nsIGfxInfo::FEATURE_WEBGL_OPENGL) {
++      aFeature == nsIGfxInfo::FEATURE_WEBGL_OPENGL ||
++      aFeature == nsIGfxInfo::FEATURE_WEBGL_ANGLE_METAL) {
+     *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
+     return NS_OK;
+   }

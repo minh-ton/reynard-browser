@@ -1,0 +1,16 @@
+diff --git a/third_party/angle/src/common/system_utils_posix.cpp b/third_party/angle/src/common/system_utils_posix.cpp
+index 7b0b868e31a0..07df213a0d5a 100644
+--- a/third_party/angle/src/common/system_utils_posix.cpp
++++ b/third_party/angle/src/common/system_utils_posix.cpp
+@@ -198,10 +198,7 @@ void *OpenSystemLibraryWithExtensionAndGetError(const char *libraryName,
+     std::string directory;
+     if (searchType == SearchType::ModuleDir)
+     {
+-#if ANGLE_PLATFORM_IOS_FAMILY
+-        // On iOS, shared libraries must be loaded from within the app bundle.
+-        directory = GetExecutableDirectory() + "/Frameworks/";
+-#elif ANGLE_PLATFORM_FUCHSIA
++#if ANGLE_PLATFORM_FUCHSIA
+         // On Fuchsia the dynamic loader always looks up libraries in /pkg/lib
+         // and disallows loading of libraries via absolute paths.
+         directory = "";

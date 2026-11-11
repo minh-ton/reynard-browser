@@ -1,16 +1,66 @@
 diff --git a/gfx/gl/SharedSurfaceIO.cpp b/gfx/gl/SharedSurfaceIO.cpp
-index 081138b5acc3..784a7a4f6ad3 100644
+index 081138b5acc3..d8573620fb7e 100644
 --- a/gfx/gl/SharedSurfaceIO.cpp
 +++ b/gfx/gl/SharedSurfaceIO.cpp
-@@ -12,6 +12,7 @@
+@@ -4,14 +4,16 @@
+ 
+ #include "SharedSurfaceIO.h"
+ 
+-#include "GLContextCGL.h"
+ #include "GLContextEGL.h"
+ #include "MozFramebuffer.h"
+ #include "ScopedGLHelpers.h"
+ #include "mozilla/gfx/MacIOSurface.h"
  #include "mozilla/layers/CompositeProcessFencesHolderMap.h"
  #include "mozilla/layers/GpuFence.h"
- #include "mozilla/layers/GpuFenceMTLSharedEvent.h"
+-#include "mozilla/layers/GpuFenceMTLSharedEvent.h"
++#ifdef XP_MACOSX
++#  include "mozilla/layers/GpuFenceMTLSharedEvent.h"
++#endif
 +#include "mozilla/layers/IOSurfacePort.h"
  #include "mozilla/layers/LayersSurfaces.h"  // for SurfaceDescriptor, etc
  #include "mozilla/layers/LayersTypes.h"
  
-@@ -189,8 +190,10 @@ Maybe<layers::SurfaceDescriptor>
+@@ -81,6 +83,9 @@ UniquePtr<SharedSurface_IOSurface> SharedSurface_IOSurface::Create(
+   auto* fencesHolderMap = layers::CompositeProcessFencesHolderMap::Get();
+ 
+   const bool useFence = [&]() -> bool {
++#ifdef XP_IOS
++    return false;
++#else
+     if (desc.gl->GetContextType() != GLContextType::EGL) {
+       return false;
+     }
+@@ -88,6 +93,7 @@ UniquePtr<SharedSurface_IOSurface> SharedSurface_IOSurface::Create(
+     const auto& egl = gle->mEgl;
+     return fencesHolderMap && egl->IsExtensionSupported(
+                                   EGLExtension::ANGLE_metal_shared_event_sync);
++#endif
+   }();
+ 
+   if (useFence) {
+@@ -135,6 +141,7 @@ void SharedSurface_IOSurface::ProducerReleaseImpl() {
+   if (!gl) return;
+   gl->MakeCurrent();
+ 
++#ifdef XP_MACOSX
+   if (mFencesHolderId.isSome()) {
+     MOZ_ASSERT(gl->GetContextType() == GLContextType::EGL);
+ 
+@@ -181,16 +188,23 @@ void SharedSurface_IOSurface::ProducerReleaseImpl() {
+     fencesHolderMap->SetWriteFence(mFencesHolderId.ref(), writeFence);
+     return;
+   }
++#endif
+ 
++#ifdef XP_IOS
++  gl->fFinish();
++#else
+   gl->fFlush();
++#endif
+ }
+ 
+ Maybe<layers::SurfaceDescriptor>
  SharedSurface_IOSurface::ToSurfaceDescriptor() {
    const bool isOpaque = false;  // RGBA
    return Some(layers::SurfaceDescriptorMacIOSurface(

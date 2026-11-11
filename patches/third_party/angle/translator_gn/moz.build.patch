@@ -1,0 +1,13 @@
+diff --git a/third_party/angle/translator_gn/moz.build b/third_party/angle/translator_gn/moz.build
+index 2ea198d1b59b..207e42c47fd6 100644
+--- a/third_party/angle/translator_gn/moz.build
++++ b/third_party/angle/translator_gn/moz.build
+@@ -291,7 +291,7 @@ if CONFIG["OS_TARGET"] == "WINNT":
+         "/third_party/angle/src/compiler/translator/tree_ops/hlsl/WrapSwitchStatementsInBlocks.cpp"
+     ]
+ 
+-if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] == "OSX":
++if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] in ("OSX", "iOS"):
+ 
+     DEFINES["ANGLE_ENABLE_METAL"] = True
+ 

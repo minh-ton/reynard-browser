@@ -1,0 +1,13 @@
+diff --git a/dom/canvas/WebGLContext.cpp b/dom/canvas/WebGLContext.cpp
+index b4d397eed695..3e3e9aa3a767 100644
+--- a/dom/canvas/WebGLContext.cpp
++++ b/dom/canvas/WebGLContext.cpp
+@@ -356,7 +356,7 @@ bool WebGLContext::CreateAndInitGL(
+     tryNativeGL = true;
+     tryANGLE = false;
+   }
+-#elif defined(XP_MACOSX)
++#elif defined(XP_MACOSX) || defined(XP_IOS)
+   if (gfx::gfxVars::AllowMetalAngleWebGL() &&
+       !StaticPrefs::webgl_disable_angle() &&
+       // Metal does not expose a software renderer. Fall back to native (CGL) if

@@ -1,0 +1,22 @@
+diff --git a/third_party/angle/moz.build b/third_party/angle/moz.build
+index f5125e6e8920..4f3512c2f98e 100644
+--- a/third_party/angle/moz.build
++++ b/third_party/angle/moz.build
+@@ -42,7 +42,7 @@ if CONFIG["OS_TARGET"] == "WINNT":
+         "/third_party/angle/third_party/zlib/zlib_gn"
+     ]
+ 
+-if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] == "OSX":
++if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] in ("OSX", "iOS"):
+ 
+     DIRS += [
+         "/third_party/angle/angle_frame_capture_mock_gn",
+@@ -67,7 +67,7 @@ if CONFIG["MOZ_DEBUG"] == "1" and CONFIG["OS_TARGET"] == "WINNT":
+         "/third_party/angle/angle_gl_enum_utils_gn"
+     ]
+ 
+-if CONFIG["MOZ_DEBUG"] == "1" and CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] == "OSX":
++if CONFIG["MOZ_DEBUG"] == "1" and CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] in ("OSX", "iOS"):
+ 
+     DIRS += [
+         "/third_party/angle/angle_gl_enum_utils_gn"

@@ -1,0 +1,28 @@
+diff --git a/third_party/angle/libANGLE_gn/moz.build b/third_party/angle/libANGLE_gn/moz.build
+index 098b90b8861b..97e7b670e5d7 100644
+--- a/third_party/angle/libANGLE_gn/moz.build
++++ b/third_party/angle/libANGLE_gn/moz.build
+@@ -61,15 +61,21 @@ if CONFIG["OS_TARGET"] == "Darwin":
+     ]
+ 
+     OS_LIBS += [
+-        "-framework Cocoa",
+         "-framework CoreFoundation",
+         "-framework CoreGraphics",
+-        "-framework IOKit",
+         "-framework IOSurface",
+         "-framework Metal",
+         "-framework QuartzCore"
+     ]
+ 
++    if CONFIG["TARGET_OS"] == "iOS":
++        OS_LIBS += ["-framework Foundation"]
++    else:
++        OS_LIBS += [
++            "-framework Cocoa",
++            "-framework IOKit"
++        ]
++
+ if CONFIG["OS_TARGET"] == "WINNT":
+ 
+     DEFINES["ANGLE_ENABLE_D3D11"] = True

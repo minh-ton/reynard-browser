@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 17f9237d1f05..651e4c61397e 100644
+index 17f9237d1f05..d3bd15b1128e 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -3414,13 +3414,13 @@
@@ -302,6 +302,15 @@ index 17f9237d1f05..651e4c61397e 100644
    value: 224
  #else
    value: 17
+@@ -20708,7 +20739,7 @@
+ 
+ - name: webgl.disable-angle
+   type: RelaxedAtomicBool
+-#if defined(XP_WIN) || defined(XP_MACOSX)
++#if defined(XP_WIN) || defined(XP_MACOSX) || defined(XP_IOS)
+   value: false
+ #else
+   value: true
 @@ -20897,7 +20928,7 @@
  # on a platform that supports the GPU process, else true.
  - name: webgl.allow-in-parent

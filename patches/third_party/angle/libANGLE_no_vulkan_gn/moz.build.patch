@@ -1,0 +1,28 @@
+diff --git a/third_party/angle/libANGLE_no_vulkan_gn/moz.build b/third_party/angle/libANGLE_no_vulkan_gn/moz.build
+index b2ca2dff970f..4ce613d7c4aa 100644
+--- a/third_party/angle/libANGLE_no_vulkan_gn/moz.build
++++ b/third_party/angle/libANGLE_no_vulkan_gn/moz.build
+@@ -159,15 +159,21 @@ if CONFIG["OS_TARGET"] == "Darwin":
+     ]
+ 
+     OS_LIBS += [
+-        "-framework Cocoa",
+         "-framework CoreFoundation",
+         "-framework CoreGraphics",
+-        "-framework IOKit",
+         "-framework IOSurface",
+         "-framework Metal",
+         "-framework QuartzCore"
+     ]
+ 
++    if CONFIG["TARGET_OS"] == "iOS":
++        OS_LIBS += ["-framework Foundation"]
++    else:
++        OS_LIBS += [
++            "-framework Cocoa",
++            "-framework IOKit"
++        ]
++
+     UNIFIED_SOURCES += [
+         "/third_party/angle/src/libANGLE/renderer/driver_utils_mac.mm"
+     ]

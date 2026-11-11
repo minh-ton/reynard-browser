@@ -1,0 +1,23 @@
+diff --git a/gfx/angle/gn-configs/angle.json b/gfx/angle/gn-configs/angle.json
+index 4c7e753d199c..7d75041e0f7d 100644
+--- a/gfx/angle/gn-configs/angle.json
++++ b/gfx/angle/gn-configs/angle.json
+@@ -5,6 +5,7 @@
+   "mozilla_add_override_dir": "",
+   "gn_target": {
+     "*": "//:translator",
++    "ios": "//:libEGL",
+     "mac": "//:libEGL",
+     "win": "//:libEGL"
+   },
+@@ -31,6 +32,10 @@
+       "use_custom_libcxx": false,
+       "use_sysroot": false
+     },
++    "ios": {
++      "angle_enable_metal": true,
++      "angle_enable_msl": true
++    },
+     "mac": {
+       "angle_enable_metal": true,
+       "angle_enable_msl": true

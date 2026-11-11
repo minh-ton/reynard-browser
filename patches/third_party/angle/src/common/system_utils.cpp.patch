@@ -1,0 +1,17 @@
+diff --git a/third_party/angle/src/common/system_utils.cpp b/third_party/angle/src/common/system_utils.cpp
+index 740384eaf030..9cb4a3a5fbe1 100644
+--- a/third_party/angle/src/common/system_utils.cpp
++++ b/third_party/angle/src/common/system_utils.cpp
+@@ -226,12 +226,6 @@ void *OpenSystemLibraryAndGetError(const char *libraryName,
+     {
+         libraryWithExtension += dotExtension;
+     }
+-#if ANGLE_PLATFORM_IOS_FAMILY
+-    // On iOS, libraryWithExtension is a directory in which the library resides.
+-    // The actual library name doesn't have an extension at all.
+-    // E.g. "libEGL.framework/libEGL"
+-    libraryWithExtension = libraryWithExtension + "/" + libraryName;
+-#endif
+     return OpenSystemLibraryWithExtensionAndGetError(libraryWithExtension.c_str(), searchType,
+                                                      errorOut);
+ }

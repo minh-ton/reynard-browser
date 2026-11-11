@@ -1,0 +1,36 @@
+diff --git a/third_party/angle/angle_gpu_info_util_gn/moz.build b/third_party/angle/angle_gpu_info_util_gn/moz.build
+index b861782d7c18..3e43d7f96d4b 100644
+--- a/third_party/angle/angle_gpu_info_util_gn/moz.build
++++ b/third_party/angle/angle_gpu_info_util_gn/moz.build
+@@ -63,15 +63,29 @@ if CONFIG["OS_TARGET"] == "Darwin":
+     OS_LIBS += [
+         "-framework CoreFoundation",
+         "-framework CoreGraphics",
+-        "-framework IOKit",
+         "-framework Metal"
+     ]
+ 
+     UNIFIED_SOURCES += [
+-        "/third_party/angle/src/gpu_info_util/SystemInfo_apple.mm",
++        "/third_party/angle/src/gpu_info_util/SystemInfo_apple.mm"
++    ]
++
++if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] == "OSX":
++
++    OS_LIBS += [
++        "-framework IOKit"
++    ]
++
++    UNIFIED_SOURCES += [
+         "/third_party/angle/src/gpu_info_util/SystemInfo_macos.mm"
+     ]
+ 
++if CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] == "iOS":
++
++    UNIFIED_SOURCES += [
++        "/third_party/angle/src/gpu_info_util/SystemInfo_ios.mm"
++    ]
++
+ if CONFIG["OS_TARGET"] == "WINNT":
+ 
+     DEFINES["ANGLE_ENABLE_D3D11"] = True

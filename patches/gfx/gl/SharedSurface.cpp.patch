@@ -1,0 +1,22 @@
+diff --git a/gfx/gl/SharedSurface.cpp b/gfx/gl/SharedSurface.cpp
+index 76fb0d540d6d..afcc3d8f0a04 100644
+--- a/gfx/gl/SharedSurface.cpp
++++ b/gfx/gl/SharedSurface.cpp
+@@ -28,7 +28,7 @@
+ #  include "SharedSurfaceD3D11Interop.h"
+ #endif
+ 
+-#ifdef XP_MACOSX
++#if defined(XP_MACOSX) || defined(XP_IOS)
+ #  include "SharedSurfaceIO.h"
+ #endif
+ 
+@@ -109,7 +109,7 @@ UniquePtr<SurfaceFactory> SurfaceFactory::Create(
+       break;
+ 
+     case layers::TextureType::MacIOSurface:
+-#ifdef XP_MACOSX
++#if defined(XP_MACOSX) || defined(XP_IOS)
+       return MakeUnique<SurfaceFactory_IOSurface>(gl);
+ #else
+       break;

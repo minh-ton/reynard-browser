@@ -1,0 +1,32 @@
+diff --git a/third_party/angle/libGLESv2_gn/moz.build b/third_party/angle/libGLESv2_gn/moz.build
+index f7fc76233e26..1027e2fb5aa2 100644
+--- a/third_party/angle/libGLESv2_gn/moz.build
++++ b/third_party/angle/libGLESv2_gn/moz.build
+@@ -80,15 +80,25 @@ if CONFIG["OS_TARGET"] == "Darwin":
+     DEFINES["__STDC_FORMAT_MACROS"] = True
+ 
+     OS_LIBS += [
+-        "-framework Cocoa",
+         "-framework CoreFoundation",
+         "-framework CoreGraphics",
+-        "-framework IOKit",
+         "-framework IOSurface",
+         "-framework Metal",
+         "-framework QuartzCore"
+     ]
+ 
++    if CONFIG["TARGET_OS"] == "iOS":
++        OS_LIBS += [
++            "-framework Foundation",
++            "-L" + CONFIG["IOS_COMPILER_RT"].rsplit("/", 1)[0],
++            "clang_rt.iossim" if CONFIG["IPHONEOS_IS_SIMULATOR"] else "clang_rt.ios",
++        ]
++    else:
++        OS_LIBS += [
++            "-framework Cocoa",
++            "-framework IOKit"
++        ]
++
+     SHARED_LIBRARY_NAME = "GLESv2"
+ 
+ 

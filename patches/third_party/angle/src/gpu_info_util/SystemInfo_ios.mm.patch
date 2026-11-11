@@ -1,0 +1,41 @@
+diff --git a/third_party/angle/src/gpu_info_util/SystemInfo_ios.mm b/third_party/angle/src/gpu_info_util/SystemInfo_ios.mm
+new file mode 100644
+index 000000000000..60a0feeeb463
+--- /dev/null
++++ b/third_party/angle/src/gpu_info_util/SystemInfo_ios.mm
+@@ -0,0 +1,35 @@
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++// SystemInfo_ios.mm: implementation of the iOS-specific parts of SystemInfo.h
++
++#include "gpu_info_util/SystemInfo_internal.h"
++
++#import <Metal/Metal.h>
++#include <sys/sysctl.h>
++
++namespace angle {
++
++bool GetSystemInfo_ios(SystemInfo* info) {
++  char machine[64];
++  size_t machineSize = sizeof(machine);
++  if (sysctlbyname("hw.machine", machine, &machineSize, nullptr, 0) == 0) {
++    info->machineModelName = machine;
++  }
++
++  GPUDeviceInfo gpu;
++  gpu.vendorId = kVendorID_Apple;
++
++  id<MTLDevice> device = MTLCreateSystemDefaultDevice();
++  if (device) {
++    gpu.deviceName = [[device name] UTF8String];
++    [device release];
++  }
++
++  info->gpus.push_back(gpu);
++  info->activeGPUIndex = 0;
++
++  return true;
++}
++
++}  // namespace angle
