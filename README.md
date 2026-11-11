@@ -56,7 +56,7 @@ Reynard is available as a standard build, a TrollStore build[^2], and a jailbrok
 </table>
 
 [^2]: The TrollStore build provides automatic JIT enablement, better performance, and automatic app updates. For automatic app updates, make sure **URL Scheme Enabled** is turned on in TrollStore.
-[^3]: The jailbroken build provides automatic JIT enablement and better performance.
+[^3]: The jailbroken build provides automatic JIT enablement and better performance. However, several components are switched off to provide compatibility with libhooker-based jailbreak environments. Automatic app updates is also available when installed through TrollStore.
 
 > [!NOTE]
 > Although jailbroken builds are available, using Reynard on a jailbroken device is not recommended. Tweaks and other system modifications may affect the browser's performance, stability, or functionality, and support for resulting issues may be limited. **On any jailbroken device**, disable tweak injection for Reynard and its extensions using tools such as [Choicy](https://github.com/opa334/Choicy).
