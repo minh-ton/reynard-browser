@@ -1,5 +1,5 @@
 diff --git a/xpcom/threads/nsThread.cpp b/xpcom/threads/nsThread.cpp
-index 8aa38b819090..6e98a9ed38d4 100644
+index 8aa38b819090..9bd4cb7ea8d0 100644
 --- a/xpcom/threads/nsThread.cpp
 +++ b/xpcom/threads/nsThread.cpp
 @@ -86,10 +86,15 @@ using GetCurrentThreadStackLimitsFn = void(WINAPI*)(PULONG_PTR LowLimit,
@@ -29,7 +29,8 @@ index 8aa38b819090..6e98a9ed38d4 100644
 -  // normally, and the OS will ignore the QoS state of the thread.
 +#ifdef MOZ_HAS_DARWIN_THREAD_QOS
    if (aPriority == nsIThread::QOS_PRIORITY_LOW) {
-     pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
+-    pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
++    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
    } else if (NS_IsMainThread()) {
 -    // MacOS documentation specifies that a main thread should be initialized at
 +    // Apple documentation specifies that a main thread should be initialized at
