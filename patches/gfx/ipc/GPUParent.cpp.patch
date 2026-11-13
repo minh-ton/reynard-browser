@@ -1,0 +1,33 @@
+diff --git a/gfx/ipc/GPUParent.cpp b/gfx/ipc/GPUParent.cpp
+index 587dc3888108..52239d95a755 100644
+--- a/gfx/ipc/GPUParent.cpp
++++ b/gfx/ipc/GPUParent.cpp
+@@ -95,6 +95,9 @@
+ #  include "mozilla/layers/AndroidImageReader.h"
+ #  include "skia/include/ports/SkTypeface_cairo.h"
+ #endif
++#ifdef XP_IOS
++#  include <sys/resource.h>
++#endif
+ #include "ChildProfilerController.h"
+ #include "nsAppRunner.h"
+ 
+@@ -558,6 +561,18 @@ mozilla::ipc::IPCResult GPUParent::RecvNotifyBatteryInfo(
+   return IPC_OK();
+ }
+ 
++#if defined(XP_IOS)
++mozilla::ipc::IPCResult GPUParent::RecvSetProcessBackground(
++    const bool& aIsBackground) {
++  const int priority = aIsBackground ? PRIO_DARWIN_BG : 0;
++  if (setpriority(PRIO_DARWIN_PROCESS, 0, priority) == -1) {
++    NS_WARNING("setpriority(PRIO_DARWIN_PROCESS) failed");
++  }
++
++  return IPC_OK();
++}
++#endif
++
+ static void CopyFeatureChange(Feature aFeature, Maybe<FeatureFailure>* aOut) {
+   FeatureState& feature = gfxConfig::GetFeature(aFeature);
+   if (feature.DisabledByDefault() || feature.IsEnabled()) {

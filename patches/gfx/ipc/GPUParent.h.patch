@@ -1,0 +1,14 @@
+diff --git a/gfx/ipc/GPUParent.h b/gfx/ipc/GPUParent.h
+index 0f839151cdee..5b9561590e68 100644
+--- a/gfx/ipc/GPUParent.h
++++ b/gfx/ipc/GPUParent.h
+@@ -78,6 +78,9 @@ class GPUParent final : public PGPUParent {
+   mozilla::ipc::IPCResult RecvScreenInformationChanged();
+   mozilla::ipc::IPCResult RecvNotifyBatteryInfo(
+       const BatteryInformation& aBatteryInfo);
++#if defined(XP_IOS)
++  mozilla::ipc::IPCResult RecvSetProcessBackground(const bool& aIsBackground);
++#endif
+   mozilla::ipc::IPCResult RecvNewContentCompositorManager(
+       Endpoint<PCompositorManagerParent>&& aEndpoint,
+       const ContentParentId& aChildId, uint32_t aNamespace,

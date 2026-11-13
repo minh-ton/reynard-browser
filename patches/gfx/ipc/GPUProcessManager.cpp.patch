@@ -1,5 +1,5 @@
 diff --git a/gfx/ipc/GPUProcessManager.cpp b/gfx/ipc/GPUProcessManager.cpp
-index 4364cc84482a..ccbd8a3fab48 100644
+index 4364cc84482a..5d7b54ff3fba 100644
 --- a/gfx/ipc/GPUProcessManager.cpp
 +++ b/gfx/ipc/GPUProcessManager.cpp
 @@ -65,9 +65,11 @@
@@ -40,7 +40,18 @@ index 4364cc84482a..ccbd8a3fab48 100644
  
  void GPUProcessManager::OnProcessLaunchComplete(GPUProcessHost* aHost) {
    MOZ_ASSERT(mProcess && mProcess == aHost);
-@@ -1326,7 +1330,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
+@@ -625,6 +629,10 @@ void GPUProcessManager::OnProcessLaunchComplete(GPUProcessHost* aHost) {
+   if (mAppInForeground) {
+     SetProcessIsForeground();
+   }
++#elif defined(XP_IOS)
++  if (!mAppInForeground) {
++    SetProcessIsForeground();
++  }
+ #endif
+ 
+   // Set a high priority for the newly-created gpu process.
+@@ -1326,7 +1334,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
    LAYERTREE_LOG("Created {} compositor for root layer tree {:x}",
                  mGPUChild ? "remote" : "in-process", layerTreeId);
  
@@ -49,7 +60,7 @@ index 4364cc84482a..ccbd8a3fab48 100644
    if (session) {
      // Nothing to do if controller gets a nullptr
      auto controller =
-@@ -1334,7 +1338,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
+@@ -1334,7 +1342,7 @@ already_AddRefed<CompositorSession> GPUProcessManager::CreateTopLevelCompositor(
      MOZ_ASSERT(controller);
      session->SetUiCompositorControllerChild(std::move(controller));
    }
@@ -58,7 +69,7 @@ index 4364cc84482a..ccbd8a3fab48 100644
  
    *aRetryOut = false;
    return session.forget();
-@@ -1415,7 +1419,9 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1415,7 +1423,9 @@ bool GPUProcessManager::CreateContentBridges(
      ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
      ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
      ipc::Endpoint<PRemoteMediaManagerChild>* aOutVideoManager,
@@ -69,7 +80,7 @@ index 4364cc84482a..ccbd8a3fab48 100644
    const uint32_t compositorManagerNamespace = AllocateNamespace();
    const uint32_t compositorBridgeNamespace = AllocateNamespace();
    const uint32_t imageBridgeNamespace = AllocateNamespace();
-@@ -1431,6 +1437,7 @@ bool GPUProcessManager::CreateContentBridges(
+@@ -1431,6 +1441,7 @@ bool GPUProcessManager::CreateContentBridges(
                    aChildId);
      return false;
    }
@@ -77,3 +88,27 @@ index 4364cc84482a..ccbd8a3fab48 100644
    // RemoteMediaManager is only supported in the GPU process, so we allow this
    // to be fallible.
    CreateContentRemoteMediaManager(aOtherProcess, aChildId, aOutVideoManager);
+@@ -1875,7 +1886,7 @@ void GPUProcessManager::SetAppInForeground(bool aInForeground) {
+   }
+ 
+   mAppInForeground = aInForeground;
+-#if defined(XP_WIN)
++#if defined(XP_WIN) || defined(XP_IOS)
+   SetProcessIsForeground();
+ #endif
+ 
+@@ -1925,6 +1936,14 @@ void GPUProcessManager::SetProcessIsForeground() {
+   setInformationProcess(processHandle, NtProcessInformationForeground,
+                         (PVOID)&foreground, sizeof(foreground));
+ }
++#elif defined(XP_IOS)
++void GPUProcessManager::SetProcessIsForeground() {
++  if (!mGPUChild) {
++    return;
++  }
++
++  (void)mGPUChild->SendSetProcessBackground(!mAppInForeground);
++}
+ #endif
+ 
+ RefPtr<PGPUChild::TestTriggerMetricsPromise>

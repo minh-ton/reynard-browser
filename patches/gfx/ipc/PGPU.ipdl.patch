@@ -1,0 +1,14 @@
+diff --git a/gfx/ipc/PGPU.ipdl b/gfx/ipc/PGPU.ipdl
+index 3bf5a8d24456..e60912fe58bc 100644
+--- a/gfx/ipc/PGPU.ipdl
++++ b/gfx/ipc/PGPU.ipdl
+@@ -84,6 +84,9 @@ parent:
+   async PreferenceUpdate(Pref pref);
+   async ScreenInformationChanged();
+   async NotifyBatteryInfo(BatteryInformation aBatteryInfo);
++#if defined(XP_IOS)
++  async SetProcessBackground(bool aIsBackground);
++#endif
+ 
+   // Create a new content-process compositor bridge.
+   async NewContentCompositorManager(Endpoint<PCompositorManagerParent> endpoint, ContentParentId childId, uint32_t aNamespace, uint32_t aContentBridgeNamespace);
