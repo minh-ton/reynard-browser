@@ -1,0 +1,33 @@
+diff --git a/dom/ipc/VsyncParentIOS.h b/dom/ipc/VsyncParentIOS.h
+new file mode 100644
+index 000000000000..65c3621e5eda
+--- /dev/null
++++ b/dom/ipc/VsyncParentIOS.h
+@@ -0,0 +1,27 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#ifndef mozilla_dom_ipc_VsyncParentIOS_h
++#define mozilla_dom_ipc_VsyncParentIOS_h
++
++#include <stdint.h>
++
++#include "mozilla/TimeStamp.h"
++
++namespace mozilla::dom {
++
++class VsyncParentIOS final {
++ public:
++  VsyncParentIOS() = delete;
++
++  static void Initialize();
++  static int32_t GetFrameRateDivisor(const TimeDuration& aVsyncRate);
++};
++
++}  // namespace mozilla::dom
++
++#endif  // mozilla_dom_ipc_VsyncParentIOS_h

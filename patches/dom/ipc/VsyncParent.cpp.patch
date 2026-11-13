@@ -1,0 +1,30 @@
+diff --git a/dom/ipc/VsyncParent.cpp b/dom/ipc/VsyncParent.cpp
+index de3d5084790f..2d9e6ad763c9 100644
+--- a/dom/ipc/VsyncParent.cpp
++++ b/dom/ipc/VsyncParent.cpp
+@@ -6,6 +6,10 @@
+ 
+ #include "nsThreadUtils.h"
+ 
++#ifdef MOZ_WIDGET_UIKIT
++#  include "VsyncParentIOS.h"
++#endif
++
+ namespace mozilla::dom {
+ 
+ VsyncParent::VsyncParent()
+@@ -52,6 +56,14 @@ void VsyncParent::DispatchVsyncEvent(const VsyncEvent& aVsync) {
+   // notification.
+   if (mObservingVsync && !mDestroyed) {
+     TimeDuration vsyncRate = mVsyncDispatcher->GetVsyncRate();
++#ifdef MOZ_WIDGET_UIKIT
++    int32_t divisor = VsyncParentIOS::GetFrameRateDivisor(vsyncRate);
++    if (++mVsyncSkipCounter < divisor) {
++      return;
++    }
++    mVsyncSkipCounter = 0;
++    vsyncRate = vsyncRate * divisor;
++#endif
+     (void)SendNotify(aVsync, vsyncRate.ToMilliseconds());
+   }
+ }

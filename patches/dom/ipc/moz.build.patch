@@ -1,0 +1,19 @@
+diff --git a/dom/ipc/moz.build b/dom/ipc/moz.build
+index 797fad22c65d..9df3b13a51ce 100644
+--- a/dom/ipc/moz.build
++++ b/dom/ipc/moz.build
+@@ -280,6 +280,14 @@ DEFINES["MOZ_APP_NAME"] = '"%s"' % CONFIG["MOZ_APP_NAME"]
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
+     DEFINES["MOZ_ENABLE_FREETYPE"] = True
+ 
++if CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
++    UNIFIED_SOURCES += [
++        "VsyncParentIOS.cpp",
++    ]
++    EXPORTS.mozilla.dom += [
++        "VsyncParentIOS.h",
++    ]
++
+ BROWSER_CHROME_MANIFESTS += [
+     "tests/browser.toml",
+     "tests/JSProcessActor/browser.toml",

@@ -1,0 +1,14 @@
+diff --git a/dom/ipc/VsyncParent.h b/dom/ipc/VsyncParent.h
+index 9336a88d742e..07a116947bdb 100644
+--- a/dom/ipc/VsyncParent.h
++++ b/dom/ipc/VsyncParent.h
+@@ -45,6 +45,9 @@ class VsyncParent final : public PVsyncParent, public VsyncObserver {
+   bool mDestroyed;
+   nsCOMPtr<nsIThread> mInitialThread;
+   RefPtr<VsyncDispatcher> mVsyncDispatcher;
++#ifdef MOZ_WIDGET_UIKIT
++  int32_t mVsyncSkipCounter = 0;
++#endif
+ };
+ 
+ }  // namespace mozilla::dom

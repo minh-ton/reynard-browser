@@ -1,0 +1,25 @@
+diff --git a/layout/build/nsLayoutStatics.cpp b/layout/build/nsLayoutStatics.cpp
+index 71d64d2c4eba..28948762c576 100644
+--- a/layout/build/nsLayoutStatics.cpp
++++ b/layout/build/nsLayoutStatics.cpp
+@@ -65,6 +65,9 @@
+ #ifdef XP_WIN
+ #  include "mozilla/widget/WinAudioSession.h"
+ #endif
++#ifdef MOZ_WIDGET_UIKIT
++#  include "mozilla/dom/VsyncParentIOS.h"
++#endif
+ #include "CubebUtils.h"
+ #include "DecoderDoctorLogger.h"
+ #include "MediaDecoder.h"
+@@ -225,6 +228,10 @@ nsresult nsLayoutStatics::Initialize() {
+ 
+   ProcessPriorityManager::Init();
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  VsyncParentIOS::Initialize();
++#endif
++
+   UIDirectionManager::Initialize();
+ 
+   CacheObserver::Init();
