@@ -20999,6 +20999,16 @@
         }
       }
     },
+    "Open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open"
+          }
+        }
+      }
+    },
     "Open Image in New Tab" : {
       "localizations" : {
         "cs" : {
@@ -21957,6 +21967,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已開啟的標籤頁"
+          }
+        }
+      }
+    },
+    "Open this page in another app?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open this page in another app?"
           }
         }
       }
