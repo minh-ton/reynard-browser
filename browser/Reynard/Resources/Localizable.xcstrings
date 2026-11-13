@@ -25509,6 +25509,16 @@
         }
       }
     },
+    "Restart to Finish Updating" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart to Finish Updating"
+          }
+        }
+      }
+    },
     "Restricted" : {
       "localizations" : {
         "cs" : {

@@ -14,8 +14,9 @@ public struct AddonErrorPresentation {
 }
 
 public struct AddonErrorPresenter {
-    public static func updateRequiresPermissions(_ error: Error) -> Bool {
-        return normalizeCode(installErrorDetails(from: error).code) == "ERROR_POSTPONED"
+    public static func updateIsPostponed(_ error: Error) -> Bool {
+        let value = Mirror(reflecting: error).descendant("value") as? [String: Any?]
+        return (value?["state"] as? NSNumber)?.intValue == 7
     }
     
     public static func installErrorPresentation(
@@ -180,8 +181,6 @@ public struct AddonErrorPresenter {
             return "ERROR_ADMIN_INSTALL_ONLY"
         case "-14", "ERROR_SOFT_BLOCKED":
             return "ERROR_SOFT_BLOCKED"
-        case "-12", "ERROR_POSTPONED":
-            return "ERROR_POSTPONED"
         case "-100", "ERROR_USER_CANCELED", "ERROR_USER_CANCELLED":
             return "ERROR_USER_CANCELED"
         default:
