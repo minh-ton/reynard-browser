@@ -1,0 +1,32 @@
+diff --git a/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs b/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
+index 2ff845c35866..3476eee498b2 100644
+--- a/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
++++ b/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
+@@ -35,6 +35,8 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+ import { isEmbeddedPdfLoad } from "resource://gre/modules/pdfjs.sys.mjs";
+ 
++const isMobilePlatform = ["android", "ios"].includes(AppConstants.platform);
++
+ // Non-pdfjs preferences to get when the viewer is created and to observe.
+ const toolbarDensityPref = "browser.uidensity";
+ const caretBrowsingModePref = "accessibility.browsewithcaret";
+@@ -102,8 +104,7 @@ function getDOMWindow(aChannel, aPrincipal) {
+ 
+ function getActor(window) {
+   try {
+-    const actorName =
+-      AppConstants.platform === "android" ? "GeckoViewPdfJs" : "PdfJs";
++    const actorName = isMobilePlatform ? "GeckoViewPdfJs" : "PdfJs";
+     return window.windowGlobalChild.getActor(actorName);
+   } catch (ex) {
+     return null;
+@@ -775,7 +776,7 @@ class ChromeActions {
+   }
+ 
+   isMobile() {
+-    return AppConstants.platform === "android";
++    return isMobilePlatform;
+   }
+ 
+   async getNimbusExperimentData() {

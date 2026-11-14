@@ -1,0 +1,13 @@
+diff --git a/toolkit/components/pdfjs/jar.mn b/toolkit/components/pdfjs/jar.mn
+index c084d6338866..17500da72b25 100644
+--- a/toolkit/components/pdfjs/jar.mn
++++ b/toolkit/components/pdfjs/jar.mn
+@@ -20,7 +20,7 @@ pdfjs.jar:
+  content/web/wasm/jbig2.wasm (content/web/wasm/jbig2.wasm)
+  content/web/wasm/jbig2_nowasm_fallback.js (content/web/wasm/jbig2_nowasm_fallback.js)
+  content/web/iccs/ (content/web/iccs/*.icc)
+-#ifdef ANDROID
++#if defined(ANDROID) || defined(XP_IOS)
+  content/GeckoViewPdfJsParent.sys.mjs (content/GeckoViewPdfJsParent.sys.mjs)
+  content/GeckoViewPdfJsChild.sys.mjs (content/GeckoViewPdfJsChild.sys.mjs)
+  content/web/viewer.html (content/web/viewer-geckoview.html)
