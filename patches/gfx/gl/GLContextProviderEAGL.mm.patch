@@ -1,0 +1,31 @@
+diff --git a/gfx/gl/GLContextProviderEAGL.mm b/gfx/gl/GLContextProviderEAGL.mm
+index 8a6f148dba39..848cca7cfa13 100644
+--- a/gfx/gl/GLContextProviderEAGL.mm
++++ b/gfx/gl/GLContextProviderEAGL.mm
+@@ -59,17 +59,18 @@
+   return [EAGLContext currentContext] == mContext;
+ }
+ 
+-static PRFuncPtr GLAPIENTRY GetLoadedProcAddress(const char* const name) {
+-  PRLibrary* lib = nullptr;
+-  const auto& ret = PR_FindFunctionSymbolAndLibrary(name, &lib);
+-  if (lib) {
+-    PR_UnloadLibrary(lib);
+-  }
+-  return ret;
++static PRLibrary* OpenGLESLibrary() {
++  static PRLibrary* sLibrary =
++      PR_LoadLibrary("/System/Library/Frameworks/OpenGLES.framework/OpenGLES");
++  return sLibrary;
+ }
+ 
+ Maybe<SymbolLoader> GLContextEAGL::GetSymbolLoader() const {
+-  return Some(SymbolLoader(&GetLoadedProcAddress));
++  PRLibrary* lib = OpenGLESLibrary();
++  if (!lib) {
++    return Nothing();
++  }
++  return Some(SymbolLoader(*lib));
+ }
+ 
+ bool GLContextEAGL::IsDoubleBuffered() const { return true; }
