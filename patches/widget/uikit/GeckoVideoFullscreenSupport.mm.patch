@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoVideoFullscreenSupport.mm b/widget/uikit/GeckoVideoFullscreenSupport.mm
 new file mode 100644
-index 000000000000..26b88bc2dcc7
+index 000000000000..e3ebd74da109
 --- /dev/null
 +++ b/widget/uikit/GeckoVideoFullscreenSupport.mm
-@@ -0,0 +1,1110 @@
+@@ -0,0 +1,1125 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -238,7 +238,11 @@ index 000000000000..26b88bc2dcc7
 +}
 +
 +- (BOOL)isPictureInPicturePossible {
-+  return YES;
++  return _contentDimensions.width > 0 && _contentDimensions.height > 0;
++}
++
+++ (NSSet*)keyPathsForValuesAffectingPictureInPicturePossible {
++  return [NSSet setWithObject:@"contentDimensions"];
 +}
 +
 +- (BOOL)hasEnabledAudio {
@@ -830,6 +834,13 @@ index 000000000000..26b88bc2dcc7
 +    return;
 +  }
 +
++  if (mState == GeckoVideoFullscreenStatePictureInPicture) {
++    [self startVideoFrames:state];
++    [self updateWithState:state];
++    [mPlayerViewController stopPictureInPicture];
++    return;
++  }
++
 +  if (mState == GeckoVideoFullscreenStateNone) {
 +    UIView* geckoView = (UIView*)mGeckoChild->GetNativeData(NS_NATIVE_WIDGET);
 +    if (![self openPlayerInScene:geckoView.window.windowScene video:state]) {
@@ -898,6 +909,12 @@ index 000000000000..26b88bc2dcc7
 +  mWindow.hidden = NO;
 +
 +  mFrameTarget = new VideoFrameTarget(mVideoLayer);
++  [self startVideoFrames:video];
++  [self setPageHidden:YES];
++  return YES;
++}
++
++- (void)startVideoFrames:(NSDictionary*)video {
 +  mGeckoChild->StartVideoFrames(
 +      [video[@"pid"] intValue], [video[@"videoHandle"] unsignedLongLongValue],
 +      [target = mFrameTarget](CFTypeRefPtr<IOSurfaceRef> aSurface) {
@@ -905,8 +922,6 @@ index 000000000000..26b88bc2dcc7
 +            "VideoFrameTarget::ShowFrame",
 +            [target, aSurface] { target->ShowFrame(aSurface); }));
 +      });
-+  [self setPageHidden:YES];
-+  return YES;
 +}
 +
 +- (void)updateWithState:(NSDictionary*)state {

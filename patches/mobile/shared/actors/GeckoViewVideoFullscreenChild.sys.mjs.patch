@@ -1,9 +1,9 @@
 diff --git a/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
 new file mode 100644
-index 000000000000..37d9f7cf6aa1
+index 000000000000..bdbf4f95d0a9
 --- /dev/null
 +++ b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,206 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -60,6 +60,30 @@ index 000000000000..37d9f7cf6aa1
 +        }
 +        break;
 +      }
++      case "MozStopPictureInPicture": {
++        const video = this.#video;
++        if (aEvent.target !== video) {
++          break;
++        }
++
++        this.contentWindow.requestAnimationFrame(() =>
++          Services.tm.dispatchToMainThread(() => {
++            if (video !== this.#video) {
++              return;
++            }
++
++            if (video.isConnected) {
++              this.#cloneVisually();
++              return;
++            }
++
++            this.sendAsyncMessage("GeckoView:VideoFullscreen:Exit", {
++              videoRect: null,
++            });
++          })
++        );
++        break;
++      }
 +      default:
 +        if (aEvent.type === "pagehide" || !this.#video.isConnected) {
 +          this.sendAsyncMessage("GeckoView:VideoFullscreen:Exit", {
@@ -88,12 +112,9 @@ index 000000000000..37d9f7cf6aa1
 +    }
 +
 +    switch (name) {
-+      case "GeckoView:VideoFullscreen:PictureInPicture": {
-+        const doc = this.document.implementation.createHTMLDocument("");
-+        const target = doc.body.appendChild(doc.createElement("video"));
-+        video.cloneElementVisually(target).catch(() => {});
++      case "GeckoView:VideoFullscreen:PictureInPicture":
++        this.#cloneVisually();
 +        break;
-+      }
 +      case "GeckoView:VideoFullscreen:Restore":
 +        video.stopCloningElementVisually();
 +        this.#fullscreenElement.requestFullscreen();
@@ -120,8 +141,18 @@ index 000000000000..37d9f7cf6aa1
 +    const video = lazy.MediaUtils.findVideoElement(
 +      this.document.fullscreenElement
 +    );
-+    if (!video || video === this.#video) {
++    if (!video) {
 +      return;
++    }
++
++    const previousVideo = this.#video;
++    const inPictureInPicture = previousVideo?.isCloningElementVisually;
++    if (video === previousVideo && !inPictureInPicture) {
++      return;
++    }
++
++    if (video !== previousVideo && inPictureInPicture) {
++      previousVideo.pause();
 +    }
 +
 +    this.#detach();
@@ -150,6 +181,12 @@ index 000000000000..37d9f7cf6aa1
 +      video.removeEventListener(type, this);
 +    }
 +    video.documentGlobal?.removeEventListener("pagehide", this);
++  }
++
++  #cloneVisually() {
++    const doc = this.document.implementation.createHTMLDocument("");
++    const target = doc.body.appendChild(doc.createElement("video"));
++    this.#video.cloneElementVisually(target).catch(() => { });
 +  }
 +
 +  #state() {
