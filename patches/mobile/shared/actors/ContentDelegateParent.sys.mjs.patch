@@ -1,0 +1,23 @@
+diff --git a/mobile/shared/actors/ContentDelegateParent.sys.mjs b/mobile/shared/actors/ContentDelegateParent.sys.mjs
+index 0b34e150741a..b2277d7d3283 100644
+--- a/mobile/shared/actors/ContentDelegateParent.sys.mjs
++++ b/mobile/shared/actors/ContentDelegateParent.sys.mjs
+@@ -20,11 +20,18 @@ export class ContentDelegateParent extends GeckoViewActorParent {
+         if (!this.#hasBeenDestroyed() && !this.#requestOrigin) {
+           this.#requestOrigin = this;
+         }
++        this.eventDispatcher.sendRequest("GeckoView:VideoFullscreen:Cancel");
+         this.window.windowUtils.remoteFrameFullscreenReverted();
+         return null;
+       }
+ 
+       case "GeckoView:DOMFullscreenRequest": {
++        if (aMsg.data.videoRect) {
++          this.eventDispatcher.sendRequest(
++            "GeckoView:VideoFullscreen:Prepare",
++            { ...aMsg.data, pid: this.manager.osPid }
++          );
++        }
+         this.#requestOrigin = this;
+         this.window.windowUtils.remoteFrameFullscreenChanged(this.browser);
+         return null;

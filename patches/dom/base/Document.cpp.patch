@@ -1,8 +1,39 @@
 diff --git a/dom/base/Document.cpp b/dom/base/Document.cpp
-index dbc92f8446f9..9ce182ceb2c0 100644
+index dbc92f8446f9..c95945c92c5d 100644
 --- a/dom/base/Document.cpp
 +++ b/dom/base/Document.cpp
-@@ -17552,9 +17552,29 @@ void Document::AddPendingFullscreenEvent(
+@@ -17437,12 +17437,13 @@ void Document::RequestFullscreenInContentProcess(
+   }
+ 
+   auto fullscreenKeyboardLock = aRequest->mFullscreenKeyboardLock;
++  RefPtr<Element> element = aRequest->Element();
+   PendingFullscreenChangeList::Add(std::move(aRequest));
+   // If we are not the top level process, dispatch an event to make
+   // our parent process go fullscreen first.
+   Dispatch(NS_NewRunnableFunction(
+       "Document::RequestFullscreenInContentProcess",
+-      [self = RefPtr{this}, fullscreenKeyboardLock] {
++      [self = RefPtr{this}, element, fullscreenKeyboardLock] {
+         if (!self->HasPendingFullscreenRequests()) {
+           return;
+         }
+@@ -17462,7 +17463,14 @@ void Document::RequestFullscreenInContentProcess(
+                                /* aCancelable */ false, detail);
+         event->SetTrusted(true);
+         event->WidgetEventPtr()->mFlags.mOnlyChromeDispatch = true;
+-        self->DispatchEvent(*event);
++
++        // Dispatch from the element so chrome knows what goes fullscreen,
++        // unless the element left the document and can't reach chrome.
++        if (element->GetComposedDoc() == self) {
++          element->DispatchEvent(*event);
++        } else {
++          self->DispatchEvent(*event);
++        }
+       }));
+ }
+ 
+@@ -17552,9 +17560,29 @@ void Document::AddPendingFullscreenEvent(
  // https://fullscreen.spec.whatwg.org/#run-the-fullscreen-steps
  void Document::RunFullscreenSteps() {
    auto events = std::move(mPendingFullscreenEvents);

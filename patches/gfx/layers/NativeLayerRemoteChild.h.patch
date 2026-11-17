@@ -1,0 +1,30 @@
+diff --git a/gfx/layers/NativeLayerRemoteChild.h b/gfx/layers/NativeLayerRemoteChild.h
+index eca4b52c8ca6..d1b2b659abe3 100644
+--- a/gfx/layers/NativeLayerRemoteChild.h
++++ b/gfx/layers/NativeLayerRemoteChild.h
+@@ -6,15 +6,24 @@
+ #define mozilla_layers_NativeLayerRemoteChild_h
+ 
+ #include "mozilla/layers/PNativeLayerRemoteChild.h"
++#include "nsITimer.h"
+ 
+ namespace mozilla {
+ namespace layers {
+ 
+ class NativeLayerRemoteChild : public PNativeLayerRemoteChild {
+-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(NativeLayerRemoteChild);
++  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(NativeLayerRemoteChild, override);
++
++  mozilla::ipc::IPCResult RecvStartVideoFrames(const base::ProcessId& aPid,
++                                               const uint64_t& aHandle);
++  mozilla::ipc::IPCResult RecvStopVideoFrames();
+ 
+  protected:
+   ~NativeLayerRemoteChild() = default;
++
++  void ActorDestroy(ActorDestroyReason aWhy) override;
++
++  nsCOMPtr<nsITimer> mVideoFrameTimer;
+ };
+ 
+ }  // namespace layers

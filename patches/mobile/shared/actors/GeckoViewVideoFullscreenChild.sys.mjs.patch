@@ -1,0 +1,175 @@
+diff --git a/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
+new file mode 100644
+index 000000000000..37d9f7cf6aa1
+--- /dev/null
++++ b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
+@@ -0,0 +1,169 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++import { GeckoViewActorChild } from "resource://gre/modules/GeckoViewActorChild.sys.mjs";
++
++const lazy = {};
++
++ChromeUtils.defineESModuleGetters(lazy, {
++  MediaUtils: "resource://gre/modules/MediaUtils.sys.mjs",
++});
++
++const VIDEO_EVENTS = [
++  "durationchange",
++  "emptied",
++  "loadedmetadata",
++  "pause",
++  "play",
++  "progress",
++  "ratechange",
++  "resize",
++  "seeked",
++  "seeking",
++  "timeupdate",
++  "volumechange",
++];
++
++export class GeckoViewVideoFullscreenChild extends GeckoViewActorChild {
++  #video = null;
++  #fullscreenElement = null;
++
++  didDestroy() {
++    this.#detach();
++  }
++
++  handleEvent(aEvent) {
++    switch (aEvent.type) {
++      case "MozDOMFullscreen:Entered":
++        this.#attach();
++        break;
++      case "MozDOMFullscreen:Exited": {
++        const video = this.#video;
++        if (video) {
++          this.contentWindow.requestAnimationFrame(() => {
++            this.sendAsyncMessage("GeckoView:VideoFullscreen:Exit", {
++              videoRect: video.isConnected
++                ? lazy.MediaUtils.getWidgetRect(video)
++                : null,
++            });
++          });
++        }
++        break;
++      }
++      default:
++        if (aEvent.type === "pagehide" || !this.#video.isConnected) {
++          this.sendAsyncMessage("GeckoView:VideoFullscreen:Exit", {
++            videoRect: null,
++          });
++          break;
++        }
++
++        this.sendAsyncMessage(
++          "GeckoView:VideoFullscreen:Update",
++          this.#state()
++        );
++        break;
++    }
++  }
++
++  receiveMessage({ name, data }) {
++    if (name === "GeckoView:VideoFullscreen:Close") {
++      this.#detach();
++      return;
++    }
++
++    const video = this.#video;
++    if (!video) {
++      return;
++    }
++
++    switch (name) {
++      case "GeckoView:VideoFullscreen:PictureInPicture": {
++        const doc = this.document.implementation.createHTMLDocument("");
++        const target = doc.body.appendChild(doc.createElement("video"));
++        video.cloneElementVisually(target).catch(() => {});
++        break;
++      }
++      case "GeckoView:VideoFullscreen:Restore":
++        video.stopCloningElementVisually();
++        this.#fullscreenElement.requestFullscreen();
++        break;
++      case "GeckoView:VideoFullscreen:Play":
++        video.play();
++        break;
++      case "GeckoView:VideoFullscreen:Pause":
++        video.pause();
++        break;
++      case "GeckoView:VideoFullscreen:Seek":
++        video.currentTime = data;
++        break;
++      case "GeckoView:VideoFullscreen:SetRate":
++        video.playbackRate = data;
++        break;
++      case "GeckoView:VideoFullscreen:SetMuted":
++        video.muted = data;
++        break;
++    }
++  }
++
++  #attach() {
++    const video = lazy.MediaUtils.findVideoElement(
++      this.document.fullscreenElement
++    );
++    if (!video || video === this.#video) {
++      return;
++    }
++
++    this.#detach();
++    this.#video = video;
++    this.#fullscreenElement = this.document.fullscreenElement;
++    for (const type of VIDEO_EVENTS) {
++      video.addEventListener(type, this);
++    }
++    video.documentGlobal.addEventListener("pagehide", this);
++    this.sendAsyncMessage("GeckoView:VideoFullscreen:Enter", {
++      ...this.#state(),
++      videoHandle: video.imageContainerHandle,
++    });
++  }
++
++  #detach() {
++    const video = this.#video;
++    if (!video) {
++      return;
++    }
++
++    this.#video = null;
++    this.#fullscreenElement = null;
++    video.stopCloningElementVisually();
++    for (const type of VIDEO_EVENTS) {
++      video.removeEventListener(type, this);
++    }
++    video.documentGlobal?.removeEventListener("pagehide", this);
++  }
++
++  #state() {
++    const video = this.#video;
++    const { buffered, seekable } = video;
++    const seekableRanges = [];
++    for (let i = 0; i < seekable.length; i++) {
++      seekableRanges.push([seekable.start(i), seekable.end(i)]);
++    }
++
++    return {
++      currentTime: video.currentTime,
++      duration: video.duration,
++      paused: video.paused,
++      playbackRate: video.playbackRate,
++      muted: video.muted,
++      videoWidth: video.videoWidth,
++      videoHeight: video.videoHeight,
++      bufferedTime: buffered.length ? buffered.end(buffered.length - 1) : 0,
++      seekable: seekableRanges,
++    };
++  }
++}

@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/moz.build b/widget/uikit/moz.build
-index 3f86e230427a..fd216e214f72 100644
+index 3f86e230427a..096b3e3923bb 100644
 --- a/widget/uikit/moz.build
 +++ b/widget/uikit/moz.build
-@@ -8,35 +8,61 @@ with Files("**"):
+@@ -8,35 +8,62 @@ with Files("**"):
  with Files("*TextInput*"):
      BUG_COMPONENT = ("Core", "DOM: UI Events & Focus Handling")
  
@@ -43,6 +43,7 @@ index 3f86e230427a..fd216e214f72 100644
 +    "GeckoPointerSupport.mm",
 +    "GeckoTextDragSupport.mm",
 +    "GeckoTouchSupport.mm",
++    "GeckoVideoFullscreenSupport.mm",
 +    "GeckoViewPrintSupport.mm",
      "GfxInfo.cpp",
      "IOSBridge.mm",
@@ -64,10 +65,11 @@ index 3f86e230427a..fd216e214f72 100644
      "UIKitUtils.mm",
  ]
  
-@@ -55,6 +81,9 @@ XPCOM_MANIFESTS += [
+@@ -55,6 +82,10 @@ XPCOM_MANIFESTS += [
  ]
  
  OS_LIBS += [
++    "-framework AVKit",
 +    "-framework CoreGraphics",
 +    "-framework CoreHaptics",
 +    "-framework GameController",

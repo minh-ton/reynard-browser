@@ -1,0 +1,18 @@
+diff --git a/gfx/layers/composite/GPUVideoTextureHost.cpp b/gfx/layers/composite/GPUVideoTextureHost.cpp
+index f8a4e6ecb119..68bf6ca15690 100644
+--- a/gfx/layers/composite/GPUVideoTextureHost.cpp
++++ b/gfx/layers/composite/GPUVideoTextureHost.cpp
+@@ -226,6 +226,13 @@ BufferTextureHost* GPUVideoTextureHost::AsBufferTextureHost() {
+   return nullptr;
+ }
+ 
++MacIOSurfaceTextureHostOGL* GPUVideoTextureHost::AsMacIOSurfaceTextureHost() {
++  if (EnsureWrappedTextureHost()) {
++    return EnsureWrappedTextureHost()->AsMacIOSurfaceTextureHost();
++  }
++  return nullptr;
++}
++
+ DXGITextureHostD3D11* GPUVideoTextureHost::AsDXGITextureHostD3D11() {
+   if (EnsureWrappedTextureHost()) {
+     return EnsureWrappedTextureHost()->AsDXGITextureHostD3D11();

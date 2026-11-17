@@ -1,8 +1,16 @@
 diff --git a/mobile/shared/actors/ContentDelegateChild.sys.mjs b/mobile/shared/actors/ContentDelegateChild.sys.mjs
-index 2bf88b9e9e52..2d2a200d45e3 100644
+index 2bf88b9e9e52..781aa897e31c 100644
 --- a/mobile/shared/actors/ContentDelegateChild.sys.mjs
 +++ b/mobile/shared/actors/ContentDelegateChild.sys.mjs
-@@ -198,6 +198,8 @@ export class ContentDelegateChild extends GeckoViewActorChild {
+@@ -8,6 +8,7 @@ const lazy = {};
+ 
+ ChromeUtils.defineESModuleGetters(lazy, {
+   ManifestObtainer: "moz-src:///dom/manifest/ManifestObtainer.sys.mjs",
++  MediaUtils: "resource://gre/modules/MediaUtils.sys.mjs",
+   SelectionUtils: "resource://gre/modules/SelectionUtils.sys.mjs",
+   SpellCheckHelper: "resource://gre/modules/InlineSpellChecker.sys.mjs",
+ });
+@@ -198,6 +199,8 @@ export class ContentDelegateChild extends GeckoViewActorChild {
                (node.innerText &&
                  node.innerText.substring(0, MAX_TEXT_LENGTH)) ||
                null,
@@ -11,3 +19,16 @@ index 2bf88b9e9e52..2d2a200d45e3 100644
            };
  
            this.sendAsyncMessage("GeckoView:ContextMenu", msg);
+@@ -206,7 +209,11 @@ export class ContentDelegateChild extends GeckoViewActorChild {
+         break;
+       }
+       case "MozDOMFullscreen:Request": {
+-        this.sendAsyncMessage("GeckoView:DOMFullscreenRequest");
++        const video = lazy.MediaUtils.findVideoElement(aEvent.composedTarget);
++        this.sendAsyncMessage("GeckoView:DOMFullscreenRequest", {
++          videoRect: video && lazy.MediaUtils.getWidgetRect(video),
++          videoHandle: video?.imageContainerHandle,
++        });
+         break;
+       }
+       case "MozDOMFullscreen:Entered":

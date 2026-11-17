@@ -1349,6 +1349,15 @@ extension TabManagerImplementation: ContentDelegate {
         )
     }
     
+    func onPictureInPictureRestore(session: GeckoSession) {
+        guard selectedTab?.session !== session,
+              let location = tabLocation(for: session) else {
+            return
+        }
+        
+        selectTab(at: location.index, mode: location.mode)
+    }
+    
     func onMetaViewportFitChange(session: GeckoSession, viewportFit: String) {}
     
     func onProductUrl(session: GeckoSession) {}

@@ -1,0 +1,33 @@
+diff --git a/mobile/shared/modules/geckoview/MediaUtils.sys.mjs b/mobile/shared/modules/geckoview/MediaUtils.sys.mjs
+index 834b5dcaeae9..4d79213c06ae 100644
+--- a/mobile/shared/modules/geckoview/MediaUtils.sys.mjs
++++ b/mobile/shared/modules/geckoview/MediaUtils.sys.mjs
+@@ -15,9 +15,9 @@ export const MediaUtils = {
+       seekable: !!aElement.seekable,
+       audioTrackCount:
+         (aElement.audioTracks?.length ??
+-        aElement.mozHasAudio ??
+-        aElement.webkitAudioDecodedByteCount ??
+-        MediaUtils.isAudioElement(aElement))
++          aElement.mozHasAudio ??
++          aElement.webkitAudioDecodedByteCount ??
++          MediaUtils.isAudioElement(aElement))
+           ? 1
+           : 0,
+       videoTrackCount:
+@@ -76,4 +76,15 @@ export const MediaUtils = {
+     }
+     return null;
+   },
++
++  getWidgetRect(aElement) {
++    const { left, top, width, height } = aElement.getBoundingClientRect();
++    const rect = aElement.documentGlobal.windowUtils.toTopLevelWidgetRect(
++      left,
++      top,
++      width,
++      height
++    );
++    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
++  },
+ };

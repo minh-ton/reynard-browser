@@ -1,0 +1,16 @@
+diff --git a/dom/webidl/HTMLVideoElement.webidl b/dom/webidl/HTMLVideoElement.webidl
+index 2d76424618fa..0371e347d52c 100644
+--- a/dom/webidl/HTMLVideoElement.webidl
++++ b/dom/webidl/HTMLVideoElement.webidl
+@@ -67,6 +67,11 @@ partial interface HTMLVideoElement {
+   // True if the video has an audio track available.
+   readonly attribute boolean mozHasAudio;
+ 
++  // Identifies the frames of this <video> in the compositor, so that the iOS
++  // native video player can show them without compositing the page.
++  [ChromeOnly]
++    readonly attribute unsigned long long imageContainerHandle;
++
+   // Clones the frames playing in this <video> to the target. Cloning ends
+   // when either node is removed from their DOM trees. Throws if one or
+   // both <video> elements are not attached to a DOM tree.

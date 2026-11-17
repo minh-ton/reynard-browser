@@ -1,0 +1,28 @@
+diff --git a/widget/uikit/GeckoVideoFullscreenSupport.h b/widget/uikit/GeckoVideoFullscreenSupport.h
+new file mode 100644
+index 000000000000..513e87d2c316
+--- /dev/null
++++ b/widget/uikit/GeckoVideoFullscreenSupport.h
+@@ -0,0 +1,22 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#ifndef mozilla_widget_GeckoVideoFullscreenSupport_h
++#define mozilla_widget_GeckoVideoFullscreenSupport_h
++
++#import <Foundation/Foundation.h>
++
++class nsWindow;
++
++@interface GeckoVideoFullscreenSupport : NSObject
++
++- (instancetype)initWithGeckoChild:(nsWindow*)geckoChild;
++- (void)widgetDestroyed;
++
++@end
++
++#endif

@@ -1,0 +1,1116 @@
+diff --git a/widget/uikit/GeckoVideoFullscreenSupport.mm b/widget/uikit/GeckoVideoFullscreenSupport.mm
+new file mode 100644
+index 000000000000..26b88bc2dcc7
+--- /dev/null
++++ b/widget/uikit/GeckoVideoFullscreenSupport.mm
+@@ -0,0 +1,1110 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++#import "GeckoVideoFullscreenSupport.h"
++
++#import <AVKit/AVKit.h>
++#include <objc/message.h>
++#include <objc/runtime.h>
++
++#include <algorithm>
++#include <cmath>
++
++#include "jsapi.h"
++#include "mozilla/dom/ScriptSettings.h"
++#include "mozilla/widget/EventDispatcher.h"
++#include "nsWindow.h"
++#include "xpcpublic.h"
++
++using namespace mozilla;
++using namespace mozilla::widget;
++
++// AVKit SPI that WebKit uses for its fullscreen video player.
++
++typedef NS_ENUM(NSInteger, AVPlayerControllerStatus) {
++  AVPlayerControllerStatusUnknown,
++  AVPlayerControllerStatusLoading,
++  AVPlayerControllerStatusReadyToPlay,
++  AVPlayerControllerStatusFailed
++};
++
++typedef NS_ENUM(NSInteger, AVPlayerViewControllerExitFullScreenReason) {
++  AVPlayerViewControllerExitFullScreenReasonDoneButtonTapped,
++  AVPlayerViewControllerExitFullScreenReasonFullScreenButtonTapped,
++  AVPlayerViewControllerExitFullScreenReasonPinchGestureHandled,
++  AVPlayerViewControllerExitFullScreenReasonRemoteControlStopEventReceived,
++  AVPlayerViewControllerExitFullScreenReasonPictureInPictureStarted
++};
++
++@interface AVValueTiming : NSObject
+++ (AVValueTiming*)valueTimingWithAnchorValue:(double)anchorValue
++                             anchorTimeStamp:(NSTimeInterval)timeStamp
++                                        rate:(double)rate;
+++ (NSTimeInterval)currentTimeStamp;
++@property(nonatomic, readonly) double currentValue;
++@end
++
++@interface AVPlayerController : NSObject
++@end
++
++@interface __AVPlayerLayerView : UIView
++@property(nonatomic, readonly) AVPlayerLayer* playerLayer;
++@end
++
++@interface AVPlayerViewController (WebKitOnly)
++- (instancetype)initWithPlayerLayerView:(__AVPlayerLayerView*)playerLayerView;
++- (void)setPlayerController:(AVPlayerController*)playerController;
++- (void)enterFullScreenAnimated:(BOOL)animated
++              completionHandler:
++                  (void (^)(BOOL success, NSError* error))completionHandler;
++- (void)exitFullScreenAnimated:(BOOL)animated
++             completionHandler:
++                 (void (^)(BOOL success, NSError* error))completionHandler;
++- (void)stopPictureInPicture;
++@end
++
++static constexpr char kPrepareEvent[] = "GeckoView:VideoFullscreen:Prepare";
++static constexpr char kEnterEvent[] = "GeckoView:VideoFullscreen:Enter";
++static constexpr char kUpdateEvent[] = "GeckoView:VideoFullscreen:Update";
++static constexpr char kExitEvent[] = "GeckoView:VideoFullscreen:Exit";
++static constexpr char kCancelEvent[] = "GeckoView:VideoFullscreen:Cancel";
++
++typedef NS_ENUM(NSInteger, GeckoVideoFullscreenState) {
++  GeckoVideoFullscreenStateNone,
++  GeckoVideoFullscreenStatePrepared,
++  GeckoVideoFullscreenStateEntering,
++  GeckoVideoFullscreenStateEntered,
++  GeckoVideoFullscreenStateExiting,
++  GeckoVideoFullscreenStatePictureInPicture
++};
++
++@interface GeckoVideoFullscreenSupport () <AVPlayerViewControllerDelegate>
++- (void)prepareWithData:(NSDictionary*)data;
++- (void)enterWithState:(NSDictionary*)state;
++- (void)updateWithState:(NSDictionary*)state;
++- (void)routeVideoToLayer:(CALayer*)layer;
++- (void)exitToRect:(NSDictionary*)rect;
++- (void)cancelPrepared;
++- (void)play;
++- (void)pause;
++- (void)seekToTime:(double)time;
++- (void)setPlaybackRate:(double)rate;
++- (void)setMuted:(BOOL)muted;
++@end
++
++@interface GeckoAVPlayerController : NSObject
++
++- (instancetype)initWithSupport:(GeckoVideoFullscreenSupport*)support;
++- (void)updateWithState:(NSDictionary*)state;
++
++@property(nonatomic, assign) GeckoVideoFullscreenSupport* support;
++@property(nonatomic, readonly) AVPlayerController* playerControllerProxy;
++@property(nonatomic, readonly) BOOL canPlay;
++@property(nonatomic, readonly) BOOL canPause;
++@property(nonatomic, readonly) BOOL canTogglePlayback;
++@property(nonatomic, readonly) BOOL canSeek;
++@property(nonatomic, readonly) BOOL allowsPictureInPicture;
++@property(nonatomic, readonly, getter=isPictureInPicturePossible)
++    BOOL pictureInPicturePossible;
++@property(nonatomic, readonly) BOOL hasEnabledAudio;
++@property(nonatomic, readonly) BOOL hasEnabledVideo;
++@property(nonatomic, readonly) BOOL hasVideo;
++@property(nonatomic, readonly) BOOL hasLiveStreamingContent;
++@property(nonatomic, readonly) AVPlayerControllerStatus status;
++@property(nonatomic) NSTimeInterval contentDuration;
++@property(nonatomic) NSTimeInterval contentDurationWithinEndTimes;
++@property(nonatomic) CGSize contentDimensions;
++@property(nonatomic, retain) AVValueTiming* timing;
++@property(nonatomic, retain) NSArray* loadedTimeRanges;
++@property(nonatomic, retain) NSArray* seekableTimeRanges;
++@property(nonatomic) double rate;
++@property(nonatomic) double defaultPlaybackRate;
++@property(nonatomic, getter=isPlaying) BOOL playing;
++@property(nonatomic, getter=isMuted) BOOL muted;
++@property(nonatomic, readonly) BOOL isScrubbing;
++@property(nonatomic, readonly) NSTimeInterval minTime;
++@property(nonatomic, readonly) NSTimeInterval maxTime;
++@property(nonatomic) NSTimeInterval currentTimeWithinEndTimes;
++
++@end
++
++@implementation GeckoAVPlayerController {
++  double _rate;
++  double _defaultPlaybackRate;
++  BOOL _muted;
++  BOOL _isScrubbing;
++}
++
++- (instancetype)initWithSupport:(GeckoVideoFullscreenSupport*)support {
++  if ((self = [super init])) {
++    _support = support;
++    _playerControllerProxy = [[AVPlayerController alloc] init];
++  }
++  return self;
++}
++
++- (void)dealloc {
++  [_playerControllerProxy release];
++  [_timing release];
++  [_loadedTimeRanges release];
++  [_seekableTimeRanges release];
++  [super dealloc];
++}
++
++- (id)forwardingTargetForSelector:(SEL)selector {
++  return _playerControllerProxy;
++}
++
++- (void)updateWithState:(NSDictionary*)state {
++  double duration = [state[@"duration"] doubleValue];
++  self.contentDuration = duration;
++  self.contentDurationWithinEndTimes = duration;
++  self.contentDimensions = CGSizeMake([state[@"videoWidth"] doubleValue],
++                                      [state[@"videoHeight"] doubleValue]);
++
++  double playbackRate = [state[@"playbackRate"] doubleValue];
++  if (_defaultPlaybackRate != playbackRate) {
++    [self willChangeValueForKey:@"defaultPlaybackRate"];
++    _defaultPlaybackRate = playbackRate;
++    [self didChangeValueForKey:@"defaultPlaybackRate"];
++  }
++
++  double rate = [state[@"paused"] boolValue] ? 0 : playbackRate;
++  if (_rate != rate) {
++    [self willChangeValueForKey:@"rate"];
++    _rate = rate;
++    [self didChangeValueForKey:@"rate"];
++  }
++
++  BOOL muted = [state[@"muted"] boolValue];
++  if (_muted != muted) {
++    [self willChangeValueForKey:@"muted"];
++    _muted = muted;
++    [self didChangeValueForKey:@"muted"];
++  }
++
++  if (!_isScrubbing) {
++    NSTimeInterval anchorTimeStamp =
++        _rate ? [AVValueTiming currentTimeStamp] : NAN;
++    self.timing = [AVValueTiming
++        valueTimingWithAnchorValue:[state[@"currentTime"] doubleValue]
++                   anchorTimeStamp:anchorTimeStamp
++                              rate:0];
++  }
++
++  double bufferedTime = [state[@"bufferedTime"] doubleValue];
++  self.loadedTimeRanges =
++      @[ @0, @(duration > 0 ? bufferedTime / duration : 0) ];
++
++  NSMutableArray* seekableTimeRanges = [NSMutableArray array];
++  for (NSArray* range in state[@"seekable"]) {
++    CMTime start = CMTimeMakeWithSeconds([range[0] doubleValue], 1000);
++    CMTime end = CMTimeMakeWithSeconds([range[1] doubleValue], 1000);
++    [seekableTimeRanges
++        addObject:[NSValue valueWithCMTimeRange:CMTimeRangeFromTimeToTime(
++                                                    start, end)]];
++  }
++  self.seekableTimeRanges = seekableTimeRanges;
++}
++
++- (BOOL)canPlay {
++  return YES;
++}
++
++- (BOOL)canPause {
++  return YES;
++}
++
++- (BOOL)canTogglePlayback {
++  return YES;
++}
++
++- (BOOL)canSeek {
++  return YES;
++}
++
++- (BOOL)allowsPictureInPicture {
++  return YES;
++}
++
++- (BOOL)isPictureInPicturePossible {
++  return YES;
++}
++
++- (BOOL)hasEnabledAudio {
++  return YES;
++}
++
++- (BOOL)hasEnabledVideo {
++  return YES;
++}
++
++- (BOOL)hasVideo {
++  return YES;
++}
++
++- (BOOL)hasLiveStreamingContent {
++  return std::isinf(_contentDuration);
++}
++
+++ (NSSet*)keyPathsForValuesAffectingHasLiveStreamingContent {
++  return [NSSet setWithObject:@"contentDuration"];
++}
++
++- (AVPlayerControllerStatus)status {
++  return AVPlayerControllerStatusReadyToPlay;
++}
++
++- (double)rate {
++  return _rate;
++}
++
++- (void)setRate:(double)rate {
++  if (rate == _rate) {
++    return;
++  }
++
++  if (!rate) {
++    [_support pause];
++    return;
++  }
++
++  [_support setPlaybackRate:rate];
++}
++
++- (double)defaultPlaybackRate {
++  return _defaultPlaybackRate;
++}
++
++- (void)setDefaultPlaybackRate:(double)defaultPlaybackRate {
++  if (defaultPlaybackRate > 0 && defaultPlaybackRate != _defaultPlaybackRate) {
++    [_support setPlaybackRate:defaultPlaybackRate];
++  }
++}
++
++- (BOOL)isPlaying {
++  return _rate != 0;
++}
++
++- (void)setPlaying:(BOOL)playing {
++  if (playing) {
++    [_support play];
++  } else {
++    [_support pause];
++  }
++}
++
+++ (NSSet*)keyPathsForValuesAffectingPlaying {
++  return [NSSet setWithObject:@"rate"];
++}
++
++- (void)play:(id)sender {
++  [_support play];
++}
++
++- (void)pause:(id)sender {
++  [_support pause];
++}
++
++- (void)togglePlayback:(id)sender {
++  self.playing = !self.playing;
++}
++
++- (void)togglePlaybackEvenWhenInBackground:(id)sender {
++  [self togglePlayback:sender];
++}
++
++- (BOOL)isMuted {
++  return _muted;
++}
++
++- (void)setMuted:(BOOL)muted {
++  [_support setMuted:muted];
++}
++
++- (void)toggleMuted:(id)sender {
++  [_support setMuted:!_muted];
++}
++
++- (void)beginScrubbing:(id)sender {
++  _isScrubbing = YES;
++}
++
++- (void)endScrubbing:(id)sender {
++  _isScrubbing = NO;
++}
++
++- (void)seekToTime:(NSTimeInterval)time {
++  [_support seekToTime:time];
++}
++
++- (void)seekToTime:(NSTimeInterval)time
++    toleranceBefore:(NSTimeInterval)before
++     toleranceAfter:(NSTimeInterval)after {
++  [_support seekToTime:time];
++}
++
++- (void)seekByTimeInterval:(NSTimeInterval)interval {
++  [_support seekToTime:_timing.currentValue + interval];
++}
++
++- (void)seekByTimeInterval:(NSTimeInterval)interval
++           toleranceBefore:(NSTimeInterval)before
++            toleranceAfter:(NSTimeInterval)after {
++  [self seekByTimeInterval:interval];
++}
++
++- (NSTimeInterval)currentTimeWithinEndTimes {
++  return _timing.currentValue;
++}
++
++- (void)setCurrentTimeWithinEndTimes:(NSTimeInterval)time {
++  [_support seekToTime:time];
++}
++
+++ (NSSet*)keyPathsForValuesAffectingCurrentTimeWithinEndTimes {
++  return [NSSet setWithObject:@"timing"];
++}
++
++- (NSTimeInterval)minTime {
++  return 0;
++}
++
++- (NSTimeInterval)maxTime {
++  return std::isfinite(_contentDuration) ? _contentDuration : NAN;
++}
++
+++ (NSSet*)keyPathsForValuesAffectingMaxTime {
++  return [NSSet setWithObject:@"contentDuration"];
++}
++
++@end
++
++@interface GeckoAVPlayerControllerForwarder : NSObject
++@property(nonatomic, retain) GeckoAVPlayerController* controller;
++@end
++
++@implementation GeckoAVPlayerControllerForwarder
++
++- (instancetype)init {
++  return [super init];
++}
++
++- (void)dealloc {
++  self.controller = nil;
++  [super dealloc];
++}
++
++- (GeckoAVPlayerController*)controller {
++  GeckoAVPlayerController* controller = nil;
++  object_getInstanceVariable(self, "_controller", (void**)&controller);
++  return controller;
++}
++
++- (void)setController:(GeckoAVPlayerController*)controller {
++  GeckoAVPlayerController* oldController = self.controller;
++  object_setInstanceVariable(self, "_controller", (void*)[controller retain]);
++  [oldController release];
++}
++
++- (BOOL)respondsToSelector:(SEL)selector {
++  return [self.controller respondsToSelector:selector];
++}
++
++- (id)forwardingTargetForSelector:(SEL)selector {
++  return self.controller;
++}
++
++- (id)valueForKey:(NSString*)key {
++  return [[self targetForKeyPath:key] valueForKey:key];
++}
++
++- (id)valueForKeyPath:(NSString*)keyPath {
++  return [[self targetForKeyPath:keyPath] valueForKeyPath:keyPath];
++}
++
++- (void)addObserver:(NSObject*)observer
++         forKeyPath:(NSString*)keyPath
++            options:(NSKeyValueObservingOptions)options
++            context:(void*)context {
++  [[self targetForKeyPath:keyPath] addObserver:observer
++                                    forKeyPath:keyPath
++                                       options:options
++                                       context:context];
++}
++
++- (void)removeObserver:(NSObject*)observer
++            forKeyPath:(NSString*)keyPath
++               context:(void*)context {
++  [[self targetForKeyPath:keyPath] removeObserver:observer
++                                       forKeyPath:keyPath
++                                          context:context];
++}
++
++- (void)removeObserver:(NSObject*)observer forKeyPath:(NSString*)keyPath {
++  [[self targetForKeyPath:keyPath] removeObserver:observer forKeyPath:keyPath];
++}
++
++- (NSObject*)targetForKeyPath:(NSString*)keyPath {
++  GeckoAVPlayerController* controller = self.controller;
++  NSString* key = [keyPath componentsSeparatedByString:@"."].firstObject;
++  if (class_getProperty([controller class], key.UTF8String)) {
++    return controller;
++  }
++  return controller.playerControllerProxy;
++}
++
++@end
++
++static Class GeckoAVPlayerControllerForwarderClass() {
++  static Class sForwarderClass = nil;
++  if (sForwarderClass) {
++    return sForwarderClass;
++  }
++
++  Class superclass = [AVPlayerController class];
++  Class forwarderClass = objc_allocateClassPair(
++      superclass, "GeckoAVPlayerControllerForwarderSubclass", 0);
++  class_addIvar(forwarderClass, "_controller", sizeof(id), log2(sizeof(id)),
++                @encode(id));
++  objc_registerClassPair(forwarderClass);
++
++  unsigned int count = 0;
++  Method* methods = class_copyMethodList(superclass, &count);
++  for (unsigned int i = 0; i < count; i++) {
++    SEL selector = method_getName(methods[i]);
++    if (sel_getName(selector)[0] == '.') {
++      continue;
++    }
++    class_addMethod(forwarderClass, selector, (IMP)_objc_msgForward,
++                    method_getTypeEncoding(methods[i]));
++  }
++  free(methods);
++
++  methods =
++      class_copyMethodList([GeckoAVPlayerControllerForwarder class], &count);
++  for (unsigned int i = 0; i < count; i++) {
++    class_replaceMethod(forwarderClass, method_getName(methods[i]),
++                        method_getImplementation(methods[i]),
++                        method_getTypeEncoding(methods[i]));
++  }
++  free(methods);
++
++  sForwarderClass = forwarderClass;
++  return sForwarderClass;
++}
++
++@interface GeckoAVPlayerLayer : CALayer
++@property(nonatomic, copy) NSString* videoGravity;
++@property(nonatomic, getter=isReadyForDisplay) BOOL readyForDisplay;
++@property(nonatomic, retain) AVPlayerController* playerController;
++@property(nonatomic, copy) NSDictionary* pixelBufferAttributes;
++@property(nonatomic) CGSize videoDimensions;
++@property(nonatomic, readonly) CGRect videoRect;
++@property(nonatomic) UIEdgeInsets legibleContentInsets;
++@property(nonatomic, getter=isLegibleDisplayEnabled) BOOL legibleDisplayEnabled;
++@end
++
++@implementation GeckoAVPlayerLayer
++
++- (instancetype)init {
++  if ((self = [super init])) {
++    self.masksToBounds = YES;
++    self.videoGravity = AVLayerVideoGravityResizeAspect;
++  }
++  return self;
++}
++
++- (void)dealloc {
++  [_videoGravity release];
++  [_playerController release];
++  [_pixelBufferAttributes release];
++  [super dealloc];
++}
++
++- (void)setVideoGravity:(NSString*)videoGravity {
++  [_videoGravity release];
++  _videoGravity = [videoGravity copy];
++
++  if ([videoGravity isEqualToString:AVLayerVideoGravityResizeAspectFill]) {
++    self.contentsGravity = kCAGravityResizeAspectFill;
++  } else if ([videoGravity isEqualToString:AVLayerVideoGravityResize]) {
++    self.contentsGravity = kCAGravityResize;
++  } else {
++    self.contentsGravity = kCAGravityResizeAspect;
++  }
++}
++
++- (CGRect)videoRect {
++  CGSize bounds = self.bounds.size;
++  bool isResize = [_videoGravity isEqualToString:AVLayerVideoGravityResize];
++  if (isResize || _videoDimensions.width <= 0 || _videoDimensions.height <= 0) {
++    return self.bounds;
++  }
++
++  CGFloat widthScale = bounds.width / _videoDimensions.width;
++  CGFloat heightScale = bounds.height / _videoDimensions.height;
++  CGFloat scale =
++      [_videoGravity isEqualToString:AVLayerVideoGravityResizeAspectFill]
++          ? std::max(widthScale, heightScale)
++          : std::min(widthScale, heightScale);
++  CGSize size = CGSizeMake(_videoDimensions.width * scale,
++                           _videoDimensions.height * scale);
++  return CGRectMake((bounds.width - size.width) / 2,
++                    (bounds.height - size.height) / 2, size.width, size.height);
++}
++
+++ (NSSet*)keyPathsForValuesAffectingVideoRect {
++  return [NSSet setWithObjects:@"videoDimensions", @"videoGravity", nil];
++}
++
++@end
++
++@interface GeckoAVPictureInPicturePlayerLayerView : UIView
++@property(nonatomic, readonly) AVPlayerLayer* playerLayer;
++@end
++
++@implementation GeckoAVPictureInPicturePlayerLayerView
++
+++ (Class)layerClass {
++  return [GeckoAVPlayerLayer class];
++}
++
++- (AVPlayerLayer*)playerLayer {
++  return (AVPlayerLayer*)self.layer;
++}
++
++@end
++
++@interface GeckoAVPlayerLayerView : __AVPlayerLayerView
++@property(nonatomic, assign) GeckoVideoFullscreenSupport* support;
++@property(nonatomic, retain) AVPlayerController* playerController;
++@end
++
++@implementation GeckoAVPlayerLayerView {
++  GeckoAVPictureInPicturePlayerLayerView* _pictureInPicturePlayerLayerView;
++}
++
+++ (Class)layerClass {
++  return [GeckoAVPlayerLayer class];
++}
++
++- (void)dealloc {
++  [_pictureInPicturePlayerLayerView release];
++  [super dealloc];
++}
++
++- (AVPlayerLayer*)playerLayer {
++  if ([__AVPlayerLayerView instancesRespondToSelector:@selector(playerLayer)]) {
++    return [super playerLayer];
++  }
++  return (AVPlayerLayer*)self.layer;
++}
++
++- (AVPlayerController*)playerController {
++  return ((GeckoAVPlayerLayer*)self.layer).playerController;
++}
++
++- (void)setPlayerController:(AVPlayerController*)playerController {
++  ((GeckoAVPlayerLayer*)self.layer).playerController = playerController;
++}
++
++- (UIView*)pictureInPicturePlayerLayerView {
++  if (!_pictureInPicturePlayerLayerView) {
++    _pictureInPicturePlayerLayerView =
++        [[GeckoAVPictureInPicturePlayerLayerView alloc]
++            initWithFrame:CGRectZero];
++  }
++  return _pictureInPicturePlayerLayerView;
++}
++
++- (void)startRoutingVideoToPictureInPicturePlayerLayerView {
++  GeckoAVPlayerLayer* playerLayer = (GeckoAVPlayerLayer*)self.layer;
++  GeckoAVPlayerLayer* pipPlayerLayer =
++      (GeckoAVPlayerLayer*)self.pictureInPicturePlayerLayerView.layer;
++  pipPlayerLayer.videoGravity = playerLayer.videoGravity;
++  pipPlayerLayer.videoDimensions = playerLayer.videoDimensions;
++  pipPlayerLayer.playerController = playerLayer.playerController;
++  [_support routeVideoToLayer:pipPlayerLayer];
++}
++
++- (void)stopRoutingVideoToPictureInPicturePlayerLayerView {
++  [_support routeVideoToLayer:self.layer];
++}
++
++@end
++
++namespace {
++
++class VideoFullscreenListener final : public nsIGeckoViewEventListener {
++ public:
++  NS_DECL_ISUPPORTS
++  NS_DECL_NSIGECKOVIEWEVENTLISTENER
++
++  explicit VideoFullscreenListener(GeckoVideoFullscreenSupport* aSupport)
++      : mSupport(aSupport) {}
++
++  void Disconnect() { mSupport = nil; }
++
++ private:
++  ~VideoFullscreenListener() = default;
++
++  GeckoVideoFullscreenSupport* mSupport;
++};
++
++NS_IMPL_ISUPPORTS(VideoFullscreenListener, nsIGeckoViewEventListener)
++
++NS_IMETHODIMP VideoFullscreenListener::OnEvent(
++    const nsAString& aEvent, JS::Handle<JS::Value> aData,
++    nsIGeckoViewEventCallback* aCallback) {
++  if (aEvent.EqualsLiteral(kCancelEvent)) {
++    [mSupport cancelPrepared];
++    return NS_OK;
++  }
++
++  NS_ENSURE_TRUE(aData.isObject(), NS_ERROR_INVALID_ARG);
++
++  dom::AutoJSAPI jsapi;
++  NS_ENSURE_TRUE(jsapi.Init(xpc::PrivilegedJunkScope()), NS_ERROR_FAILURE);
++
++  JSContext* cx = jsapi.cx();
++  JS::Rooted<JSObject*> data(cx, &aData.toObject());
++  NS_ENSURE_TRUE(JS_WrapObject(cx, &data), NS_ERROR_FAILURE);
++
++  CFTypeRefPtr<CFTypeRef> state;
++  nsresult rv = EventDispatcher::BoxBundle(cx, data, state);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  if (aEvent.EqualsLiteral(kPrepareEvent)) {
++    [mSupport prepareWithData:(NSDictionary*)state.get()];
++  } else if (aEvent.EqualsLiteral(kEnterEvent)) {
++    [mSupport enterWithState:(NSDictionary*)state.get()];
++  } else if (aEvent.EqualsLiteral(kExitEvent)) {
++    id rect = ((NSDictionary*)state.get())[@"videoRect"];
++    [mSupport
++        exitToRect:[rect isKindOfClass:[NSDictionary class]] ? rect : nil];
++  } else {
++    [mSupport updateWithState:(NSDictionary*)state.get()];
++  }
++  return NS_OK;
++}
++
++template <typename T>
++void DispatchToPage(nsWindow* aWindow, const nsAString& aEvent, T&& aData) {
++  AssertIsOnMainThread();
++  if (!aWindow) {
++    return;
++  }
++
++  if (EventDispatcher* dispatcher = aWindow->GetEventDispatcher()) {
++    dispatcher->Dispatch(aEvent, std::forward<T>(aData));
++  }
++}
++
++class VideoFrameTarget final {
++ public:
++  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(VideoFrameTarget)
++
++  explicit VideoFrameTarget(CALayer* aLayer) { SetLayer(aLayer); }
++
++  void SetLayer(CALayer* aLayer) {
++    AssertIsOnMainThread();
++    [mLayer release];
++    mLayer = [aLayer retain];
++  }
++
++  void ShowFrame(CFTypeRefPtr<IOSurfaceRef> aSurface) {
++    AssertIsOnMainThread();
++    [CATransaction begin];
++    [CATransaction setDisableActions:YES];
++    mLayer.contents = (id)aSurface.get();
++    [CATransaction commit];
++  }
++
++ private:
++  ~VideoFrameTarget() { [mLayer release]; }
++
++  CALayer* mLayer = nil;
++};
++
++}  // namespace
++
++@implementation GeckoVideoFullscreenSupport {
++  nsWindow* mGeckoChild;
++  RefPtr<VideoFullscreenListener> mListener;
++  GeckoAVPlayerController* mPlayerController;
++  GeckoAVPlayerLayerView* mPlayerLayerView;
++  CALayer* mVideoLayer;
++  RefPtr<VideoFrameTarget> mFrameTarget;
++  AVPlayerViewController* mPlayerViewController;
++  UIWindow* mWindow;
++  UIView* mSnapshotView;
++  GeckoVideoFullscreenState mState;
++  BOOL mExitPending;
++}
++
++- (instancetype)initWithGeckoChild:(nsWindow*)geckoChild {
++  if (!(self = [super init])) {
++    return nil;
++  }
++
++  mGeckoChild = geckoChild;
++  mListener = new VideoFullscreenListener(self);
++
++  EventDispatcher* dispatcher = geckoChild->GetEventDispatcher();
++  dom::AutoJSAPI jsapi;
++  if (!dispatcher || !jsapi.Init(xpc::PrivilegedJunkScope())) {
++    return self;
++  }
++
++  JSContext* cx = jsapi.cx();
++  for (const char* event :
++       {kPrepareEvent, kEnterEvent, kUpdateEvent, kExitEvent, kCancelEvent}) {
++    JS::Rooted<JSString*> name(cx, JS_NewStringCopyZ(cx, event));
++    if (!name) {
++      break;
++    }
++    JS::Rooted<JS::Value> value(cx, JS::StringValue(name));
++    dispatcher->RegisterListener(mListener, value, cx);
++  }
++  return self;
++}
++
++- (void)widgetDestroyed {
++  [self stopPictureInPicture];
++  [self tearDown];
++  mListener->Disconnect();
++  mGeckoChild = nullptr;
++}
++
++- (void)prepareWithData:(NSDictionary*)data {
++  if (mState != GeckoVideoFullscreenStateNone || !mGeckoChild) {
++    return;
++  }
++
++  UIView* geckoView = (UIView*)mGeckoChild->GetNativeData(NS_NATIVE_WIDGET);
++  UIWindow* browserWindow = geckoView.window;
++  if (![self openPlayerInScene:browserWindow.windowScene video:data]) {
++    return;
++  }
++
++  mSnapshotView = [browserWindow snapshotViewAfterScreenUpdates:NO];
++  [mWindow.rootViewController.view insertSubview:mSnapshotView atIndex:0];
++
++  [self moveInlinePlayerToRect:data[@"videoRect"]];
++  mState = GeckoVideoFullscreenStatePrepared;
++}
++
++- (void)cancelPrepared {
++  if (mState == GeckoVideoFullscreenStatePrepared) {
++    [self tearDown];
++  }
++}
++
++- (void)moveInlinePlayerToRect:(NSDictionary*)rect {
++  UIView* geckoView = (UIView*)mGeckoChild->GetNativeData(NS_NATIVE_WIDGET);
++  CGFloat scale = geckoView.window.screen.scale;
++  CGRect videoRect = CGRectMake([rect[@"x"] doubleValue] / scale,
++                                [rect[@"y"] doubleValue] / scale,
++                                [rect[@"width"] doubleValue] / scale,
++                                [rect[@"height"] doubleValue] / scale);
++  // Both windows cover the scene, so their coordinates match. Converting
++  // through screen coordinates can use a stale position of the player window.
++  mPlayerViewController.view.frame = [mWindow.rootViewController.view
++      convertRect:[geckoView convertRect:videoRect toView:nil]
++         fromView:nil];
++}
++
++- (void)enterWithState:(NSDictionary*)state {
++  if (!mGeckoChild) {
++    return;
++  }
++
++  if (mState == GeckoVideoFullscreenStateNone) {
++    UIView* geckoView = (UIView*)mGeckoChild->GetNativeData(NS_NATIVE_WIDGET);
++    if (![self openPlayerInScene:geckoView.window.windowScene video:state]) {
++      return;
++    }
++  } else if (mState != GeckoVideoFullscreenStatePrepared) {
++    return;
++  }
++
++  [self updateWithState:state];
++  [mPlayerViewController.view layoutIfNeeded];
++
++  mState = GeckoVideoFullscreenStateEntering;
++  [mPlayerViewController
++      enterFullScreenAnimated:YES
++            completionHandler:^(BOOL success, NSError* error) {
++              if (!success) {
++                [self tearDown];
++                return;
++              }
++
++              mState = GeckoVideoFullscreenStateEntered;
++
++              [mSnapshotView removeFromSuperview];
++              mSnapshotView = nil;
++
++              if (mExitPending) {
++                [self exitToRect:nil];
++              }
++            }];
++}
++
++- (BOOL)openPlayerInScene:(UIWindowScene*)windowScene
++                    video:(NSDictionary*)video {
++  if (!windowScene) {
++    return NO;
++  }
++
++  mExitPending = NO;
++
++  mPlayerController = [[GeckoAVPlayerController alloc] initWithSupport:self];
++  mPlayerLayerView = [[GeckoAVPlayerLayerView alloc] initWithFrame:CGRectZero];
++  mPlayerLayerView.support = self;
++  mVideoLayer = mPlayerLayerView.layer;
++
++  GeckoAVPlayerControllerForwarder* forwarder =
++      [[[GeckoAVPlayerControllerForwarderClass() alloc] init] autorelease];
++  forwarder.controller = mPlayerController;
++
++  mPlayerViewController =
++      [[AVPlayerViewController alloc] initWithPlayerLayerView:mPlayerLayerView];
++  mPlayerViewController.delegate = self;
++  mPlayerViewController.allowsPictureInPicturePlayback = YES;
++  mPlayerViewController.updatesNowPlayingInfoCenter = NO;
++  [mPlayerViewController setPlayerController:(AVPlayerController*)forwarder];
++
++  UIViewController* rootViewController =
++      [[[UIViewController alloc] init] autorelease];
++  mWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
++  mWindow.windowLevel = UIWindowLevelNormal + 1;
++  mWindow.rootViewController = rootViewController;
++  [rootViewController addChildViewController:mPlayerViewController];
++  mPlayerViewController.view.frame = rootViewController.view.bounds;
++  [rootViewController.view addSubview:mPlayerViewController.view];
++  [mPlayerViewController didMoveToParentViewController:rootViewController];
++  mWindow.hidden = NO;
++
++  mFrameTarget = new VideoFrameTarget(mVideoLayer);
++  mGeckoChild->StartVideoFrames(
++      [video[@"pid"] intValue], [video[@"videoHandle"] unsignedLongLongValue],
++      [target = mFrameTarget](CFTypeRefPtr<IOSurfaceRef> aSurface) {
++        NS_DispatchToMainThread(NS_NewRunnableFunction(
++            "VideoFrameTarget::ShowFrame",
++            [target, aSurface] { target->ShowFrame(aSurface); }));
++      });
++  [self setPageHidden:YES];
++  return YES;
++}
++
++- (void)updateWithState:(NSDictionary*)state {
++  [mPlayerController updateWithState:state];
++  ((GeckoAVPlayerLayer*)mVideoLayer).videoDimensions =
++      mPlayerController.contentDimensions;
++}
++
++- (void)routeVideoToLayer:(CALayer*)layer {
++  mVideoLayer.contents = nil;
++  mVideoLayer = layer;
++  mFrameTarget->SetLayer(layer);
++}
++
++- (void)exitToRect:(NSDictionary*)rect {
++  if (mState != GeckoVideoFullscreenStateEntering &&
++      mState != GeckoVideoFullscreenStateEntered &&
++      mState != GeckoVideoFullscreenStatePictureInPicture) {
++    return;
++  }
++
++  if (rect) {
++    [self moveInlinePlayerToRect:rect];
++  }
++
++  if (mState == GeckoVideoFullscreenStatePictureInPicture) {
++    if (!rect) {
++      [self stopPictureInPicture];
++    }
++    return;
++  }
++
++  if (mState == GeckoVideoFullscreenStateEntering) {
++    mExitPending = YES;
++    return;
++  }
++
++  mState = GeckoVideoFullscreenStateExiting;
++  [self setPageHidden:NO];
++  [mPlayerViewController
++      exitFullScreenAnimated:YES
++           completionHandler:^(BOOL success, NSError* error) {
++             [self tearDown];
++           }];
++}
++
++- (void)stopPictureInPicture {
++  if (mState != GeckoVideoFullscreenStatePictureInPicture) {
++    return;
++  }
++
++  mState = GeckoVideoFullscreenStateExiting;
++  [mPlayerViewController stopPictureInPicture];
++}
++
++- (void)tearDown {
++  if (!mPlayerViewController) {
++    return;
++  }
++
++  mState = GeckoVideoFullscreenStateNone;
++  if (mGeckoChild) {
++    mGeckoChild->StopVideoFrames();
++  }
++  mFrameTarget->SetLayer(nil);
++  mFrameTarget = nullptr;
++  [self setPageHidden:NO];
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:Close"_ns,
++                 JS::NullHandleValue);
++  mPlayerController.support = nil;
++  mPlayerLayerView.support = nil;
++  mVideoLayer = nil;
++  mWindow.hidden = YES;
++  mSnapshotView = nil;
++
++  [mWindow release];
++  mWindow = nil;
++  [mPlayerViewController release];
++  mPlayerViewController = nil;
++  [mPlayerLayerView release];
++  mPlayerLayerView = nil;
++  [mPlayerController release];
++  mPlayerController = nil;
++}
++
++- (void)setPageHidden:(BOOL)hidden {
++  if (!mGeckoChild) {
++    return;
++  }
++
++  UIView* geckoView = (UIView*)mGeckoChild->GetNativeData(NS_NATIVE_WIDGET);
++  geckoView.alpha = hidden ? 0 : 1;
++  mGeckoChild->SetCoveredByVideoPlayer(hidden);
++}
++
++- (void)play {
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:Play"_ns,
++                 JS::NullHandleValue);
++}
++
++- (void)pause {
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:Pause"_ns,
++                 JS::NullHandleValue);
++}
++
++- (void)seekToTime:(double)time {
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:Seek"_ns, time);
++}
++
++- (void)setPlaybackRate:(double)rate {
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:SetRate"_ns, rate);
++}
++
++- (void)setMuted:(BOOL)muted {
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:SetMuted"_ns,
++                 bool(muted));
++}
++
++- (BOOL)playerViewController:(AVPlayerViewController*)playerViewController
++    shouldExitFullScreenWithReason:
++        (AVPlayerViewControllerExitFullScreenReason)reason {
++  if (reason ==
++      AVPlayerViewControllerExitFullScreenReasonPictureInPictureStarted) {
++    return NO;
++  }
++
++  if (reason == AVPlayerViewControllerExitFullScreenReasonDoneButtonTapped) {
++    [self pause];
++  }
++
++  DispatchToPage(mGeckoChild, u"GeckoViewContent:ExitFullScreen"_ns,
++                 JS::NullHandleValue);
++  return NO;
++}
++
++- (BOOL)playerViewControllerShouldAutomaticallyDismissAtPictureInPictureStart:
++    (AVPlayerViewController*)playerViewController {
++  return NO;
++}
++
++- (void)playerViewControllerDidStartPictureInPicture:
++    (AVPlayerViewController*)playerViewController {
++  if (mState != GeckoVideoFullscreenStateEntered) {
++    return;
++  }
++
++  mState = GeckoVideoFullscreenStatePictureInPicture;
++  [self setPageHidden:NO];
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:PictureInPicture"_ns,
++                 JS::NullHandleValue);
++  [mPlayerViewController.view layoutIfNeeded];
++  [mPlayerViewController
++      exitFullScreenAnimated:YES
++           completionHandler:^(BOOL success, NSError* error) {
++             mWindow.hidden = YES;
++           }];
++  DispatchToPage(mGeckoChild, u"GeckoViewContent:ExitFullScreen"_ns,
++                 JS::NullHandleValue);
++}
++
++- (void)playerViewController:(AVPlayerViewController*)playerViewController
++    restoreUserInterfaceForPictureInPictureStopWithCompletionHandler:
++        (void (^)(BOOL restored))completionHandler {
++  if (mState != GeckoVideoFullscreenStatePictureInPicture) {
++    completionHandler(NO);
++    return;
++  }
++
++  if (EventDispatcher* dispatcher =
++          mGeckoChild ? mGeckoChild->GetEventDispatcher() : nullptr) {
++    dispatcher->DispatchToEmbedder(u"GeckoView:PictureInPictureRestore"_ns);
++  }
++
++  DispatchToPage(mGeckoChild, u"GeckoView:VideoFullscreen:Restore"_ns,
++                 JS::NullHandleValue);
++
++  mState = GeckoVideoFullscreenStateEntering;
++  mExitPending = NO;
++  mWindow.hidden = NO;
++  mPlayerViewController.view.hidden = NO;
++  [mPlayerViewController.view layoutIfNeeded];
++  [self setPageHidden:YES];
++  [mPlayerViewController
++      enterFullScreenAnimated:NO
++            completionHandler:^(BOOL success, NSError* error) {
++              completionHandler(success);
++              if (!success) {
++                [self tearDown];
++                return;
++              }
++
++              mState = GeckoVideoFullscreenStateEntered;
++              if (mExitPending) {
++                [self exitToRect:nil];
++              }
++            }];
++}
++
++- (void)playerViewControllerDidStopPictureInPicture:
++    (AVPlayerViewController*)playerViewController {
++  if (mState == GeckoVideoFullscreenStatePictureInPicture ||
++      mState == GeckoVideoFullscreenStateExiting) {
++    [self tearDown];
++  }
++}
++
++@end

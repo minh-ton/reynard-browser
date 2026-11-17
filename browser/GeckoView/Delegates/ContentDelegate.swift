@@ -114,6 +114,7 @@ public protocol ContentDelegate {
     func onFocusRequest(session: GeckoSession)
     func onCloseRequest(session: GeckoSession)
     func onFullScreen(session: GeckoSession, fullScreen: Bool)
+    func onPictureInPictureRestore(session: GeckoSession)
     func onMetaViewportFitChange(session: GeckoSession, viewportFit: String)
     func onProductUrl(session: GeckoSession)
     func onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: ContextElement)
@@ -140,6 +141,7 @@ extension ContentDelegate {
     public func onFocusRequest(session: GeckoSession) {}
     public func onCloseRequest(session: GeckoSession) {}
     public func onFullScreen(session: GeckoSession, fullScreen: Bool) {}
+    public func onPictureInPictureRestore(session: GeckoSession) {}
     public func onMetaViewportFitChange(session: GeckoSession, viewportFit: String) {}
     public func onProductUrl(session: GeckoSession) {}
     public func onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: ContextElement) {}
@@ -175,6 +177,7 @@ enum ContentEvents: String, CaseIterable {
     case focusRequest = "GeckoView:FocusRequest"
     case fullscreenEnter = "GeckoView:FullScreenEnter"
     case fullscreenExit = "GeckoView:FullScreenExit"
+    case pictureInPictureRestore = "GeckoView:PictureInPictureRestore"
     case webAppManifest = "GeckoView:WebAppManifest"
     case firstContentfulPaint = "GeckoView:FirstContentfulPaint"
     case paintStatusReset = "GeckoView:PaintStatusReset"
@@ -296,6 +299,10 @@ func newContentHandler(_ session: GeckoSession) -> GeckoSessionHandler {
             
         case .fullscreenExit:
             delegate?.onFullScreen(session: session, fullScreen: false)
+            return nil
+            
+        case .pictureInPictureRestore:
+            delegate?.onPictureInPictureRestore(session: session)
             return nil
             
         case .webAppManifest:

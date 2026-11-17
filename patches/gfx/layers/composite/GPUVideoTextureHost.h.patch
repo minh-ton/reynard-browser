@@ -1,0 +1,13 @@
+diff --git a/gfx/layers/composite/GPUVideoTextureHost.h b/gfx/layers/composite/GPUVideoTextureHost.h
+index 1fb7d286fca9..2f57325fe773 100644
+--- a/gfx/layers/composite/GPUVideoTextureHost.h
++++ b/gfx/layers/composite/GPUVideoTextureHost.h
+@@ -70,6 +70,8 @@ class GPUVideoTextureHost final : public TextureHost {
+ 
+   BufferTextureHost* AsBufferTextureHost() override;
+ 
++  MacIOSurfaceTextureHostOGL* AsMacIOSurfaceTextureHost() override;
++
+   DXGITextureHostD3D11* AsDXGITextureHostD3D11() override;
+ 
+   DXGIYCbCrTextureHostD3D11* AsDXGIYCbCrTextureHostD3D11() override;

@@ -1,0 +1,35 @@
+diff --git a/mobile/shared/chrome/geckoview/geckoview.js b/mobile/shared/chrome/geckoview/geckoview.js
+index da3a49598a5d..27cd04eb326a 100644
+--- a/mobile/shared/chrome/geckoview/geckoview.js
++++ b/mobile/shared/chrome/geckoview/geckoview.js
+@@ -701,6 +701,30 @@ function startup() {
+         },
+       },
+     },
++    {
++      name: "GeckoViewVideoFullscreen",
++      onInit: {
++        actors: {
++          GeckoViewVideoFullscreen: {
++            parent: {
++              esModuleURI:
++                "resource:///actors/GeckoViewVideoFullscreenParent.sys.mjs",
++            },
++            child: {
++              esModuleURI:
++                "resource:///actors/GeckoViewVideoFullscreenChild.sys.mjs",
++              events: {
++                "MozDOMFullscreen:Entered": {},
++                "MozDOMFullscreen:Exited": {},
++              },
++            },
++            allFrames: true,
++            messageManagerGroups: ["browsers"],
++            safeForUntrustedWebProcess: true,
++          },
++        },
++      },
++    },
+     {
+       name: "GeckoViewAutocomplete",
+       onInit: {

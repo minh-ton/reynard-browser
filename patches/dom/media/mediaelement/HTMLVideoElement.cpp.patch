@@ -1,0 +1,16 @@
+diff --git a/dom/media/mediaelement/HTMLVideoElement.cpp b/dom/media/mediaelement/HTMLVideoElement.cpp
+index 2da1c3ce8b9b..35083c91675a 100644
+--- a/dom/media/mediaelement/HTMLVideoElement.cpp
++++ b/dom/media/mediaelement/HTMLVideoElement.cpp
+@@ -429,6 +429,11 @@ bool HTMLVideoElement::MozHasAudio() const {
+   return HasAudio();
+ }
+ 
++uint64_t HTMLVideoElement::ImageContainerHandle() {
++  layers::ImageContainer* container = GetImageContainer();
++  return container ? uint64_t(container->GetAsyncContainerHandle()) : 0;
++}
++
+ JSObject* HTMLVideoElement::WrapNode(JSContext* aCx,
+                                      JS::Handle<JSObject*> aGivenProto) {
+   return HTMLVideoElement_Binding::Wrap(aCx, this, aGivenProto);

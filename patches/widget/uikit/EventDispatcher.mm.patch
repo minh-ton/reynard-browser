@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/EventDispatcher.mm b/widget/uikit/EventDispatcher.mm
-index db8380bd78c2..f2ebbfdd8b21 100644
+index db8380bd78c2..9ba37cb1a04e 100644
 --- a/widget/uikit/EventDispatcher.mm
 +++ b/widget/uikit/EventDispatcher.mm
 @@ -6,6 +6,7 @@
@@ -46,3 +46,16 @@ index db8380bd78c2..f2ebbfdd8b21 100644
  void EventDispatcher::Attach(id aDispatcher) {
    AssertIsOnMainThread();
    MOZ_ASSERT(aDispatcher);
+@@ -579,6 +593,12 @@ - (BOOL)hasListener:(NSString*)type {
+   mDispatcher = nullptr;
+ }
+ 
++/* static */
++nsresult EventDispatcher::BoxBundle(JSContext* aCx, JS::Handle<JSObject*> aData,
++                                    CFTypeRefPtr<CFTypeRef>& aOut) {
++  return detail::BoxObject(aCx, aData, aOut);
++}
++
+ /* static */
+ nsresult EventDispatcher::UnboxBundle(JSContext* aCx, CFDictionaryRef aData,
+                                       JS::MutableHandle<JS::Value> aOut) {

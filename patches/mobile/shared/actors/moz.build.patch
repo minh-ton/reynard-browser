@@ -1,0 +1,13 @@
+diff --git a/mobile/shared/actors/moz.build b/mobile/shared/actors/moz.build
+index bdeb0af3f898..5ab0559f8352 100644
+--- a/mobile/shared/actors/moz.build
++++ b/mobile/shared/actors/moz.build
+@@ -29,6 +29,8 @@ FINAL_TARGET_FILES.actors += [
+     "GeckoViewPromptParent.sys.mjs",
+     "GeckoViewPushParent.sys.mjs",
+     "GeckoViewSettingsChild.sys.mjs",
++    "GeckoViewVideoFullscreenChild.sys.mjs",
++    "GeckoViewVideoFullscreenParent.sys.mjs",
+     "LoadURIDelegateChild.sys.mjs",
+     "LoadURIDelegateParent.sys.mjs",
+     "MediaControlDelegateChild.sys.mjs",

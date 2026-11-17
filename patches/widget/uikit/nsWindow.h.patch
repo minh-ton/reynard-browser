@@ -1,9 +1,29 @@
 diff --git a/widget/uikit/nsWindow.h b/widget/uikit/nsWindow.h
-index 027dbf683744..da48a1bedaf7 100644
+index 027dbf683744..54057944fdab 100644
 --- a/widget/uikit/nsWindow.h
 +++ b/widget/uikit/nsWindow.h
-@@ -19,12 +19,23 @@
+@@ -6,8 +6,13 @@
+ #define NSWINDOW_H_
+ 
+ #include <CoreFoundation/CoreFoundation.h>
++#include <IOSurface/IOSurfaceRef.h>
+ #include <objc/objc.h>
+ 
++#include <functional>
++
++#include "CFTypeRefPtr.h"
++#include "base/process.h"
+ #include "gfxPoint.h"
+ #include "mozilla/widget/IOSView.h"
+ #include "nsIWidget.h"
+@@ -15,16 +20,29 @@
+ 
+ #ifdef __OBJC__
+ @class ChildView;
++@class GeckoVideoFullscreenSupport;
+ #else
  typedef struct objc_object ChildView;
++typedef struct objc_object GeckoVideoFullscreenSupport;
  #endif
  
 +namespace mozilla::ipc {
@@ -27,7 +47,7 @@ index 027dbf683744..da48a1bedaf7 100644
  class TextInputHandler;
  }  // namespace mozilla::widget
  
-@@ -54,12 +65,16 @@ class nsWindow final : public nsIWidget {
+@@ -54,12 +72,16 @@ class nsWindow final : public nsIWidget {
    LayoutDeviceIntPoint WidgetToScreenOffset() override;
  
    void SetBackgroundColor(const nscolor& aColor) override;
@@ -45,7 +65,7 @@ index 027dbf683744..da48a1bedaf7 100644
    void Resize(const DesktopSize&, bool aRepaint) override;
    void Resize(const DesktopRect&, bool aRepaint) override;
    void DoResize(double aX, double aY, double aWidth, double aHeight,
-@@ -76,8 +91,29 @@ class nsWindow final : public nsIWidget {
+@@ -76,8 +98,29 @@ class nsWindow final : public nsIWidget {
      // XXX: terrible
      return 326.0f;
    }
@@ -75,7 +95,7 @@ index 027dbf683744..da48a1bedaf7 100644
  
    nsresult SetTitle(const nsAString& aTitle) override { return NS_OK; }
  
-@@ -92,22 +128,42 @@ class nsWindow final : public nsIWidget {
+@@ -92,23 +135,49 @@ class nsWindow final : public nsIWidget {
    void SetInputContext(const InputContext& aContext,
                         const InputContextAction& aAction) override;
    InputContext GetInputContext() override;
@@ -118,17 +138,36 @@ index 027dbf683744..da48a1bedaf7 100644
 +      const nsTArray<mozilla::layers::ScrollableLayerGuid>& aScrollers) const;
  
    mozilla::layers::NativeLayerRoot* GetNativeLayerRoot() override;
+ 
++  void StartVideoFrames(
++      base::ProcessId aPid, uint64_t aHandle,
++      std::function<void(CFTypeRefPtr<IOSurfaceRef>)>&& aCallback);
++  void StopVideoFrames();
++
 +  void GetCompositorWidgetInitData(
 +      mozilla::widget::CompositorWidgetInitData* aInitData) override;
 +  void DestroyCompositor() override;
 +  void NotifyCompositorSessionLost(
 +      mozilla::layers::CompositorSession* aSession) override;
- 
++
    void HandleMainThreadCATransaction();
  
-@@ -137,6 +193,17 @@ class nsWindow final : public nsIWidget {
-     mIOSView = aView;
-   }
+   // Called when the main thread enters a phase during which visual changes
+@@ -128,15 +197,26 @@ class nsWindow final : public nsIWidget {
+   // and we can start modifying CALayers from the compositor thread again.
+   void UnsuspendAsyncCATransactions();
+ 
++  void SetCoveredByVideoPlayer(bool aCovered);
++
+   mozilla::widget::EventDispatcher* GetEventDispatcher() const;
+ 
+   static already_AddRefed<nsWindow> From(nsPIDOMWindowOuter* aDOMWindow);
+   static already_AddRefed<nsWindow> From(nsIWidget* aWidget);
+ 
+-  void SetIOSView(already_AddRefed<mozilla::widget::IOSView> aView) {
+-    mIOSView = aView;
+-  }
++  void SetIOSView(already_AddRefed<mozilla::widget::IOSView> aView);
    mozilla::widget::IOSView* GetIOSView() const { return mIOSView; }
 +  nsCursor GetCursorType() const { return mCursor.mDefaultCursor; }
 +
@@ -144,16 +183,17 @@ index 027dbf683744..da48a1bedaf7 100644
  
   protected:
    virtual ~nsWindow();
-@@ -146,6 +213,8 @@ class nsWindow final : public nsIWidget {
+@@ -146,6 +226,9 @@ class nsWindow final : public nsIWidget {
    nsresult GetCurrentOffset(uint32_t& aOffset, uint32_t& aLength);
    nsresult DeleteRange(int aOffset, int aLen);
  
 +  void CloseNativeLayerRemoteParent(bool aWaitUntilClosed);
++  void SendVideoFrameRequest();
 +  void DestroyNativeLayerRoot();
    void TearDownView();
  
    ChildView* mNativeView;
-@@ -155,13 +224,23 @@ class nsWindow final : public nsIWidget {
+@@ -155,13 +238,32 @@ class nsWindow final : public nsIWidget {
    nsWindow* mParent;
  
    mozilla::widget::InputContext mInputContext;
@@ -161,12 +201,21 @@ index 027dbf683744..da48a1bedaf7 100644
    RefPtr<mozilla::widget::TextInputHandler> mTextInputHandler;
 +  nsTArray<mozilla::NativeTextInputScrollUpdate> mNativeTextInputScrollUpdates;
    RefPtr<mozilla::widget::IOSView> mIOSView;
++  GeckoVideoFullscreenSupport* mVideoFullscreenSupport = nullptr;
 +  mozilla::widget::PlatformCompositorWidgetDelegate* mCompositorWidgetDelegate =
 +      nullptr;
  
    RefPtr<mozilla::layers::NativeLayerRootCA> mNativeLayerRoot;
 +  RefPtr<mozilla::layers::NativeLayerRootRemoteMacParent>
 +      mNativeLayerRootRemoteMacParent;
++
++  struct VideoFrameRequest {
++    base::ProcessId mPid;
++    uint64_t mHandle;
++    std::function<void(CFTypeRefPtr<IOSurfaceRef>)> mCallback;
++  };
++  mozilla::Maybe<VideoFrameRequest> mVideoFrameRequest;
++  bool mCoveredByVideoPlayer = false;
  
    RefPtr<mozilla::CancelableRunnable> mUnsuspendAsyncCATransactionsRunnable;
    LayoutDeviceIntRect mBounds;

@@ -1,0 +1,13 @@
+diff --git a/dom/media/mediaelement/HTMLVideoElement.h b/dom/media/mediaelement/HTMLVideoElement.h
+index 3846309bb97f..3a16a10b8ef8 100644
+--- a/dom/media/mediaelement/HTMLVideoElement.h
++++ b/dom/media/mediaelement/HTMLVideoElement.h
+@@ -125,6 +125,8 @@ class HTMLVideoElement final : public HTMLMediaElement {
+ 
+   bool MozHasAudio() const;
+ 
++  uint64_t ImageContainerHandle();
++
+   already_AddRefed<VideoPlaybackQuality> GetVideoPlaybackQuality();
+ 
+   MOZ_CAN_RUN_SCRIPT already_AddRefed<Promise> CloneElementVisually(

@@ -1,0 +1,25 @@
+diff --git a/gfx/layers/wr/WebRenderImageHost.cpp b/gfx/layers/wr/WebRenderImageHost.cpp
+index 20441740bff4..1a7bc6623354 100644
+--- a/gfx/layers/wr/WebRenderImageHost.cpp
++++ b/gfx/layers/wr/WebRenderImageHost.cpp
+@@ -378,6 +378,20 @@ TextureHost* WebRenderImageHost::GetAsTextureHostForComposite(
+   return mCurrentTextureHost;
+ }
+ 
++#ifdef MOZ_WIDGET_UIKIT
++TextureHost* WebRenderImageHost::GetTextureHostAt(
++    const TimeStamp& aTime) const {
++  TextureHost* texture = nullptr;
++  for (const auto& image : Images()) {
++    if (texture && !image.mTimeStamp.IsNull() && image.mTimeStamp > aTime) {
++      break;
++    }
++    texture = image.mTextureHost;
++  }
++  return texture;
++}
++#endif
++
+ void WebRenderImageHost::SetCurrentTextureHost(TextureHost* aTexture) {
+   if (aTexture == mCurrentTextureHost.get()) {
+     return;

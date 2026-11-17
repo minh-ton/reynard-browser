@@ -1,0 +1,12 @@
+diff --git a/gfx/layers/NativeLayerRemoteParent.h b/gfx/layers/NativeLayerRemoteParent.h
+index a6e5d67864e7..916d28e23949 100644
+--- a/gfx/layers/NativeLayerRemoteParent.h
++++ b/gfx/layers/NativeLayerRemoteParent.h
+@@ -19,6 +19,7 @@ class NativeLayerRemoteParent : public PNativeLayerRemoteParent {
+                                                       Shmem* const aPixels) = 0;
+ 
+   virtual mozilla::ipc::IPCResult RecvFlush() = 0;
++  virtual mozilla::ipc::IPCResult RecvVideoFrame(IOSurfacePort&& aSurface) = 0;
+ };
+ 
+ }  // namespace layers

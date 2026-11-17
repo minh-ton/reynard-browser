@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerCA.h b/gfx/layers/NativeLayerCA.h
-index c7156fca6e5e..91ff34d976de 100644
+index c7156fca6e5e..5fd1f3602b3c 100644
 --- a/gfx/layers/NativeLayerCA.h
 +++ b/gfx/layers/NativeLayerCA.h
 @@ -10,6 +10,11 @@
@@ -38,7 +38,7 @@ index c7156fca6e5e..91ff34d976de 100644
    void SetLayers(const nsTArray<RefPtr<NativeLayer>>& aLayers) override;
    UniquePtr<NativeLayerRootSnapshotter> CreateSnapshotter() override;
  
-+#ifdef XP_IOS
++#ifdef MOZ_WIDGET_UIKIT
 +  // Retain aLayer so the next CommitToScreen() can clear its onscreen contents.
 +  // aLayer must be a NativeLayerCA absent from that commit's layer list.
 +  void RetainLayerUntilNextScreenCommit(NativeLayer* aLayer);
@@ -61,7 +61,7 @@ index c7156fca6e5e..91ff34d976de 100644
    CALayer* mOnscreenRootCALayer = nullptr;   // strong
    CALayer* mOffscreenRootCALayer = nullptr;  // strong
    NativeLayerRootSnapshotterCA* mWeakSnapshotter = nullptr;
-@@ -234,6 +263,12 @@ class NativeLayerRootCA final : public NativeLayerRoot {
+@@ -234,6 +263,13 @@ class NativeLayerRootCA final : public NativeLayerRoot {
    // opportunity.
    bool mCommitPending = false;
  
@@ -69,27 +69,17 @@ index c7156fca6e5e..91ff34d976de 100644
 +  std::function<void()> mMainThreadCommitCallback;
 +  bool mMainThreadCommitScheduled = false;
 +  Maybe<mozilla::ipc::ByteBuf> mOnscreenCommitData;
++  nsTArray<RefPtr<NativeLayerCA>> mLayersRetainedUntilNextScreenCommit;
 +#endif
 +
    // Updated by the layer's view's window to match the fullscreen state
    // of that window.
    bool mWindowIsFullscreen = false;
-@@ -242,6 +277,10 @@ class NativeLayerRootCA final : public NativeLayerRoot {
-   bool mMutatedOnscreenLayerStructure = false;
-   bool mMutatedOffscreenLayerStructure = false;
- 
-+#ifdef XP_IOS
-+  nsTArray<RefPtr<NativeLayerCA>> mLayersRetainedUntilNextScreenCommit;
-+#endif
-+
-   // How many times have we committed since the last time we emitted
-   // telemetry?
-   unsigned int mTelemetryCommitCount = 0;
-@@ -443,6 +482,10 @@ class NativeLayerCA : public NativeLayer {
+@@ -443,6 +479,10 @@ class NativeLayerCA : public NativeLayer {
    bool ApplyChanges(WhichRepresentation aRepresentation, UpdateType aUpdate,
                      bool* aMustRebuild);
  
-+#ifdef XP_IOS
++#ifdef MOZ_WIDGET_UIKIT
 +  void ClearOnscreenSurfaceContents();
 +#endif
 +

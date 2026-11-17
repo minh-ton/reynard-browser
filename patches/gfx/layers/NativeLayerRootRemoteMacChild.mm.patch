@@ -1,8 +1,22 @@
 diff --git a/gfx/layers/NativeLayerRootRemoteMacChild.mm b/gfx/layers/NativeLayerRootRemoteMacChild.mm
-index aedf46b0a438..81ca4faed84f 100644
+index aedf46b0a438..b168dd05432d 100644
 --- a/gfx/layers/NativeLayerRootRemoteMacChild.mm
 +++ b/gfx/layers/NativeLayerRootRemoteMacChild.mm
-@@ -151,6 +151,13 @@
+@@ -3,8 +3,13 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ 
+ #include "mozilla/layers/NativeLayerRootRemoteMacChild.h"
++#include "mozilla/gfx/MacIOSurface.h"
++#include "mozilla/layers/CompositorThread.h"
++#include "mozilla/layers/ImageBridgeParent.h"
++#include "mozilla/layers/MacIOSurfaceTextureHostOGL.h"
+ #include "mozilla/layers/NativeLayerRemoteMac.h"
+ #include "mozilla/layers/SurfacePool.h"
++#include "mozilla/layers/WebRenderImageHost.h"
+ 
+ namespace mozilla {
+ namespace layers {
+@@ -151,6 +156,13 @@
    mRemoteChild->SendFlush();
  }
  
@@ -16,3 +30,69 @@ index aedf46b0a438..81ca4faed84f 100644
  void NativeLayerRootRemoteMacChild::CommitForSnapshot(CALayer* aRootCALayer) {
    [CATransaction begin];
    [CATransaction setDisableActions:YES];  // disable cross-fade
+@@ -209,5 +221,65 @@
+ NativeLayerRootRemoteMacChild::SnapshotterDelegate::~SnapshotterDelegate() =
+     default;
+ 
++#ifdef MOZ_WIDGET_UIKIT
++static CFTypeRefPtr<IOSurfaceRef> GetVideoFrame(base::ProcessId aPid,
++                                                uint64_t aHandle) {
++  RefPtr<ImageBridgeParent> bridge = ImageBridgeParent::GetInstance(aPid);
++  RefPtr<CompositableHost> host =
++      bridge ? bridge->FindCompositable(CompositableHandle(aHandle)) : nullptr;
++  WebRenderImageHost* imageHost = host ? host->AsWebRenderImageHost() : nullptr;
++  TextureHost* texture =
++      imageHost ? imageHost->GetTextureHostAt(TimeStamp::Now()) : nullptr;
++  MacIOSurfaceTextureHostOGL* surfaceTexture =
++      texture ? texture->AsMacIOSurfaceTextureHost() : nullptr;
++  if (!surfaceTexture) {
++    return {};
++  }
++  return surfaceTexture->GetMacIOSurface()->GetIOSurfaceRef();
++}
++#endif
++
++mozilla::ipc::IPCResult NativeLayerRemoteChild::RecvStartVideoFrames(
++    const base::ProcessId& aPid, const uint64_t& aHandle) {
++#ifdef MOZ_WIDGET_UIKIT
++  RecvStopVideoFrames();
++
++  nsCOMPtr<nsISerialEventTarget> actorThread = GetCurrentSerialEventTarget();
++  NS_NewTimerWithCallback(
++      getter_AddRefs(mVideoFrameTimer),
++      [self = RefPtr{this}, actorThread, aPid, aHandle,
++       lastSurface = CFTypeRefPtr<IOSurfaceRef>()](nsITimer*) mutable {
++        CFTypeRefPtr<IOSurfaceRef> surface = GetVideoFrame(aPid, aHandle);
++        if (!surface || surface.get() == lastSurface.get()) {
++          return;
++        }
++
++        lastSurface = surface;
++        actorThread->Dispatch(NS_NewRunnableFunction(
++            "NativeLayerRemoteChild::SendVideoFrame", [self, surface] {
++              if (self->CanSend()) {
++                (void)self->SendVideoFrame(IOSurfacePort::FromSurface(surface));
++              }
++            }));
++      },
++      TimeDuration::FromMilliseconds(16),
++      nsITimer::TYPE_REPEATING_PRECISE_CAN_SKIP,
++      "NativeLayerRemoteChild::VideoFrames"_ns, CompositorThread());
++#endif
++  return IPC_OK();
++}
++
++mozilla::ipc::IPCResult NativeLayerRemoteChild::RecvStopVideoFrames() {
++  if (mVideoFrameTimer) {
++    mVideoFrameTimer->Cancel();
++    mVideoFrameTimer = nullptr;
++  }
++  return IPC_OK();
++}
++
++void NativeLayerRemoteChild::ActorDestroy(ActorDestroyReason aWhy) {
++  RecvStopVideoFrames();
++}
++
+ }  // namespace layers
+ }  // namespace mozilla

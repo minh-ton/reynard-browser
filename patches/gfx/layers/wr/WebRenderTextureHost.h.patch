@@ -1,0 +1,15 @@
+diff --git a/gfx/layers/wr/WebRenderTextureHost.h b/gfx/layers/wr/WebRenderTextureHost.h
+index baaf5f4a09b0..5fc0d8671a27 100644
+--- a/gfx/layers/wr/WebRenderTextureHost.h
++++ b/gfx/layers/wr/WebRenderTextureHost.h
+@@ -69,6 +69,10 @@ class WebRenderTextureHost final : public TextureHost {
+     return mWrappedTextureHost->AsBufferTextureHost();
+   }
+ 
++  MacIOSurfaceTextureHostOGL* AsMacIOSurfaceTextureHost() override {
++    return mWrappedTextureHost->AsMacIOSurfaceTextureHost();
++  }
++
+   DXGITextureHostD3D11* AsDXGITextureHostD3D11() override {
+     return mWrappedTextureHost->AsDXGITextureHostD3D11();
+   }

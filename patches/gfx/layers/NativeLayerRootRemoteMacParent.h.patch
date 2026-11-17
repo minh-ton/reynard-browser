@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerRootRemoteMacParent.h b/gfx/layers/NativeLayerRootRemoteMacParent.h
-index 484a45d00f59..7da94f7a7398 100644
+index 484a45d00f59..ef280fe351c2 100644
 --- a/gfx/layers/NativeLayerRootRemoteMacParent.h
 +++ b/gfx/layers/NativeLayerRootRemoteMacParent.h
 @@ -23,6 +23,8 @@ class NativeLayerRootRemoteMacParent final : public NativeLayerRemoteParent {
@@ -11,3 +11,29 @@ index 484a45d00f59..7da94f7a7398 100644
    mozilla::ipc::IPCResult RecvCommitNativeLayerCommands(
        nsTArray<NativeLayerCommand>&& aCommands) override;
  
+@@ -31,6 +33,15 @@ class NativeLayerRootRemoteMacParent final : public NativeLayerRemoteParent {
+ 
+   mozilla::ipc::IPCResult RecvFlush() override;
+ 
++  mozilla::ipc::IPCResult RecvVideoFrame(IOSurfacePort&& aSurface) override;
++
++#ifdef MOZ_WIDGET_UIKIT
++  void StartVideoFrames(
++      base::ProcessId aPid, uint64_t aHandle,
++      std::function<void(CFTypeRefPtr<IOSurfaceRef>)>&& aCallback);
++  void StopVideoFrames();
++#endif
++
+  protected:
+   ~NativeLayerRootRemoteMacParent() = default;
+ 
+@@ -50,6 +61,9 @@ class NativeLayerRootRemoteMacParent final : public NativeLayerRemoteParent {
+   RefPtr<NativeLayerRootCA> mRealNativeLayerRoot;
+   UniquePtr<NativeLayerRootSnapshotter> mSnapshotter;
+   nsTHashMap<uint64_t, RefPtr<NativeLayer>> mKnownLayers;
++#ifdef MOZ_WIDGET_UIKIT
++  std::function<void(CFTypeRefPtr<IOSurfaceRef>)> mVideoFrameCallback;
++#endif
+ };
+ 
+ }  // namespace layers

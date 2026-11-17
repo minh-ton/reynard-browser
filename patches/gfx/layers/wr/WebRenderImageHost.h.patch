@@ -1,0 +1,15 @@
+diff --git a/gfx/layers/wr/WebRenderImageHost.h b/gfx/layers/wr/WebRenderImageHost.h
+index b1e6ce026cc4..0b71836d44a4 100644
+--- a/gfx/layers/wr/WebRenderImageHost.h
++++ b/gfx/layers/wr/WebRenderImageHost.h
+@@ -54,6 +54,10 @@ class WebRenderImageHost : public CompositableHost, public ImageComposite {
+   TextureHost* GetAsTextureHostForComposite(
+       AsyncImagePipelineManager* aAsyncImageManager);
+ 
++#ifdef MOZ_WIDGET_UIKIT
++  TextureHost* GetTextureHostAt(const TimeStamp& aTime) const;
++#endif
++
+   void SetWrBridge(const wr::PipelineId& aPipelineId,
+                    WebRenderBridgeParent* aWrBridge);
+ 

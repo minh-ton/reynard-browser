@@ -1,0 +1,71 @@
+diff --git a/mobile/shared/actors/GeckoViewVideoFullscreenParent.sys.mjs b/mobile/shared/actors/GeckoViewVideoFullscreenParent.sys.mjs
+new file mode 100644
+index 000000000000..546daec90d09
+--- /dev/null
++++ b/mobile/shared/actors/GeckoViewVideoFullscreenParent.sys.mjs
+@@ -0,0 +1,65 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++/* This source code is introduced during the work of an iOS 13+ browser
++ * https://github.com/minh-ton/reynard-browser in Feb 2026. */
++
++import { GeckoViewActorParent } from "resource://gre/modules/GeckoViewActorParent.sys.mjs";
++
++const PLAYER_EVENTS = [
++  "GeckoView:VideoFullscreen:Play",
++  "GeckoView:VideoFullscreen:Pause",
++  "GeckoView:VideoFullscreen:Seek",
++  "GeckoView:VideoFullscreen:SetRate",
++  "GeckoView:VideoFullscreen:SetMuted",
++  "GeckoView:VideoFullscreen:PictureInPicture",
++  "GeckoView:VideoFullscreen:Restore",
++  "GeckoView:VideoFullscreen:Close",
++];
++
++export class GeckoViewVideoFullscreenParent extends GeckoViewActorParent {
++  #eventDispatcher = null;
++
++  #listener = {
++    onEvent: (aEvent, aData) => {
++      if (aEvent === "GeckoView:VideoFullscreen:Close") {
++        this.#close();
++      }
++      this.sendAsyncMessage(aEvent, aData);
++    },
++  };
++
++  didDestroy() {
++    this.#eventDispatcher?.sendRequest("GeckoView:VideoFullscreen:Exit", {});
++    this.#close();
++  }
++
++  receiveMessage({ name, data }) {
++    switch (name) {
++      case "GeckoView:VideoFullscreen:Enter":
++        if (!this.#eventDispatcher) {
++          this.#eventDispatcher = this.eventDispatcher;
++          this.#eventDispatcher.registerListener(this.#listener, PLAYER_EVENTS);
++        }
++        this.#eventDispatcher.sendRequest(name, {
++          ...data,
++          pid: this.manager.osPid,
++        });
++        break;
++      case "GeckoView:VideoFullscreen:Update":
++      case "GeckoView:VideoFullscreen:Exit":
++        this.#eventDispatcher?.sendRequest(name, data);
++        break;
++    }
++  }
++
++  #close() {
++    if (!this.#eventDispatcher) {
++      return;
++    }
++
++    this.#eventDispatcher.unregisterListener(this.#listener, PLAYER_EVENTS);
++    this.#eventDispatcher = null;
++  }
++}
