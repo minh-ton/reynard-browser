@@ -1,0 +1,13 @@
+diff --git a/third_party/rust/nss-rs/src/freebl/mod.rs b/third_party/rust/nss-rs/src/freebl/mod.rs
+index 7462df29eab3..f797e5d41981 100644
+--- a/third_party/rust/nss-rs/src/freebl/mod.rs
++++ b/third_party/rust/nss-rs/src/freebl/mod.rs
+@@ -213,7 +213,7 @@ fn freebl_vector() -> Res<*const FREEBLVectorStr> {
+     // Library names in preference order, from NSS's blname.c.
+     let libs: &[&CStr] = if cfg!(target_os = "linux") {
+         &[c"libfreeblpriv3.so", c"libfreebl3.so"]
+-    } else if cfg!(target_os = "macos") {
++    } else if cfg!(any(target_os = "macos", target_os = "ios")) {
+         &[c"libfreebl3.dylib"]
+     } else if cfg!(windows) {
+         &[c"freebl3.dll"]
