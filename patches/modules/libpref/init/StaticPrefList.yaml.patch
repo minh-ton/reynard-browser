@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 4261b6733ff8..a3d4c8f9b489 100644
+index 4261b6733ff8..cad3311abc12 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -3414,13 +3414,13 @@
@@ -27,6 +27,15 @@ index 4261b6733ff8..a3d4c8f9b489 100644
  #else
    value: 3
  #endif
+@@ -4199,7 +4201,7 @@
+ # Enable the Picture-in-Picture API
+ - name: dom.media-pip.enabled
+   type: RelaxedAtomicBool
+-#ifdef ANDROID
++#if defined(XP_IOS) || defined(ANDROID)
+ # Not yet supported on Android (Fenix), so keep it disabled to avoid
+ # webpages successfully feature-detecting an API that fails on use.
+   value: false
 @@ -6152,7 +6154,7 @@
  # document.createEvent("TouchEvent").
  - name: dom.w3c_touch_events.legacy_apis.enabled
