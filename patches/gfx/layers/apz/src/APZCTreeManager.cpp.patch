@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.cpp b/gfx/layers/apz/src/APZCTreeManager.cpp
-index 033548404a11..83ad92fbe66c 100644
+index 033548404a11..270b70ce853b 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.cpp
 +++ b/gfx/layers/apz/src/APZCTreeManager.cpp
 @@ -4,11 +4,13 @@
@@ -627,14 +627,15 @@ index 033548404a11..83ad92fbe66c 100644
            if (atAncestor) {
              MOZ_ASSERT(underAncestor);
              underAncestor = false;
-@@ -3983,11 +4091,17 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3982,12 +4090,18 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+   }
  }
  
- void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
+-void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
 -                                           ScreenIntCoord aBottom) {
-+                                           ScreenIntCoord aBottom,
-+                                           ScreenIntCoord aTopInset,
-+                                           ScreenIntCoord aBottomInset) {
++void APZCTreeManager::SetFixedLayerMargins(
++    ScreenIntCoord aTop, ScreenIntCoord aBottom, ScreenIntCoord aTopInset,
++    ScreenIntCoord aBottomInset, ScreenIntCoord aObscuredBottomInset) {
    {
      MutexAutoLock lock(mMapLock);
 -    mCompositorFixedLayerMargins.top = ScreenCoord(aTop);
@@ -644,10 +645,11 @@ index 033548404a11..83ad92fbe66c 100644
 +    mObscuredTopInset = ScreenCoord(aTop);
 +    mContentTopInset = ScreenCoord(aTopInset);
 +    mContentBottomInset = ScreenCoord(aBottomInset);
++    mObscuredBottomInset = ScreenCoord(aObscuredBottomInset);
    }
    {
      RecursiveMutexAutoLock lock(mTreeLock);
-@@ -3997,9 +4111,20 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
+@@ -3997,9 +4111,22 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
  
  void APZCTreeManager::SetFixedLayerMarginsOnRootContentApzcs(
      const RecursiveMutexAutoLock& aProofOfTreeLock) {
@@ -656,21 +658,23 @@ index 033548404a11..83ad92fbe66c 100644
 +  ScreenCoord topInset;
 +  ScreenCoord bottomInset;
 +  ScreenCoord obscuredTopInset;
++  ScreenCoord obscuredBottomInset;
 +  {
 +    MutexAutoLock lock(mMapLock);
 +    margins = GetCompositorFixedLayerMargins(lock);
 +    topInset = mContentTopInset;
 +    bottomInset = mContentBottomInset;
 +    obscuredTopInset = mObscuredTopInset;
++    obscuredBottomInset = mObscuredBottomInset;
 +  }
    for (auto* apzc : mRootContentApzcs) {
 -    apzc->SetFixedLayerMargins(margins);
-+    apzc->SetFixedLayerMargins(margins, topInset, bottomInset,
-+                               obscuredTopInset);
++    apzc->SetFixedLayerMargins(margins, topInset, bottomInset, obscuredTopInset,
++                               obscuredBottomInset);
    }
  }
  
-@@ -4129,11 +4254,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
+@@ -4129,11 +4256,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
  APZCTreeManager::StickyPositionInfo::StickyPositionInfo(
      const HitTestingTreeNode* aNode) {
    mStickyPositionAnimationId = aNode->GetStickyPositionAnimationId();

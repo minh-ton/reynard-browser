@@ -1,0 +1,94 @@
+diff --git a/gfx/layers/apz/src/ScrollThumbUtils.cpp b/gfx/layers/apz/src/ScrollThumbUtils.cpp
+index 22190519501e..42ea8064e95c 100644
+--- a/gfx/layers/apz/src/ScrollThumbUtils.cpp
++++ b/gfx/layers/apz/src/ScrollThumbUtils.cpp
+@@ -48,6 +48,10 @@ struct AsyncScrollThumbTransformer {
+   // (CSS pixels along the scrollbar track, similar to e.g.
+   // |mScrollbarData.mThumbStart|).
+   void TranslateThumb(const Axis& aAxis, OuterCSSCoord aTranslation);
++
++  // Move the thumb along |aAxis| so it travels only over the part of the
++  // track that the dynamic toolbars don't cover.
++  void FitThumbInUnobscuredTrack(const Axis& aAxis);
+ };
+ 
+ void AsyncScrollThumbTransformer::TranslateThumb(const Axis& aAxis,
+@@ -89,6 +93,47 @@ void AsyncScrollThumbTransformer::ScaleThumbBy(const Axis& aAxis, float aScale,
+   TranslateThumb(aAxis, -thumbExtentDelta);
+ }
+ 
++void AsyncScrollThumbTransformer::FitThumbInUnobscuredTrack(const Axis& aAxis) {
++  const float toParentLayer =
++      (mMetrics.GetDevPixelsPerCSSPixel() * LayoutDeviceToParentLayerScale(1.0))
++          .scale;
++  const OuterCSSCoord scrollTrackOrigin =
++      aAxis.GetPointOffset(
++          mMetrics.CalculateCompositionBoundsInOuterCssPixels().TopLeft()) +
++      mScrollbarData.mScrollTrackStart;
++  const ParentLayerCoord trackStart(scrollTrackOrigin.value * toParentLayer);
++  const ParentLayerCoord trackLength(mScrollbarData.mScrollTrackLength.value *
++                                     toParentLayer);
++
++  // Where the thumb is after the transforms applied so far.
++  const float thumbScale = aAxis.GetTransformScale(mScrollbarTransform);
++  const ParentLayerCoord thumbStart =
++      ParentLayerCoord((scrollTrackOrigin + mScrollbarData.mThumbStart).value *
++                       toParentLayer * thumbScale) +
++      aAxis.GetTransformTranslation(mScrollbarTransform);
++  const ParentLayerCoord thumbLength(mScrollbarData.mThumbLength.value *
++                                     toParentLayer * thumbScale);
++
++  const ParentLayerCoord travelLength = trackLength - thumbLength;
++  if (travelLength <= 0) {
++    return;
++  }
++
++  const ParentLayerRect unobscuredBounds =
++      mApzc->GetUnobscuredCompositionBounds();
++  const ParentLayerCoord unobscuredStart =
++      std::max(trackStart, aAxis.GetRectOffset(unobscuredBounds));
++  const ParentLayerCoord unobscuredEnd = std::min(
++      trackStart + trackLength, aAxis.GetRectOffset(unobscuredBounds) +
++                                    aAxis.GetRectLength(unobscuredBounds));
++
++  const float progress = (thumbStart - trackStart).value / travelLength.value;
++  const ParentLayerCoord fittedThumbStart =
++      unobscuredStart +
++      (unobscuredEnd - unobscuredStart - thumbLength) * progress;
++  aAxis.PostTranslate(mScrollbarTransform, fittedThumbStart - thumbStart);
++}
++
+ void AsyncScrollThumbTransformer::ApplyTransformForAxis(const Axis& aAxis) {
+   ParentLayerCoord asyncScroll = aAxis.GetTransformTranslation(mAsyncTransform);
+   const float asyncZoom = aAxis.GetTransformScale(mAsyncTransform);
+@@ -172,11 +217,15 @@ void AsyncScrollThumbTransformer::ApplyTransformForAxis(const Axis& aAxis) {
+     const CSSCoord curPos = aAxis.GetRectOffset(visualViewportRect) -
+                             aAxis.GetRectOffset(mMetrics.GetScrollableRect());
+ 
+-    const CSSToOuterCSSScale thumbPosRatio(
+-        (maxMinPosDifference != 0)
+-            ? float((mScrollbarData.mScrollTrackLength - effectiveThumbLength) /
+-                    maxMinPosDifference)
+-            : 1.f);
++    CSSToOuterCSSScale thumbPosRatio(mScrollbarData.mThumbRatio);
++    if (haveAsyncZoom) {
++      thumbPosRatio =
++          CSSToOuterCSSScale((maxMinPosDifference != 0)
++                                 ? float((mScrollbarData.mScrollTrackLength -
++                                          effectiveThumbLength) /
++                                         maxMinPosDifference)
++                                 : 1.f);
++    }
+ 
+     const OuterCSSCoord desiredThumbPos = curPos * thumbPosRatio;
+ 
+@@ -296,6 +345,9 @@ LayerToParentLayerMatrix4x4 AsyncScrollThumbTransformer::ComputeTransform() {
+   // so that it reflects what the user is actually seeing now.
+   if (*mScrollbarData.mDirection == ScrollDirection::eVertical) {
+     ApplyTransformForAxis(mApzc->mY);
++    if (mMetrics.IsRootContent()) {
++      FitThumbInUnobscuredTrack(mApzc->mY);
++    }
+   }
+   if (*mScrollbarData.mDirection == ScrollDirection::eHorizontal) {
+     ApplyTransformForAxis(mApzc->mX);

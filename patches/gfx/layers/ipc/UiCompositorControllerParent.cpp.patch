@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerParent.cpp b/gfx/layers/ipc/UiCompositorControllerParent.cpp
-index edc483e80c69..de3e47449bbb 100644
+index edc483e80c69..625d93e78570 100644
 --- a/gfx/layers/ipc/UiCompositorControllerParent.cpp
 +++ b/gfx/layers/ipc/UiCompositorControllerParent.cpp
 @@ -14,6 +14,7 @@
@@ -10,7 +10,7 @@ index edc483e80c69..de3e47449bbb 100644
  #include "mozilla/layers/Compositor.h"
  #include "mozilla/layers/CompositorBridgeParent.h"
  #include "mozilla/layers/CompositorThread.h"
-@@ -113,16 +114,17 @@ UiCompositorControllerParent::RecvInvalidateAndRender() {
+@@ -113,16 +114,18 @@ UiCompositorControllerParent::RecvInvalidateAndRender() {
    return IPC_OK();
  }
  
@@ -19,21 +19,22 @@ index edc483e80c69..de3e47449bbb 100644
 -#if defined(MOZ_WIDGET_ANDROID)
 +mozilla::ipc::IPCResult UiCompositorControllerParent::RecvFixedLayerMargins(
 +    const int32_t& aTop, const int32_t& aBottom, const int32_t& aTopInset,
-+    const int32_t& aBottomInset) {
++    const int32_t& aBottomInset, const int32_t& aObscuredBottomInset) {
 +#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_UIKIT)
    CompositorBridgeParent* parent =
        CompositorBridgeParent::GetCompositorBridgeParentFromLayersId(
            mRootLayerTreeId);
    if (parent) {
 -    parent->SetFixedLayerMargins(0, aOffset);
-+    parent->SetFixedLayerMargins(aTop, aBottom, aTopInset, aBottomInset);
++    parent->SetFixedLayerMargins(aTop, aBottom, aTopInset, aBottomInset,
++                                 aObscuredBottomInset);
    }
 -#endif  // defined(MOZ_WIDGET_ANDROID)
 +#endif
  
    return IPC_OK();
  }
-@@ -190,6 +192,25 @@ UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(
+@@ -190,6 +193,25 @@ UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(
    return IPC_OK();
  }
  

@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/PUiCompositorController.ipdl b/gfx/layers/ipc/PUiCompositorController.ipdl
-index 4b476e9c4651..050378ac4f46 100644
+index 4b476e9c4651..0bc4be16e157 100644
 --- a/gfx/layers/ipc/PUiCompositorController.ipdl
 +++ b/gfx/layers/ipc/PUiCompositorController.ipdl
 @@ -4,6 +4,7 @@
@@ -16,7 +16,7 @@ index 4b476e9c4651..050378ac4f46 100644
    async InvalidateAndRender();
 -  async FixedBottomOffset(int32_t aOffset);
 +  async FixedLayerMargins(int32_t aTop, int32_t aBottom, int32_t aTopInset,
-+                         int32_t aBottomInset);
++                         int32_t aBottomInset, int32_t aObscuredBottomInset);
    async DefaultClearColor(uint32_t aColor);
    async RequestScreenPixels(uint64_t aRequestId, IntRect aSourceRect,
                              FileDescriptor aHardwareBuffer);

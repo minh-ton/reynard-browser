@@ -1,16 +1,15 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerParent.h b/gfx/layers/ipc/UiCompositorControllerParent.h
-index 0a7be6e8bdcf..c3930e6d7864 100644
+index 0a7be6e8bdcf..9ce70a87c0d0 100644
 --- a/gfx/layers/ipc/UiCompositorControllerParent.h
 +++ b/gfx/layers/ipc/UiCompositorControllerParent.h
-@@ -38,13 +38,18 @@ class UiCompositorControllerParent final
+@@ -38,13 +38,17 @@ class UiCompositorControllerParent final
                                                const int32_t& aWidth,
                                                bool* aOutResumed);
    mozilla::ipc::IPCResult RecvInvalidateAndRender();
 -  mozilla::ipc::IPCResult RecvFixedBottomOffset(const int32_t& aOffset);
-+  mozilla::ipc::IPCResult RecvFixedLayerMargins(const int32_t& aTop,
-+                                                const int32_t& aBottom,
-+                                                const int32_t& aTopInset,
-+                                                const int32_t& aBottomInset);
++  mozilla::ipc::IPCResult RecvFixedLayerMargins(
++      const int32_t& aTop, const int32_t& aBottom, const int32_t& aTopInset,
++      const int32_t& aBottomInset, const int32_t& aObscuredBottomInset);
    mozilla::ipc::IPCResult RecvDefaultClearColor(const uint32_t& aColor);
    mozilla::ipc::IPCResult RecvRequestScreenPixels(
        uint64_t aRequestId, gfx::IntRect aSourceRect,

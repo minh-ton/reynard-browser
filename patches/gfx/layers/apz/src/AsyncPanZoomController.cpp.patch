@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/AsyncPanZoomController.cpp b/gfx/layers/apz/src/AsyncPanZoomController.cpp
-index fa09c6085c1e..63b4e120ab5f 100644
+index fa09c6085c1e..79bd78394866 100644
 --- a/gfx/layers/apz/src/AsyncPanZoomController.cpp
 +++ b/gfx/layers/apz/src/AsyncPanZoomController.cpp
 @@ -41,9 +41,10 @@
@@ -273,17 +273,20 @@ index fa09c6085c1e..63b4e120ab5f 100644
      // GetSnapPointForDestination() can produce a destination that's outside
      // of the scroll frame's scroll range. Clamp it here (this matches the
      // behaviour of the main-thread code path, which clamps it in
-@@ -7278,9 +7390,60 @@ ScreenMargin AsyncPanZoomController::GetFixedLayerMargins(
+@@ -7278,9 +7390,63 @@ ScreenMargin AsyncPanZoomController::GetFixedLayerMargins(
    return mCompositorFixedLayerMargins;
  }
  
 -void AsyncPanZoomController::SetFixedLayerMargins(const ScreenMargin& aMargin) {
 +void AsyncPanZoomController::SetFixedLayerMargins(
 +    const ScreenMargin& aMargin, ScreenCoord aTopInset,
-+    ScreenCoord aBottomInset, ScreenCoord aObscuredTopInset) {
++    ScreenCoord aBottomInset, ScreenCoord aObscuredTopInset,
++    ScreenCoord aObscuredBottomInset) {
    RecursiveMutexAutoLock lock(mRecursiveMutex);
 +  const bool marginsChanged = mCompositorFixedLayerMargins != aMargin;
    mCompositorFixedLayerMargins = aMargin;
++  mObscuredBottomInset = ViewAs<ParentLayerPixel>(
++      aObscuredBottomInset, PixelCastJustification::ScreenIsParentLayerForRoot);
 +  const ParentLayerCoord topInset = ViewAs<ParentLayerPixel>(
 +      aTopInset, PixelCastJustification::ScreenIsParentLayerForRoot);
 +  const ParentLayerCoord bottomInset = ViewAs<ParentLayerPixel>(

@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/AsyncPanZoomController.h b/gfx/layers/apz/src/AsyncPanZoomController.h
-index f7baa4c101f0..1d90f2111cac 100644
+index f7baa4c101f0..73d68af0dc05 100644
 --- a/gfx/layers/apz/src/AsyncPanZoomController.h
 +++ b/gfx/layers/apz/src/AsyncPanZoomController.h
 @@ -40,6 +40,8 @@
@@ -11,7 +11,23 @@ index f7baa4c101f0..1d90f2111cac 100644
  namespace ipc {
  
  class SharedMemory;
-@@ -1349,6 +1351,10 @@ class AsyncPanZoomController {
+@@ -1323,6 +1325,15 @@ class AsyncPanZoomController {
+     return mScrollMetadata.GetMetrics().GetCompositionBounds();
+   }
+ 
++  ParentLayerRect GetUnobscuredCompositionBounds() const {
++    RecursiveMutexAutoLock lock(mRecursiveMutex);
++    const FrameMetrics& metrics = mScrollMetadata.GetMetrics();
++    ParentLayerRect bounds = metrics.GetCompositionBounds();
++    bounds.Deflate(ParentLayerMargin(metrics.GetObscuredTopInset(), 0,
++                                     mObscuredBottomInset, 0));
++    return bounds;
++  }
++
+   LayoutDeviceToLayerScale GetCumulativeResolution() const {
+     RecursiveMutexAutoLock lock(mRecursiveMutex);
+     return mScrollMetadata.GetMetrics().GetCumulativeResolution();
+@@ -1349,6 +1360,10 @@ class AsyncPanZoomController {
      return Metrics().GetLayoutScrollOffset();
    }
  
@@ -22,7 +38,7 @@ index f7baa4c101f0..1d90f2111cac 100644
    // Returns the delta for the given InputData.
    ParentLayerPoint GetDeltaForEvent(const InputData& aEvent) const;
  
-@@ -1593,7 +1599,6 @@ class AsyncPanZoomController {
+@@ -1593,7 +1608,6 @@ class AsyncPanZoomController {
    /**
     * Internal helpers for checking general state of this apzc.
     */
@@ -30,7 +46,7 @@ index f7baa4c101f0..1d90f2111cac 100644
    static bool IsTransformingState(PanZoomState aState);
  
    /* ===================================================================
-@@ -1928,6 +1933,7 @@ class AsyncPanZoomController {
+@@ -1928,6 +1942,7 @@ class AsyncPanZoomController {
  
   public:
    bool IsInPanningState() const;
@@ -38,7 +54,7 @@ index f7baa4c101f0..1d90f2111cac 100644
  
    // Returns whether being in the middle of a gesture. E.g., this APZC has
    // started handling a pan gesture but hasn't yet received pan-end, etc.
-@@ -1970,11 +1976,15 @@ class AsyncPanZoomController {
+@@ -1970,11 +1985,16 @@ class AsyncPanZoomController {
      return mState == PINCHING || mState == ANIMATING_ZOOM;
    }
  
@@ -46,7 +62,8 @@ index f7baa4c101f0..1d90f2111cac 100644
 +  void SetFixedLayerMargins(const ScreenMargin& aMargins,
 +                            ScreenCoord aTopInset = 0,
 +                            ScreenCoord aBottomInset = 0,
-+                            ScreenCoord aObscuredTopInset = 0);
++                            ScreenCoord aObscuredTopInset = 0,
++                            ScreenCoord aObscuredBottomInset = 0);
  
   private:
    // The timestamp of the latest touch start event.
@@ -55,3 +72,13 @@ index f7baa4c101f0..1d90f2111cac 100644
    // The start time of the latest autoscroll animation.
    TimeStamp mAutoscrollStartTime;
    // Used for interpolating touch events that cross the touch-start
+@@ -1997,6 +2017,9 @@ class AsyncPanZoomController {
+   ScrollSnapTargetIds mLastSnapTargetIds;
+   // This variable needs to be protected by |mRecursiveMutex|.
+   ScreenMargin mCompositorFixedLayerMargins;
++  // The height of the web view covered by the bottom toolbar.
++  // This variable needs to be protected by |mRecursiveMutex|.
++  ParentLayerCoord mObscuredBottomInset;
+   // Extra offset to add to the async scroll position for testing
+   CSSPoint mTestAsyncScrollOffset;
+   // Extra zoom to include in the aync zoom for testing

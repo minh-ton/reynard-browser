@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.h b/gfx/layers/apz/src/APZCTreeManager.h
-index c9d92950f0fd..a1558356e5fb 100644
+index c9d92950f0fd..18070289e599 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.h
 +++ b/gfx/layers/apz/src/APZCTreeManager.h
 @@ -204,10 +204,16 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
@@ -20,18 +20,19 @@ index c9d92950f0fd..a1558356e5fb 100644
    /**
     * Refer to the documentation of APZBridge::ReceiveInputEvent() and
     * APZEventResult.
-@@ -501,7 +507,9 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -501,7 +507,10 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
    /**
     * Set fixed layer margins for dynamic toolbar.
     */
 -  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom);
 +  void SetFixedLayerMargins(ScreenIntCoord aTop, ScreenIntCoord aBottom,
 +                            ScreenIntCoord aTopInset = 0,
-+                            ScreenIntCoord aBottomInset = 0);
++                            ScreenIntCoord aBottomInset = 0,
++                            ScreenIntCoord aObscuredBottomInset = 0);
  
    /**
     * Refer to apz::ComputeTransformForScrollThumb() for a description
-@@ -602,8 +610,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -602,8 +611,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
        const MutexAutoLock& aProofOfMapLock) const;
    ScreenToParentLayerMatrix4x4 GetScreenToApzcTransform(
        const AsyncPanZoomController* aApzc) const;
@@ -42,7 +43,7 @@ index c9d92950f0fd..a1558356e5fb 100644
    ParentLayerToScreenMatrix4x4 GetApzcToGeckoTransform(
        const AsyncPanZoomController* aApzc,
        const AsyncTransformComponents& aComponents) const;
-@@ -660,9 +668,6 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -660,9 +669,6 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
  
    ScreenMargin GetCompositorFixedLayerMargins() const;
  
@@ -52,7 +53,7 @@ index c9d92950f0fd..a1558356e5fb 100644
    APZScrollGeneration NewAPZScrollGeneration() {
      // In the production code this function gets only called from the sampler
      // thread but in tests using nsIDOMWindowUtils.setAsyncScrollOffset this
-@@ -719,22 +724,14 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -719,22 +725,14 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
    struct FixedPositionInfo;
    struct StickyPositionInfo;
  
@@ -82,7 +83,7 @@ index c9d92950f0fd..a1558356e5fb 100644
  
    /**
     * Perform hit testing for a touch-start event.
-@@ -971,6 +968,11 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -971,6 +969,11 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
                       ScrollableLayerGuid::EqualIgnoringPresShellFn>
        mApzcMap MOZ_GUARDED_BY(mMapLock);
  
@@ -94,7 +95,7 @@ index c9d92950f0fd..a1558356e5fb 100644
    /**
     * Set of ScrollableLayerGuids that have been notified by content as
     * having a non-passive APZ-aware event listener registered in their
-@@ -1077,11 +1079,15 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -1077,11 +1080,15 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
     */
    struct StickyPositionInfo {
      Maybe<uint64_t> mStickyPositionAnimationId;
@@ -113,7 +114,7 @@ index c9d92950f0fd..a1558356e5fb 100644
  
      explicit StickyPositionInfo(const HitTestingTreeNode* aNode);
    };
-@@ -1116,7 +1122,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -1116,7 +1123,8 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
    /* This tracks the hit test result info for the current touch input block.
     * In particular, it tracks the target APZC, the hit test flags, and the
     * fixed pos sides. This is populated at the start of a touch block based
@@ -123,13 +124,14 @@ index c9d92950f0fd..a1558356e5fb 100644
     * This allows touch points to move outside the thing they started on, but
     * still have the touch events delivered to the same initial APZC. This will
     * only ever be touched on the input delivery thread, and so does not require
-@@ -1157,6 +1164,9 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
+@@ -1157,6 +1165,10 @@ class APZCTreeManager : public IAPZCTreeManager, public APZBridge {
     * Acquire mMapLock before accessing this.
     */
    ScreenMargin mCompositorFixedLayerMargins MOZ_GUARDED_BY(mMapLock);
 +  ScreenCoord mContentTopInset MOZ_GUARDED_BY(mMapLock){0};
 +  ScreenCoord mContentBottomInset MOZ_GUARDED_BY(mMapLock){0};
 +  ScreenCoord mObscuredTopInset MOZ_GUARDED_BY(mMapLock){0};
++  ScreenCoord mObscuredBottomInset MOZ_GUARDED_BY(mMapLock){0};
    /* Similar to above |mCompositorFixedLayerMargins|. But this value is the
     * margins on the main-thread at the last time position:fixed elements were
     * updated during the dynamic toolbar transitions.
