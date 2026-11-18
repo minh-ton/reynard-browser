@@ -192,7 +192,12 @@ final class FaviconStore {
         )
     }
     
+    @available(*, deprecated, message: "use favicon(for:traitCollection:) instead")
     func favicon(for pageURL: URL) async -> UIImage? {
+        return await favicon(for: pageURL, traitCollection: .current)
+    }
+    
+    func favicon(for pageURL: URL, traitCollection: UITraitCollection) async -> UIImage? {
         guard URLUtils.isWebURL(pageURL) else {
             return nil
         }
@@ -211,7 +216,7 @@ final class FaviconStore {
                 return nil
             }
             
-            let image = await self.fetchAndCacheFavicon(for: pageURL)
+            let image = await self.fetchAndCacheFavicon(for: pageURL, traitCollection: traitCollection)
             self.stateQueue.async {
                 self.activeRequests[requestKey] = nil
             }
@@ -224,7 +229,12 @@ final class FaviconStore {
         return await task.value
     }
     
+    @available(*, deprecated, message: "use favicon(for:webAppManifest:traitCollection:) instead")
     func favicon(for pageURL: URL, webAppManifest: Any) async -> UIImage? {
+        return await favicon(for: pageURL, webAppManifest: webAppManifest, traitCollection: .current)
+    }
+    
+    func favicon(for pageURL: URL, webAppManifest: Any, traitCollection: UITraitCollection) async -> UIImage? {
         let manifestURLs = manifestIconURLs(from: webAppManifest, baseURL: pageURL)
         let candidates = manifestURLs.map {
             FetchCandidate(url: $0, requiresTouchIconSize: true)
@@ -233,7 +243,7 @@ final class FaviconStore {
         if let image = await fetchAndCacheFirstCandidate(candidates, for: pageURL) {
             return image
         }
-        return await favicon(for: pageURL)
+        return await favicon(for: pageURL, traitCollection: traitCollection)
     }
     
     func clearCache() {
@@ -416,7 +426,7 @@ final class FaviconStore {
         return result == 0 || result == 2
     }
     
-    private func fetchAndCacheFavicon(for pageURL: URL) async -> UIImage? {
+    private func fetchAndCacheFavicon(for pageURL: URL, traitCollection: UITraitCollection) async -> UIImage? {
         var candidates: [FetchCandidate] = []
         var fallbackPageURL = pageURL
         var declaredCandidates: [IconCandidate] = []
@@ -435,7 +445,7 @@ final class FaviconStore {
         candidates.append(contentsOf: declaredCandidates.filter(\.kind.isTouchIcon).map {
             FetchCandidate(url: $0.url, requiresTouchIconSize: true)
         })
-        candidates.append(contentsOf: deviceTouchIconURLs(for: fallbackPageURL).map {
+        candidates.append(contentsOf: deviceTouchIconURLs(for: fallbackPageURL, traitCollection: traitCollection).map {
             FetchCandidate(url: $0, requiresTouchIconSize: true)
         })
         candidates.append(contentsOf: defaultTouchIconURLs(for: fallbackPageURL).map {
@@ -896,13 +906,14 @@ final class FaviconStore {
         ].compactMap { $0 }
     }
     
-    private func deviceTouchIconURLs(for pageURL: URL) -> [URL] {
+    private func deviceTouchIconURLs(for pageURL: URL, traitCollection: UITraitCollection) -> [URL] {
+        let displayScale = traitCollection.displayScale
         let sideLength: Int
         switch UIDevice.current.userInterfaceIdiom {
         case .phone:
-            sideLength = UIScreen.main.scale == 1 ? 57 : 120
+            sideLength = displayScale == 1 ? 57 : 120
         case .pad:
-            sideLength = UIScreen.main.scale == 1 ? 76 : 152
+            sideLength = displayScale == 1 ? 76 : 152
         default:
             sideLength = 57
         }

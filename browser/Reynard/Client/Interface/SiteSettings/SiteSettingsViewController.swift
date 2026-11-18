@@ -356,7 +356,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
             cell.textLabel?.text = NSLocalizedString("Request Desktop Website", comment: "")
             requestDesktopWebsiteSwitch.isOn = SiteSettingsStore.shared.settings(for: host)?.websiteMode.map {
                 $0 == .desktop
-            } ?? Prefs.BrowsingSettings.requestDesktopWebsite
+            } ?? Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
             cell.accessoryView = requestDesktopWebsiteSwitch
             cell.selectionStyle = .none
             return cell
@@ -504,7 +504,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
     }
     
     @objc private func requestDesktopWebsiteSwitchDidChange(_ sender: UISwitch) {
-        if sender.isOn == Prefs.BrowsingSettings.requestDesktopWebsite {
+        if sender.isOn == Prefs.BrowsingSettings.effectiveRequestDesktopWebsite {
             _ = SiteSettingsStore.shared.clearWebsiteMode(for: host)
         } else {
             _ = SiteSettingsStore.shared.setWebsiteMode(sender.isOn ? .desktop : .mobile, for: host)
@@ -730,7 +730,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
         _ = SiteSettingsStore.shared.clearPageZoom(for: host)
         _ = SiteSettingsStore.shared.clearWebsiteMode(for: host)
         _ = SiteSettingsStore.shared.clearReaderMode(for: host)
-        requestDesktopWebsiteSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsite
+        requestDesktopWebsiteSwitch.isOn = Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
         useReaderAutomaticallySwitch.isOn = Prefs.BrowsingSettings.useReaderAutomatically
         updateSessionPageZoom(Prefs.BrowsingSettings.defaultPageZoomLevel)
         tableView.reloadData()

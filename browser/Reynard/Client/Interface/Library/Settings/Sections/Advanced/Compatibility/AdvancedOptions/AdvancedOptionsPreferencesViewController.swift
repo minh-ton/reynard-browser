@@ -115,7 +115,7 @@ final class AdvancedOptionsPreferencesViewController: SettingsTableViewControlle
     
     private var defaultConfiguration: UserAgentConfiguration {
         return userAgentPolicy.defaultConfiguration(
-            prefersDesktopMode: Prefs.BrowsingSettings.requestDesktopWebsite
+            prefersDesktopMode: Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
         )
     }
     

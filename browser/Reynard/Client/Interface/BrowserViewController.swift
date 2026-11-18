@@ -38,10 +38,16 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     private var preFullscreenOrientation: UIInterfaceOrientation?
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
-    private var shouldRestoreContentFocus = false
-    private(set) var browserLayout = BrowserLayout.initial(
-        interfaceIdiom: UIDevice.current.userInterfaceIdiom
+    lazy var verticalBarItems = BrowserVerticalBarItems(
+        onBack: { [weak self] in self?.browserChrome.onBack?() },
+        onForward: { [weak self] in self?.browserChrome.onForward?() },
+        onShare: { [weak self] in self?.browserChrome.onShare?() },
+        onLibrary: { [weak self] in self?.browserChrome.onLibrary?() },
+        onTabOverview: { [weak self] in self?.browserChrome.onTabOverview?() }
     )
+    private var shouldRestoreContentFocus = false
+    // Resolved from the view's traits once it is in a window; see layoutInterfaceIdiom.
+    private(set) var browserLayout = BrowserLayout.initial(interfaceIdiom: .phone)
     
     // MARK: - Views And Coordinators
     
@@ -120,6 +126,15 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         return sidebarCoordinator.statusBarController
     }
     
+    /// On the larger display of a foldable iPhone the browser draws one
+    /// toolbar row along the top, with the status bar on the horizontal axis at
+    /// the end of that row, as in Safari. Compact windows keep the system
+    /// default, a status bar column at the side that the layout stays clear of.
+    @available(iOS 27.1, *)
+    override var preferredVerticalBarBehavior: UIVerticalBarBehavior {
+        return layoutInterfaceIdiom == .pad ? .disabled : .automatic
+    }
+    
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         if let lockedOrientations {
             return lockedOrientations
@@ -150,6 +165,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
+        registerForLayoutTraitChanges()
         
         if sidebarCoordinator.installHostIfNeeded() {
             return
@@ -234,6 +250,21 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
+        layoutTraitsDidChange()
+    }
+    
+    private func registerForLayoutTraitChanges() {
+        if #available(iOS 27.1, *) {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) { (self: Self, _: UITraitCollection) in
+                self.layoutTraitsDidChange()
+            }
+        }
+    }
+    
+    private func layoutTraitsDidChange() {
+        if #available(iOS 27.1, *) {
+            setNeedsUpdateOfVerticalBarConfiguration()
+        }
         DispatchQueue.main.async { [weak self] in
             guard let self,
                   self.isViewLoaded,
@@ -303,9 +334,8 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             bottomAnchor: view.bottomAnchor
         )
         
+        NSLayoutConstraint.activate(contentSafeAreaConstraints)
         NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).withPriority(.defaultHigh),
             contentView.bottomAnchor.constraint(equalTo: browserChrome.bottomToolbarTopAnchor).withPriority(.defaultHigh),
             browserChrome.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -525,13 +555,20 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         
         let previousLayout = browserLayout
         browserLayout = resolveBrowserLayout()
+        var addressBarEditingSnapshot: AddressBar.EditingSnapshot?
         if browserLayout != previousLayout {
             if let readerSettings = presentedViewController as? ReaderSettingsViewController {
                 readerSettings.dismiss(animated: false)
             }
+            // The chrome is rebuilt for the new layout; keep what the user was
+            // typing so folding or unfolding does not interrupt them.
+            addressBarEditingSnapshot = browserChrome.addressBarEditingSnapshot()
             dismissAddressBarEditingAndOverlays()
         }
         applyBrowserLayout(animated: animated)
+        if browserLayout != previousLayout {
+            browserLayoutDidChange(from: previousLayout, restoringAddressBarEditing: addressBarEditingSnapshot)
+        }
         homepageOverlayCoordinator.updatePresentation(animated: false)
         searchOverlayCoordinator.updatePresentedLayout()
         
@@ -574,7 +611,32 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         updateBrowserLayout(animated: animated, duration: duration)
     }
     
+    /// Keeps page content out from under the status bar, camera housing and
+    /// rounded corners on the left and right (for example the status bar column
+    /// at the trailing edge of an unfolded foldable iPhone in landscape), the way
+    /// Safari insets pages by default. Fullscreen media still fills the window.
+    private lazy var contentSafeAreaConstraints: [NSLayoutConstraint] = [
+        contentView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+        contentView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+    ]
+    
+    private lazy var contentEdgeToEdgeConstraints: [NSLayoutConstraint] = [
+        contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+        contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+    ]
+    
+    private func updateContentHorizontalConstraints(edgeToEdge: Bool) {
+        if edgeToEdge {
+            NSLayoutConstraint.deactivate(contentSafeAreaConstraints)
+            NSLayoutConstraint.activate(contentEdgeToEdgeConstraints)
+        } else {
+            NSLayoutConstraint.deactivate(contentEdgeToEdgeConstraints)
+            NSLayoutConstraint.activate(contentSafeAreaConstraints)
+        }
+    }
+    
     func applyBrowserLayout(animated: Bool = false) {
+        updateContentHorizontalConstraints(edgeToEdge: isShowingFullscreenMedia)
         if isShowingFullscreenMedia {
             applyFullscreenLayout()
         } else {
@@ -590,6 +652,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         
         applyTabOverviewLayout()
         applyBrowserChromeLayout(animated: animated)
+        syncVerticalBarItems(animated: animated)
         updateNavigationButtons()
         setNeedsStatusBarAppearanceUpdate()
     }
@@ -610,7 +673,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             topAnchor: view.safeAreaLayoutGuide.topAnchor,
             bottomAnchor: isSearchFocused
             ? view.safeAreaLayoutGuide.bottomAnchor
-            : browserChrome.bottomToolbarTopAnchor
+            : (browserLayout.usesVerticalBar ? view.bottomAnchor : browserChrome.bottomToolbarTopAnchor)
         )
         tabBar.setVisibility(.hidden, animated: false)
     }
@@ -676,13 +739,104 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             interfaceIdiom: browserLayout.interfaceIdiom,
             orientation: browserLayout.orientation,
             isTwoThirdSplitScreenOrSmaller: isSidebarOverlayLayout,
-            sidebarButtonVisible: sidebarCoordinator.showChromeSidebarButton,
-            animatesChromeStateChanges: animated
+            sidebarButtonVisible: usesSidebar && sidebarCoordinator.showChromeSidebarButton,
+            showsLibraryButton: !usesSidebar,
+            animatesChromeStateChanges: animated,
+            usesVerticalBar: browserLayout.usesVerticalBar
         ))
     }
     
+    /// The idiom the browser chrome is laid out for. This follows the space the
+    /// window actually has rather than the kind of device: an iPhone whose window
+    /// is regular in both dimensions (for example the inner display of a foldable
+    /// iPhone) gets the same tab bar and sidebar layout as an iPad, and falls back
+    /// to the phone layout as soon as the window becomes compact again.
+    var layoutInterfaceIdiom: UIUserInterfaceIdiom {
+        // Read the scene's traits: when this browser sits inside the sidebar
+        // container, the container overrides the horizontal size class of its
+        // children to keep the split view from collapsing, so our own trait
+        // collection does not describe the space the window really has.
+        let traits = view.window?.windowScene?.traitCollection ?? traitCollection
+        if traits.userInterfaceIdiom == .pad {
+            return .pad
+        }
+        
+        let isRegularInBothDimensions = traits.horizontalSizeClass == .regular
+        && traits.verticalSizeClass == .regular
+        return isRegularInBothDimensions ? .pad : .phone
+    }
+    
+    /// Whether bookmarks, history and settings open in a sidebar beside the
+    /// page. That is the iPad design; on the inner display of a foldable iPhone
+    /// they open from the toolbar button instead, which leaves the whole width
+    /// to the page.
+    var usesSidebar: Bool {
+        let traits = view.window?.windowScene?.traitCollection ?? traitCollection
+        return traits.userInterfaceIdiom == .pad
+    }
+    
+    /// Follow-up work when the window moves between a compact and a large layout,
+    /// for example when a foldable iPhone is folded or unfolded.
+    private func browserLayoutDidChange(
+        from previousLayout: BrowserLayout,
+        restoringAddressBarEditing editingSnapshot: AddressBar.EditingSnapshot?
+    ) {
+        // Desktop websites on large windows, mobile websites on compact ones.
+        let windowPrefersDesktopWebsite = browserLayout.interfaceIdiom == .pad
+        if Prefs.BrowsingSettings.windowPrefersDesktopWebsite != windowPrefersDesktopWebsite {
+            Prefs.BrowsingSettings.windowPrefersDesktopWebsite = windowPrefersDesktopWebsite
+            tabManager.reloadSelectedTabIfWebsiteModeChanged()
+        }
+        
+        let sidebar = splitViewController as? SidebarViewController
+        let wasLargeLandscape = previousLayout.interfaceIdiom == .pad && previousLayout.orientation == .landscape
+        let isLargeLandscape = browserLayout.interfaceIdiom == .pad && browserLayout.orientation == .landscape
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.view.window != nil else {
+                return
+            }
+            
+            if let sidebar {
+                if !self.usesSidebar || self.browserLayout.interfaceIdiom != .pad, sidebar.isSidebarVisible {
+                    // No room for the sidebar in a compact window, and its toggle is hidden.
+                    sidebar.setVisible(false)
+                } else if self.usesSidebar, isLargeLandscape, !wasLargeLandscape,
+                          !self.isShowingFullscreenMedia,
+                          sidebar.isSidebarVisible != Prefs.AppearanceSettings.showsSidebarInLargeWindows {
+                    // Like Safari on iPad: bring back the sidebar the user last had open.
+                    sidebar.setVisible(Prefs.AppearanceSettings.showsSidebarInLargeWindows)
+                }
+            }
+            
+            if let editingSnapshot,
+               !self.tabOverview.isPresented,
+               self.presentedControllerInHierarchy == nil {
+                self.browserChrome.restoreAddressBarEditing(from: editingSnapshot)
+            }
+        }
+    }
+    
+    /// Whether the system vertical bar holds the toolbar buttons: on a folded
+    /// foldable iPhone the status bar sits in a column at one side, and the
+    /// system shows navigation and toolbar items in that column.
+    private var usesVerticalBar: Bool {
+        guard #available(iOS 27.1, *),
+              navigationController != nil,
+              layoutInterfaceIdiom == .phone else {
+            return false
+        }
+        return traitCollection.verticalBarEdge != .unspecified
+    }
+    
     private func resolveBrowserLayout() -> BrowserLayout {
-        let interfaceIdiom = traitCollection.userInterfaceIdiom
+        if usesVerticalBar {
+            var layout = resolvePhoneLayout()
+            layout.usesVerticalBar = true
+            return layout
+        }
+        
+        let interfaceIdiom = layoutInterfaceIdiom
         let orientation = currentViewportOrientation()
         
         if interfaceIdiom == .pad {
@@ -701,11 +855,9 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     }
     
     private func currentViewportOrientation() -> BrowserLayout.ViewportOrientation {
-        if let interfaceOrientation = view.window?.windowScene?.interfaceOrientation,
-           interfaceOrientation != .unknown {
-            return interfaceOrientation.isLandscape ? .landscape : .portrait
-        }
-        
+        // Layout follows the shape of the space we have, not the device
+        // orientation: a resizable or folded window can be wider than tall in
+        // either device orientation.
         return view.bounds.width > view.bounds.height ? .landscape : .portrait
     }
     
@@ -801,6 +953,16 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     }
     
     private func browserTopInset() -> CGFloat {
+        // When the status bar shares the top band with the toolbar row (the
+        // inner display of a foldable iPhone), the row starts where the system
+        // places a top bar, not below the status bar; collapsing on scroll
+        // measures from there.
+        if #available(iOS 27.2, *), browserLayout.chromeMode == .pad {
+            let barTop = view.edgeInsets(for: .bar(onEdge: UIRectEdge.top)).top
+            if barTop < view.safeAreaInsets.top {
+                return barTop
+            }
+        }
         return sidebarCoordinator.topInset(fallback: UX.fallbackTopInset)
     }
     
@@ -1074,11 +1236,9 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     // MARK: - Browser UI Updates
     
     func syncBrowserNavigationChrome(animated: Bool) {
-        navigationController?.setNavigationBarHidden(true, animated: animated)
         navigationItem.leftItemsSupplementBackButton = false
         navigationItem.hidesBackButton = true
-        navigationItem.leftBarButtonItems = []
-        navigationItem.leftBarButtonItem = nil
+        syncVerticalBarItems(animated: animated)
     }
     
     func updateNavigationButtons() {
@@ -1093,10 +1253,16 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             return
         }
         
+        let canShare = tabManager.shareableURL(for: tab) != nil
         browserChrome.updateNavigation(
             canGoBack: tabManager.canGoBack,
             canGoForward: tab.state.navigationState.canGoForward,
-            canShare: tabManager.shareableURL(for: tab) != nil
+            canShare: canShare
+        )
+        verticalBarItems.updateNavigation(
+            canGoBack: tabManager.canGoBack,
+            canGoForward: tab.state.navigationState.canGoForward,
+            canShare: canShare
         )
         
         let previewImages = tabManager.navigationPreviewImages(for: tab)

@@ -802,7 +802,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
         
         updateBookmarkMenu()
         
-        let targetWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
+        let targetWidth = view.bounds.width
         headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
         LibrarySharedUtils.updateTableHeaderHeight(headerView, in: tableView)
     }

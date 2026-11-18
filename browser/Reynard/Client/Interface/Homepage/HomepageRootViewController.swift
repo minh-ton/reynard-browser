@@ -107,6 +107,31 @@ final class HomepageRootViewController: UIViewController {
         configureSections()
     }
     
+    private var containerSafeAreaConstraints: [NSLayoutConstraint] = []
+    
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        installContainerSafeAreaConstraintsIfNeeded()
+    }
+    
+    /// Takes the side insets from the homepage's container, which sits in the
+    /// browser's content area. With the system vertical bar (a folded foldable
+    /// iPhone), the navigation controller adds the bar's column to this view a
+    /// second time even though the container is already clear of it; the
+    /// container's own safe area is the real one.
+    private func installContainerSafeAreaConstraintsIfNeeded() {
+        guard containerSafeAreaConstraints.isEmpty,
+              let containerView = navigationController?.view,
+              view.isDescendant(of: containerView) else {
+            return
+        }
+        containerSafeAreaConstraints = [
+            scrollView.leadingAnchor.constraint(equalTo: containerView.safeAreaLayoutGuide.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: containerView.safeAreaLayoutGuide.trailingAnchor),
+        ]
+        NSLayoutConstraint.activate(containerSafeAreaConstraints)
+    }
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateSectionStackWidth()
@@ -217,8 +242,8 @@ final class HomepageRootViewController: UIViewController {
             wallpaperImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor).withPriority(.defaultHigh),
+            scrollView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor).withPriority(.defaultHigh),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             scrollView.contentLayoutGuide.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
             

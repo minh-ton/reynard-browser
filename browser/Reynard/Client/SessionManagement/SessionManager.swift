@@ -306,6 +306,10 @@ final class SessionManager {
         updateSettings(of: session, for: url, tabID: tabID)
     }
     
+    func websiteModeNeedsUpdate(of session: GeckoSession, for url: String, tabID: UUID?) -> Bool {
+        return session.settings.websiteMode != sessionSettings.settings(for: url, tabID: tabID).websiteMode
+    }
+    
     func isDesktopMode(for url: String, tabID: UUID) -> Bool? {
         return sessionSettings.websiteMode.isDesktopMode(for: url, tabID: tabID)
     }

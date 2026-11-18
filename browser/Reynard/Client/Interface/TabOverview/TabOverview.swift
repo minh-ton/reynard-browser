@@ -107,6 +107,34 @@ final class TabOverview: UIView {
     
     let collection: TabOverviewCollection
     let topToolbar = TabOverviewTopToolbar()
+    
+    /// The action buttons as bar items, for the system vertical bar (iOS 27.1)
+    /// on a folded foldable iPhone: clearing tabs at the top, new tab and done
+    /// at the bottom, like Safari's tab overview there.
+    private(set) lazy var verticalBarClearItem: UIBarButtonItem = makeVerticalBarItem(
+        UIBarButtonItem(barButtonSystemItem: .trash, target: nil, action: nil)
+    )
+    private(set) lazy var verticalBarAddItem: UIBarButtonItem = makeVerticalBarItem(
+        UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(verticalBarAddTapped))
+    )
+    private(set) lazy var verticalBarDoneItem: UIBarButtonItem = makeVerticalBarItem(
+        UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(verticalBarDoneTapped))
+    )
+    
+    private func makeVerticalBarItem(_ item: UIBarButtonItem) -> UIBarButtonItem {
+        if #available(iOS 27.1, *) {
+            item.axisBehavior = .verticalPreferred
+            item.sharesBackground = false
+        }
+        return item
+    }
+    
+    @objc private func verticalBarAddTapped() { requestNewTab() }
+    @objc private func verticalBarDoneTapped() { requestDone() }
+    
+    func setActionsShownInVerticalBar(_ shown: Bool) {
+        bottomToolbar.setActionControlsHidden(shown)
+    }
     let bottomToolbar = TabOverviewBottomToolbar()
     private let statusBarBlurView: VariableBlurView = {
         let view = VariableBlurView()
@@ -359,5 +387,13 @@ final class TabOverview: UIView {
         : regularCount
         topToolbar.apply(tabCount: regularCount, visibleTabCount: visibleCount, hasVisibleTab: visibleCount > 0)
         bottomToolbar.apply(tabCount: regularCount, visibleTabCount: visibleCount, hasVisibleTab: visibleCount > 0)
+        if #available(iOS 27.1, *) {
+            verticalBarClearItem.menu = TabOverviewClearTabsMenu.make(
+                tabCount: visibleCount,
+                onClearTabs: { [weak self] in self?.requestClearTabs() },
+                onClearTabsOlderThan: { [weak self] age in self?.requestClearTabsOlderThan(age) }
+            )
+        }
+        verticalBarDoneItem.isEnabled = visibleCount > 0
     }
 }

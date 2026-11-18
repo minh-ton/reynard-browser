@@ -129,6 +129,24 @@ extension TabManager {
 }
 
 extension TabManagerImplementation {
+    /// Reloads the selected tab when the desktop/mobile mode it should use no
+    /// longer matches the one it was loaded with, for example after the window
+    /// changed size and the default now follows the larger or smaller window.
+    @discardableResult
+    func reloadSelectedTabIfWebsiteModeChanged() -> Bool {
+        guard let tab = selectedTab,
+              let url = tab.url,
+              let scheme = URL(string: url)?.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              sessionManager.websiteModeNeedsUpdate(of: tab.session, for: url, tabID: tab.id) else {
+            return false
+        }
+        
+        sessionManager.updateSettings(of: tab.session, for: url, tabID: tab.id)
+        tab.session.reload()
+        return true
+    }
+    
     @discardableResult
     func changeWebsiteModeForSelectedTab() -> Bool {
         guard let tab = selectedTab,

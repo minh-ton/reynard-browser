@@ -35846,6 +35846,38 @@
           }
         }
       }
+    },
+    "Match Window Size" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟随窗口大小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨視窗大小"
+          }
+        }
+      }
+    },
+    "When Match Window Size is on, desktop websites are requested while the window is large, such as on iPad or an unfolded iPhone, and mobile websites while it is compact." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开“跟随窗口大小”后，窗口较大时（如 iPad 或展开的 iPhone）请求桌面网站，窗口较小时请求移动网站。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟「跟隨視窗大小」後，視窗較大時（如 iPad 或展開的 iPhone）請求桌面網站，視窗較小時請求行動網站。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

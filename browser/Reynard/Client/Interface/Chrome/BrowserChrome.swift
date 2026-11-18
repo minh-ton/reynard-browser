@@ -10,6 +10,7 @@ import UIKit
 final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     private enum UX {
         static let overlayTopSpacing: CGFloat = 12
+        static let overlayEdgeMargin: CGFloat = 8
         static let actionBarSpacing: CGFloat = 0
         static let actionBarFlyOutDuration: TimeInterval = 0.18
         static var actionBarFadeDuration: TimeInterval {
@@ -54,7 +55,9 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         let orientation: BrowserLayout.ViewportOrientation
         let isTwoThirdSplitScreenOrSmaller: Bool
         let sidebarButtonVisible: Bool
+        var showsLibraryButton = false
         let animatesChromeStateChanges: Bool
+        var usesVerticalBar = false
     }
     
     var onSidebar: (() -> Void)?
@@ -183,13 +186,24 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         return addressBar.bottomAnchor
     }
     
+    /// How far the minimized bottom toolbar stays above the bottom edge. With
+    /// the buttons in the system vertical bar, nothing else sits there, so the
+    /// minimized address goes down into the home indicator area, as in Safari.
+    private var minimizedBottomInset: CGFloat {
+        return state?.usesVerticalBar == true ? safeAreaInsets.bottom / 2 : safeAreaInsets.bottom
+    }
+    
     func minimizedToolbarHeight(for mode: BrowserChromeMode) -> CGFloat {
-        let inset = mode == .phone ? safeAreaInsets.bottom : (state?.topInset ?? safeAreaInsets.top)
+        let inset = mode == .phone ? minimizedBottomInset : (state?.topInset ?? safeAreaInsets.top)
         return inset + UX.minimizedToolbarContentHeight
     }
     
     func addressBarFrame(in view: UIView) -> CGRect {
         return addressBar.convert(addressBar.bounds, to: view)
+    }
+    
+    func libraryPopoverSourceView() -> UIView {
+        return topToolbar.libraryPopoverSourceView()
     }
     
     func sharePopoverSourceView() -> UIView {
@@ -240,11 +254,15 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
             state: topState,
             topInset: state.topInset,
             interfaceIdiom: state.interfaceIdiom,
-            sidebarButtonVisible: state.sidebarButtonVisible
+            sidebarButtonVisible: state.sidebarButtonVisible,
+            showsLibraryButton: state.showsLibraryButton
         )
+        // With the buttons in the system vertical bar, only the address bar
+        // stays at the bottom.
+        bottomToolbar.setFloating(state.usesVerticalBar)
         bottomToolbar.apply(
             state: bottomState,
-            hidesButtons: state.search == .scrollingEmbeddedSuggestions
+            hidesButtons: state.usesVerticalBar || state.search == .scrollingEmbeddedSuggestions
         )
         addressBar.setDismissButtonVisible(
             state.search.showsAddressBarDismissButton && state.presentation == .browsing,
@@ -477,8 +495,23 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
             equalTo: addressBar.bottomAnchor,
             constant: UX.overlayTopSpacing
         )
+        // Centred under the address bar when there is room, but never pushed
+        // past the edges of the browser area (narrow windows, sidebars, the
+        // status bar column of an unfolded foldable iPhone).
         let centerXConstraint = overlayContentView.centerXAnchor.constraint(equalTo: addressBar.centerXAnchor)
-        NSLayoutConstraint.activate([topConstraint, centerXConstraint])
+        centerXConstraint.priority = .defaultHigh
+        let contentGuide: UILayoutGuide
+        if #available(iOS 26.0, *) {
+            contentGuide = layoutGuide(for: .safeArea(cornerAdaptation: .horizontal))
+        } else {
+            contentGuide = safeAreaLayoutGuide
+        }
+        NSLayoutConstraint.activate([
+            topConstraint,
+            centerXConstraint,
+            overlayContentView.leadingAnchor.constraint(greaterThanOrEqualTo: contentGuide.leadingAnchor, constant: UX.overlayEdgeMargin),
+            overlayContentView.trailingAnchor.constraint(lessThanOrEqualTo: contentGuide.trailingAnchor, constant: -UX.overlayEdgeMargin),
+        ])
         overlayTopConstraint = topConstraint
         overlayCenterXConstraint = centerXConstraint
     }
@@ -570,6 +603,8 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     }
     
     var isAddressBarEditing: Bool { return addressBar.isEditingText }
+    func addressBarEditingSnapshot() -> AddressBar.EditingSnapshot? { addressBar.editingSnapshot() }
+    func restoreAddressBarEditing(from snapshot: AddressBar.EditingSnapshot) { addressBar.restoreEditing(from: snapshot) }
     var isShowingAddressBarAutocomplete: Bool { return addressBar.isShowingAutocomplete }
     
     // MARK: - Toolbar Updates
@@ -715,6 +750,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         topToolbar.transform = CGAffineTransform(translationX: 0, y: topOffset)
         topToolbar.setBackgroundCollapseOffset(tabBarCollapseOffset)
         bottomToolbar.transform = CGAffineTransform(translationX: 0, y: bottomOffset)
+        bottomToolbar.setFloatingCollapseProgress(collapseProgress)
         actionBar.transform = actionBarKeyboardBottomConstraint == nil
         ? CGAffineTransform(translationX: 0, y: bottomOffset)
         : .identity
@@ -783,7 +819,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         let totalTravel = abs(offset) / toolbarCollapseProgress
         let expandedFrame = presentation.frame.offsetBy(dx: 0, dy: -offset)
         let minimizedTextCenterY = isBottom
-        ? bounds.maxY - safeAreaInsets.bottom - UX.minimizedToolbarContentHeight / 2
+        ? bounds.maxY - minimizedBottomInset - UX.minimizedToolbarContentHeight / 2
         : state.topInset + UX.minimizedToolbarContentHeight / 2
         let minimizedScale = UX.minimizedTextFontSize / presentation.font.pointSize
         let minimizedTextHeight = presentation.font.lineHeight * minimizedScale
@@ -828,6 +864,8 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     
     private func configureConstraints() {
         overlayWidthConstraint = overlayContentView.widthAnchor.constraint(equalToConstant: 0)
+        // Yields to the edge constraints when the window is narrower than the panel.
+        overlayWidthConstraint.priority = UILayoutPriority(UILayoutPriority.required.rawValue - 1)
         overlayHeightConstraint = overlayContentView.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             topToolbar.leadingAnchor.constraint(equalTo: leadingAnchor),

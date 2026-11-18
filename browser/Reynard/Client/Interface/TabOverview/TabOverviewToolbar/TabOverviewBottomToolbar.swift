@@ -27,6 +27,23 @@ final class TabOverviewBottomToolbar: UIView {
     private lazy var actionButtonStackView = UIStackView(arrangedSubviews: [clearTabsButton, addTabButton, doneButton])
     private lazy var liquidGlassActionToolbar = makeLiquidGlassActionToolbar()
     private let tabModeControl = UISegmentedControl(items: [NSLocalizedString("Private", comment: ""), NSLocalizedString("0 Tabs", comment: "")])
+    private var actionControlsTopConstraint: NSLayoutConstraint!
+    private var modeControlAloneConstraint: NSLayoutConstraint!
+    
+    /// Hides the action buttons while the system vertical bar shows them (a
+    /// folded foldable iPhone); the mode control then takes their place,
+    /// level with the bottom of the vertical bar, as in Safari.
+    func setActionControlsHidden(_ hidden: Bool) {
+        let actionControlsView: UIView
+        if #available(iOS 26.0, *) {
+            actionControlsView = liquidGlassActionToolbar
+        } else {
+            actionControlsView = actionButtonStackView
+        }
+        actionControlsView.isHidden = hidden
+        actionControlsTopConstraint.isActive = !hidden
+        modeControlAloneConstraint.isActive = hidden
+    }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -89,6 +106,8 @@ final class TabOverviewBottomToolbar: UIView {
         } else {
             actionControlsView = actionButtonStackView
         }
+        actionControlsTopConstraint = tabModeControl.bottomAnchor.constraint(equalTo: actionControlsView.topAnchor, constant: -UX.modeControlToActionControlsSpacing)
+        modeControlAloneConstraint = tabModeControl.centerYAnchor.constraint(equalTo: bottomAnchor, constant: -UX.actionControlsBottomOffset)
         NSLayoutConstraint.activate([
             actionControlsView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: UX.toolbarContentHorizontalInset),
             actionControlsView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -UX.toolbarContentHorizontalInset),
@@ -96,7 +115,7 @@ final class TabOverviewBottomToolbar: UIView {
             tabModeControl.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: UX.toolbarContentHorizontalInset),
             tabModeControl.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -UX.toolbarContentHorizontalInset),
             tabModeControl.heightAnchor.constraint(equalToConstant: UX.tabModeControlHeight),
-            tabModeControl.bottomAnchor.constraint(equalTo: actionControlsView.topAnchor, constant: -UX.modeControlToActionControlsSpacing),
+            actionControlsTopConstraint,
         ])
     }
     

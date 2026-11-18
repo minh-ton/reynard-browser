@@ -21,6 +21,8 @@ final class TabBar: UIView {
     private enum UX {
         static let tabBarHeight: CGFloat = 36
         static let tabBarBottomPadding: CGFloat = 2
+        /// Same side margin as the toolbar row above.
+        static let tabBarHorizontalInset: CGFloat = 12
     }
     
     enum Visibility: Equatable {
@@ -262,9 +264,18 @@ final class TabBar: UIView {
     private func configureConstraints() {
         heightConstraint = heightAnchor.constraint(equalToConstant: 0)
         let tabCollectionHeightConstraint = tabCollection.heightAnchor.constraint(equalToConstant: UX.tabBarHeight)
+        // Keep tabs clear of the status bar and rounded corners at the sides,
+        // matching the toolbar above (the trailing edge of an unfolded foldable
+        // iPhone in landscape hosts the status bar).
+        let contentGuide: UILayoutGuide
+        if #available(iOS 26.0, *) {
+            contentGuide = layoutGuide(for: .safeArea(cornerAdaptation: .horizontal))
+        } else {
+            contentGuide = safeAreaLayoutGuide
+        }
         NSLayoutConstraint.activate([
-            tabCollection.leadingAnchor.constraint(equalTo: leadingAnchor),
-            tabCollection.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tabCollection.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor, constant: UX.tabBarHorizontalInset),
+            tabCollection.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor, constant: -UX.tabBarHorizontalInset),
             tabCollection.topAnchor.constraint(equalTo: topAnchor),
             tabCollectionHeightConstraint,
             heightConstraint,

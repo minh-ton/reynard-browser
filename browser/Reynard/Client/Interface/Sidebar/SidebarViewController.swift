@@ -9,9 +9,6 @@ import UIKit
 
 final class SidebarViewController: UISplitViewController, UISplitViewControllerDelegate {
     private enum UX {
-        static let preferredPrimaryWidth: CGFloat = 320
-        static let minimumPrimaryWidth: CGFloat = 280
-        static let maximumPrimaryWidth: CGFloat = 360
         static let collapseAnimationDuration: TimeInterval = 0.14
         static let layoutAnimationDuration: TimeInterval = 0.22
     }
@@ -26,6 +23,11 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
     
     var isSidebarVisible: Bool {
         return sidebarVisible
+    }
+    
+    /// The sidebar is open and covering the page rather than sitting beside it.
+    var isFloatingOverContent: Bool {
+        return sidebarVisible && displayMode == .oneOverSecondary
     }
     
     var showChromeSidebarButton: Bool {
@@ -110,9 +112,22 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
     
     func toggleVisibility() {
         setVisible(!sidebarVisible)
+        rememberVisibilityForLargeLandscapeWindows()
+    }
+    
+    /// Remembers an explicit open/close in a large landscape window, so the
+    /// sidebar comes back the same way the next time the window is large
+    /// (for example when a foldable iPhone is unfolded again).
+    private func rememberVisibilityForLargeLandscapeWindows() {
+        let layout = contentController.sidebarContentLayout
+        guard layout.interfaceIdiom == .pad, layout.orientation == .landscape else {
+            return
+        }
+        Prefs.AppearanceSettings.showsSidebarInLargeWindows = sidebarVisible
     }
     
     func collapse(from sourceView: UIView?) {
+        defer { rememberVisibilityForLargeLandscapeWindows() }
         guard !UIAccessibility.isReduceMotionEnabled,
               let sourceView,
               contentController.sidebarContentViewController.isViewLoaded,
@@ -225,9 +240,12 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
         if #available(iOS 14.0, *) {
             preferredDisplayMode = .secondaryOnly
             preferredSplitBehavior = .tile
-            preferredPrimaryColumnWidth = UX.preferredPrimaryWidth
-            minimumPrimaryColumnWidth = UX.minimumPrimaryWidth
-            maximumPrimaryColumnWidth = UX.maximumPrimaryWidth
+            // The system sizes the sidebar for the window, as it does for
+            // Safari: narrower on the inner display of a foldable iPhone than
+            // on a large iPad.
+            preferredPrimaryColumnWidth = UISplitViewController.automaticDimension
+            minimumPrimaryColumnWidth = UISplitViewController.automaticDimension
+            maximumPrimaryColumnWidth = UISplitViewController.automaticDimension
             showsSecondaryOnlyButton = false
             if #available(iOS 14.5, *) {
                 displayModeButtonVisibility = .never

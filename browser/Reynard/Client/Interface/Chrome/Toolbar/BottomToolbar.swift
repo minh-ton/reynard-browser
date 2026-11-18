@@ -22,6 +22,9 @@ final class BottomToolbar: UIView {
         static let addressBarDockedVerticalAdjustment: CGFloat = 36
         static let keyboardDockedBlurTopExtension: CGFloat = 24
         static let borderWidth: CGFloat = 0.5
+        /// Matches `AddressBar`'s own height; with no buttons below it, the
+        /// floating address bar sits right on the bottom of the safe area.
+        static let floatingAddressBarHeight: CGFloat = 44
     }
     
     enum LayoutState {
@@ -102,9 +105,67 @@ final class BottomToolbar: UIView {
     private weak var addressBar: AddressBar?
     
     private var addressBarDockOffset: CGFloat = 0
+    private var isFloating = false
+    private var floatingAddressBarConstraints: [NSLayoutConstraint] = []
+    
+    /// Floating style used while the system vertical bar holds the buttons: no
+    /// bar background or buttons, just the address bar over the page.
+    func setFloating(_ floating: Bool) {
+        guard floating != isFloating else {
+            return
+        }
+        isFloating = floating
+        setFloatingCollapseProgress(0)
+        updateAddressBarHorizontalConstraints()
+        addressBarTopConstraint?.constant = addressBarTopConstant(for: addressBarDockOffset)
+        keyboardDockedBlurTopConstraint?.constant = keyboardDockedBlurTopConstant
+    }
+    
+    private var keyboardDockedBlurTopConstant: CGFloat {
+        return UX.addressBarDockedVerticalAdjustment - UX.keyboardDockedBlurTopExtension - floatingHeightReduction
+    }
+    
+    private var keyboardDockedBlurTopConstraint: NSLayoutConstraint?
+    
+    /// While floating, the bar background stays hidden until the toolbar
+    /// collapses on scroll, so the minimized address stays readable over the page.
+    func setFloatingCollapseProgress(_ progress: CGFloat) {
+        let alpha = isFloating ? min(max(progress, 0), 1) : 1
+        backgroundView.alpha = alpha
+        backgroundTopBorderView.alpha = alpha
+    }
+    
+    private func updateAddressBarHorizontalConstraints() {
+        guard let addressBar, !addressBarConstraints.isEmpty else {
+            return
+        }
+        let edgeConstraints = addressBarConstraints.filter { $0 !== addressBarTopConstraint }
+        if floatingAddressBarConstraints.isEmpty {
+            // Across the page, beside the vertical bar rather than under it.
+            floatingAddressBarConstraints = [
+                addressBar.leadingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.leadingAnchor, constant: UX.addressBarHorizontalInset),
+                addressBar.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor, constant: -UX.addressBarHorizontalInset),
+            ]
+        }
+        if isFloating {
+            NSLayoutConstraint.deactivate(edgeConstraints)
+            NSLayoutConstraint.activate(floatingAddressBarConstraints)
+        } else {
+            NSLayoutConstraint.deactivate(floatingAddressBarConstraints)
+            NSLayoutConstraint.activate(edgeConstraints)
+        }
+    }
+    
+    /// How much shorter the bar is while floating than the standard bar the
+    /// keyboard docking offsets are measured against.
+    private var floatingHeightReduction: CGFloat {
+        return isFloating
+        ? UX.bottomToolbarStandardContentHeight - (UX.addressBarTopInset + UX.floatingAddressBarHeight)
+        : 0
+    }
     
     private func addressBarTopConstant(for dockOffset: CGFloat) -> CGFloat {
-        let dockedAdjustment = dockOffset == 0 ? 0 : UX.addressBarDockedVerticalAdjustment
+        let dockedAdjustment = dockOffset == 0 ? 0 : UX.addressBarDockedVerticalAdjustment - floatingHeightReduction
         return UX.addressBarTopInset + dockOffset + dockedAdjustment
     }
     
@@ -149,11 +210,25 @@ final class BottomToolbar: UIView {
         }
         addressBarTopConstraint?.constant = addressBarTopConstant(for: addressBarDockOffset)
         NSLayoutConstraint.activate(addressBarConstraints)
+        updateAddressBarHorizontalConstraints()
     }
     
     func detachAddressBar() {
         NSLayoutConstraint.deactivate(addressBarConstraints)
+        NSLayoutConstraint.deactivate(floatingAddressBarConstraints)
         addressBar = nil
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hitView = super.hitTest(point, with: event)
+        guard isFloating else {
+            return hitView
+        }
+        // Floating over the page: only the address bar itself takes touches.
+        if let addressBar, let hitView, hitView.isDescendant(of: addressBar) {
+            return hitView
+        }
+        return nil
     }
     
     func hitTestAddressBar(at point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -177,7 +252,9 @@ final class BottomToolbar: UIView {
         let contentHeight: CGFloat
         switch state {
         case .hidden, .standard:
-            contentHeight = UX.bottomToolbarStandardContentHeight
+            contentHeight = isFloating
+            ? UX.addressBarTopInset + UX.floatingAddressBarHeight
+            : UX.bottomToolbarStandardContentHeight
         case .collapsed, .compact:
             contentHeight = UX.bottomToolbarCompactContentHeight
         }
@@ -313,13 +390,15 @@ final class BottomToolbar: UIView {
             buttons.heightAnchor.constraint(equalToConstant: UX.bottomToolbarButtonStackHeight),
         ])
         
+        let keyboardDockedBlurTop = keyboardDockedBlurView.topAnchor.constraint(
+            equalTo: contentView.topAnchor,
+            constant: keyboardDockedBlurTopConstant
+        )
+        keyboardDockedBlurTopConstraint = keyboardDockedBlurTop
         NSLayoutConstraint.activate([
             keyboardDockedBlurView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: -UX.backgroundViewHorizontalExtension),
             keyboardDockedBlurView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: UX.backgroundViewHorizontalExtension),
-            keyboardDockedBlurView.topAnchor.constraint(
-                equalTo: contentView.topAnchor,
-                constant: UX.addressBarDockedVerticalAdjustment - UX.keyboardDockedBlurTopExtension
-            ),
+            keyboardDockedBlurTop,
             keyboardDockedBlurView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
     }

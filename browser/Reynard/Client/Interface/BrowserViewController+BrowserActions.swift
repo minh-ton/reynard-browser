@@ -40,13 +40,22 @@ extension BrowserViewController {
         present(activityController, animated: true)
     }
     
-    func presentContentModal(_ rootViewController: UIViewController) {
+    func presentContentModal(_ rootViewController: UIViewController, popoverSourceView: UIView? = nil) {
         let navigationController = ContentModalNavigationController(
             rootViewController: rootViewController
         ) { [weak self] in
             self?.requestContentKeyboardFocus()
         }
-        navigationController.modalPresentationStyle = .pageSheet
+        if let popoverSourceView {
+            // Drops down from the toolbar button; the system turns it into a
+            // sheet on its own when the window is compact.
+            navigationController.modalPresentationStyle = .popover
+            navigationController.preferredContentSize = CGSize(width: 375, height: 600)
+            navigationController.popoverPresentationController?.sourceView = popoverSourceView
+            navigationController.popoverPresentationController?.sourceRect = popoverSourceView.bounds
+        } else {
+            navigationController.modalPresentationStyle = .pageSheet
+        }
         present(navigationController, animated: true)
     }
     
@@ -54,7 +63,8 @@ extension BrowserViewController {
         initialSection: LibrarySection = .bookmarks,
         startsEditingBookmarks: Bool = false
     ) {
-        if browserLayout.interfaceIdiom == .pad,
+        if usesSidebar,
+           browserLayout.interfaceIdiom == .pad,
            browserLayout.chromeMode == .pad {
             sidebarCoordinator.showSection(
                 initialSection,
@@ -71,11 +81,15 @@ extension BrowserViewController {
                 self?.dismiss(animated: true)
             }
         )
-        presentContentModal(libraryController)
+        presentContentModal(
+            libraryController,
+            popoverSourceView: browserLayout.chromeMode == .pad ? browserChrome.libraryPopoverSourceView() : nil
+        )
     }
     
     func toggleLibrary(section: LibrarySection) {
-        if browserLayout.interfaceIdiom == .pad,
+        if usesSidebar,
+           browserLayout.interfaceIdiom == .pad,
            browserLayout.chromeMode == .pad {
             (splitViewController as? SidebarViewController)?.toggleSection(section)
             return

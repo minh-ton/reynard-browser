@@ -53,7 +53,12 @@ final class SidebarCoordinator {
     }
     
     var hostsSidebar: Bool {
-        return canHostSidebar && host?.sidebarInterfaceIdiom == .pad
+        // The sidebar container is installed once, when the root browser loads,
+        // and stays in place for the life of the scene. Whether the sidebar is
+        // usable is decided by the content browser's layout, which follows the
+        // window size, so a foldable iPhone can switch between its outer
+        // (compact) and inner (regular) displays without rebuilding the hierarchy.
+        return canHostSidebar
     }
     
     // MARK: - Lifecycle
@@ -191,7 +196,11 @@ final class SidebarCoordinator {
     
     func updateContentLayout(animated: Bool, duration: TimeInterval) {
         updateSidebarSizeClassOverride()
-        contentBrowser?.updateBrowserLayout(animated: animated, duration: duration)
+        guard let contentBrowser,
+              contentBrowser !== host else {
+            return
+        }
+        contentBrowser.updateBrowserLayout(animated: animated, duration: duration)
     }
     
     func openExternalURL(_ url: URL) {

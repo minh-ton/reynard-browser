@@ -148,6 +148,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             searchOverlayCoordinator.tabOverviewWillPresent()
         }
         tabOverview.setPresented(visible, animated: animated)
+        syncVerticalBarItems(animated: animated)
         if !visible {
             homepageOverlayCoordinator.updatePresentation(animated: animated)
         }

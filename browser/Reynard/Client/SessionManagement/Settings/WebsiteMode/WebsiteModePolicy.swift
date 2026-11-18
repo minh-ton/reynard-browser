@@ -83,7 +83,7 @@ final class WebsiteModePolicy {
     private func storedMode(for url: String) -> Bool {
         guard let host = URL(string: url)?.host,
               let mode = SiteSettingsStore.shared.settings(for: host)?.websiteMode else {
-            return Prefs.BrowsingSettings.requestDesktopWebsite
+            return Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
         }
         return mode == .desktop
     }

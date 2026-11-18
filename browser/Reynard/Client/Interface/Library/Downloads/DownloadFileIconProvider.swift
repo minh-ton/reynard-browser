@@ -53,20 +53,30 @@ final class DownloadFileIconProvider {
         return image
     }
     
+    @available(*, deprecated, message: "use icon(for:size:traitCollection:completion:) instead")
     func icon(for fileURL: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
+        icon(for: fileURL, size: size, traitCollection: .current, completion: completion)
+    }
+    
+    func icon(
+        for fileURL: URL,
+        size: CGSize,
+        traitCollection: UITraitCollection,
+        completion: @escaping (UIImage?) -> Void
+    ) {
         if let cachedImage = thumbnailCache.object(forKey: fileURL as NSURL) {
             completion(cachedImage)
             return
         }
         
-        generateIcon(for: fileURL, size: size, contentTypeIdentifier: nil) { [weak self] image in
+        generateIcon(for: fileURL, size: size, contentTypeIdentifier: nil, traitCollection: traitCollection) { [weak self] image in
             if let image {
                 self?.thumbnailCache.setObject(image, forKey: fileURL as NSURL)
                 completion(image)
                 return
             }
             
-            self?.fallbackIcon(for: fileURL, size: size, completion: completion)
+            self?.fallbackIcon(for: fileURL, size: size, traitCollection: traitCollection, completion: completion)
         }
     }
     
@@ -79,12 +89,13 @@ final class DownloadFileIconProvider {
         size: CGSize,
         contentTypeIdentifier: String?,
         representationTypes: QLThumbnailGenerator.Request.RepresentationTypes = .all,
+        traitCollection: UITraitCollection,
         completion: @escaping (UIImage?) -> Void
     ) {
         let request = QLThumbnailGenerator.Request(
             fileAt: fileURL,
             size: size,
-            scale: UIScreen.main.scale,
+            scale: traitCollection.displayScale,
             representationTypes: representationTypes
         )
         request.iconMode = true
@@ -101,7 +112,12 @@ final class DownloadFileIconProvider {
         }
     }
     
-    private func fallbackIcon(for fileURL: URL, size: CGSize, completion: @escaping (UIImage?) -> Void) {
+    private func fallbackIcon(
+        for fileURL: URL,
+        size: CGSize,
+        traitCollection: UITraitCollection,
+        completion: @escaping (UIImage?) -> Void
+    ) {
         let fileName = fileURL.lastPathComponent
         let cacheKey = placeholderCacheKey(fileName: fileName, mimeType: nil)
         if let cachedImage = placeholderCache.object(forKey: cacheKey) {
@@ -118,7 +134,8 @@ final class DownloadFileIconProvider {
             for: placeholderFileURL,
             size: size,
             contentTypeIdentifier: resolvedContentTypeIdentifier(fileName: fileName, mimeType: nil),
-            representationTypes: .icon
+            representationTypes: .icon,
+            traitCollection: traitCollection
         ) { [weak self] image in
             let resolvedImage = image ?? self?.documentInteractionIcon(for: placeholderFileURL)
             if let resolvedImage {

@@ -145,6 +145,9 @@ final class TopToolbar: UIView {
     private var heightConstraint: NSLayoutConstraint!
     private var contentTopConstraint: NSLayoutConstraint!
     private var backgroundBottomConstraint: NSLayoutConstraint!
+    private var leadingButtonsLeadingConstraint: NSLayoutConstraint!
+    private var trailingButtonsTrailingConstraint: NSLayoutConstraint!
+    private var requestedTopInset: CGFloat = 0
     private var leadingWidthConstraint: NSLayoutConstraint!
     private var trailingWidthConstraint: NSLayoutConstraint!
     private var standardAddressBarConstraints: [NSLayoutConstraint] = []
@@ -154,6 +157,7 @@ final class TopToolbar: UIView {
     private var layoutState: LayoutState = .hidden
     private var layoutInterfaceIdiom: UIUserInterfaceIdiom = .unspecified
     private var layoutSidebarButtonVisible = false
+    private var layoutShowsLibraryButton = false
     private var isUsingStandardAddressBarWidthLimit = false
     
     // MARK: - Lifecycle
@@ -170,8 +174,58 @@ final class TopToolbar: UIView {
     }
     
     override func layoutSubviews() {
+        updateRowPlacement()
         super.layoutSubviews()
         updateStandardAddressBarLayout()
+    }
+    
+    /// Where the system places a bar along the top edge when the status bar
+    /// shares the top band with it, as on the inner display of a foldable
+    /// iPhone (iOS 27.2): beside the status bar and centred on it, like Safari's
+    /// toolbar row. `nil` when the bar goes below the status bar as usual.
+    /// Reading layout regions here lays the toolbar out again when they change.
+    private var systemTopBarFrame: CGRect? {
+        // Read from the browser chrome this toolbar is pinned to (same origin
+        // and width): the toolbar itself slides up while it collapses on
+        // scroll, and its own insets would move with it.
+        guard #available(iOS 27.2, *), let container = superview, container.bounds.width > 0 else {
+            return nil
+        }
+        let insets = container.edgeInsets(for: .bar(onEdge: UIRectEdge.top))
+        guard insets.top < container.safeAreaInsets.top else {
+            return nil
+        }
+        return container.bounds.inset(by: insets)
+    }
+    
+    private func updateRowPlacement() {
+        var contentTop = requestedTopInset
+        var height = requestedTopInset + UX.topToolbarContentHeight
+        var leadingClearance: CGFloat = 0
+        var trailingClearance: CGFloat = 0
+        
+        if layoutState == .standard, let bar = systemTopBarFrame, bar.height > 0 {
+            contentTop = max(0, bar.midY - UX.topToolbarContentHeight / 2)
+            height = contentTop + UX.topToolbarContentHeight
+            // The system bar region already includes the standard margins.
+            leadingClearance = max(0, bar.minX - safeAreaInsets.left - UX.topToolbarHorizontalInset)
+            trailingClearance = max(0, bounds.maxX - safeAreaInsets.right - bar.maxX - UX.topToolbarHorizontalInset)
+        }
+        
+        if contentTopConstraint.constant != contentTop {
+            contentTopConstraint.constant = contentTop
+        }
+        if heightConstraint.constant != height {
+            heightConstraint.constant = height
+        }
+        let leadingConstant = UX.topToolbarHorizontalInset + leadingClearance
+        if leadingButtonsLeadingConstraint.constant != leadingConstant {
+            leadingButtonsLeadingConstraint.constant = leadingConstant
+        }
+        let trailingConstant = -(UX.topToolbarHorizontalInset + trailingClearance)
+        if trailingButtonsTrailingConstraint.constant != trailingConstant {
+            trailingButtonsTrailingConstraint.constant = trailingConstant
+        }
     }
     
     // MARK: - Layout
@@ -216,6 +270,10 @@ final class TopToolbar: UIView {
         isUsingStandardAddressBarWidthLimit = false
     }
     
+    func libraryPopoverSourceView() -> UIView {
+        return libraryButton
+    }
+    
     func sharePopoverSourceView() -> UIView {
         return shareButton
     }
@@ -234,15 +292,17 @@ final class TopToolbar: UIView {
         state: LayoutState,
         topInset: CGFloat,
         interfaceIdiom: UIUserInterfaceIdiom,
-        sidebarButtonVisible: Bool
+        sidebarButtonVisible: Bool,
+        showsLibraryButton: Bool = false
     ) {
         layoutState = state
         layoutInterfaceIdiom = interfaceIdiom
         layoutSidebarButtonVisible = sidebarButtonVisible
+        layoutShowsLibraryButton = showsLibraryButton
         
+        requestedTopInset = topInset
         UIView.performWithoutAnimation {
-            contentTopConstraint.constant = topInset
-            heightConstraint.constant = topInset + UX.topToolbarContentHeight
+            updateRowPlacement()
             isHidden = state == .hidden
             guard state != .hidden else { return }
             
@@ -257,7 +317,7 @@ final class TopToolbar: UIView {
             trailingWidthConstraint.constant = isCompact ? 0 : UX.topToolbarStandardButtonStackWidth
             
             sidebarButton.isHidden = interfaceIdiom != .pad || !sidebarButtonVisible
-            libraryButton.isHidden = interfaceIdiom == .pad
+            libraryButton.isHidden = interfaceIdiom == .pad && !showsLibraryButton
             downloadButton.isHidden = isCompact || !downloadButton.isShowingDownloads
             
             NSLayoutConstraint.deactivate(standardAddressBarConstraints + widthLimitedStandardAddressBarConstraints + compactAddressBarConstraints)
@@ -391,6 +451,8 @@ final class TopToolbar: UIView {
         backgroundBottomConstraint = backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor)
         leadingWidthConstraint = leadingButtons.widthAnchor.constraint(equalToConstant: UX.topToolbarStandardButtonStackWidth)
         trailingWidthConstraint = trailingButtons.widthAnchor.constraint(equalToConstant: UX.topToolbarStandardButtonStackWidth)
+        leadingButtonsLeadingConstraint = leadingButtons.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor, constant: UX.topToolbarHorizontalInset)
+        trailingButtonsTrailingConstraint = trailingButtons.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor, constant: -UX.topToolbarHorizontalInset)
         
         NSLayoutConstraint.activate([
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: -UX.backgroundViewHorizontalExtension),
@@ -409,12 +471,12 @@ final class TopToolbar: UIView {
             contentView.trailingAnchor.constraint(equalTo: trailingAnchor),
             contentView.heightAnchor.constraint(equalToConstant: UX.topToolbarContentHeight),
             
-            leadingButtons.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor, constant: UX.topToolbarHorizontalInset),
+            leadingButtonsLeadingConstraint,
             leadingButtons.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             leadingWidthConstraint,
             leadingButtons.heightAnchor.constraint(equalToConstant: UX.topToolbarButtonStackHeight),
             
-            trailingButtons.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor, constant: -UX.topToolbarHorizontalInset),
+            trailingButtonsTrailingConstraint,
             trailingButtons.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             trailingWidthConstraint,
             trailingButtons.heightAnchor.constraint(equalToConstant: UX.topToolbarButtonStackHeight),
@@ -427,7 +489,10 @@ final class TopToolbar: UIView {
         showsDownloads: Bool
     ) -> CGFloat {
         guard interfaceIdiom == .pad else { return UX.topToolbarStandardButtonStackWidth }
-        let visibleButtonCount = (sidebarButtonVisible ? 3 : 2) + (showsDownloads ? 1 : 0)
+        let visibleButtonCount = 2
+        + (sidebarButtonVisible ? 1 : 0)
+        + (layoutShowsLibraryButton ? 1 : 0)
+        + (showsDownloads ? 1 : 0)
         return (CGFloat(visibleButtonCount) * UX.topToolbarButtonStackHeight)
         + (CGFloat(max(visibleButtonCount - 1, 0)) * UX.topToolbarButtonSpacing)
     }
@@ -437,11 +502,11 @@ final class TopToolbar: UIView {
         let safeWidth = bounds.width - layoutInsets.left - layoutInsets.right
         guard safeWidth > 0 else { return false }
         
-        let leadingBoundary = UX.topToolbarHorizontalInset
+        let leadingBoundary = leadingButtonsLeadingConstraint.constant
         + leadingWidthConstraint.constant
         + UX.topToolbarAddressBarSpacing
         let trailingBoundary = safeWidth
-        - UX.topToolbarHorizontalInset
+        + trailingButtonsTrailingConstraint.constant
         - trailingWidthConstraint.constant
         - UX.topToolbarAddressBarSpacing
         let centeredWidth = min(

@@ -270,7 +270,10 @@ final class HomepagePreferencesViewController: SettingsTableViewController {
     }
     
     private func prepareWallpaper(from imageData: Data) async {
-        let maximumPixelSize = Int(max(UIScreen.main.nativeBounds.width, UIScreen.main.nativeBounds.height))
+        guard let screen = view.window?.windowScene?.screen else {
+            return
+        }
+        let maximumPixelSize = Int(max(screen.nativeBounds.width, screen.nativeBounds.height))
         let wallpaper = await Task.detached(priority: .userInitiated) {
             return ImageUtils.prepareJPEGImage(
                 from: imageData,

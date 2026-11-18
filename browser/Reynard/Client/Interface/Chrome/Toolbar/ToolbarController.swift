@@ -27,7 +27,10 @@ final class ToolbarController {
         static let manualCollapseSpeedMultiplier: CGFloat = 2
         static let maxTextCenterDuration: TimeInterval = 0.2
         static let snapDelay: TimeInterval = 0.1
-        static let snapDuration: TimeInterval = 0.2
+        static let snapDuration: TimeInterval = 0.3
+        /// How far the page has to scroll in one direction before the toolbar
+        /// collapses or expands.
+        static let directionChangeThreshold: CGFloat = 24
     }
     
     private unowned let browserChrome: BrowserChrome
@@ -52,6 +55,7 @@ final class ToolbarController {
     private var isCollapsedUntilReset = false
     private var resizesPage = false
     private var lockReasons = Set<LockReason>()
+    private var directionalScrollDistance: CGFloat = 0
     
     // MARK: - Lifecycle
     
@@ -204,6 +208,10 @@ final class ToolbarController {
     
     // MARK: - Scroll Handling
     
+    /// Like Safari, the toolbar follows the direction of scrolling rather than
+    /// the finger: scrolling down a little collapses it with one smooth
+    /// animation, scrolling up expands it, and it is always expanded at the top
+    /// of the page.
     private func handleScroll(delta: CGFloat, position: CGFloat) {
         scrollPosition = max(0, position)
         guard Prefs.AppearanceSettings.scrollToHideToolbarEnabled,
@@ -213,19 +221,30 @@ final class ToolbarController {
             return
         }
         
-        // Resume from the visible position when scrolling takes over or changes direction.
-        if animationDisplayLink == nil || snapStartTime != nil || delta * (targetOffset - transitionOffset) < 0 {
-            targetOffset = transitionOffset
+        if scrollPosition <= 0 {
+            directionalScrollDistance = 0
+            animate(to: 0)
+            return
         }
-        snapStartTime = nil
         
-        var maximumOffset = maxTransitionOffset
-        if scrollPosition < maxTopToolbarOffset {
-            maximumOffset *= scrollPosition / maxTopToolbarOffset
+        if delta * directionalScrollDistance < 0 {
+            directionalScrollDistance = 0
         }
-        targetOffset = min(max(targetOffset + delta * UX.toolbarScrollFactor, 0), maximumOffset)
-        startAnimation()
-        scheduleSnap()
+        directionalScrollDistance += delta
+        guard abs(directionalScrollDistance) >= UX.directionChangeThreshold else {
+            return
+        }
+        animate(to: directionalScrollDistance > 0 ? maxTransitionOffset : 0)
+        directionalScrollDistance = 0
+    }
+    
+    private func animate(to destination: CGFloat) {
+        let isAnimatingThere = animationDisplayLink != nil && targetOffset == destination
+        guard !isAnimatingThere, transitionOffset != destination || animationDisplayLink != nil else {
+            return
+        }
+        pendingSnap?.cancel()
+        beginSnap(to: destination)
     }
     
     // MARK: - Animation And Snapping
@@ -270,7 +289,7 @@ final class ToolbarController {
         var requestedTextCenterProgress: CGFloat?
         if let snapStartTime {
             let progress = min(CGFloat((time - snapStartTime) / UX.snapDuration) * speedMultiplier, 1)
-            let easedProgress = 1 - pow(1 - progress, 2)
+            let easedProgress = 1 - pow(1 - progress, 3)
             requestedOffset = snapOrigin + (targetOffset - snapOrigin) * easedProgress
             if targetOffset > snapOrigin {
                 let centerProgress = min(

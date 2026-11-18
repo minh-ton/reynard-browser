@@ -16,7 +16,10 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
         var text: SettingsSectionText {
             switch self {
             case .default:
-                return SettingsSectionText(headerTitle: NSLocalizedString("Default Setting", comment: ""))
+                return SettingsSectionText(
+                    headerTitle: NSLocalizedString("Default Setting", comment: ""),
+                    footerTitle: NSLocalizedString("When Match Window Size is on, desktop websites are requested while the window is large, such as on iPad or an unfolded iPhone, and mobile websites while it is compact.", comment: "")
+                )
             case .websites:
                 return SettingsSectionText(headerTitle: NSLocalizedString("Websites With Custom Settings", comment: ""))
             case .reset:
@@ -26,6 +29,7 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
     }
     
     private let defaultSwitch = UISwitch()
+    private let matchesWindowSwitch = UISwitch()
     private var websiteSettings: [SiteSettingsRecord] = []
     
     private var displayedSections: [Section] {
@@ -37,6 +41,7 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
                 return !websiteSettings.isEmpty
             case .reset:
                 return Prefs.BrowsingSettings.requestDesktopWebsite != (UIDevice.current.userInterfaceIdiom == .pad)
+                || !Prefs.BrowsingSettings.requestDesktopWebsiteMatchesWindow
                 || !websiteSettings.isEmpty
             }
         }
@@ -54,6 +59,7 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
     override func viewDidLoad() {
         super.viewDidLoad()
         defaultSwitch.addTarget(self, action: #selector(defaultSwitchDidChange(_:)), for: .valueChanged)
+        matchesWindowSwitch.addTarget(self, action: #selector(matchesWindowSwitchDidChange(_:)), for: .valueChanged)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -69,7 +75,14 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
         guard displayedSections.indices.contains(section) else {
             return 0
         }
-        return displayedSections[section] == .websites ? websiteSettings.count : 1
+        switch displayedSections[section] {
+        case .default:
+            return 2
+        case .websites:
+            return websiteSettings.count
+        case .reset:
+            return 1
+        }
     }
     
     override func sectionText(for section: Int) -> SettingsSectionText {
@@ -87,10 +100,19 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
         switch displayedSections[indexPath.section] {
         case .default:
             let cell = SettingsTableViewCell(style: .default, reuseIdentifier: nil)
-            cell.textLabel?.text = NSLocalizedString("Request Desktop Website", comment: "")
-            defaultSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsite
-            cell.accessoryView = defaultSwitch
             cell.selectionStyle = .none
+            if indexPath.row == 0 {
+                cell.textLabel?.text = NSLocalizedString("Match Window Size", comment: "")
+                matchesWindowSwitch.isOn = Prefs.BrowsingSettings.requestDesktopWebsiteMatchesWindow
+                cell.accessoryView = matchesWindowSwitch
+                return cell
+            }
+            let matchesWindow = Prefs.BrowsingSettings.requestDesktopWebsiteMatchesWindow
+            cell.textLabel?.text = NSLocalizedString("Request Desktop Website", comment: "")
+            cell.textLabel?.isEnabled = !matchesWindow
+            defaultSwitch.isOn = Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
+            defaultSwitch.isEnabled = !matchesWindow
+            cell.accessoryView = defaultSwitch
             return cell
         case .websites:
             guard websiteSettings.indices.contains(indexPath.row),
@@ -123,7 +145,17 @@ final class RequestDesktopWebsitePreferencesViewController: SettingsTableViewCon
         }
         
         Prefs.BrowsingSettings.requestDesktopWebsite = UIDevice.current.userInterfaceIdiom == .pad
+        Prefs.BrowsingSettings.requestDesktopWebsiteMatchesWindow = true
         clearAllWebsiteSettings()
+        reloadSettings()
+    }
+    
+    @objc private func matchesWindowSwitchDidChange(_ sender: UISwitch) {
+        if !sender.isOn {
+            // Keep the mode currently in effect as the fixed default.
+            Prefs.BrowsingSettings.requestDesktopWebsite = Prefs.BrowsingSettings.effectiveRequestDesktopWebsite
+        }
+        Prefs.BrowsingSettings.requestDesktopWebsiteMatchesWindow = sender.isOn
         reloadSettings()
     }
     

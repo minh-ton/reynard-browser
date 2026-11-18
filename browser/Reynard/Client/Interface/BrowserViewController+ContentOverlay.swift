@@ -191,6 +191,12 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
     }
     
     func addressBarDidBeginEditing(_ addressBar: AddressBar) {
+        // Like Safari: a sidebar floating over the page steps aside while the
+        // user types an address, so the search panel has the whole window.
+        if let sidebar = splitViewController as? SidebarViewController,
+           sidebar.isFloatingOverContent {
+            sidebar.setVisible(false)
+        }
         toolbarController.lock(for: .addressBarEditing)
         homepageOverlayCoordinator.addressBarDidBeginEditing(addressBar)
         searchOverlayCoordinator.addressBarDidBeginEditing(addressBar)

@@ -187,7 +187,7 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
         
         NSLayoutConstraint.activate(constraints)
         
-        let targetWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
+        let targetWidth = view.bounds.width
         headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 0)
         LibrarySharedUtils.updateTableHeaderHeight(headerView, in: tableView)
         

@@ -85,6 +85,11 @@ final class ReaderSettingsViewController: UIViewController, UIPopoverPresentatio
         onVisibilityChanged?(true)
     }
     
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        brightnessDidChange()
+    }
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let width = view.bounds.width
@@ -567,11 +572,12 @@ final class ReaderSettingsViewController: UIViewController, UIPopoverPresentatio
     }
     
     @objc private func brightnessDidChange() {
-        brightnessSlider.value = Float((view.window?.screen ?? UIScreen.main).brightness)
+        guard let screen = view.window?.windowScene?.screen else { return }
+        brightnessSlider.value = Float(screen.brightness)
     }
     
     @objc private func brightnessChanged() {
-        (view.window?.screen ?? UIScreen.main).brightness = CGFloat(brightnessSlider.value)
+        view.window?.windowScene?.screen.brightness = CGFloat(brightnessSlider.value)
         let reachedMinimum = brightnessSlider.value <= UX.brightnessThreshold
         let reachedMaximum = brightnessSlider.value >= 1 - UX.brightnessThreshold
         let endpoint = reachedMinimum ? -1 : (reachedMaximum ? 1 : 0)

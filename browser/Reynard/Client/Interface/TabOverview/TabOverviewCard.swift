@@ -269,7 +269,7 @@ final class TabOverviewCard: UICollectionViewCell {
             dy: -UX.cardTransitionSnapshotOutset
         )
         let rendererFormat = UIGraphicsImageRendererFormat()
-        rendererFormat.scale = UIScreen.main.scale
+        rendererFormat.scale = traitCollection.displayScale
         rendererFormat.opaque = false
         let renderer = UIGraphicsImageRenderer(size: snapshotBounds.size, format: rendererFormat)
         webpagePreviewRegionView.isHidden = true
@@ -293,7 +293,7 @@ final class TabOverviewCard: UICollectionViewCell {
         contentView.layoutIfNeeded()
         
         let rendererFormat = UIGraphicsImageRendererFormat()
-        rendererFormat.scale = UIScreen.main.scale
+        rendererFormat.scale = traitCollection.displayScale
         rendererFormat.opaque = false
         let renderer = UIGraphicsImageRenderer(size: closeTabButton.bounds.size, format: rendererFormat)
         let snapshotImage = renderer.image { _ in

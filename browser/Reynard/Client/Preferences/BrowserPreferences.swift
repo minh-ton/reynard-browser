@@ -67,6 +67,8 @@ final class BrowserPreferences {
             
             // Browsing
             key("BrowsingSettings", "requestDesktopWebsite"): UIDevice.current.userInterfaceIdiom == .pad,
+            key("BrowsingSettings", "requestDesktopWebsiteMatchesWindow"): true,
+            key("AppearanceSettings", "largeWindowSidebarVisible"): false,
             key("BrowsingSettings", "showLinkPreviews"): true,
             key("BrowsingSettings", "showImagePreviews"): true,
             key("BrowsingSettings", "openLinksInExternalApps"): true,
@@ -287,6 +289,29 @@ final class BrowserPreferences {
             set {
                 prefs.set(newValue, forSetting: "BrowsingSettings", key: "requestDesktopWebsite")
             }
+        }
+        
+        /// Like Safari: request desktop websites while the browser window is
+        /// large (iPad, or the inner display of a foldable iPhone) and mobile
+        /// websites while it is compact. Per-site settings still take priority.
+        static var requestDesktopWebsiteMatchesWindow: Bool {
+            get {
+                return prefs.bool(forSetting: "BrowsingSettings", key: "requestDesktopWebsiteMatchesWindow")
+            }
+            set {
+                prefs.set(newValue, forSetting: "BrowsingSettings", key: "requestDesktopWebsiteMatchesWindow")
+            }
+        }
+        
+        /// Whether the current browser window is large enough for desktop
+        /// websites. Updated by the browser whenever its layout changes.
+        static var windowPrefersDesktopWebsite = UIDevice.current.userInterfaceIdiom == .pad
+        
+        /// The default used for websites without a per-site setting.
+        static var effectiveRequestDesktopWebsite: Bool {
+            return requestDesktopWebsiteMatchesWindow
+            ? windowPrefersDesktopWebsite
+            : requestDesktopWebsite
         }
         
         static var showLinkPreviews: Bool {
@@ -994,6 +1019,17 @@ final class BrowserPreferences {
     
     // MARK: - Appearance
     struct AppearanceSettings {
+        /// Whether the sidebar is shown when the window is large and landscape
+        /// (iPad, or an unfolded foldable iPhone). Remembers the last choice.
+        static var showsSidebarInLargeWindows: Bool {
+            get {
+                return prefs.bool(forSetting: "AppearanceSettings", key: "largeWindowSidebarVisible")
+            }
+            set {
+                prefs.set(newValue, forSetting: "AppearanceSettings", key: "largeWindowSidebarVisible")
+            }
+        }
+        
         static var appAppearance: AppAppearance {
             get {
                 let rawValue = prefs.string(forSetting: "AppearanceSettings", key: "appAppearance") ?? AppAppearance.system.rawValue

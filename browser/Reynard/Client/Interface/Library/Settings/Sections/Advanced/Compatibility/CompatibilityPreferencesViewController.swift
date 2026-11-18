@@ -38,7 +38,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController 
             || !Prefs.CompatibilitySettings.customBuildID.isEmpty {
             return NSLocalizedString("Custom", comment: "")
         }
-        return Prefs.BrowsingSettings.requestDesktopWebsite ? NSLocalizedString("Desktop Firefox", comment: "") : NSLocalizedString("Firefox for Android", comment: "")
+        return Prefs.BrowsingSettings.effectiveRequestDesktopWebsite ? NSLocalizedString("Desktop Firefox", comment: "") : NSLocalizedString("Firefox for Android", comment: "")
     }
     
     init() {

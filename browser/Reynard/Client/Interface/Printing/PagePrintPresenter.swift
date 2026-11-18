@@ -39,7 +39,7 @@ enum PagePrintPresenter {
                 }
             }
             
-            if UIDevice.current.userInterfaceIdiom == .pad {
+            if presenter.traitCollection.horizontalSizeClass == .regular {
                 let sourceRect = CGRect(
                     x: presenter.view.bounds.midX,
                     y: presenter.view.bounds.midY,

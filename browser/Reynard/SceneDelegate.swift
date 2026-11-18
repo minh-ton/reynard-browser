@@ -12,6 +12,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
+        // Pick the desktop/mobile default for the first page load from the
+        // window we are launching into, so restored tabs do not reload once
+        // the browser layout is resolved.
+        let sceneTraits = windowScene.traitCollection
+        Prefs.BrowsingSettings.windowPrefersDesktopWebsite = sceneTraits.userInterfaceIdiom == .pad
+        || (sceneTraits.horizontalSizeClass == .regular && sceneTraits.verticalSizeClass == .regular)
         
         let browserViewController = BrowserViewController()
         browserViewController.sessionManager.setApplicationForeground(scene.activationState != .background)

@@ -57,6 +57,8 @@ protocol TabManager: AnyObject {
     func muteOtherPlayingTabs(excluding tabID: UUID)
     @discardableResult
     func changeWebsiteModeForSelectedTab() -> Bool
+    @discardableResult
+    func reloadSelectedTabIfWebsiteModeChanged() -> Bool
 }
 
 enum TabManagerUpdateReason {

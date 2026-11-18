@@ -323,12 +323,6 @@ final class AddressBar: UIView {
         return textField.resignFirstResponder()
     }
     
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else {
-            return
-        }
-    }
     
     // MARK: - Configuration
     
@@ -624,6 +618,47 @@ final class AddressBar: UIView {
     
     var isEditingText: Bool {
         return textField.isFirstResponder
+    }
+    
+    /// What the user is typing, so it can survive a window size change that
+    /// rebuilds the chrome (for example folding or unfolding a foldable iPhone).
+    struct EditingSnapshot {
+        let text: String
+        let selectedRange: NSRange?
+    }
+    
+    func editingSnapshot() -> EditingSnapshot? {
+        guard textField.isFirstResponder else {
+            return nil
+        }
+        
+        var selectedRange: NSRange?
+        if let selection = textField.selectedTextRange {
+            let location = textField.offset(from: textField.beginningOfDocument, to: selection.start)
+            let length = textField.offset(from: selection.start, to: selection.end)
+            selectedRange = NSRange(location: location, length: length)
+        }
+        return EditingSnapshot(text: lastEditingText, selectedRange: selectedRange)
+    }
+    
+    func restoreEditing(from snapshot: EditingSnapshot) {
+        guard textField.isFirstResponder || textField.becomeFirstResponder() else {
+            return
+        }
+        
+        if !snapshot.text.isEmpty, textField.text != snapshot.text {
+            if case .focusPreview = autocompleteState {
+                clearFocusPreview()
+            }
+            textField.text = snapshot.text
+            textFieldDidChange()
+        }
+        
+        if let selectedRange = snapshot.selectedRange,
+           let start = textField.position(from: textField.beginningOfDocument, offset: selectedRange.location),
+           let end = textField.position(from: start, offset: selectedRange.length) {
+            textField.selectedTextRange = textField.textRange(from: start, to: end)
+        }
     }
     
     // MARK: - View Setup
