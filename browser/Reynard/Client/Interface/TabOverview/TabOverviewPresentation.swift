@@ -23,6 +23,7 @@ final class TabOverviewPresentation {
         static let presentationSpringDamping: CGFloat = 0.8
         static let dismissalAnimationDuration: TimeInterval = 0.45
         static let dismissalSpringDamping: CGFloat = 0.9
+        static let reducedMotionFadeDuration: TimeInterval = 0.25
         static let transitionPreviewCornerRadius: CGFloat = 18
     }
     
@@ -130,7 +131,9 @@ final class TabOverviewPresentation {
         }
         
         if animated {
-            if context.browserLayout.chromeMode != .phone {
+            if !visible, UIAccessibility.isReduceMotionEnabled {
+                dismissWithFade()
+            } else if context.browserLayout.chromeMode != .phone {
                 visible ? presentOnPad() : dismissOnPad()
             } else {
                 visible ? presentOnPhone() : dismissOnPhone()
@@ -265,6 +268,11 @@ final class TabOverviewPresentation {
             selectedCollection.scrollToItem(at: IndexPath(item: selectedItem, section: 0), at: .centeredVertically, animated: false)
         }
         selectedCollection.layoutIfNeeded()
+        
+        if UIAccessibility.isReduceMotionEnabled {
+            presentWithFade(chromeSnapshot: bottomChromeView)
+            return
+        }
         
         let standardCollectionTransform = selectedCollection.transform
         
@@ -509,6 +517,11 @@ final class TabOverviewPresentation {
         }
         selectedCollection.layoutIfNeeded()
         
+        if UIAccessibility.isReduceMotionEnabled {
+            presentWithFade(chromeSnapshot: topChromeView)
+            return
+        }
+        
         let standardCollectionTransform = selectedCollection.transform
         
         guard let selectedCell = selectedTabCard(at: selectedIndex) else {
@@ -699,6 +712,42 @@ final class TabOverviewPresentation {
             self.tabOverview.collection.setPresentationVerticalOffset(0)
             self.tabOverview.isHidden = true
             self.tabOverview.setActiveToolbarAlpha(1)
+            self.state = .dismissed
+            self.context.tabOverviewDidFinishDismissal()
+        }
+    }
+    
+    private func presentWithFade(chromeSnapshot: UIView?) {
+        let token = presentationToken
+        context.containerView.bringSubviewToFront(tabOverview)
+        tabOverview.setActiveToolbarAlpha(1)
+        
+        UIView.animate(withDuration: UX.reducedMotionFadeDuration) {
+            self.tabOverview.alpha = 1
+        } completion: { _ in
+            chromeSnapshot?.removeFromSuperview()
+            guard self.presentationToken == token else { return }
+            
+            self.context.updateLayout(animated: false, duration: 0)
+            self.state = .presented
+        }
+    }
+    
+    private func dismissWithFade() {
+        state = .dismissing
+        presentationProgress = 0
+        commitPendingTabSelection()
+        context.updateLayout(animated: false, duration: 0)
+        context.tabBar.updateLayout()
+        context.contentView.setTransitionTransform(.identity)
+        context.browserChrome.setChromeTransition(topAlpha: 1, bottomAlpha: 1, bottomTranslationY: 0)
+        context.tabBar.setPresentationAlpha(1)
+        context.containerView.bringSubviewToFront(tabOverview)
+        
+        UIView.animate(withDuration: UX.reducedMotionFadeDuration) {
+            self.tabOverview.alpha = 0
+        } completion: { _ in
+            self.tabOverview.isHidden = true
             self.state = .dismissed
             self.context.tabOverviewDidFinishDismissal()
         }

@@ -28,7 +28,7 @@ final class TabBarPresentation {
         }
         tabBar.applyVisibility(visibility)
         
-        if animated {
+        if animated, !UIAccessibility.isReduceMotionEnabled {
             UIView.animate(
                 withDuration: UX.visibilityAnimationDuration,
                 animations: {
