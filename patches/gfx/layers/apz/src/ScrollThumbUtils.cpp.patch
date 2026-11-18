@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/ScrollThumbUtils.cpp b/gfx/layers/apz/src/ScrollThumbUtils.cpp
-index 22190519501e..521b27b6fd10 100644
+index 22190519501e..c42c4061e835 100644
 --- a/gfx/layers/apz/src/ScrollThumbUtils.cpp
 +++ b/gfx/layers/apz/src/ScrollThumbUtils.cpp
 @@ -48,6 +48,10 @@ struct AsyncScrollThumbTransformer {
@@ -13,7 +13,7 @@ index 22190519501e..521b27b6fd10 100644
  };
  
  void AsyncScrollThumbTransformer::TranslateThumb(const Axis& aAxis,
-@@ -89,6 +93,39 @@ void AsyncScrollThumbTransformer::ScaleThumbBy(const Axis& aAxis, float aScale,
+@@ -89,6 +93,45 @@ void AsyncScrollThumbTransformer::ScaleThumbBy(const Axis& aAxis, float aScale,
    TranslateThumb(aAxis, -thumbExtentDelta);
  }
  
@@ -35,15 +35,21 @@ index 22190519501e..521b27b6fd10 100644
 +      scrollTrackOrigin;
 +  const OuterCSSCoord thumbLength = mScrollbarData.mThumbLength * thumbScale;
 +
-+  const OuterCSSCoord travelLength =
-+      mScrollbarData.mScrollTrackLength - thumbLength;
-+  if (travelLength <= 0) {
++  const CSSRect visualViewport = mApzc->GetCurrentAsyncVisualViewport(
++      AsyncPanZoomController::eForCompositing);
++  const CSSRect scrollableRect =
++      mMetrics.GetScrollableRectWithContentInsets(mMetrics.GetZoom());
++  const CSSCoord scrollRange =
++      aAxis.GetRectLength(scrollableRect) - aAxis.GetRectLength(visualViewport);
++  if (scrollRange <= 0) {
 +    return;
 +  }
 +
 +  const auto [unobscuredStart, unobscuredEnd] =
 +      mApzc->GetUnobscuredScrollTrack(mScrollbarData);
-+  const float progress = thumbStart / travelLength;
++  const float progress = (aAxis.GetRectOffset(visualViewport) -
++                          aAxis.GetRectOffset(scrollableRect)) /
++                         scrollRange;
 +  const OuterCSSCoord fittedThumbStart =
 +      unobscuredStart +
 +      (unobscuredEnd - unobscuredStart - thumbLength) * progress;
@@ -53,7 +59,7 @@ index 22190519501e..521b27b6fd10 100644
  void AsyncScrollThumbTransformer::ApplyTransformForAxis(const Axis& aAxis) {
    ParentLayerCoord asyncScroll = aAxis.GetTransformTranslation(mAsyncTransform);
    const float asyncZoom = aAxis.GetTransformScale(mAsyncTransform);
-@@ -172,11 +209,15 @@ void AsyncScrollThumbTransformer::ApplyTransformForAxis(const Axis& aAxis) {
+@@ -172,11 +215,15 @@ void AsyncScrollThumbTransformer::ApplyTransformForAxis(const Axis& aAxis) {
      const CSSCoord curPos = aAxis.GetRectOffset(visualViewportRect) -
                              aAxis.GetRectOffset(mMetrics.GetScrollableRect());
  
@@ -74,7 +80,7 @@ index 22190519501e..521b27b6fd10 100644
  
      const OuterCSSCoord desiredThumbPos = curPos * thumbPosRatio;
  
-@@ -296,6 +337,9 @@ LayerToParentLayerMatrix4x4 AsyncScrollThumbTransformer::ComputeTransform() {
+@@ -296,6 +343,9 @@ LayerToParentLayerMatrix4x4 AsyncScrollThumbTransformer::ComputeTransform() {
    // so that it reflects what the user is actually seeing now.
    if (*mScrollbarData.mDirection == ScrollDirection::eVertical) {
      ApplyTransformForAxis(mApzc->mY);
