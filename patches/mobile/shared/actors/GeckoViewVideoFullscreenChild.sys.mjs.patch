@@ -1,9 +1,9 @@
 diff --git a/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
 new file mode 100644
-index 000000000000..bdbf4f95d0a9
+index 000000000000..375dde6eb196
 --- /dev/null
 +++ b/mobile/shared/actors/GeckoViewVideoFullscreenChild.sys.mjs
-@@ -0,0 +1,206 @@
+@@ -0,0 +1,207 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -205,6 +205,7 @@ index 000000000000..bdbf4f95d0a9
 +      muted: video.muted,
 +      videoWidth: video.videoWidth,
 +      videoHeight: video.videoHeight,
++      disablePictureInPicture: video.disablePictureInPicture,
 +      bufferedTime: buffered.length ? buffered.end(buffered.length - 1) : 0,
 +      seekable: seekableRanges,
 +    };

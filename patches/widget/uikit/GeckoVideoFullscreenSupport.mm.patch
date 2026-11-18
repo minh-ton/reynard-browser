@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoVideoFullscreenSupport.mm b/widget/uikit/GeckoVideoFullscreenSupport.mm
 new file mode 100644
-index 000000000000..e3ebd74da109
+index 000000000000..68b08000db2a
 --- /dev/null
 +++ b/widget/uikit/GeckoVideoFullscreenSupport.mm
-@@ -0,0 +1,1125 @@
+@@ -0,0 +1,1159 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -71,6 +71,18 @@ index 000000000000..e3ebd74da109
 +             completionHandler:
 +                 (void (^)(BOOL success, NSError* error))completionHandler;
 +- (void)stopPictureInPicture;
++@end
++
++typedef NS_OPTIONS(NSUInteger, AVPlayerViewControllerControls) {
++  AVPlayerViewControllerControlsPictureInPicture = 1 << 8,
++};
++
++@interface AVPlayerViewControllerConfiguration : NSObject
++@property(nonatomic) AVPlayerViewControllerControls excludedControls;
++@end
++
++@interface AVPlayerViewController (Configuration)
++@property(nonatomic, copy) AVPlayerViewControllerConfiguration* configuration;
 +@end
 +
 +static constexpr char kPrepareEvent[] = "GeckoView:VideoFullscreen:Prepare";
@@ -893,7 +905,6 @@ index 000000000000..e3ebd74da109
 +  mPlayerViewController =
 +      [[AVPlayerViewController alloc] initWithPlayerLayerView:mPlayerLayerView];
 +  mPlayerViewController.delegate = self;
-+  mPlayerViewController.allowsPictureInPicturePlayback = YES;
 +  mPlayerViewController.updatesNowPlayingInfoCenter = NO;
 +  [mPlayerViewController setPlayerController:(AVPlayerController*)forwarder];
 +
@@ -928,6 +939,29 @@ index 000000000000..e3ebd74da109
 +  [mPlayerController updateWithState:state];
 +  ((GeckoAVPlayerLayer*)mVideoLayer).videoDimensions =
 +      mPlayerController.contentDimensions;
++
++  BOOL allowsPictureInPicture = ![state[@"disablePictureInPicture"] boolValue];
++  if (mPlayerViewController.allowsPictureInPicturePlayback ==
++      allowsPictureInPicture) {
++    return;
++  }
++
++  mPlayerViewController.allowsPictureInPicturePlayback = allowsPictureInPicture;
++
++  if (![mPlayerViewController respondsToSelector:@selector(configuration)]) {
++    return;
++  }
++
++  AVPlayerViewControllerConfiguration* configuration =
++      mPlayerViewController.configuration;
++  if (allowsPictureInPicture) {
++    configuration.excludedControls &=
++        ~AVPlayerViewControllerControlsPictureInPicture;
++  } else {
++    configuration.excludedControls |=
++        AVPlayerViewControllerControlsPictureInPicture;
++  }
++  mPlayerViewController.configuration = configuration;
 +}
 +
 +- (void)routeVideoToLayer:(CALayer*)layer {
