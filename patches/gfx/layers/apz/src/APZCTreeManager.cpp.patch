@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZCTreeManager.cpp b/gfx/layers/apz/src/APZCTreeManager.cpp
-index 033548404a11..270b70ce853b 100644
+index 033548404a11..823776233747 100644
 --- a/gfx/layers/apz/src/APZCTreeManager.cpp
 +++ b/gfx/layers/apz/src/APZCTreeManager.cpp
 @@ -4,11 +4,13 @@
@@ -297,7 +297,26 @@ index 033548404a11..270b70ce853b 100644
  static MouseInput::MouseType MultiTouchTypeToMouseType(
      MultiTouchInput::MultiTouchType aType) {
    switch (aType) {
-@@ -2584,11 +2599,8 @@ void APZCTreeManager::ProcessUnhandledEvent(LayoutDeviceIntPoint* aRefPoint,
+@@ -2413,11 +2428,13 @@ void APZCTreeManager::SetupScrollbarDrag(
+     // Only consider the translation, since we do not support both
+     // zooming and scrollbar dragging on any platform.
+     // FIXME: We do now.
+-    OuterCSSCoord thumbStart =
+-        thumbData.mThumbStart +
+-        ((*thumbData.mDirection == ScrollDirection::eHorizontal)
+-             ? thumbTransform._41
+-             : thumbTransform._42);
++    const OuterCSSCoord thumbTranslation =
++        dragStart -
++        aApzc->ConvertScrollbarPoint(
++            aMouseInput.mLocalOrigin -
++                ParentLayerPoint(thumbTransform._41, thumbTransform._42),
++            thumbData);
++    OuterCSSCoord thumbStart = thumbData.mThumbStart + thumbTranslation;
+     dragStart -= thumbStart;
+ 
+     // Content can't prevent scrollbar dragging with preventDefault(),
+@@ -2584,11 +2601,8 @@ void APZCTreeManager::ProcessUnhandledEvent(LayoutDeviceIntPoint* aRefPoint,
    if (hit.mTargetApzc) {
      MOZ_ASSERT(hit.mHitResult != CompositorHitTestInvisibleToHit);
      hit.mTargetApzc->GetGuid(aOutTargetGuid);
@@ -311,7 +330,7 @@ index 033548404a11..270b70ce853b 100644
      Maybe<ScreenIntPoint> untransformedRefPoint =
          UntransformBy(outTransform, refPointAsScreen);
      if (untransformedRefPoint) {
-@@ -2835,8 +2847,11 @@ void APZCTreeManager::ClearTree() {
+@@ -2835,8 +2849,11 @@ void APZCTreeManager::ClearTree() {
    // Ensure that no references to APZCs are alive in any lingering input
    // blocks. This breaks cycles from InputBlockState::mTargetApzc back to
    // the InputQueue.
@@ -325,7 +344,7 @@ index 033548404a11..270b70ce853b 100644
  
    RecursiveMutexAutoLock lock(mTreeLock);
  
-@@ -3572,15 +3587,89 @@ ParentLayerToScreenMatrix4x4 APZCTreeManager::GetApzcToGeckoTransform(
+@@ -3572,15 +3589,89 @@ ParentLayerToScreenMatrix4x4 APZCTreeManager::GetApzcToGeckoTransform(
        PixelCastJustification::ScreenIsParentLayerForRoot);
  }
  
@@ -419,7 +438,7 @@ index 033548404a11..270b70ce853b 100644
  }
  
  CSSToCSSMatrix4x4 APZCTreeManager::GetOopifToRootContentTransform(
-@@ -3694,19 +3783,7 @@ Maybe<ScreenIntPoint> APZCTreeManager::ConvertToGecko(
+@@ -3694,19 +3785,7 @@ Maybe<ScreenIntPoint> APZCTreeManager::ConvertToGecko(
    const HitTestResult& hit = mInputQueue->GetCurrentTouchBlock()
                                   ? mTouchBlockHitResult
                                   : mTapGestureHitResult;
@@ -440,7 +459,7 @@ index 033548404a11..270b70ce853b 100644
  }
  
  already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
-@@ -3756,68 +3833,70 @@ already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
+@@ -3756,68 +3835,70 @@ already_AddRefed<AsyncPanZoomController> APZCTreeManager::CommonAncestor(
    return ancestor.forget();
  }
  
@@ -564,7 +583,7 @@ index 033548404a11..270b70ce853b 100644
  }
  
  LayerToParentLayerMatrix4x4 APZCTreeManager::ComputeTransformForScrollThumbNode(
-@@ -3933,6 +4012,23 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3933,6 +4014,23 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
        // Note, mRootNode needs to be checked with mTreeLock held.
        return;
      }
@@ -588,7 +607,7 @@ index 033548404a11..270b70ce853b 100644
      // This formulation duplicates matrix multiplications closer
      // to the root of the tree. For now, aiming for separation
      // of concerns rather than minimum number of multiplications.
-@@ -3940,7 +4036,7 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3940,7 +4038,7 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
          mRootNode.get(),
          [&](HitTestingTreeNode* aNode) {
            mTreeLock.AssertCurrentThreadIn();
@@ -597,7 +616,7 @@ index 033548404a11..270b70ce853b 100644
            MOZ_ASSERT(!(underAncestor && atAncestor));
            underAncestor |= atAncestor;
            if (!underAncestor) {
-@@ -3959,14 +4055,26 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3959,14 +4057,26 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
                // It's important to pass aRemoteLayersId=layersId here (not
                // parent->GetLayersId()). layersId is the LayersId of the
                // remote content for which this transform is being computed.
@@ -627,7 +646,7 @@ index 033548404a11..270b70ce853b 100644
            if (atAncestor) {
              MOZ_ASSERT(underAncestor);
              underAncestor = false;
-@@ -3982,12 +4090,18 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
+@@ -3982,12 +4092,18 @@ void APZCTreeManager::SendSubtreeTransformsToChromeMainThread(
    }
  }
  
@@ -649,7 +668,7 @@ index 033548404a11..270b70ce853b 100644
    }
    {
      RecursiveMutexAutoLock lock(mTreeLock);
-@@ -3997,9 +4111,22 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
+@@ -3997,9 +4113,22 @@ void APZCTreeManager::SetFixedLayerMargins(ScreenIntCoord aTop,
  
  void APZCTreeManager::SetFixedLayerMarginsOnRootContentApzcs(
      const RecursiveMutexAutoLock& aProofOfTreeLock) {
@@ -674,7 +693,7 @@ index 033548404a11..270b70ce853b 100644
    }
  }
  
-@@ -4129,11 +4256,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
+@@ -4129,11 +4258,18 @@ APZCTreeManager::FixedPositionInfo::FixedPositionInfo(
  APZCTreeManager::StickyPositionInfo::StickyPositionInfo(
      const HitTestingTreeNode* aNode) {
    mStickyPositionAnimationId = aNode->GetStickyPositionAnimationId();
