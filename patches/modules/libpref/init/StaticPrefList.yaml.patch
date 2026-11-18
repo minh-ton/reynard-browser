@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 17f9237d1f05..d3bd15b1128e 100644
+index 4261b6733ff8..a3d4c8f9b489 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -3414,13 +3414,13 @@
