@@ -1,5 +1,5 @@
 diff --git a/gfx/wr/webrender/src/scene_building.rs b/gfx/wr/webrender/src/scene_building.rs
-index 1c25768b93ef..46f5f0776e57 100644
+index 1c25768b93ef..9628fbb8faa1 100644
 --- a/gfx/wr/webrender/src/scene_building.rs
 +++ b/gfx/wr/webrender/src/scene_building.rs
 @@ -1490,17 +1490,29 @@ impl<'a> SceneBuilder<'a> {
@@ -43,3 +43,34 @@ index 1c25768b93ef..46f5f0776e57 100644
                  };
  
                  let clip_node_id = self.get_clip_node(info.clip_chain_id);
+@@ -1933,21 +1945,6 @@ impl<'a> SceneBuilder<'a> {
+         flags
+     }
+ 
+-    fn make_current_slice_atomic_if_required(&mut self) {
+-        let has_non_wrapping_sc = self.sc_stack
+-            .iter()
+-            .position(|sc| {
+-                !sc.flags.contains(StackingContextFlags::WRAPS_BACKDROP_FILTER)
+-            })
+-            .is_some();
+-
+-        if has_non_wrapping_sc {
+-            return;
+-        }
+-
+-        self.tile_cache_builder.make_current_slice_atomic();
+-    }
+-
+     /// If no stacking contexts are present (i.e. we are adding prims to a tile
+     /// cache), set a barrier to force creation of a slice before the next prim
+     fn add_tile_cache_barrier_if_needed(
+@@ -3150,8 +3147,6 @@ impl<'a> SceneBuilder<'a> {
+         // (which is the common case). It will get resolved later during `finalize_picture`.
+         let filter_spatial_node_index = SpatialNodeIndex::UNKNOWN;
+ 
+-        self.make_current_slice_atomic_if_required();
+-
+         // Ensure we create a clip-chain for the capture primitive that matches
+         // the render primitive, otherwise one might get culled while the other
+         // is considered visible.
