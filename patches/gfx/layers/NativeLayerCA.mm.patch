@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerCA.mm b/gfx/layers/NativeLayerCA.mm
-index cc1bd339e032..44c7fd952f6e 100644
+index cc1bd339e032..92083ea60ac3 100644
 --- a/gfx/layers/NativeLayerCA.mm
 +++ b/gfx/layers/NativeLayerCA.mm
 @@ -249,6 +249,15 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
@@ -18,7 +18,7 @@ index cc1bd339e032..44c7fd952f6e 100644
  void NativeLayerRootCA::SetBackingScale(float aBackingScale) {
    MutexAutoLock lock(mMutex);
  
-@@ -280,6 +289,11 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
+@@ -280,18 +289,43 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
  }
  
  bool NativeLayerRootCA::CommitToScreen() {
@@ -29,22 +29,24 @@ index cc1bd339e032..44c7fd952f6e 100644
 +
    MutexAutoLock lock(mMutex);
  
-   if (!NS_IsMainThread() && mOffMainThreadCommitsSuspended) {
-@@ -287,11 +301,29 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
-     return false;
-   }
- 
 +#ifdef MOZ_WIDGET_UIKIT
 +  if (NS_IsMainThread()) {
 +    mMainThreadCommitScheduled = false;
-+  } else if (mMainThreadCommitCallback) {
++  } else if (mOnscreenCommitData && mMainThreadCommitCallback) {
 +    if (!mMainThreadCommitScheduled) {
 +      mMainThreadCommitScheduled = true;
 +      mMainThreadCommitCallback();
 +    }
 +    return false;
 +  }
++#endif
 +
+   if (!NS_IsMainThread() && mOffMainThreadCommitsSuspended) {
+     mCommitPending = true;
+     return false;
+   }
+ 
++#ifdef MOZ_WIDGET_UIKIT
 +  transaction.emplace();
 +#endif
 +
@@ -60,7 +62,7 @@ index cc1bd339e032..44c7fd952f6e 100644
    mCommitPending = false;
  
    if (StaticPrefs::gfx_webrender_debug_dump_native_layer_tree_to_file()) {
-@@ -325,6 +357,19 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
+@@ -325,6 +359,19 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
      EmitTelemetryForVideoLowPower(videoLowPower);
    }
  
@@ -80,7 +82,7 @@ index cc1bd339e032..44c7fd952f6e 100644
    return true;
  }
  
-@@ -365,6 +410,26 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
+@@ -365,6 +412,26 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
    mMutatedOffscreenLayerStructure = false;
  }
  
@@ -107,7 +109,7 @@ index cc1bd339e032..44c7fd952f6e 100644
  void NativeLayerRootCA::SetMutatedLayerStructure() {
    mMutatedOnscreenLayerStructure = true;
    mMutatedOffscreenLayerStructure = true;
-@@ -433,6 +498,19 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
+@@ -433,6 +500,19 @@ static void EmitTelemetryForVideoLowPower(VideoLowPowerType aVideoLowPower) {
    if (mustRebuild) {
      aRootCALayer.sublayers = sublayers;
    }
@@ -127,7 +129,7 @@ index cc1bd339e032..44c7fd952f6e 100644
  }
  
  SnapshotterCADelegate::~SnapshotterCADelegate() = default;
-@@ -1533,6 +1611,14 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
+@@ -1533,6 +1613,14 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
    return updateSucceeded;
  }
  
@@ -142,7 +144,7 @@ index cc1bd339e032..44c7fd952f6e 100644
  CALayer* NativeLayerCA::UnderlyingCALayer(WhichRepresentation aRepresentation) {
    MutexAutoLock lock(mMutex);
    return GetRepresentation(aRepresentation).UnderlyingCALayer();
-@@ -1545,7 +1631,8 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
+@@ -1545,7 +1633,8 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
    AVSampleBufferDisplayLayer* videoLayer =
        (AVSampleBufferDisplayLayer*)mContentCALayer;
  
@@ -152,7 +154,7 @@ index cc1bd339e032..44c7fd952f6e 100644
      if (videoLayer.requiresFlushToResumeDecoding) {
        [videoLayer flush];
      }
-@@ -1651,6 +1738,11 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
+@@ -1651,6 +1740,11 @@ CGColorRef CGColorCreateForDeviceColor(const gfx::DeviceColor& aColor) {
    if (osValue != noErr) {
      MOZ_ASSERT(sampleBuffer == nullptr,
                 "Failed call shouldn't allocate memory.");

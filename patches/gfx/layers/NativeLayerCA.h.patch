@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/NativeLayerCA.h b/gfx/layers/NativeLayerCA.h
-index c7156fca6e5e..fd1cad10aeca 100644
+index c7156fca6e5e..5fd1f3602b3c 100644
 --- a/gfx/layers/NativeLayerCA.h
 +++ b/gfx/layers/NativeLayerCA.h
 @@ -10,6 +10,11 @@
@@ -24,7 +24,7 @@ index c7156fca6e5e..fd1cad10aeca 100644
 +  void SetOnscreenCommitCallback(
 +      std::function<void(mozilla::ipc::ByteBuf&&)> aCallback);
 +
-+  // Schedule a main-thread commit for commits requested off the main thread.
++  // Schedule a main-thread commit when onscreen commit data is pending.
 +  void SetMainThreadCommitCallback(std::function<void()> aCallback);
 +
 +  // Prevent onscreen commits from applying an incomplete remote update batch.
