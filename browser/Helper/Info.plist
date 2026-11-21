@@ -17,6 +17,8 @@
 		<string>com.apple.ar.viewer</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>ReynardHelperMain</string>
+		<key>NSExtensionViewControllerHostClass</key>
+		<string>_UIRemoteViewController</string>
 	</dict>
 	<key>XPCService</key>
 	<dict>

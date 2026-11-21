@@ -1,9 +1,9 @@
 diff --git a/ipc/glue/NSExtensionUtils.h b/ipc/glue/NSExtensionUtils.h
 new file mode 100644
-index 000000000000..330a56fbb02b
+index 000000000000..f6640248f9ae
 --- /dev/null
 +++ b/ipc/glue/NSExtensionUtils.h
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,77 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this file,
 + * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -35,8 +35,11 @@ index 000000000000..330a56fbb02b
 +class NSExtensionProcess {
 + public:
 +  // Called to start the process. The `aCompletion` function may be executed on
-+  // a background libdispatch thread.
++  // a background libdispatch thread. If `aHostsView` is true, the process is
++  // also shown as a small view in the app's window (a hack to be marked as
++  // foreground)
 +  static void StartProcess(
++      bool aHostsView,
 +      const std::function<void(Result<NSExtensionProcess, LaunchError>&&)>&
 +          aCompletion);
 +

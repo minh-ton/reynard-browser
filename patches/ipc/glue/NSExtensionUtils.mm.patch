@@ -1,9 +1,9 @@
 diff --git a/ipc/glue/NSExtensionUtils.mm b/ipc/glue/NSExtensionUtils.mm
 new file mode 100644
-index 000000000000..518377a5f5dd
+index 000000000000..5ceaae76a77d
 --- /dev/null
 +++ b/ipc/glue/NSExtensionUtils.mm
-@@ -0,0 +1,356 @@
+@@ -0,0 +1,408 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -15,6 +15,7 @@ index 000000000000..518377a5f5dd
 +#include "LaunchError.h"
 +
 +#import <Foundation/Foundation.h>
++#import <UIKit/UIKit.h>
 +#include <memory>
 +
 +#import "mozilla/widget/GeckoViewSupport.h"
@@ -32,6 +33,13 @@ index 000000000000..518377a5f5dd
 +- (void)cancelExtensionRequestWithIdentifier:(NSUUID*)requestIdentifier;
 +- (void)setRequestInterruptionBlock:
 +    (void (^_Nonnull)(NSUUID* requestIdentifier))block;
++- (void)
++    instantiateViewControllerWithInputItems:(NSArray*)inputItems
++                          connectionHandler:
++                              (void (^_Nonnull)(
++                                  NSUUID* _Nullable requestIdentifier,
++                                  UIViewController* _Nullable viewController,
++                                  NSError* _Nullable error))handler;
 +@end
 +
 +@interface NSXPCConnection (Private)
@@ -117,12 +125,14 @@ index 000000000000..518377a5f5dd
 +  ExtensionConnectionDelegate* mListenerDelegate;
 +  NSXPCConnection* mConnection;
 +  NSUUID* mRequestIdentifier;
++  UIViewController* mRemoteViewController;
 +  xpc_connection_t mLibXPCConnection;
 +  bool mInvalidated;
 +}
 +
-+- (void)startWithCompletion:
-+    (void (^_Nonnull)(NSError* _Nullable error))aCompletion;
++- (void)startHostingView:(bool)aHostsView
++          withCompletion:
++              (void (^_Nonnull)(NSError* _Nullable error))aCompletion;
 +- (xpc_connection_t _Nullable)copyLibXPCConnection;
 +- (void)invalidate;
 +
@@ -130,8 +140,9 @@ index 000000000000..518377a5f5dd
 +
 +@implementation ExtensionProcess
 +
-+- (void)startWithCompletion:
-+    (void (^_Nonnull)(NSError* _Nullable error))aCompletion {
++- (void)startHostingView:(bool)aHostsView
++          withCompletion:
++              (void (^_Nonnull)(NSError* _Nullable error))aCompletion {
 +  void (^completion)(NSError* _Nullable) = [aCompletion copy];
 +
 +  dispatch_async(ExtensionLaunchQueue(), ^{
@@ -216,6 +227,35 @@ index 000000000000..518377a5f5dd
 +    NSExtensionItem* input = [[[NSExtensionItem alloc] init] autorelease];
 +    [input setUserInfo:@{@"ReynardXPCListenerEndpoint" : [mListener endpoint]}];
 +
++    if (aHostsView) {
++      [mExtension
++          instantiateViewControllerWithInputItems:@[ input ]
++                                connectionHandler:^(
++                                    NSUUID* requestIdentifier,
++                                    UIViewController* viewController,
++                                    NSError* error) {
++                                  if (!viewController) {
++                                    completeOnce(ExtensionLaunchError(
++                                        @"Failed to host NSExtension view",
++                                        error));
++                                    return;
++                                  }
++
++                                  mRequestIdentifier =
++                                      [requestIdentifier retain];
++                                  mRemoteViewController =
++                                      [viewController retain];
++                                  dispatch_async(dispatch_get_main_queue(), ^{
++                                    UIView* view = viewController.view;
++                                    view.frame = CGRectMake(0, 0, 1, 1);
++                                    view.userInteractionEnabled = NO;
++                                    [UIApplication.sharedApplication.windows
++                                            .firstObject addSubview:view];
++                                  });
++                                }];
++      return;
++    }
++
 +    NSError* requestError = nil;
 +    mRequestIdentifier =
 +        [[mExtension beginExtensionRequestWithInputItems:@[ input ]
@@ -267,6 +307,15 @@ index 000000000000..518377a5f5dd
 +    mRequestIdentifier = nil;
 +  }
 +
++  if (mRemoteViewController) {
++    UIViewController* viewController = mRemoteViewController;
++    mRemoteViewController = nil;
++    dispatch_async(dispatch_get_main_queue(), ^{
++      [viewController.view removeFromSuperview];
++      [viewController release];
++    });
++  }
++
 +  if (mListener) {
 +    [mListener setDelegate:nil];
 +    [mListener invalidate];
@@ -297,6 +346,7 @@ index 000000000000..518377a5f5dd
 +}
 +
 +void NSExtensionProcess::StartProcess(
++    bool aHostsView,
 +    const std::function<void(Result<NSExtensionProcess, LaunchError>&&)>&
 +        aCompletion) {
 +  auto ownedCompletion = std::make_shared<
@@ -305,15 +355,17 @@ index 000000000000..518377a5f5dd
 +
 +  ExtensionProcess* process = [[ExtensionProcess alloc] init];
 +
-+  [process startWithCompletion:^(NSError* error) {
-+    if (error) {
-+      [process release];
-+      (*ownedCompletion)(Err(LaunchError("NSExtensionProcess::StartProcess")));
-+      return;
-+    }
++  [process startHostingView:aHostsView
++             withCompletion:^(NSError* error) {
++               if (error) {
++                 [process release];
++                 (*ownedCompletion)(
++                     Err(LaunchError("NSExtensionProcess::StartProcess")));
++                 return;
++               }
 +
-+    (*ownedCompletion)(NSExtensionProcess(process));
-+  }];
++               (*ownedCompletion)(NSExtensionProcess(process));
++             }];
 +}
 +
 +DarwinObjectPtr<xpc_connection_t> NSExtensionProcess::MakeLibXPCConnection() {
