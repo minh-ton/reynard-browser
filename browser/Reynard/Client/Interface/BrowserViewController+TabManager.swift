@@ -124,7 +124,13 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, captureHistoryThumbnailForTabAt index: Int, mode: TabMode, url: String) {
-        captureHistoryThumbnail(forTabAt: index, mode: mode, url: url)
+        guard index == tabManager.selectedTabIndex,
+              mode == tabManager.selectedTabMode,
+              tabManager.selectedTab?.url == url else {
+            return
+        }
+        
+        captureHistoryThumbnail()
     }
     
     func tabManager(_ tabManager: TabManager, didRequestContextMenuAt point: CGPoint, for element: ContextElement, in session: GeckoSession) {
@@ -269,18 +275,9 @@ extension BrowserViewController: TabManagerDelegate {
             return
         }
         
-        let selectedIndex = tabManager.selectedTabIndex
-        let selectedMode = tabManager.selectedTabMode
-        captureThumbnail(forTabAt: selectedIndex, mode: selectedMode) { [weak self] _ in
-            guard let self,
-                  tabManager.activeTabs.indices.contains(index) else {
-                completion()
-                return
-            }
-            
-            self.tabBar.setPendingExpansion(at: index)
-            self.browserChrome.animateAutomaticTabTransition(to: tabManager.activeTabs[index], completion: completion)
-        }
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        tabBar.setPendingExpansion(at: index)
+        browserChrome.animateAutomaticTabTransition(to: tabManager.activeTabs[index], completion: completion)
     }
     
     func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {
@@ -334,112 +331,21 @@ extension BrowserViewController: TabManagerDelegate {
 }
 
 extension BrowserViewController {
-    func applyNewTabDisplayOption(toTabAt index: Int) {
+    // Returns the new tab's thumbnail when it shows the homepage or a blank page.
+    @discardableResult
+    func applyNewTabDisplayOption(toTabAt index: Int, mode: TabMode) -> UIImage? {
         switch Prefs.NewTabSettings.newTabDisplayOption {
         case .homepage, .blankPage:
-            captureThumbnail(forTabAt: index, mode: tabManager.selectedTabMode)
+            return captureThumbnail(forTabAt: index, mode: mode)
         case .customURL:
-            guard let tab = tabManager.activeTabs[safe: index],
+            let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+            guard let tab = tabs[safe: index],
                   URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil else {
-                return
+                return nil
             }
             
             tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
+            return nil
         }
-    }
-    
-    func captureThumbnail(forTabAt index: Int, mode: TabMode, completion: ((UIImage?) -> Void)? = nil) {
-        let targetTabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard let targetTab = targetTabs[safe: index] else {
-            completion?(nil)
-            return
-        }
-        
-        let targetTabID = targetTab.id
-        if homepageOverlayCoordinator.isHomepageTab(targetTab) {
-            homepageOverlayCoordinator.captureHomepageThumbnail(targetTab) { [weak self] thumbnail in
-                guard let self,
-                      let thumbnail,
-                      (mode == .private ? self.tabManager.privateTabs : self.tabManager.regularTabs)[safe: index]?.id == targetTabID else {
-                    completion?(nil)
-                    return
-                }
-                
-                self.tabManager.updateThumbnail(thumbnail, forTabAt: index, mode: mode)
-                completion?(thumbnail)
-            }
-            return
-        }
-        
-        guard mode == tabManager.selectedTabMode,
-              index == tabManager.selectedTabIndex,
-              let tab = tabManager.activeTabs[safe: index],
-              tab.id == targetTabID,
-              !contentView.isHidden,
-              contentView.isDisplaying(session: tab.session) else {
-            completion?(nil)
-            return
-        }
-        
-        guard let thumbnail = contentView.makeWebThumbnail() else {
-            completion?(nil)
-            return
-        }
-        
-        tabManager.updateThumbnail(thumbnail, forTabAt: index, mode: mode)
-        completion?(thumbnail)
-    }
-    
-    func captureOutgoingHistoryThumbnail() {
-        guard let url = tabManager.selectedTab?.url else {
-            return
-        }
-        
-        captureHistoryThumbnail(
-            forTabAt: tabManager.selectedTabIndex,
-            mode: tabManager.selectedTabMode,
-            url: url
-        )
-    }
-    
-    func prepareThumbnailForNavigation() {
-        guard let url = tabManager.selectedTab?.url else {
-            return
-        }
-        
-        captureHistoryThumbnail(
-            forTabAt: tabManager.selectedTabIndex,
-            mode: tabManager.selectedTabMode,
-            url: url,
-            isPreparedForNavigation: true
-        )
-    }
-    
-    private func captureHistoryThumbnail(
-        forTabAt index: Int,
-        mode: TabMode,
-        url: String,
-        isPreparedForNavigation: Bool = false
-    ) {
-        guard mode == tabManager.selectedTabMode,
-              index == tabManager.selectedTabIndex,
-              let tab = tabManager.activeTabs[safe: index],
-              tab.url == url,
-              !contentView.isHidden,
-              contentView.isDisplaying(session: tab.session) else {
-            return
-        }
-        
-        guard let thumbnail = contentView.makeWebThumbnail() else {
-            return
-        }
-        
-        tabManager.updateThumbnail(thumbnail, forTabAt: index, mode: mode)
-        tabManager.updateHistoryThumbnail(
-            thumbnail,
-            for: tab,
-            url: url,
-            isPreparedForNavigation: isPreparedForNavigation
-        )
     }
 }

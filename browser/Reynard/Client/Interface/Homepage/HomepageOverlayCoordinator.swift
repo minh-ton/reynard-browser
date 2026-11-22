@@ -36,7 +36,6 @@ final class HomepageOverlayCoordinator {
     private let overlayCoordinator: OverlayCoordinator
     private unowned let toolbarController: ToolbarController
     private let homepageViewController: HomepageViewController
-    private let homepageThumbnailRenderer: HomepageThumbnailRenderer
     private var presentationIntent: HomepagePresentationIntent = .inactive
     
     private struct HomepagePresentation: Equatable {
@@ -56,7 +55,6 @@ final class HomepageOverlayCoordinator {
         self.overlayCoordinator = overlayCoordinator
         self.toolbarController = toolbarController
         homepageViewController = HomepageViewController()
-        homepageThumbnailRenderer = HomepageThumbnailRenderer(homepageViewController: homepageViewController)
         homepageViewController.homepageDelegate = self
         homepageViewController.setPrivateBrowsing(isPrivateBrowsing)
     }
@@ -113,47 +111,16 @@ final class HomepageOverlayCoordinator {
     
     // MARK: - Thumbnails
     
-    func prepareHomepageForNewTab(mode: TabMode) {
+    func makeThumbnail(for tab: Tab) -> UIImage? {
         guard let delegate,
-              showsHomepageForBlankTabs else {
-            return
-        }
-        
-        homepageThumbnailRenderer.prepareForCapture(
-            contentMode: embeddedContentMode(layout: delegate.homepageLayout),
-            isPrivateBrowsing: mode == .private
-        )
-    }
-    
-    func captureHomepageThumbnail(_ tab: Tab, completion: @escaping (UIImage?) -> Void) {
-        guard let delegate,
-              let geometry = delegate.homepageContentView.thumbnailCaptureGeometry else {
-            completion(nil)
-            return
-        }
-        
-        homepageThumbnailRenderer.capture(
-            size: geometry.size,
-            visibleRect: geometry.visibleRect,
-            contentMode: embeddedContentMode(layout: delegate.homepageLayout),
-            isPrivateBrowsing: tab.isPrivate,
-            completion: completion
-        )
-    }
-    
-    func previewImage(for tab: Tab) -> UIImage? {
-        guard let delegate,
-              isHomepageTab(tab),
               let geometry = delegate.homepageContentView.thumbnailCaptureGeometry else {
             return nil
         }
         
-        return homepageThumbnailRenderer.snapshot(
-            size: geometry.size,
-            visibleRect: geometry.visibleRect,
-            contentMode: embeddedContentMode(layout: delegate.homepageLayout),
-            isPrivateBrowsing: tab.isPrivate
-        )
+        homepageViewController.setPrivateBrowsing(tab.isPrivate)
+        homepageViewController.setContentMode(embeddedContentMode(layout: delegate.homepageLayout))
+        homepageViewController.setShowsBackground(true)
+        return homepageViewController.makeThumbnail(size: geometry.size, visibleRect: geometry.visibleRect)
     }
     
     // MARK: - Presentation

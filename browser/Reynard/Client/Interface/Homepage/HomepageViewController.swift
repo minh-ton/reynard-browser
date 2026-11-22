@@ -118,6 +118,46 @@ final class HomepageViewController: UINavigationController {
         view.layoutIfNeeded()
     }
     
+    // MARK: - Thumbnail
+    
+    func makeThumbnail(size: CGSize, visibleRect: CGRect) -> UIImage {
+        setVisibleContentInsets(UIEdgeInsets(
+            top: max(0, visibleRect.minY),
+            left: 0,
+            bottom: max(0, size.height - visibleRect.maxY),
+            right: 0
+        ))
+        
+        let originalFrame = view.frame
+        let originalBounds = view.bounds
+        let isTemporarilyAttached = view.superview == nil
+        
+        if isTemporarilyAttached {
+            let captureContainer = UIView(frame: CGRect(origin: .zero, size: size))
+            captureContainer.addSubview(view)
+            view.frame = captureContainer.bounds
+            captureContainer.layoutIfNeeded()
+        } else {
+            view.bounds.size = size
+        }
+        view.layoutIfNeeded()
+        
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor.systemBackground.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            view.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: false)
+        }
+        
+        if isTemporarilyAttached {
+            view.removeFromSuperview()
+        }
+        
+        view.bounds = originalBounds
+        view.frame = originalFrame
+        view.layoutIfNeeded()
+        return image
+    }
+    
     // MARK: - Configuration
     
     private func configureAppearance() {

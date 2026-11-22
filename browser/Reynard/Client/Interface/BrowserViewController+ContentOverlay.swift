@@ -136,15 +136,10 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
             return
         }
         
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode) { [weak self] _ in
-            guard let self else {
-                return
-            }
-            
-            self.tabBar.setPendingExpansion(at: tabIndex)
-            self.browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
-                self?.tabManager.selectTab(at: tabIndex, mode: mode)
-            }
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        tabBar.setPendingExpansion(at: tabIndex)
+        browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
+            self?.tabManager.selectTab(at: tabIndex, mode: mode)
         }
     }
     

@@ -149,20 +149,16 @@ final class TabOverviewPresentation {
             pendingSelectionTabIndex = nil
             pendingSelectionTabMode = nil
             pendingSelectionPreviewImage = nil
-            let token = presentationToken
-            dataSource.captureThumbnail(forTabAt: dataSource.selectedIndex, mode: dataSource.selectedMode) { [weak self] _ in
-                guard let self, self.presentationToken == token else { return }
-                
-                self.tabOverview.reloadTabs()
-                self.tabOverview.isHidden = false
-                self.context.containerView.bringSubviewToFront(self.tabOverview)
-                self.context.endEditing()
-                self.context.setSearchFocused(false, animated: true)
-                self.applyPresentationProgress(1)
-                self.state = .presented
-                self.context.updateLayout(animated: false, duration: 0)
-                self.context.tabBar.updateLayout()
-            }
+            dataSource.captureThumbnail(forTabAt: dataSource.selectedIndex, mode: dataSource.selectedMode)
+            tabOverview.reloadTabs()
+            tabOverview.isHidden = false
+            context.containerView.bringSubviewToFront(tabOverview)
+            context.endEditing()
+            context.setSearchFocused(false, animated: true)
+            applyPresentationProgress(1)
+            state = .presented
+            context.updateLayout(animated: false, duration: 0)
+            context.tabBar.updateLayout()
             return
         }
         
@@ -228,7 +224,6 @@ final class TabOverviewPresentation {
         presentationProgress = 1
         activePresentationTransition = nil
         presentationToken += 1
-        let token = presentationToken
         
         let overviewMode: TabOverview.Mode = dataSource.selectedMode == .private ? .privateTabs : .regularTabs
         tabOverview.setMode(overviewMode, animated: false)
@@ -236,18 +231,12 @@ final class TabOverviewPresentation {
         context.containerView.layoutIfNeeded()
         let bottomChromeView = context.browserChrome.bottomToolbarTransitionView()
         context.prepareTabOverviewPresentation()
-        dataSource.captureThumbnail(forTabAt: selectedIndex, mode: dataSource.selectedMode) { [weak self] _ in
-            guard let self, self.presentationToken == token else {
-                bottomChromeView?.removeFromSuperview()
-                return
-            }
-            
-            if let bottomChromeView {
-                bottomChromeView.frame = self.context.browserChrome.bottomToolbarTransitionFrame(in: self.context.containerView)
-                self.context.containerView.addSubview(bottomChromeView)
-            }
-            self.animatePhonePresentation(selectedIndex: selectedIndex, bottomChromeView: bottomChromeView)
+        dataSource.captureThumbnail(forTabAt: selectedIndex, mode: dataSource.selectedMode)
+        if let bottomChromeView {
+            bottomChromeView.frame = context.browserChrome.bottomToolbarTransitionFrame(in: context.containerView)
+            context.containerView.addSubview(bottomChromeView)
         }
+        animatePhonePresentation(selectedIndex: selectedIndex, bottomChromeView: bottomChromeView)
     }
     
     private func animatePhonePresentation(selectedIndex: Int, bottomChromeView: UIView?) {
@@ -477,7 +466,6 @@ final class TabOverviewPresentation {
         presentationProgress = 1
         activePresentationTransition = nil
         presentationToken += 1
-        let token = presentationToken
         
         let overviewMode: TabOverview.Mode = dataSource.selectedMode == .private ? .privateTabs : .regularTabs
         tabOverview.setMode(overviewMode, animated: false)
@@ -485,18 +473,12 @@ final class TabOverviewPresentation {
         context.containerView.layoutIfNeeded()
         let topChromeView = context.browserChrome.topToolbarTransitionView()
         context.prepareTabOverviewPresentation()
-        dataSource.captureThumbnail(forTabAt: selectedIndex, mode: dataSource.selectedMode) { [weak self] _ in
-            guard let self, self.presentationToken == token else {
-                topChromeView?.removeFromSuperview()
-                return
-            }
-            
-            if let topChromeView {
-                topChromeView.frame = self.context.browserChrome.topToolbarTransitionFrame(in: self.context.containerView)
-                self.context.containerView.addSubview(topChromeView)
-            }
-            self.animatePadPresentation(selectedIndex: selectedIndex, topChromeView: topChromeView)
+        dataSource.captureThumbnail(forTabAt: selectedIndex, mode: dataSource.selectedMode)
+        if let topChromeView {
+            topChromeView.frame = context.browserChrome.topToolbarTransitionFrame(in: context.containerView)
+            context.containerView.addSubview(topChromeView)
         }
+        animatePadPresentation(selectedIndex: selectedIndex, topChromeView: topChromeView)
     }
     
     private func animatePadPresentation(selectedIndex: Int, topChromeView: UIView?) {

@@ -136,9 +136,8 @@ extension BrowserViewController {
             tabOverview.prepareNextTabChangesWithoutAnimation()
             createTabFromOverview(mode: targetMode)
         } else {
-            homepageOverlayCoordinator.prepareHomepageForNewTab(mode: targetMode)
             let createdIndex = tabManager.createTab(selecting: true, mode: targetMode)
-            applyNewTabDisplayOption(toTabAt: createdIndex)
+            applyNewTabDisplayOption(toTabAt: createdIndex, mode: targetMode)
             tabBar.setPendingExpansion(at: createdIndex)
             setTabOverviewVisible(false, animated: true)
         }
@@ -168,56 +167,24 @@ extension BrowserViewController {
     }
     
     func createNewTabAnimated(mode: TabMode) {
-        let sourceIndex = tabManager.selectedTabIndex
-        let sourceMode = tabManager.selectedTabMode
-        captureThumbnail(forTabAt: sourceIndex, mode: sourceMode) { [weak self] _ in
-            guard let self else {
-                return
-            }
-            
-            self.toolbarController.reset()
-            self.dismissAddressBarEditingAndOverlays()
-            self.homepageOverlayCoordinator.prepareHomepageForNewTab(mode: mode)
-            let target: TabInsertionTarget = self.tabManager.selectedTabMode == mode ? .afterSelected : .end
-            let createdIndex = self.tabManager.createTab(
-                selecting: false,
-                target: target,
-                mode: mode
-            )
-            let tabs = mode == .private ? self.tabManager.privateTabs : self.tabManager.regularTabs
-            guard let tab = tabs[safe: createdIndex] else {
-                return
-            }
-            
-            self.prepareNewTab(tab, at: createdIndex, mode: mode) { [weak self] in
-                guard let self else {
-                    return
-                }
-                
-                self.tabBar.setPendingExpansion(at: createdIndex)
-                self.browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
-                    self?.tabManager.selectTab(at: createdIndex, mode: mode)
-                }
-            }
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        toolbarController.reset()
+        dismissAddressBarEditingAndOverlays()
+        let target: TabInsertionTarget = tabManager.selectedTabMode == mode ? .afterSelected : .end
+        let createdIndex = tabManager.createTab(
+            selecting: false,
+            target: target,
+            mode: mode
+        )
+        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+        guard let tab = tabs[safe: createdIndex] else {
+            return
         }
-    }
-    
-    private func prepareNewTab(
-        _ tab: Tab,
-        at index: Int,
-        mode: TabMode,
-        completion: @escaping () -> Void
-    ) {
-        switch Prefs.NewTabSettings.newTabDisplayOption {
-        case .homepage, .blankPage:
-            captureThumbnail(forTabAt: index, mode: mode) { _ in
-                completion()
-            }
-        case .customURL:
-            if URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil {
-                tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
-            }
-            completion()
+        
+        applyNewTabDisplayOption(toTabAt: createdIndex, mode: mode)
+        tabBar.setPendingExpansion(at: createdIndex)
+        browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
+            self?.tabManager.selectTab(at: createdIndex, mode: mode)
         }
     }
 }

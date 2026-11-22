@@ -282,20 +282,9 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     
     func createTabForSwipe() -> Int {
         let mode = tabManager.selectedTabMode
-        captureTabThumbnailIfNeeded()
-        homepageOverlayCoordinator.prepareHomepageForNewTab(mode: mode)
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: mode)
         let index = tabManager.createTab(selecting: false)
-        
-        if Prefs.NewTabSettings.newTabDisplayOption == .customURL {
-            applyNewTabDisplayOption(toTabAt: index)
-            return index
-        }
-        
-        if let tab = tabManager.activeTabs[safe: index],
-           let previewImage = homepageOverlayCoordinator.previewImage(for: tab) {
-            tabManager.updateThumbnail(previewImage, forTabAt: index, mode: mode)
-        }
-        
+        applyNewTabDisplayOption(toTabAt: index, mode: mode)
         return index
     }
     
@@ -313,31 +302,11 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             return
         }
         browserChrome.dismissActionBar(animated: false)
-        captureTabThumbnailIfNeeded()
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
     }
     
     func addressBarTransitionDidEnd() {
         toolbarController.unlock(for: .addressBarTransition)
-    }
-    
-    private func captureTabThumbnailIfNeeded() {
-        if let tab = tabManager.activeTabs[safe: tabManager.selectedTabIndex],
-           homepageOverlayCoordinator.isHomepageTab(tab) {
-            if let thumbnail = homepageOverlayCoordinator.previewImage(for: tab) {
-                tabManager.updateThumbnail(thumbnail, forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
-            }
-            return
-        }
-        
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
-    }
-    
-    func storedContentPreview(from tab: Tab) -> UIImage? {
-        guard homepageOverlayCoordinator.isHomepageTab(tab) else {
-            return nil
-        }
-        
-        return tab.thumbnail
     }
     
     // MARK: - Page Zoom

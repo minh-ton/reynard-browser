@@ -25,12 +25,8 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         return tabManager.selectedTab?.session
     }
     
-    func captureSourceTabThumbnail(completion: @escaping () -> Void) {
-        let selectedIndex = tabManager.selectedTabIndex
-        let selectedMode = tabManager.selectedTabMode
-        captureThumbnail(forTabAt: selectedIndex, mode: selectedMode) { _ in
-            completion()
-        }
+    func captureSourceTabThumbnail() {
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
     }
     
     func contextMenuOpenLink(_ url: URL, disposition: TabOpenDisposition) {
@@ -62,15 +58,10 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
             return
         }
         
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode) { [weak self] _ in
-            guard let self else {
-                return
-            }
-            
-            self.tabBar.setPendingExpansion(at: tabIndex)
-            self.browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
-                self?.tabManager.selectTab(at: tabIndex, mode: mode)
-            }
+        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        tabBar.setPendingExpansion(at: tabIndex)
+        browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
+            self?.tabManager.selectTab(at: tabIndex, mode: mode)
         }
     }
     

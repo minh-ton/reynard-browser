@@ -328,7 +328,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             self?.tabManager.goForward()
         }
         contentView.onHistorySwipeBegan = { [weak self] in
-            self?.captureOutgoingHistoryThumbnail()
+            self?.captureHistoryThumbnail(isPreparedForNavigation: true)
         }
         contentView.onErrorAction = { [weak self] action in
             self?.performErrorPageAction(action)
@@ -338,12 +338,12 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         }
         browserChrome.onBack = { [weak self] in
             self?.toolbarController.reset(preserveManualCollapse: true)
-            self?.prepareThumbnailForNavigation()
+            self?.captureHistoryThumbnail(isPreparedForNavigation: true)
             self?.tabManager.goBack()
         }
         browserChrome.onForward = { [weak self] in
             self?.toolbarController.reset(preserveManualCollapse: true)
-            self?.prepareThumbnailForNavigation()
+            self?.captureHistoryThumbnail(isPreparedForNavigation: true)
             self?.tabManager.goForward()
         }
         browserChrome.configureNavigationMenus(
@@ -366,7 +366,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
                 }
                 
                 self.toolbarController.reset(preserveManualCollapse: true)
-                self.prepareThumbnailForNavigation()
+                self.captureHistoryThumbnail(isPreparedForNavigation: true)
                 switch direction {
                 case .back:
                     self.tabManager.goBack(to: index)

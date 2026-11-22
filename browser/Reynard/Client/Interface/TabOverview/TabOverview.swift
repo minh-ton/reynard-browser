@@ -16,7 +16,8 @@ protocol TabOverviewDataSource: AnyObject {
     func selectTab(at index: Int, mode: TabMode)
     func closeTab(at index: Int, mode: TabMode)
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
-    func captureThumbnail(forTabAt index: Int, mode: TabMode, completion: ((UIImage?) -> Void)?)
+    @discardableResult
+    func captureThumbnail(forTabAt index: Int, mode: TabMode) -> UIImage?
 }
 
 protocol TabOverviewDelegate: AnyObject {

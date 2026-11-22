@@ -14,7 +14,7 @@ protocol ContextMenuCoordinatorHost: AnyObject {
     var contextMenuSelectedTabIsPrivate: Bool { get }
     var contextMenuSelectedSession: GeckoSession? { get }
     
-    func captureSourceTabThumbnail(completion: @escaping () -> Void)
+    func captureSourceTabThumbnail()
     func contextMenuOpenLink(_ url: URL, disposition: TabOpenDisposition)
     func contextMenuPresentShareSheet(items: [Any], sourceView: UIView, sourceRect: CGRect)
     func contextMenuRestoreInteraction(for session: GeckoSession)
@@ -112,31 +112,24 @@ final class ContextMenuCoordinator: NSObject {
             return
         }
         
-        guard linkPreview != nil else {
+        guard let preview = linkPreview else {
             return
         }
         
         isCommitting = true
-        host.captureSourceTabThumbnail { [weak self] in
-            guard let self,
-                  let host = self.host,
-                  let preview = self.linkPreview else {
-                self?.isCommitting = false
-                return
-            }
-            guard let session = preview.releaseSession() else {
-                self.isCommitting = false
-                return
-            }
-            
-            host.contextMenuTabActions.openPreviewSession(
-                session,
-                url: preview.pageURL,
-                title: preview.pageTitle,
-                disposition: disposition
-            )
-            self.linkPreview = nil
+        host.captureSourceTabThumbnail()
+        guard let session = preview.releaseSession() else {
+            isCommitting = false
+            return
         }
+        
+        host.contextMenuTabActions.openPreviewSession(
+            session,
+            url: preview.pageURL,
+            title: preview.pageTitle,
+            disposition: disposition
+        )
+        linkPreview = nil
     }
     
     private func makeTargetedPreview() -> UITargetedPreview? {
