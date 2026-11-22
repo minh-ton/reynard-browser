@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..dc4f34ab1b15
+index 000000000000..ea1839d5b389
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4215 @@
+@@ -0,0 +1,4327 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -23,6 +23,7 @@ index 000000000000..dc4f34ab1b15
 +#include "nsWindow.h"
 +
 +#include "ipc/nsGUIEventIPC.h"
++#include "jsapi.h"
 +#include "mozilla/AutoRestore.h"
 +#include "mozilla/CheckedInt.h"
 +#include "mozilla/EventForwards.h"
@@ -32,9 +33,11 @@ index 000000000000..dc4f34ab1b15
 +#include "mozilla/TextRange.h"
 +#include "mozilla/dom/BrowserParent.h"
 +#include "mozilla/layers/CompositorSession.h"
++#include "mozilla/widget/EventDispatcher.h"
 +#include "nsIURI.h"
 +#include "nsIWidget.h"
 +#include "nsString.h"
++#include "xpcpublic.h"
 +
 +using namespace mozilla;
 +using namespace mozilla::widget;
@@ -54,6 +57,14 @@ index 000000000000..dc4f34ab1b15
 +
 +@protocol GeckoKeyboardDeletionState <NSObject>
 +- (BOOL)isAutoDeleteActive;
++@end
++
++@protocol GeckoKeyboardAutofillController <NSObject>
++- (NSMutableDictionary*)autofillGroup;
++@end
++
++@protocol GeckoKeyboardAutofillState <NSObject>
++- (id<GeckoKeyboardAutofillController>)autofillController;
 +@end
 +
 +@interface UIKeyboardImpl : NSObject
@@ -235,6 +246,12 @@ index 000000000000..dc4f34ab1b15
 +@interface ChildView (TextDrag)
 +- (void)setupTextDragInteractions;
 +- (void)teardownTextDragInteractions;
++@end
++
++@interface ChildView (PasswordAutofill)
++- (void)setupAutofill;
++- (void)teardownAutofill;
++- (void)updateAutofillField:(nullable NSDictionary*)aField;
 +@end
 +
 +@implementation ChildViewTextPosition
@@ -1661,6 +1678,7 @@ index 000000000000..dc4f34ab1b15
 +                                                object:nil];
 +  }
 +
++  [self teardownAutofill];
 +  [self textStyleMenuDidHide:nil];
 +  [self cancelAutoscroll];
 +  [self teardownTextDragInteractions];
@@ -4096,126 +4114,220 @@ index 000000000000..dc4f34ab1b15
 +
 +// MARK: - Password Autofill
 +
-+@protocol ChildViewCredentialDelegate <NSObject>
-+- (nullable UITextContentType)autofillTextContentType;
-+- (nullable NSString*)autofillOrigin;
-+- (BOOL)acceptsLoginCredentials;
-+- (void)didSelectAutofillUsername:(nullable NSString*)aUsername
-+                         password:(nullable NSString*)aPassword;
-+- (void)didSelectOneTimeCode:(NSString*)aOneTimeCode;
-+@end
-+
 +@protocol CredentialSuggestion <NSObject>
 +@property(nonatomic, readonly, nullable) NSString* username;
 +@property(nonatomic, readonly, nullable) NSString* password;
 +@end
 +
-+@interface ChildView (PasswordAutofill)
-+- (void)setAutofillDelegate:(nullable id<ChildViewCredentialDelegate>)aDelegate;
-+- (void)activatePasswordInputForAutofill;
-+- (nullable NSURL*)activeAutofillURL;
-+@end
++namespace {
++
++constexpr char kStartAutofillEvent[] = "GeckoView:StartAutofill";
++constexpr char kAddAutofillEvent[] = "GeckoView:AddAutofill";
++constexpr char kFocusAutofillEvent[] = "GeckoView:OnAutofillFocus";
++constexpr char kClearAutofillEvent[] = "GeckoView:ClearAutofill";
++
++class AutofillListener final : public nsIGeckoViewEventListener {
++ public:
++  NS_DECL_ISUPPORTS
++  NS_DECL_NSIGECKOVIEWEVENTLISTENER
++
++  explicit AutofillListener(ChildView* aView) : mView(aView) {}
++
++  void Disconnect() { mView = nil; }
++
++ private:
++  ~AutofillListener() = default;
++
++  ChildView* mView;
++};
++
++NS_IMPL_ISUPPORTS(AutofillListener, nsIGeckoViewEventListener)
++
++NS_IMETHODIMP AutofillListener::OnEvent(const nsAString& aEvent,
++                                        JS::Handle<JS::Value> aData,
++                                        nsIGeckoViewEventCallback* aCallback) {
++  if (aEvent.EqualsLiteral(kClearAutofillEvent)) {
++    [mView updateAutofillField:nil];
++    return NS_OK;
++  }
++
++  if (!aEvent.EqualsLiteral(kAddAutofillEvent) &&
++      !aEvent.EqualsLiteral(kFocusAutofillEvent)) {
++    return NS_OK;
++  }
++
++  dom::AutoJSAPI jsapi;
++  NS_ENSURE_TRUE(jsapi.Init(xpc::PrivilegedJunkScope()), NS_ERROR_FAILURE);
++  JSContext* cx = jsapi.cx();
++
++  if (aEvent.EqualsLiteral(kAddAutofillEvent)) {
++    JS::Rooted<JSObject*> values(cx, JS_NewPlainObject(cx));
++    NS_ENSURE_TRUE(values, NS_ERROR_OUT_OF_MEMORY);
++    JS::Rooted<JS::Value> valuesValue(cx, JS::ObjectValue(*values));
++    return aCallback ? aCallback->OnSuccess(valuesValue, cx) : NS_OK;
++  }
++
++  NS_ENSURE_TRUE(aData.isObject(), NS_ERROR_INVALID_ARG);
++  JS::Rooted<JSObject*> data(cx, &aData.toObject());
++  NS_ENSURE_TRUE(JS_WrapObject(cx, &data), NS_ERROR_FAILURE);
++
++  CFTypeRefPtr<CFTypeRef> message;
++  nsresult rv = EventDispatcher::BoxBundle(cx, data, message);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  id field = ((NSDictionary*)message.get())[@"node"];
++  [mView updateAutofillField:[field isKindOfClass:[NSDictionary class]] ? field
++                                                                        : nil];
++  return NS_OK;
++}
++
++}  // namespace
 +
 +@implementation ChildView (PasswordAutofill)
 +
-+- (void)setAutofillDelegate:(id<ChildViewCredentialDelegate>)aDelegate {
-+  mEditable.mCredentialDelegate = aDelegate;
++- (void)setupAutofill {
++  EventDispatcher* dispatcher = mGeckoChild->GetEventDispatcher();
++  dom::AutoJSAPI jsapi;
++  if (!dispatcher || !jsapi.Init(xpc::PrivilegedJunkScope())) {
++    return;
++  }
++
++  mEditable.mAutofillListener = new AutofillListener(self);
++  JSContext* cx = jsapi.cx();
++  for (const char* event : {kStartAutofillEvent, kAddAutofillEvent,
++                            kFocusAutofillEvent, kClearAutofillEvent}) {
++    JS::Rooted<JSString*> name(cx, JS_NewStringCopyZ(cx, event));
++    if (!name) {
++      break;
++    }
++    JS::Rooted<JS::Value> value(cx, JS::StringValue(name));
++    dispatcher->RegisterListener(mEditable.mAutofillListener, value, cx);
++  }
++}
++
++- (void)teardownAutofill {
++  if (mEditable.mAutofillListener) {
++    static_cast<AutofillListener*>(mEditable.mAutofillListener.get())
++        ->Disconnect();
++  }
++  [mEditable.mAutofillField release];
++}
++
++- (void)updateAutofillField:(NSDictionary*)aField {
++  NSMutableDictionary* field = nil;
++  if (aField[@"uuid"]) {
++    BOOL acceptsLoginCredentials =
++        [aField[@"acceptsLoginCredentials"] boolValue];
++    field = [NSMutableDictionary dictionaryWithDictionary:@{
++      @"uuid" : aField[@"uuid"],
++      @"acceptsLoginCredentials" : @(acceptsLoginCredentials),
++    }];
++    if ([aField[@"isOneTimeCode"] boolValue]) {
++      field[@"textContentType"] = UITextContentTypeOneTimeCode;
++    } else if (acceptsLoginCredentials) {
++      field[@"textContentType"] =
++          [aField[@"credentialRole"] isEqual:@"username"]
++              ? UITextContentTypeUsername
++              : UITextContentTypePassword;
++    }
++  }
++
++  if (field == mEditable.mAutofillField ||
++      [field isEqual:mEditable.mAutofillField]) {
++    return;
++  }
++  [mEditable.mAutofillField release];
++  mEditable.mAutofillField = [field copy];
++
++  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L8322
++  self.inputDelegate = nil;
++  [self reloadInputViews];
++
++  if (![field[@"acceptsLoginCredentials"] boolValue]) {
++    return;
++  }
++
++  UIKeyboardImpl* keyboard =
++      [NSClassFromString(@"UIKeyboardImpl") activeInstance];
++  if ([keyboard inputDelegate] != self) {
++    return;
++  }
++
++  id<GeckoKeyboardAutofillState> keyboardState =
++      (id<GeckoKeyboardAutofillState>)[keyboard keyboardStateManager];
++  [keyboardState.autofillController.autofillGroup removeObjectsForKeys:@[
++    UITextContentTypeUsername, UITextContentTypePassword,
++    UITextContentTypeOneTimeCode
++  ]];
 +}
 +
 +- (UITextContentType)textContentType {
-+  return [mEditable.mCredentialDelegate autofillTextContentType];
-+}
-+
-+- (void)activatePasswordInputForAutofill {
-+  [self cancelResponderBlur];
-+  [self becomeFirstResponder];
-+  [self reloadInputViews];
-+}
-+
-+- (NSURL*)activeAutofillURL {
-+  id<ChildViewCredentialDelegate> credentialDelegate =
-+      mEditable.mCredentialDelegate;
-+  if (!credentialDelegate) {
-+    return nil;
-+  }
-+
-+  NSString* autofillOrigin = [credentialDelegate autofillOrigin];
-+  if (!autofillOrigin || !mGeckoChild || mGeckoChild->Destroyed()) {
-+    return nil;
-+  }
-+
-+  const widget::InputContext& context = mGeckoChild->GetInputContext();
-+  if (!context.mURI) {
-+    return nil;
-+  }
-+
-+  nsAutoCString spec;
-+  if (NS_FAILED(context.mURI->GetSpec(spec))) {
-+    return nil;
-+  }
-+
-+  NSString* urlString =
-+      [[[NSString alloc] initWithBytes:spec.BeginReading()
-+                                length:spec.Length()
-+                              encoding:NSUTF8StringEncoding] autorelease];
-+  NSURL* autofillURL = [NSURL URLWithString:urlString];
-+  NSString* scheme = autofillURL.scheme.lowercaseString;
-+  if (!autofillURL ||
-+      (![scheme isEqualToString:@"http"] &&
-+       ![scheme isEqualToString:@"https"]) ||
-+      !CredentialOriginsMatch(autofillURL, autofillOrigin)) {
-+    return nil;
-+  }
-+
-+  return autofillURL;
++  return mEditable.mAutofillField[@"textContentType"];
 +}
 +
 +- (NSDictionary*)_autofillContext {
-+  NSURL* autofillURL = [self activeAutofillURL];
-+  if (!autofillURL) {
++  if (!mGeckoChild || mGeckoChild->Destroyed()) {
++    return nil;
++  }
++
++  const widget::InputContext& inputContext = mGeckoChild->GetInputContext();
++  if (!inputContext.mIMEState.IsEditable()) {
 +    return nil;
 +  }
 +
 +  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L11803
-+  //
++  NSMutableDictionary* context = [NSMutableDictionary
++      dictionaryWithDictionary:@{@"_WKAutofillContextVersion" : @2}];
++  if ([mEditable.mAutofillField[@"acceptsLoginCredentials"] boolValue]) {
++    context[@"_acceptsLoginCredentials"] = @YES;
++  }
++
++  nsAutoCString spec;
++  if (!inputContext.mURI || NS_FAILED(inputContext.mURI->GetSpec(spec))) {
++    return context;
++  }
++
++  NSURL* pageURL = [NSURL
++      URLWithString:[[[NSString alloc] initWithBytes:spec.BeginReading()
++                                              length:spec.Length()
++                                            encoding:NSUTF8StringEncoding]
++                        autorelease]];
++  if (!pageURL.host) {
++    return context;
++  }
++
 +  // Initially, I thought getting the credential chip to show is impossible
 +  // since we can't set Associated Domains inside the app's settings, but
 +  // looking at _TIKeyboardStateAutofillContextAssociatedDomainsKey and
 +  // _AFAutoFillContextAssociatedDomainsKey by reversing AutoFillCore, seems
 +  // like supplying the lowercased host to the _AssociatedDomains field is
 +  // enough to make them show up!
-+
-+  BOOL acceptsLoginCredentials =
-+      [mEditable.mCredentialDelegate acceptsLoginCredentials];
-+  NSMutableDictionary* context =
-+      [NSMutableDictionary dictionaryWithDictionary:@{
-+        @"_WKAutofillContextVersion" : @2,
-+        @"_WebViewURL" : autofillURL,
-+        @"_AssociatedDomains" : @[ autofillURL.host.lowercaseString ],
-+        // show the credential chip for the current domain instead of the
-+        // generic "Passwords" chip
-+      }];
-+  if (acceptsLoginCredentials) {
-+    context[@"_acceptsLoginCredentials"] = @YES;
-+  }
++  context[@"_WebViewURL"] = pageURL;
++  context[@"_AssociatedDomains"] = @[ pageURL.host.lowercaseString ];
 +  return context;
 +}
 +
 +- (void)insertTextSuggestion:(id)aSuggestion {
 +  // https://github.com/WebKit/WebKit/blob/f82ca57ad9b7224c783cac937d15415af50d380f/Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm#L6578
 +  Class suggestionClass = NSClassFromString(@"UITextAutofillSuggestion");
-+  if (!suggestionClass || ![aSuggestion isKindOfClass:suggestionClass] ||
-+      ![aSuggestion respondsToSelector:@selector(username)] ||
-+      ![aSuggestion respondsToSelector:@selector(password)] ||
-+      ![mEditable.mCredentialDelegate acceptsLoginCredentials] ||
-+      ![self activeAutofillURL]) {
++  if (![aSuggestion isKindOfClass:suggestionClass] ||
++      ![mEditable.mAutofillField[@"acceptsLoginCredentials"] boolValue] ||
++      !mGeckoChild || mGeckoChild->Destroyed()) {
 +    return;
 +  }
 +
-+  // Hand to Swift, Gecko remains the only DOM-filling mechanism
++  EventDispatcher* dispatcher = mGeckoChild->GetEventDispatcher();
++  if (!dispatcher) {
++    return;
++  }
++
 +  id<CredentialSuggestion> suggestion = aSuggestion;
-+  [mEditable.mCredentialDelegate didSelectAutofillUsername:suggestion.username
-+                                                  password:suggestion.password];
++  nsAutoString username, password;
++  CopyNSStringToXPCOMString(suggestion.username ?: @"", username);
++  CopyNSStringToXPCOMString(suggestion.password ?: @"", password);
++  AssertIsOnMainThread();
++  dispatcher->Dispatch(u"GeckoView:Autofill:FillCredentials"_ns,
++                       nsTArray<nsString>{username, password});
 +}
 +
 +@end

@@ -1,8 +1,16 @@
 diff --git a/mobile/shared/chrome/geckoview/geckoview.js b/mobile/shared/chrome/geckoview/geckoview.js
-index da3a49598a5d..c10a7d996196 100644
+index da3a49598a5d..a96f93c271d1 100644
 --- a/mobile/shared/chrome/geckoview/geckoview.js
 +++ b/mobile/shared/chrome/geckoview/geckoview.js
-@@ -701,6 +701,31 @@ function startup() {
+@@ -633,6 +633,7 @@ function startup() {
+     },
+     {
+       name: "GeckoViewAutofill",
++      enabled: true,
+       onInit: {
+         actors: {
+           GeckoViewAutoFill: {
+@@ -701,6 +702,31 @@ function startup() {
          },
        },
      },

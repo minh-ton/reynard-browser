@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs b/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
-index 635806ea1724..0c5b324c7347 100644
+index 635806ea1724..7f06d28942d7 100644
 --- a/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
 +++ b/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
 @@ -3,6 +3,7 @@
@@ -10,19 +10,20 @@ index 635806ea1724..0c5b324c7347 100644
  
  export class GeckoViewContent extends GeckoViewModule {
    onInit() {
-@@ -26,6 +27,11 @@ export class GeckoViewContent extends GeckoViewModule {
+@@ -26,6 +27,12 @@ export class GeckoViewContent extends GeckoViewModule {
        "GeckoView:GetWebCompatInfo",
        "GeckoView:SendGleanBrokenSiteReport",
        "GeckoView:SendMoreWebCompatInfo",
 +
 +      // New events
 +      "GeckoView:Autofill:FillOneTimeCode",
++      "GeckoView:Autofill:FillCredentials",
 +      "GeckoView:GetFocusedInputMetrics",
 +      "GeckoView:FetchImage",
      ]);
    }
  
-@@ -173,6 +179,19 @@ export class GeckoViewContent extends GeckoViewModule {
+@@ -173,6 +180,22 @@ export class GeckoViewContent extends GeckoViewModule {
    onEvent(aEvent, aData, aCallback) {
      debug`onEvent: event=${aEvent}, data=${aData}`;
  
@@ -30,6 +31,9 @@ index 635806ea1724..0c5b324c7347 100644
 +    switch (aEvent) {
 +      case "GeckoView:Autofill:FillOneTimeCode":
 +        this._fillOneTimeCode(aData, aCallback);
++        return;
++      case "GeckoView:Autofill:FillCredentials":
++        this._fillCredentials(aData);
 +        return;
 +      case "GeckoView:GetFocusedInputMetrics":
 +        this._getFocusedInputMetrics(aCallback);
@@ -42,7 +46,7 @@ index 635806ea1724..0c5b324c7347 100644
      switch (aEvent) {
        case "GeckoViewContent:ExitFullScreen":
          this.browser.ownerDocument.exitFullscreen();
-@@ -491,6 +510,49 @@ export class GeckoViewContent extends GeckoViewModule {
+@@ -491,6 +514,62 @@ export class GeckoViewContent extends GeckoViewModule {
      aCallback.onSuccess(await this.actor.containsFormData());
    }
  
@@ -57,6 +61,19 @@ index 635806ea1724..0c5b324c7347 100644
 +    } catch (error) {
 +      aCallback.onError(`Cannot fill one-time code, error: ${error}`);
 +    }
++  }
++
++  _fillCredentials([aUsername, aPassword]) {
++    const focusedContext = Services.focus.focusedContentBrowsingContext;
++    if (focusedContext?.top !== this.browser.browsingContext) {
++      return;
++    }
++    focusedContext.currentWindowGlobal
++      ?.getActor("GeckoViewAutoFill")
++      .sendAsyncMessage("FillCredentials", {
++        username: aUsername,
++        password: aPassword,
++      });
 +  }
 +
 +  async _getFocusedInputMetrics(aCallback) {

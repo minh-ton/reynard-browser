@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.h b/widget/uikit/GeckoEditableSupport.h
 new file mode 100644
-index 000000000000..852759e0f418
+index 000000000000..7e9570ac136e
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.h
-@@ -0,0 +1,168 @@
+@@ -0,0 +1,131 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -19,8 +19,8 @@ index 000000000000..852759e0f418
 +#include <cmath>
 +
 +#include "Units.h"
-+
-+@protocol ChildViewCredentialDelegate;
++#include "nsCOMPtr.h"
++#include "nsIGeckoViewBridge.h"
 +
 +// MARK: - UITextInput Model Objects
 +
@@ -59,7 +59,8 @@ index 000000000000..852759e0f418
 +  id mTextInputTraits;
 +  BOOL mSeenHardwareKeyDownInNonEditableContent;
 +  NSHashTable<id<UITextInputDelegate>>* mTextInputDelegates;
-+  id<ChildViewCredentialDelegate> mCredentialDelegate;
++  NSDictionary* mAutofillField;
++  nsCOMPtr<nsIGeckoViewEventListener> mAutofillListener;
 +  NSDictionary* mMarkedTextStyle;
 +  NSMutableAttributedString* mTextAnnotations;
 +  UITextInteraction* mEditableTextInteraction;
@@ -131,44 +132,6 @@ index 000000000000..852759e0f418
 +
 +  aRect = clippedRect;
 +  return true;
-+}
-+
-+// MARK: - Credential Utilities
-+
-+inline NSInteger EffectiveOriginPort(NSURLComponents* aComponents) {
-+  if (aComponents.port) {
-+    return aComponents.port.integerValue;
-+  }
-+  NSString* scheme = aComponents.scheme.lowercaseString;
-+  if ([scheme isEqualToString:@"http"]) {
-+    return 80;
-+  }
-+  if ([scheme isEqualToString:@"https"]) {
-+    return 443;
-+  }
-+  return NSNotFound;
-+}
-+
-+inline BOOL CredentialOriginsMatch(NSURL* aDocumentURL,
-+                                   NSString* aExpectedOrigin) {
-+  NSURLComponents* documentOrigin =
-+      [NSURLComponents componentsWithURL:aDocumentURL
-+                 resolvingAgainstBaseURL:NO];
-+  NSURLComponents* expectedOrigin =
-+      [NSURLComponents componentsWithString:aExpectedOrigin];
-+  NSString* documentScheme = documentOrigin.scheme.lowercaseString;
-+  NSString* expectedScheme = expectedOrigin.scheme.lowercaseString;
-+  NSString* documentHost = documentOrigin.host.lowercaseString;
-+  NSString* expectedHost = expectedOrigin.host.lowercaseString;
-+  if (!documentScheme || !expectedScheme || !documentHost || !expectedHost) {
-+    return NO;
-+  }
-+  if (![documentScheme isEqualToString:expectedScheme] ||
-+      ![documentHost isEqualToString:expectedHost]) {
-+    return NO;
-+  }
-+  return EffectiveOriginPort(documentOrigin) ==
-+         EffectiveOriginPort(expectedOrigin);
 +}
 +
 +#endif  // mozilla_widget_GeckoEditableSupport_h
