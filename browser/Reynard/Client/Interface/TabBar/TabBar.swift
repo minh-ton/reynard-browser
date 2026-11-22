@@ -162,9 +162,9 @@ final class TabBar: UIView {
         tabCollection.reloadTab(at: index)
     }
     
-    func setPendingExpansion(at index: Int?) {
-        pendingExpandedTabID = index.flatMap { dataSource?.tabs[safe: $0]?.id }
-        if index != nil {
+    func setPendingExpansion(to tab: Tab?) {
+        pendingExpandedTabID = tab?.id
+        if tab != nil {
             tabCollection.reloadTabs()
         }
     }

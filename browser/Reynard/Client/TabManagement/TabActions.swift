@@ -15,7 +15,7 @@ extension TabManager {
         windowId: String? = nil,
         target: TabInsertionTarget = .end,
         mode: TabMode? = nil
-    ) -> Int {
+    ) -> Tab {
         let mode = mode ?? selectedTabMode
         return addTab(
             selecting: selecting,
@@ -32,18 +32,14 @@ extension TabManager {
         target: TabInsertionTarget = .end,
         url: String? = nil,
         loadImmediately: Bool = false
-    ) -> Tab? {
-        let tabIndex = createTab(
+    ) -> Tab {
+        let tab = createTab(
             selecting: selecting,
             windowId: windowId,
             target: target,
             mode: .regular
         )
-        guard regularTabs.indices.contains(tabIndex) else {
-            return nil
-        }
         
-        let tab = regularTabs[tabIndex]
         if let url = url?.trimmingCharacters(in: .whitespacesAndNewlines),
            !url.isEmpty {
             loadImmediately ? browse(to: url, in: tab) : (tab.state.displayState = .pending(url))
@@ -114,8 +110,7 @@ extension TabManager {
             return selectedTab
         }
         
-        let tabIndex = createTab(selecting: true)
-        return activeTabs[tabIndex]
+        return createTab(selecting: true)
     }
     
     private func isBlankTab(_ tab: Tab) -> Bool {

@@ -59,13 +59,13 @@ extension BrowserViewController {
             return
         }
         
-        guard tabManager.selectedTab != nil else {
+        guard let tab = tabManager.selectedTab else {
             return
         }
         
         toolbarController.reset()
         let mode = tabManager.selectedTabMode
-        tabManager.removeTab(at: tabManager.selectedTabIndex, mode: mode, behavior: .adjacent)
+        tabManager.removeTab(tab, behavior: .adjacent)
         
         if mode == .regular && tabManager.regularTabs.isEmpty {
             createNewTab(mode: .regular)
@@ -246,20 +246,15 @@ extension BrowserViewController {
     }
     
     @objc func closeOtherTabsKeyCommand(_ sender: UIKeyCommand) {
-        let mode = tabManager.selectedTabMode
         let tabs = tabManager.activeTabs
         guard tabs.count > 1,
-              let selectedTabID = tabManager.selectedTab?.id else {
+              let selectedTab = tabManager.selectedTab else {
             return
         }
         
         toolbarController.reset()
         dismissAddressBarEditingAndOverlays()
-        tabs.indices.reversed().forEach { index in
-            if tabs[index].id != selectedTabID {
-                tabManager.removeTab(at: index, mode: mode, behavior: .none)
-            }
-        }
+        tabs.filter { $0 !== selectedTab }.forEach { tabManager.removeTab($0, behavior: .none) }
     }
     
     private var hasSelectedWebPage: Bool {

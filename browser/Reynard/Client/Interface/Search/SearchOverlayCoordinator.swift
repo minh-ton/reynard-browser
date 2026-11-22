@@ -306,11 +306,11 @@ final class SearchOverlayCoordinator {
     }
     
     private func switchToTab(id: UUID) {
-        guard let index = tabManager.activeTabs.firstIndex(where: { $0.id == id }) else {
+        guard let tab = tabManager.activeTabs.first(where: { $0.id == id }) else {
             return
         }
         
-        tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
+        tabManager.selectTab(tab)
     }
     
     private func shouldShowSearchSuggestions(in tabMode: TabMode) -> Bool {

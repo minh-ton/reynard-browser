@@ -25,36 +25,44 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     func selectTab(at index: Int, mode: TabMode) {
         browserChrome.dismissActionBar(animated: false)
         toolbarController.reset()
+        guard let tab = tabManager.tabs(for: mode)[safe: index] else {
+            return
+        }
+        
         if mode == tabManager.selectedTabMode,
-           index != tabManager.selectedTabIndex {
+           tab !== tabManager.selectedTab {
             if tabOverview.isPresented || tabOverview.isTransitionRunning {
-                tabManager.selectTab(at: index, mode: mode)
+                tabManager.selectTab(tab)
                 return
             }
             
-            captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
-            tabManager.selectTab(at: index, mode: mode)
+            captureThumbnail(for: tabManager.selectedTab)
+            tabManager.selectTab(tab)
             return
         }
-        tabManager.selectTab(at: index, mode: mode)
+        tabManager.selectTab(tab)
     }
     
     func closeTab(at index: Int, mode: TabMode) {
         toolbarController.reset()
+        guard let tab = tabManager.tabs(for: mode)[safe: index] else {
+            return
+        }
+        
         let isTabOverviewActive = tabOverview.isPresented || tabOverview.isTransitionRunning
         if isTabOverviewActive,
            tabOverview.mode == .regularTabs,
            mode == .regular,
            tabManager.regularTabs.count == 1 {
             tabOverview.prepareNextTabChangesWithoutAnimation()
-            tabManager.removeTab(at: index, mode: mode, behavior: .none)
+            tabManager.removeTab(tab, behavior: .none)
             tabOverview.prepareNextTabChangesWithoutAnimation()
             createTabFromOverview(mode: .regular)
             return
         }
         
         let behavior: TabRemovalBehavior = isTabOverviewActive ? .none : .recent
-        tabManager.removeTab(at: index, mode: mode, behavior: behavior)
+        tabManager.removeTab(tab, behavior: behavior)
     }
     
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode) {
@@ -74,6 +82,10 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     
     var selectedIndex: Int {
         return tabManager.selectedTabIndex
+    }
+    
+    func captureThumbnail(forTabAt index: Int, mode: TabMode) -> UIImage? {
+        return captureThumbnail(for: tabManager.tabs(for: mode)[safe: index])
     }
     
     // MARK: - TabOverviewDelegate
@@ -99,7 +111,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     }
     
     func tabOverviewDidRequestClearPendingTabExpansion(_ tabOverview: TabOverview) {
-        tabBar.setPendingExpansion(at: nil)
+        tabBar.setPendingExpansion(to: nil)
     }
     
     // MARK: - TabOverviewPresentationContext
@@ -163,10 +175,8 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             }
             
             if tabManager.selectedTabMode != mode,
-               let tabIndex = tabs.indices.max(by: {
-                   tabs[$0].state.selectionOrder < tabs[$1].state.selectionOrder
-               }) {
-                tabManager.selectTab(at: tabIndex, mode: mode)
+               let tab = tabs.max(by: { $0.state.selectionOrder < $1.state.selectionOrder }) {
+                tabManager.selectTab(tab)
             }
             scrollTabOverviewToTab(at: tabManager.selectedTabIndex)
             tabOverview.prepareDismissSelectionForCurrentTab()
@@ -189,7 +199,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     }
     
     private func clearTabsForCurrentOverviewMode() {
-        tabBar.setPendingExpansion(at: nil)
+        tabBar.setPendingExpansion(to: nil)
         
         guard tabOverview.isPresented else {
             tabManager.removeAllTabs(mode: nil)
@@ -215,35 +225,33 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             return
         }
         
-        tabBar.setPendingExpansion(at: nil)
+        tabBar.setPendingExpansion(to: nil)
         let mode = tabOverview.mode.tabMode
         let tabs = tabManager.tabs(for: mode)
         let oldTabIDs = TabManagementStore.shared.tabIDs(olderThan: cutoffDate, isPrivate: mode == .private)
-        let oldTabIndices = tabs.indices.filter { oldTabIDs.contains(tabs[$0].id) }
-        guard !oldTabIndices.isEmpty else {
+        let oldTabs = tabs.filter { oldTabIDs.contains($0.id) }
+        guard !oldTabs.isEmpty else {
             return
         }
         
-        if oldTabIndices.count == tabs.count {
+        if oldTabs.count == tabs.count {
             clearTabsForCurrentOverviewMode()
             return
         }
         
-        oldTabIndices.reversed().forEach { index in
-            tabManager.removeTab(at: index, mode: mode, behavior: .none)
-        }
+        oldTabs.forEach { tabManager.removeTab($0, behavior: .none) }
     }
     
     func createTabFromOverview(mode: TabMode) {
-        let createdIndex = tabManager.createTab(
+        let tab = tabManager.createTab(
             selecting: true,
             target: .end,
             mode: mode
         )
-        let previewImage = applyNewTabDisplayOption(toTabAt: createdIndex, mode: mode)
-        tabOverview.prepareDismissSelection(to: createdIndex, mode: mode, previewImage: previewImage)
-        scrollTabOverviewToTab(at: createdIndex)
-        tabBar.setPendingExpansion(at: createdIndex)
+        let previewImage = applyNewTabDisplayOption(to: tab)
+        tabOverview.prepareDismissSelection(to: tabManager.selectedTabIndex, mode: mode, previewImage: previewImage)
+        scrollTabOverviewToTab(at: tabManager.selectedTabIndex)
+        tabBar.setPendingExpansion(to: tab)
         setTabOverviewVisible(false, animated: true)
     }
 }

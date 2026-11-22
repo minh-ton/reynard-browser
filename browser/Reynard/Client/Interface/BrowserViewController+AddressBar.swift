@@ -105,10 +105,10 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func addressBar(_ addressBar: AddressBar, didSelectAudioAction action: AddressBarMenu.AudioAction) {
         switch action {
         case let .selectTab(tabID):
-            guard let index = tabManager.activeTabs.firstIndex(where: { $0.id == tabID }) else {
+            guard let tab = tabManager.activeTabs.first(where: { $0.id == tabID }) else {
                 return
             }
-            tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
+            tabManager.selectTab(tab)
         case let .setMuted(tabID, muted):
             tabManager.setMuted(muted, for: tabID)
         case let .muteOtherTabs(excluding: tabID):
@@ -277,19 +277,21 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
     
     func selectTabFromGesture(at index: Int, mode: TabMode) {
-        tabManager.selectTab(at: index, mode: mode)
+        guard let tab = tabManager.tabs(for: mode)[safe: index] else {
+            return
+        }
+        tabManager.selectTab(tab)
     }
     
-    func createTabForSwipe() -> Int {
-        let mode = tabManager.selectedTabMode
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: mode)
-        let index = tabManager.createTab(selecting: false)
-        applyNewTabDisplayOption(toTabAt: index, mode: mode)
-        return index
+    func createTabForSwipe() -> Tab {
+        captureThumbnail(for: tabManager.selectedTab)
+        let tab = tabManager.createTab(selecting: false)
+        applyNewTabDisplayOption(to: tab)
+        return tab
     }
     
-    func setPendingTabExpansion(at index: Int?) {
-        tabBar.setPendingExpansion(at: index)
+    func setPendingTabExpansion(to tab: Tab?) {
+        tabBar.setPendingExpansion(to: tab)
     }
     
     func presentTabOverviewFromGesture(animated: Bool) {
@@ -302,7 +304,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             return
         }
         browserChrome.dismissActionBar(animated: false)
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        captureThumbnail(for: tabManager.selectedTab)
     }
     
     func addressBarTransitionDidEnd() {

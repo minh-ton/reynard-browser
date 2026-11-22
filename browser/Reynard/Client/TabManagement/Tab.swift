@@ -20,6 +20,10 @@ final class Tab {
     var isMuted: Bool
     let state = TabSessionState()
     
+    var mode: TabMode {
+        return isPrivate ? .private : .regular
+    }
+    
     init(
         id: UUID = UUID(),
         session: GeckoSession,

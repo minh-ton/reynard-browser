@@ -114,14 +114,12 @@ enum LibrarySharedUtils {
         
         let openTab = {
             browserViewController.loadViewIfNeeded()
-            guard browserViewController.tabManager.createRegularTab(
+            browserViewController.tabManager.createRegularTab(
                 selecting: true,
                 target: .end,
                 url: trimmedURLString,
                 loadImmediately: true
-            ) != nil else {
-                return
-            }
+            )
             browserViewController.refreshAddressBar()
         }
         

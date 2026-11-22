@@ -100,15 +100,12 @@ extension BrowserViewController {
             tabManager.goBack()
         case .retry:
             if !tab.session.isOpen() {
-                tabManager.selectTab(at: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+                tabManager.selectTab(tab)
             } else {
                 tab.session.reload()
             }
         case let .openLink(url):
-            let index = tabManager.createTab(selecting: true, target: .afterSelected)
-            guard let tab = tabManager.activeTabs[safe: index] else {
-                return
-            }
+            let tab = tabManager.createTab(selecting: true, target: .afterSelected)
             tabManager.browse(to: url.absoluteString, in: tab)
         case .acceptCertificate, .continueHTTP:
             let succeeded = action == .acceptCertificate
@@ -136,9 +133,9 @@ extension BrowserViewController {
             tabOverview.prepareNextTabChangesWithoutAnimation()
             createTabFromOverview(mode: targetMode)
         } else {
-            let createdIndex = tabManager.createTab(selecting: true, mode: targetMode)
-            applyNewTabDisplayOption(toTabAt: createdIndex, mode: targetMode)
-            tabBar.setPendingExpansion(at: createdIndex)
+            let tab = tabManager.createTab(selecting: true, mode: targetMode)
+            applyNewTabDisplayOption(to: tab)
+            tabBar.setPendingExpansion(to: tab)
             setTabOverviewVisible(false, animated: true)
         }
     }
@@ -167,23 +164,19 @@ extension BrowserViewController {
     }
     
     func createNewTabAnimated(mode: TabMode) {
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        captureThumbnail(for: tabManager.selectedTab)
         toolbarController.reset()
         dismissAddressBarEditingAndOverlays()
         let target: TabInsertionTarget = tabManager.selectedTabMode == mode ? .afterSelected : .end
-        let createdIndex = tabManager.createTab(
+        let tab = tabManager.createTab(
             selecting: false,
             target: target,
             mode: mode
         )
-        guard let tab = tabManager.tabs(for: mode)[safe: createdIndex] else {
-            return
-        }
-        
-        applyNewTabDisplayOption(toTabAt: createdIndex, mode: mode)
-        tabBar.setPendingExpansion(at: createdIndex)
+        applyNewTabDisplayOption(to: tab)
+        tabBar.setPendingExpansion(to: tab)
         browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
-            self?.tabManager.selectTab(at: createdIndex, mode: mode)
+            self?.tabManager.selectTab(tab)
         }
     }
 }

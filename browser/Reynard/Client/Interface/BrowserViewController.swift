@@ -881,7 +881,7 @@ final class BrowserViewController: UIViewController {
     
     @objc private func newTabDisplayOptionDidChange() {
         homepageOverlayCoordinator.updatePresentation(animated: true)
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        captureThumbnail(for: tabManager.selectedTab)
     }
     
     @objc func addressBarPositionDidChange() {

@@ -112,16 +112,9 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     // MARK: - Tab State
     
-    func handleTabSelectionChange(selectedIndex: Int, previousIndex: Int?) {
-        let activeTabs = tabManager.activeTabs
-        if let previousIndex,
-           activeTabs.indices.contains(previousIndex) {
-            activeTabs[previousIndex].session.setAddonTabActive(false)
-        }
-        
-        if activeTabs.indices.contains(selectedIndex) {
-            activeTabs[selectedIndex].session.setAddonTabActive(true)
-        }
+    func handleTabSelectionChange(from previousTab: Tab?, to tab: Tab) {
+        previousTab?.session.setAddonTabActive(false)
+        tab.session.setAddonTabActive(true)
     }
     
     func handleSelectedTabSessionReplacement(from previousSession: GeckoSession, to replacementSession: GeckoSession) {
@@ -378,12 +371,12 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     func addonController(_ controller: AddonRuntime, updateTab session: GeckoSession, for addon: Addon, details: AddonUpdateTabDetails) -> AllowOrDeny {
         _ = addon
-        guard let index = tabManager.tabIndex(for: session) else {
+        guard let tab = tabManager.activeTabs.first(where: { $0.session === session }) else {
             return .deny
         }
         
         if details.active == true {
-            tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
+            tabManager.selectTab(tab)
         }
         
         return .allow
@@ -391,11 +384,11 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     func addonController(_ controller: AddonRuntime, closeTab session: GeckoSession, for addon: Addon) -> AllowOrDeny {
         _ = addon
-        guard let index = tabManager.tabIndex(for: session) else {
+        guard let tab = tabManager.activeTabs.first(where: { $0.session === session }) else {
             return .deny
         }
         
-        tabManager.removeTab(at: index, mode: tabManager.selectedTabMode, behavior: .recent)
+        tabManager.removeTab(tab, behavior: .recent)
         return .allow
     }
     
@@ -494,7 +487,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         windowId: String? = nil,
         at index: Int? = nil,
         loadImmediately: Bool = false
-    ) -> Tab? {
+    ) -> Tab {
         let tab = tabManager.createRegularTab(
             selecting: selecting,
             windowId: windowId,
@@ -517,7 +510,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     }
     
     private func createPopupTabSession(url: String, windowId: String) -> GeckoSession? {
-        let session = createAddonTab(selecting: true, url: url, windowId: windowId)?.session
+        let session = createAddonTab(selecting: true, url: url, windowId: windowId).session
         _ = delegate?.dismissAddonModal(self, completion: nil)
         return session
     }

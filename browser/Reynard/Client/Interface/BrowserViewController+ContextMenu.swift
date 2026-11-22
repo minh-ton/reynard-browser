@@ -10,7 +10,7 @@ import UIKit
 
 extension BrowserViewController: ContextMenuCoordinatorHost {
     func captureSourceTabThumbnail() {
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
+        captureThumbnail(for: tabManager.selectedTab)
     }
     
     func contextMenuOpenLink(_ url: URL, disposition: TabOpenDisposition) {
@@ -30,21 +30,17 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         }
         
         let openerTabID = mode == .regular ? tabManager.selectedTab?.id : nil
-        let tabIndex = tabManager.createTab(selecting: disposition != .backgroundTab, target: target, mode: mode)
-        guard let tab = tabManager.tabs(for: mode)[safe: tabIndex] else {
-            return
-        }
-        
+        let tab = tabManager.createTab(selecting: disposition != .backgroundTab, target: target, mode: mode)
         tab.state.openerTabID = openerTabID
         tabManager.browse(to: url.absoluteString, in: tab)
         guard disposition != .backgroundTab else {
             return
         }
         
-        captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
-        tabBar.setPendingExpansion(at: tabIndex)
+        captureThumbnail(for: tabManager.selectedTab)
+        tabBar.setPendingExpansion(to: tab)
         browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
-            self?.tabManager.selectTab(at: tabIndex, mode: mode)
+            self?.tabManager.selectTab(tab)
         }
     }
     
