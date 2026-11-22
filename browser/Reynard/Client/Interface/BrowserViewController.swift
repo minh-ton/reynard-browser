@@ -463,6 +463,21 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         browserChrome.onTabOverview = { [weak self] in
             self?.setTabOverviewVisible(true, animated: true)
         }
+        browserChrome.onBookmarks = { [weak self] in
+            self?.presentLibrary(initialSection: .bookmarks)
+        }
+        browserChrome.onHistory = { [weak self] in
+            self?.presentLibrary(initialSection: .history)
+        }
+        browserChrome.onReload = { [weak self] in
+            self?.reloadSelectedPage()
+        }
+        browserChrome.onShowFindInPage = { [weak self] in
+            self?.showFindInPage()
+        }
+        browserChrome.onReaderMode = { [weak self] in
+            self?.toggleReaderMode()
+        }
         browserChrome.onOverlayDismiss = { [weak self] in
             self?.toolbarController.reset()
             self?.dismissAddressBarEditingAndChromeOverlay()

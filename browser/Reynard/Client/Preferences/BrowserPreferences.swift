@@ -104,6 +104,7 @@ final class BrowserPreferences {
             key("AppearanceSettings", "scrollToHideToolbarEnabled"): true,
             key("AppearanceSettings", "swipeAddressBarSidewaysEnabled"): true,
             key("AppearanceSettings", "swipeAddressBarUpEnabled"): true,
+            key("AppearanceSettings", "bottomToolbarItems"): (try? JSONEncoder().encode(BottomToolbarItem.defaultItems.map(\.rawValue))) ?? Data(),
             
             // Languages
             key("LanguageSettings", "websiteLanguages"): (try? JSONEncoder().encode(WebsiteLanguageCatalog.defaultLanguageCodes())) ?? Data(),
@@ -1072,6 +1073,22 @@ final class BrowserPreferences {
             set {
                 prefs.set(newValue, forSetting: "AppearanceSettings", key: "swipeAddressBarUpEnabled")
                 NotificationCenter.default.post(name: .appearanceGestureSettingsDidChange, object: nil)
+            }
+        }
+        
+        static var bottomToolbarItems: [BottomToolbarItem] {
+            get {
+                guard let data = prefs.data(forSetting: "AppearanceSettings", key: "bottomToolbarItems"),
+                      let rawValues = try? JSONDecoder().decode([String].self, from: data) else {
+                    return BottomToolbarItem.defaultItems
+                }
+                return BottomToolbarItem.sanitized(rawValues.compactMap(BottomToolbarItem.init(rawValue:)))
+            }
+            set {
+                let rawValues = BottomToolbarItem.sanitized(newValue).map(\.rawValue)
+                let data = try? JSONEncoder().encode(rawValues)
+                prefs.set(data, forSetting: "AppearanceSettings", key: "bottomToolbarItems")
+                NotificationCenter.default.post(name: .bottomToolbarItemsDidChange, object: nil)
             }
         }
         

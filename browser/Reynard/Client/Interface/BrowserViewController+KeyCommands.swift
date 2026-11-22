@@ -93,6 +93,20 @@ extension BrowserViewController {
     }
     
     @objc func findInPageKeyCommand(_ sender: UIKeyCommand) {
+        showFindInPage()
+    }
+    
+    @objc func reloadPageKeyCommand(_ sender: UIKeyCommand) {
+        reloadSelectedPage()
+    }
+    
+    @objc func toggleReaderKeyCommand(_ sender: UIKeyCommand) {
+        toggleReaderMode()
+    }
+    
+    // MARK: - Page Actions
+    
+    func showFindInPage() {
         guard hasSelectedWebPage else {
             return
         }
@@ -102,7 +116,7 @@ extension BrowserViewController {
         browserChrome.showActionBar(.findInPage(), animated: true)
     }
     
-    @objc func reloadPageKeyCommand(_ sender: UIKeyCommand) {
+    func reloadSelectedPage() {
         guard hasSelectedWebPage,
               let session = tabManager.selectedTab?.session else {
             return
@@ -115,7 +129,7 @@ extension BrowserViewController {
         }
     }
     
-    @objc func toggleReaderKeyCommand(_ sender: UIKeyCommand) {
+    func toggleReaderMode() {
         guard let tab = tabManager.selectedTab else {
             return
         }

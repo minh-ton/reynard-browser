@@ -33,6 +33,29 @@ final class ToolbarButton: UIButton {
         case download
         case newTab
         case sidebar
+        case bookmarks
+        case history
+        case reload
+        case findInPage
+        case readerMode
+        
+        var symbolName: String {
+            switch self {
+            case .back: return "reynard.chevron.backward"
+            case .forward: return "reynard.chevron.forward"
+            case .share: return "reynard.square.and.arrow.up"
+            case .library: return "reynard.ellipsis.circle"
+            case .tabOverview: return "reynard.square.on.square"
+            case .download: return "reynard.arrow.down.circle"
+            case .newTab: return "reynard.plus"
+            case .sidebar: return "reynard.sidebar.left"
+            case .bookmarks: return "reynard.book"
+            case .history: return "reynard.clock"
+            case .reload: return "reynard.arrow.clockwise"
+            case .findInPage: return "reynard.text.page.badge.magnifyingglass"
+            case .readerMode: return "reynard.text.page"
+            }
+        }
     }
     
     private lazy var downloadIconView: UIImageView = {
@@ -195,16 +218,7 @@ final class ToolbarButton: UIButton {
     // MARK: - Button
     
     private var symbolName: String {
-        switch toolbarButtonType {
-        case .back: return "reynard.chevron.backward"
-        case .forward: return "reynard.chevron.forward"
-        case .share: return "reynard.square.and.arrow.up"
-        case .library: return "reynard.ellipsis.circle"
-        case .tabOverview: return "reynard.square.on.square"
-        case .download: return "reynard.arrow.down.circle"
-        case .newTab: return "reynard.plus"
-        case .sidebar: return "reynard.sidebar.left"
-        }
+        return toolbarButtonType.symbolName
     }
     
     private func playDownloadBounceAnimation() {

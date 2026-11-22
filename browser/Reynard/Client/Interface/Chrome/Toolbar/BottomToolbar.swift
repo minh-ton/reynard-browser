@@ -38,6 +38,12 @@ final class BottomToolbar: UIView {
     var onLibrary: (() -> Void)?
     var onDownloads: (() -> Void)?
     var onTabOverview: (() -> Void)?
+    var onNewTab: (() -> Void)?
+    var onBookmarks: (() -> Void)?
+    var onHistory: (() -> Void)?
+    var onReload: (() -> Void)?
+    var onFindInPage: (() -> Void)?
+    var onReaderMode: (() -> Void)?
     
     private let contentView: UIView = {
         let view = UIView()
@@ -82,10 +88,17 @@ final class BottomToolbar: UIView {
     private lazy var libraryButton = ToolbarButton(buttonType: .library, target: self, action: #selector(libraryTapped))
     private lazy var downloadButton = ToolbarButton(buttonType: .download, target: self, action: #selector(downloadsTapped))
     private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: self, action: #selector(tabOverviewTapped))
+    private lazy var newTabButton = ToolbarButton(buttonType: .newTab, target: self, action: #selector(newTabTapped))
+    private lazy var bookmarksButton = ToolbarButton(buttonType: .bookmarks, target: self, action: #selector(bookmarksTapped))
+    private lazy var historyButton = ToolbarButton(buttonType: .history, target: self, action: #selector(historyTapped))
+    private lazy var reloadButton = ToolbarButton(buttonType: .reload, target: self, action: #selector(reloadTapped))
+    private lazy var findInPageButton = ToolbarButton(buttonType: .findInPage, target: self, action: #selector(findInPageTapped))
+    private lazy var readerModeButton = ToolbarButton(buttonType: .readerMode, target: self, action: #selector(readerModeTapped))
     private let buttonMenus = ToolbarButtonMenus()
+    private var items: [BottomToolbarItem] = []
     
     private lazy var buttons: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, libraryButton, downloadButton, tabOverviewButton])
+        let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -171,7 +184,41 @@ final class BottomToolbar: UIView {
     }
     
     func sharePopoverSourceView() -> UIView {
-        return shareButton
+        return items.contains(.share) ? shareButton : libraryButton
+    }
+    
+    /// Rebuilds the button row from the user's toolbar configuration.
+    /// The downloads button isn't configurable: it appears automatically before the last button while downloads exist.
+    func setItems(_ newItems: [BottomToolbarItem]) {
+        let newItems = BottomToolbarItem.sanitized(newItems)
+        guard newItems != items else { return }
+        items = newItems
+        
+        buttons.arrangedSubviews.forEach { view in
+            buttons.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        var arrangedButtons = newItems.map(button(for:))
+        arrangedButtons.insert(downloadButton, at: max(arrangedButtons.count - 1, 0))
+        arrangedButtons.forEach { buttons.addArrangedSubview($0) }
+        downloadButton.isHidden = !downloadButton.isShowingDownloads
+        buttons.setNeedsLayout()
+    }
+    
+    private func button(for item: BottomToolbarItem) -> ToolbarButton {
+        switch item {
+        case .back: return backButton
+        case .forward: return forwardButton
+        case .share: return shareButton
+        case .newTab: return newTabButton
+        case .menu: return libraryButton
+        case .tabOverview: return tabOverviewButton
+        case .bookmarks: return bookmarksButton
+        case .history: return historyButton
+        case .reload: return reloadButton
+        case .findInPage: return findInPageButton
+        case .readerMode: return readerModeButton
+        }
     }
     
     func apply(state: LayoutState, hidesButtons: Bool) {
@@ -203,6 +250,9 @@ final class BottomToolbar: UIView {
         backButton.isEnabled = canGoBack
         forwardButton.isEnabled = canGoForward
         shareButton.isEnabled = canShare
+        reloadButton.isEnabled = canShare
+        findInPageButton.isEnabled = canShare
+        readerModeButton.isEnabled = canShare
     }
     
     func configureNavigationMenus(
@@ -212,6 +262,19 @@ final class BottomToolbar: UIView {
         buttonMenus.installNavigationMenus(
             on: backButton,
             forwardButton: forwardButton,
+            itemsProvider: itemsProvider,
+            onSelect: onSelect
+        )
+    }
+    
+    func configureRecentlyClosedTabsMenu(
+        isAvailable: @escaping () -> Bool,
+        itemsProvider: @escaping () -> [TabManagementStore.RecentlyClosedTabSnapshot],
+        onSelect: @escaping (UUID) -> Void
+    ) {
+        buttonMenus.installRecentlyClosedTabsMenu(
+            on: newTabButton,
+            isAvailable: isAvailable,
             itemsProvider: itemsProvider,
             onSelect: onSelect
         )
@@ -269,6 +332,12 @@ final class BottomToolbar: UIView {
     @objc private func libraryTapped() { onLibrary?() }
     @objc private func downloadsTapped() { onDownloads?() }
     @objc private func tabOverviewTapped() { onTabOverview?() }
+    @objc private func newTabTapped() { onNewTab?() }
+    @objc private func bookmarksTapped() { onBookmarks?() }
+    @objc private func historyTapped() { onHistory?() }
+    @objc private func reloadTapped() { onReload?() }
+    @objc private func findInPageTapped() { onFindInPage?() }
+    @objc private func readerModeTapped() { onReaderMode?() }
     
     // MARK: - View Setup
     
@@ -327,7 +396,11 @@ final class BottomToolbar: UIView {
     
     private func configureInitialState() {
         shareButton.isEnabled = false
+        reloadButton.isEnabled = false
+        findInPageButton.isEnabled = false
+        readerModeButton.isEnabled = false
         downloadButton.isHidden = true
+        setItems(Prefs.AppearanceSettings.bottomToolbarItems)
     }
     
 }
