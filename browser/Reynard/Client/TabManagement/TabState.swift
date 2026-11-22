@@ -48,11 +48,6 @@ enum TabInsertionTarget: Equatable {
     case index(Int)
 }
 
-enum HistoryNavigationDirection {
-    case back
-    case forward
-}
-
 final class TabSessionState {
     var readerMode = ReaderModeState()
     var tabSessionState: GeckoSessionState?
@@ -60,12 +55,10 @@ final class TabSessionState {
     var suppressInitialNavigation = true
     var isSuppressingInitialBlankPageLoad = false
     var openerTabID: UUID?
-    var sessionNavigationAvailability = SessionNavigationAvailability.unavailable
     var navigationState = NavigationAvailability(canGoBack: false, canGoForward: false)
-    var pendingHistoryNavigations: [HistoryNavigationDirection] = []
-    var lastHistoryNavigationID = 0
-    var activeHistoryNavigationID: Int?
     var preparedNavigationThumbnailURL: String?
+    var committedEngineURL: String?
+    var displayedHistoryEntry: GeckoSessionHistoryIdentifier?
     var displayState: TabDisplayState = .committed
     var loadingState = TabLoadingState.idle
     var loadError: WebRequestError?

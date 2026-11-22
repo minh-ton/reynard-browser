@@ -31,7 +31,7 @@ struct ContextMenuTabActions {
     ) {
         switch disposition {
         case .currentTab:
-            tabManager.replaceSelectedSession(with: session, url: url, title: title)
+            tabManager.adoptPreview(session, url: url, title: title)
             
         case .newTab, .backgroundTab:
             tabManager.addTransferredSession(

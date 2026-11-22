@@ -286,8 +286,10 @@ final class TabManagementStore {
                 return
             }
             
-            expiredTabIDs.forEach { tabID in
-                NavigationHistoryStore.shared.removeNavigationHistory(for: tabID)
+            DispatchQueue.main.async {
+                expiredTabIDs.forEach { tabID in
+                    NavigationHistoryStore.shared.removeThumbnails(for: tabID)
+                }
             }
         }
     }
@@ -338,7 +340,7 @@ final class TabManagementStore {
             return false
         }
         
-        NavigationHistoryStore.shared.removeNavigationHistory(for: id)
+        NavigationHistoryStore.shared.removeThumbnails(for: id)
         return true
     }
     
@@ -368,7 +370,7 @@ final class TabManagementStore {
         }
         
         tabIDs.forEach { tabID in
-            NavigationHistoryStore.shared.removeNavigationHistory(for: tabID)
+            NavigationHistoryStore.shared.removeThumbnails(for: tabID)
         }
         return true
     }

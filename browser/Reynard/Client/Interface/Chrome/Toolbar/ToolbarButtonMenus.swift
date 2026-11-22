@@ -5,6 +5,7 @@
 //  Created by Minh Ton on 14/8/26.
 //
 
+import GeckoView
 import UIKit
 
 final class ToolbarButtonMenus {
@@ -16,13 +17,13 @@ final class ToolbarButtonMenus {
     private final class NavigationMenuDelegate: NSObject, UIContextMenuInteractionDelegate {
         private let direction: NavigationDirection
         private let isReversed: Bool
-        private let itemsProvider: (NavigationDirection) -> [NavigationHistoryStore.HistoryItem]
+        private let itemsProvider: (NavigationDirection) -> [GeckoSessionHistoryItem]
         private let onSelect: (NavigationDirection, Int) -> Void
         
         init(
             direction: NavigationDirection,
             isReversed: Bool,
-            itemsProvider: @escaping (NavigationDirection) -> [NavigationHistoryStore.HistoryItem],
+            itemsProvider: @escaping (NavigationDirection) -> [GeckoSessionHistoryItem],
             onSelect: @escaping (NavigationDirection, Int) -> Void
         ) {
             self.direction = direction
@@ -57,11 +58,11 @@ final class ToolbarButtonMenus {
         }
         
         private func makeAction(
-            for item: NavigationHistoryStore.HistoryItem,
+            for item: GeckoSessionHistoryItem,
             at index: Int
         ) -> UIAction {
             let url = displayURL(for: item.url)
-            let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let hasTitle = !title.isEmpty && title != item.url
             let actionTitle: String
             if #available(iOS 15.0, *) {
@@ -251,7 +252,7 @@ final class ToolbarButtonMenus {
     func installNavigationMenus(
         on backButton: ToolbarButton,
         forwardButton: ToolbarButton,
-        itemsProvider: @escaping (NavigationDirection) -> [NavigationHistoryStore.HistoryItem],
+        itemsProvider: @escaping (NavigationDirection) -> [GeckoSessionHistoryItem],
         onSelect: @escaping (NavigationDirection, Int) -> Void,
         isReversed: Bool = true
     ) {
@@ -307,7 +308,7 @@ final class ToolbarButtonMenus {
         on button: ToolbarButton,
         direction: NavigationDirection,
         isReversed: Bool,
-        itemsProvider: @escaping (NavigationDirection) -> [NavigationHistoryStore.HistoryItem],
+        itemsProvider: @escaping (NavigationDirection) -> [GeckoSessionHistoryItem],
         onSelect: @escaping (NavigationDirection, Int) -> Void
     ) {
         let delegate = NavigationMenuDelegate(

@@ -1,0 +1,35 @@
+diff --git a/dom/base/nsFrameLoader.cpp b/dom/base/nsFrameLoader.cpp
+index d053fbe719de..4281c75e4f2d 100644
+--- a/dom/base/nsFrameLoader.cpp
++++ b/dom/base/nsFrameLoader.cpp
+@@ -1794,6 +1794,30 @@ nsresult nsFrameLoader::SwapWithOtherLoader(nsFrameLoader* aOther,
+   return NS_OK;
+ }
+ 
++void nsFrameLoader::MoveToOwner(Element* aOwner) {
++  MOZ_ASSERT(IsRemoteFrame());
++
++  RefPtr<BrowserParent> browserParent = GetBrowserParent();
++  MaybeUpdatePrimaryBrowserParent(eBrowserParentRemoved);
++  SetOwnerContent(aOwner);
++  browserParent->SetOwnerElement(aOwner);
++
++  RefPtr<nsGlobalWindowOuter> window =
++      nsGlobalWindowOuter::Cast(aOwner->OwnerDoc()->GetWindow());
++  if (window && window->IsChromeWindow()) {
++    browserParent->SetBrowserDOMWindow(window->GetBrowserDOMWindow());
++  }
++
++  if (nsCOMPtr<nsIWidget> widget = browserParent->GetTopLevelWidget()) {
++    (void)browserParent->SendSafeAreaInsetsChanged(widget->GetSafeAreaInsets());
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_UIKIT)
++    browserParent->DynamicToolbarMaxHeightChanged(
++        widget->GetDynamicToolbarMaxHeight());
++#endif
++  }
++  browserParent->RecomputeProcessPriority();
++}
++
+ void nsFrameLoader::Destroy(bool aForProcessSwitch) {
+   StartDestroy(aForProcessSwitch);
+ }

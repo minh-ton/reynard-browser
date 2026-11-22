@@ -348,17 +348,16 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         }
         browserChrome.configureNavigationMenus(
             itemsProvider: { [weak self] direction in
-                guard let self,
-                      let tab = self.tabManager.selectedTab else {
+                guard let tab = self?.tabManager.selectedTab,
+                      let sessionState = self?.tabManager.displayedSessionState(for: tab) else {
                     return []
                 }
                 
-                let snapshot = self.tabManager.navigationHistory(for: tab)
                 switch direction {
                 case .back:
-                    return snapshot.backHistory
+                    return sessionState.backHistory
                 case .forward:
-                    return snapshot.forwardHistory
+                    return sessionState.forwardHistory
                 }
             },
             onSelect: { [weak self] direction, index in

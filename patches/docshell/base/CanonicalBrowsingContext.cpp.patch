@@ -1,8 +1,16 @@
 diff --git a/docshell/base/CanonicalBrowsingContext.cpp b/docshell/base/CanonicalBrowsingContext.cpp
-index b228b691674e..934e7096adc8 100644
+index b228b691674e..e44b1e52eda5 100644
 --- a/docshell/base/CanonicalBrowsingContext.cpp
 +++ b/docshell/base/CanonicalBrowsingContext.cpp
-@@ -334,6 +334,10 @@ void CanonicalBrowsingContext::ReplacedBy(
+@@ -63,6 +63,7 @@
+ #include "nsNetUtil.h"
+ #include "nsDocShellLoadState.h"
+ #include "nsSHistory.h"
++#include "nsSubDocumentFrame.h"
+ #include "nsSecureBrowserUI.h"
+ #include "nsQueryObject.h"
+ #include "nsBrowserStatusFilter.h"
+@@ -334,6 +335,10 @@ void CanonicalBrowsingContext::ReplacedBy(
    txn.SetAllowJavascript(GetAllowJavascript());
    txn.SetForceEnableTrackingProtection(GetForceEnableTrackingProtection());
    txn.SetUserAgentOverride(GetUserAgentOverride());
@@ -13,3 +21,69 @@ index b228b691674e..934e7096adc8 100644
    txn.SetSuspendMediaWhenInactive(GetSuspendMediaWhenInactive());
    txn.SetDisplayMode(GetDisplayMode());
    txn.SetForceDesktopViewport(GetForceDesktopViewport());
+@@ -2344,6 +2349,65 @@ void CanonicalBrowsingContext::Stop(uint32_t aStopFlags) {
+   }
+ }
+ 
++void CanonicalBrowsingContext::AdoptPreview(CanonicalBrowsingContext& aPreview,
++                                            ErrorResult& aRv) {
++  RefPtr<Element> owner = GetEmbedderElement();
++  RefPtr<Element> previewElement = aPreview.GetEmbedderElement();
++  nsCOMPtr<nsFrameLoaderOwner> previewOwner = do_QueryInterface(previewElement);
++  RefPtr<nsFrameLoader> frameLoader =
++      previewOwner ? previewOwner->GetFrameLoader() : nullptr;
++  RefPtr<nsSHistory> shistory = static_cast<nsSHistory*>(GetSessionHistory());
++  RefPtr<SessionHistoryEntry> entry = aPreview.GetActiveSessionHistoryEntry();
++
++  bool areTopLevel = IsTop() && aPreview.IsTop() && &aPreview != this;
++  bool hasRemotePreview = frameLoader && frameLoader->GetBrowserParent();
++  bool hasCommittedPreview = entry && aPreview.mLoadingEntries.IsEmpty();
++  bool sharesStorage = OriginAttributesRef() == aPreview.OriginAttributesRef();
++  if (!mozilla::BFCacheInParent() || !areTopLevel || !owner || !shistory ||
++      !hasRemotePreview || !hasCommittedPreview || !sharesStorage) {
++    aRv.Throw(NS_ERROR_INVALID_ARG);
++    return;
++  }
++
++  aPreview.DeactivateDocuments();
++
++  previewOwner->SetFrameLoader(nullptr);
++  if (nsSubDocumentFrame* previewFrame =
++          do_QueryFrame(previewElement->GetPrimaryFrame())) {
++    previewFrame->ResetFrameLoader(nsSubDocumentFrame::RetainPaintData::No);
++  }
++  frameLoader->MoveToOwner(owner);
++
++  aPreview.mSessionHistory = nullptr;
++  aPreview.mWebProgress = nullptr;
++  RefPtr<ChildSHistory> previewChildSHistory = aPreview.ForgetChildSHistory();
++
++  // AddEntry makes the new entry current.
++  entry->SetShistory(nullptr);
++  aRv = shistory->AddEntry(entry);
++  if (aRv.Failed()) {
++    return;
++  }
++  int32_t index = shistory->Index();
++  shistory->InternalSetRequestedIndex(index - 1);
++  shistory->UpdateIndex();
++
++  entry->SetFrameLoader(frameLoader);
++  nsTArray<nsSHistory::LoadEntryResult> loadResults;
++  aRv = shistory->GotoIndex(/* aSourceBrowsingContext */ nullptr, index,
++                            loadResults, /* aSameEpoch */ false,
++                            /* aLoadCurrentEntry */ false,
++                            /* aUserActivation */ true);
++  if (aRv.Failed()) {
++    return;
++  }
++
++  for (const nsSHistory::LoadEntryResult& loadResult : loadResults) {
++    loadResult.mLoadState->SetNotifiedBeforeUnloadListeners(true);
++  }
++  nsSHistory::LoadURIs(loadResults, /* aCheckForCancelation */ false);
++}
++
+ void CanonicalBrowsingContext::PendingRemotenessChange::ProcessLaunched() {
+   if (!mPromise) {
+     return;

@@ -1,0 +1,13 @@
+diff --git a/docshell/base/CanonicalBrowsingContext.h b/docshell/base/CanonicalBrowsingContext.h
+index be089602a01f..cdf1bc0d9336 100644
+--- a/docshell/base/CanonicalBrowsingContext.h
++++ b/docshell/base/CanonicalBrowsingContext.h
+@@ -295,6 +295,8 @@ class CanonicalBrowsingContext final : public BrowsingContext {
+   MOZ_CAN_RUN_SCRIPT
+   void Reload(uint32_t aReloadFlags);
+   void Stop(uint32_t aStopFlags);
++  MOZ_CAN_RUN_SCRIPT
++  void AdoptPreview(CanonicalBrowsingContext& aPreview, ErrorResult& aRv);
+ 
+   // Get the publicly exposed current URI loaded in this BrowsingContext.
+   already_AddRefed<nsIURI> GetCurrentURI() const;

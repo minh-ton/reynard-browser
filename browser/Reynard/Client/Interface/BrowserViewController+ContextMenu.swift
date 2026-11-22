@@ -87,4 +87,8 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         sessionManager.activate(session)
         requestContentKeyboardFocus(for: session)
     }
+    
+    func contextMenuExpandToolbar() {
+        toolbarController.reset()
+    }
 }

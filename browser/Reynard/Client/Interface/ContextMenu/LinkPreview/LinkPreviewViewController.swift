@@ -16,7 +16,6 @@ final class LinkPreviewViewController: UIViewController {
     private(set) var pageURL: String
     private(set) var pageTitle: String?
     let targetURL: URL
-    let navigationHistoryState: GeckoSessionState?
     private let sessionManager: SessionManager
     private var session: GeckoSession?
     private var hasClosedSession = false
@@ -29,15 +28,11 @@ final class LinkPreviewViewController: UIViewController {
     init(
         url: URL,
         isPrivate: Bool,
-        sessionManager: SessionManager,
-        sourceSessionState: GeckoSessionState?
+        sessionManager: SessionManager
     ) {
         targetURL = url
         pageURL = url.absoluteString
         self.sessionManager = sessionManager
-        navigationHistoryState = sourceSessionState?.navigationHistoryState(
-            appending: url.absoluteString
-        )
         super.init(nibName: nil, bundle: nil)
         configurePreview(isPrivate: isPrivate)
     }
@@ -89,12 +84,9 @@ final class LinkPreviewViewController: UIViewController {
     
     // MARK: - Session
     
-    func releaseSession(purgingHistory: Bool) -> GeckoSession? {
+    func releaseSession() -> GeckoSession? {
         hasClosedSession = true
         if let session {
-            if purgingHistory && navigationHistoryState != nil {
-                session.purgeHistory()
-            }
             session.mediaSession.muteAudio(false)
             sessionManager.deactivate(session)
         }
@@ -125,11 +117,7 @@ final class LinkPreviewViewController: UIViewController {
         session.mediaSession.muteAudio(true)
         geckoView.session = session
         sessionManager.activate(session)
-        if let navigationHistoryState {
-            session.restoreState(navigationHistoryState)
-        } else {
-            session.load(pageURL)
-        }
+        session.load(pageURL)
     }
 }
 

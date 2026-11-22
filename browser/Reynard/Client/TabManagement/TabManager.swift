@@ -45,12 +45,12 @@ protocol TabManager: AnyObject {
     func goBack(to index: Int)
     func goForward()
     func goForward(to index: Int)
-    func replaceSelectedSession(with session: GeckoSession, url: String, title: String?)
+    func displayedSessionState(for tab: Tab) -> GeckoSessionState?
+    func adoptPreview(_ previewSession: GeckoSession, url: String, title: String?)
     func tabIndex(for session: GeckoSession) -> Int?
     func shareableURL(for tab: Tab) -> URL?
     func updateThumbnail(_ image: UIImage?, forTabAt index: Int, mode: TabMode)
-    func updateHistoryThumbnail(_ image: UIImage?, for tab: Tab, url: String, isPreparedForNavigation: Bool)
-    func navigationHistory(for tab: Tab) -> NavigationHistoryStore.Snapshot
+    func updateHistoryThumbnail(_ image: UIImage, for tab: Tab, url: String, isPreparedForNavigation: Bool)
     func navigationPreviewImages(for tab: Tab) -> NavigationPreviewImages
     func invalidateNavigationThumbnails()
     func setMuted(_ muted: Bool, for tabID: UUID)

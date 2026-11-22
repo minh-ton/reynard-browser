@@ -51,50 +51,22 @@ public final class GeckoSessionState {
         return index - 1
     }
     
+    public var backHistory: [GeckoSessionHistoryItem] {
+        guard let currentHistoryIndex else {
+            return []
+        }
+        return history.prefix(currentHistoryIndex).reversed()
+    }
+    
+    public var forwardHistory: [GeckoSessionHistoryItem] {
+        guard let currentHistoryIndex else {
+            return []
+        }
+        return Array(history.dropFirst(currentHistoryIndex + 1))
+    }
+    
     public var isEmpty: Bool {
         return historyEntries.isEmpty
-    }
-    
-    public func currentPageState() -> GeckoSessionState? {
-        guard var history = payload["history"] as? [String: Any],
-              let currentHistoryIndex,
-              let entries = history["entries"] as? [[String: Any]],
-              entries.indices.contains(currentHistoryIndex) else {
-            return nil
-        }
-        history["entries"] = [entries[currentHistoryIndex]]
-        history["index"] = 1
-        history["requestedIndex"] = 0
-        history["fromIdx"] = -1
-        var currentPagePayload = payload
-        currentPagePayload["history"] = history
-        return GeckoSessionState(payload: currentPagePayload)
-    }
-    
-    public func navigationHistoryState(appending url: String) -> GeckoSessionState? {
-        guard var history = payload["history"] as? [String: Any],
-              let currentHistoryIndex,
-              let entries = history["entries"] as? [[String: Any]],
-              entries.indices.contains(currentHistoryIndex) else {
-            return nil
-        }
-        let currentEntry = entries[currentHistoryIndex]
-        var appendedEntry: [String: Any] = [
-            "url": url,
-            "title": url,
-            "hasUserInteraction": true,
-        ]
-        if let triggeringPrincipal = currentEntry["triggeringPrincipal_base64"] {
-            appendedEntry["triggeringPrincipal_base64"] = triggeringPrincipal
-        }
-        if let docshellUUID = currentEntry["docshellUUID"] {
-            appendedEntry["docshellUUID"] = docshellUUID
-        }
-        history["entries"] = Array(entries.prefix(currentHistoryIndex + 1)) + [appendedEntry]
-        history["index"] = currentHistoryIndex + 2
-        history["requestedIndex"] = 0
-        history["fromIdx"] = -1
-        return GeckoSessionState(payload: ["history": history])
     }
     
     var restorePayload: [String: Any] {

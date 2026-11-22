@@ -1,0 +1,16 @@
+diff --git a/docshell/shistory/SessionHistoryEntry.cpp b/docshell/shistory/SessionHistoryEntry.cpp
+index 1388a83717e1..cf53cdb24d0b 100644
+--- a/docshell/shistory/SessionHistoryEntry.cpp
++++ b/docshell/shistory/SessionHistoryEntry.cpp
+@@ -1002,8 +1002,9 @@ SessionHistoryEntry::GetShistory(nsISHistory** aShistory) {
+ NS_IMETHODIMP
+ SessionHistoryEntry::SetShistory(nsISHistory* aShistory) {
+   nsWeakPtr shistory = do_GetWeakReference(aShistory);
+-  // mSHistory can not be changed once it's set
+-  MOZ_ASSERT(!SharedInfo()->mSHistory || (SharedInfo()->mSHistory == shistory));
++  // mSHistory can only be cleared once it's set
++  MOZ_ASSERT(!shistory || !SharedInfo()->mSHistory ||
++             (SharedInfo()->mSHistory == shistory));
+   SharedInfo()->mSHistory = shistory;
+   return NS_OK;
+ }

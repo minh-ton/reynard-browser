@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/modules/geckoview/GeckoViewNavigation.sys.mjs b/mobile/shared/modules/geckoview/GeckoViewNavigation.sys.mjs
-index f13150bc961c..49d7c4c92e1a 100644
+index f13150bc961c..e8881eb48065 100644
 --- a/mobile/shared/modules/geckoview/GeckoViewNavigation.sys.mjs
 +++ b/mobile/shared/modules/geckoview/GeckoViewNavigation.sys.mjs
 @@ -41,7 +41,7 @@ const createReferrerInfo = aReferrer => {
@@ -11,7 +11,45 @@ index f13150bc961c..49d7c4c92e1a 100644
  
    return new lazy.ReferrerInfo(Ci.nsIReferrerInfo.EMPTY, true, referrerUri);
  };
-@@ -254,7 +254,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -117,6 +117,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+       "GeckoView:GoBack",
+       "GeckoView:GoForward",
+       "GeckoView:GotoHistoryIndex",
++      "GeckoView:AdoptPreview",
+       "GeckoView:LoadUri",
+       "GeckoView:Reload",
+       "GeckoView:Stop",
+@@ -154,7 +155,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+   }
+ 
+   // Bundle event handler.
+-  async onEvent(aEvent, aData) {
++  async onEvent(aEvent, aData, aCallback) {
+     debug`onEvent: event=${aEvent}, data=${aData}`;
+ 
+     switch (aEvent) {
+@@ -167,6 +168,20 @@ export class GeckoViewNavigation extends GeckoViewModule {
+       case "GeckoView:GotoHistoryIndex":
+         this.browser.gotoIndex(aData.index);
+         break;
++      case "GeckoView:AdoptPreview": {
++        const previewWindow = Services.ww.getWindowByName(
++          aData.previewSessionId
++        );
++        try {
++          this.browser.browsingContext.adoptPreview(
++            previewWindow.browser.browsingContext
++          );
++          aCallback.onSuccess();
++        } catch (e) {
++          aCallback.onError(`Failed to adopt preview: ${e}`);
++        }
++        break;
++      }
+       case "GeckoView:LoadUri": {
+         const {
+           uri,
+@@ -254,7 +269,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
          if (originalInput) {
            schemelessInput =
              !originalInput.toLowerCase().startsWith("http://") &&
@@ -20,7 +58,7 @@ index f13150bc961c..49d7c4c92e1a 100644
                ? Ci.nsILoadInfo.SchemelessInputTypeSchemeless
                : Ci.nsILoadInfo.SchemelessInputTypeSchemeful;
          }
-@@ -316,6 +316,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -316,6 +331,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
      this._handleNewSessionAsync({
        aUri,
        aOpenWindowInfo,
@@ -28,7 +66,7 @@ index f13150bc961c..49d7c4c92e1a 100644
        aName,
      }).then(
        result => {
-@@ -338,6 +339,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -338,6 +354,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
      return [
        Ci.nsIBrowserDOMWindow.OPEN_NEWTAB,
        Ci.nsIBrowserDOMWindow.OPEN_NEWTAB_BACKGROUND,
@@ -36,7 +74,7 @@ index f13150bc961c..49d7c4c92e1a 100644
      ].includes(aWhere);
    }
  
-@@ -345,7 +347,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -345,7 +362,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
     * Similar to handleNewSession. But this returns a promise to wait for new
     * browser.
     */
@@ -45,7 +83,7 @@ index f13150bc961c..49d7c4c92e1a 100644
      if (!this.enabled) {
        return Promise.reject();
      }
-@@ -359,6 +361,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -359,6 +376,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
      const message = {
        uri: aUri ? aUri.displaySpec : "",
        newSessionId,
@@ -53,7 +91,7 @@ index f13150bc961c..49d7c4c92e1a 100644
      };
  
      // The window might be already open by the time we get the response from
-@@ -476,6 +479,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -476,6 +494,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
      return await this._handleNewSessionAsync({
        aUri,
        aOpenWindowInfo: aParams.openWindowInfo,
@@ -61,7 +99,7 @@ index f13150bc961c..49d7c4c92e1a 100644
        aName,
      });
    }
-@@ -556,6 +560,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -556,6 +575,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
          return await this._handleNewSessionAsync({
            aUri: uri,
            aOpenWindowInfo: openWindowInfo,
@@ -69,7 +107,7 @@ index f13150bc961c..49d7c4c92e1a 100644
            aName: name,
          });
        }
-@@ -693,7 +698,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
+@@ -693,7 +713,7 @@ export class GeckoViewNavigation extends GeckoViewModule {
  
      try {
        fixedURI = Services.io.createExposableURI(aLocationURI);

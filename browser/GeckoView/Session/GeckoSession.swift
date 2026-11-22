@@ -330,6 +330,13 @@ public class GeckoSession {
         dispatcher.dispatch(type: "GeckoView:PurgeHistory")
     }
     
+    public func adoptPreview(_ preview: GeckoSession) async throws {
+        _ = try await dispatcher.query(
+            type: "GeckoView:AdoptPreview",
+            message: ["previewSessionId": preview.id]
+        )
+    }
+    
     // MARK: - Full screen
     
     public func exitFullScreen() {

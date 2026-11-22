@@ -137,7 +137,7 @@ final class ReaderModeController: AddonMessageDelegate, AddonPortDelegate {
         
         delegate?.readerModeController(self, didChangeStateFor: tab)
         
-        if tab.state.sessionNavigationAvailability.canGoBack {
+        if tab.state.navigationState.canGoBack {
             tab.session.goBack(userInteraction: false)
         } else if let port = activePorts[ObjectIdentifier(tab.session)] {
             port.postMessage(["action": "hide"])
