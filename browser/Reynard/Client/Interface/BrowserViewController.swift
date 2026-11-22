@@ -178,7 +178,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
             
             await self.addonCoordinator.start()
             if let session = self.tabManager.selectedTab?.session {
-                self.sessionManager.setAddonTabActive(true, for: session)
+                session.setAddonTabActive(true)
             }
         }
         
