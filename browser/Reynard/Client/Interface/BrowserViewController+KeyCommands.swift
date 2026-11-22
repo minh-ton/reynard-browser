@@ -254,7 +254,7 @@ extension BrowserViewController {
         
         toolbarController.reset()
         dismissAddressBarEditingAndOverlays()
-        tabs.filter { $0 !== selectedTab }.forEach { tabManager.removeTab($0, behavior: .none) }
+        tabs.filter { $0 !== selectedTab }.reversed().forEach { tabManager.removeTab($0, behavior: .none) }
     }
     
     private var hasSelectedWebPage: Bool {

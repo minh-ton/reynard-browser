@@ -239,7 +239,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             return
         }
         
-        oldTabs.forEach { tabManager.removeTab($0, behavior: .none) }
+        oldTabs.reversed().forEach { tabManager.removeTab($0, behavior: .none) }
     }
     
     func createTabFromOverview(mode: TabMode) {
