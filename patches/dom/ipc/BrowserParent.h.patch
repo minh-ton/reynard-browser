@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/BrowserParent.h b/dom/ipc/BrowserParent.h
-index df6377896ecc..0b7886c5c24a 100644
+index df6377896ecc..72296985cdb7 100644
 --- a/dom/ipc/BrowserParent.h
 +++ b/dom/ipc/BrowserParent.h
 @@ -11,6 +11,7 @@
@@ -10,7 +10,18 @@ index df6377896ecc..0b7886c5c24a 100644
  #include "mozilla/RefPtr.h"
  #include "mozilla/StaticPtr.h"
  #include "mozilla/WeakPtr.h"
-@@ -394,6 +395,7 @@ class BrowserParent final : public PBrowserParent,
+@@ -268,6 +269,10 @@ class BrowserParent final : public PBrowserParent,
+ 
+   void AddWindowListeners();
+ 
++#ifdef XP_IOS
++  void DispatchBackgroundColor();
++#endif
++
+   mozilla::ipc::IPCResult RecvDidUnsuppressPainting();
+   mozilla::ipc::IPCResult RecvDidUnsuppressPaintingNormalPriority() {
+     return RecvDidUnsuppressPainting();
+@@ -394,6 +399,7 @@ class BrowserParent final : public PBrowserParent,
        const nsCursor& aValue, Maybe<IPCImage>&& aCustomCursor,
        const float& aResolutionX, const float& aResolutionY,
        const uint32_t& aHotspotX, const uint32_t& aHotspotY, const bool& aForce);
@@ -18,7 +29,7 @@ index df6377896ecc..0b7886c5c24a 100644
  
    mozilla::ipc::IPCResult RecvSetLinkStatus(const nsString& aStatus);
  
-@@ -604,6 +606,10 @@ class BrowserParent final : public PBrowserParent,
+@@ -604,6 +610,10 @@ class BrowserParent final : public PBrowserParent,
  
    bool HandleQueryContentEvent(mozilla::WidgetQueryContentEvent& aEvent);
  
@@ -29,7 +40,7 @@ index df6377896ecc..0b7886c5c24a 100644
    bool SendSimpleContentCommandEvent(
        const mozilla::WidgetContentCommandEvent& aEvent);
    bool SendInsertText(const mozilla::WidgetContentCommandEvent& aEvent);
-@@ -666,7 +672,7 @@ class BrowserParent final : public PBrowserParent,
+@@ -666,7 +676,7 @@ class BrowserParent final : public PBrowserParent,
  
    void LayerTreeUpdate(bool aActive);
  
@@ -38,7 +49,7 @@ index df6377896ecc..0b7886c5c24a 100644
        nsTArray<IPCTransferableData>&& aTransferables, const uint32_t& aAction,
        Maybe<BigBuffer>&& aVisualDnDData, const uint32_t& aStride,
        const gfx::SurfaceFormat& aFormat, const LayoutDeviceIntRect& aDragRect,
-@@ -970,6 +976,10 @@ class BrowserParent final : public PBrowserParent,
+@@ -970,6 +980,10 @@ class BrowserParent final : public PBrowserParent,
    // tab, it should take this appearance.
    nsIWidget::Cursor mCursor;
  

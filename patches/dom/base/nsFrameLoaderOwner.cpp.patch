@@ -1,0 +1,14 @@
+diff --git a/dom/base/nsFrameLoaderOwner.cpp b/dom/base/nsFrameLoaderOwner.cpp
+index b345dbf80996..c77b4ce027e4 100644
+--- a/dom/base/nsFrameLoaderOwner.cpp
++++ b/dom/base/nsFrameLoaderOwner.cpp
+@@ -437,6 +437,9 @@ bool nsFrameLoaderOwner::RestoreFrameLoaderFromBFCache(
+ 
+   if (auto* browserParent = mFrameLoader->GetBrowserParent()) {
+     browserParent->AddWindowListeners();
++#ifdef XP_IOS
++    browserParent->DispatchBackgroundColor();
++#endif
+   }
+ 
+   RefPtr<Element> owner = do_QueryObject(this);
