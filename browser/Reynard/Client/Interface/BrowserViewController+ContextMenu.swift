@@ -47,8 +47,7 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         
         let openerTabID = mode == .regular ? tabManager.selectedTab?.id : nil
         let tabIndex = tabManager.createTab(selecting: disposition != .backgroundTab, target: target, mode: mode)
-        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard let tab = tabs[safe: tabIndex] else {
+        guard let tab = tabManager.tabs(for: mode)[safe: tabIndex] else {
             return
         }
         

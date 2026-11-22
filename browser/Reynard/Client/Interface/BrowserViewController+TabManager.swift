@@ -338,8 +338,7 @@ extension BrowserViewController {
         case .homepage, .blankPage:
             return captureThumbnail(forTabAt: index, mode: mode)
         case .customURL:
-            let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
-            guard let tab = tabs[safe: index],
+            guard let tab = tabManager.tabs(for: mode)[safe: index],
                   URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil else {
                 return nil
             }

@@ -88,18 +88,18 @@ extension TabManager {
     }
     
     var activeTabs: [Tab] {
-        return selectedTabMode == .private ? privateTabs : regularTabs
+        return tabs(for: selectedTabMode)
     }
     
     func index(for target: TabInsertionTarget, mode: TabMode) -> Int? {
-        let tabs = mode == .private ? privateTabs : regularTabs
+        let tabCount = tabs(for: mode).count
         switch target {
         case .end:
-            return tabs.count
+            return tabCount
         case .afterSelected:
             guard selectedTabMode == mode,
                   selectedTabIndex >= 0 else {
-                return tabs.count
+                return tabCount
             }
             return selectedTabIndex + 1
         case let .index(index):

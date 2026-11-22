@@ -157,7 +157,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     private func dismissTabOverviewSelectingMostRecentTabIfNeeded() {
         if tabOverview.isPresented {
             let mode = tabOverview.mode.tabMode
-            let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+            let tabs = tabManager.tabs(for: mode)
             guard !tabs.isEmpty else {
                 return
             }
@@ -217,7 +217,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
         
         tabBar.setPendingExpansion(at: nil)
         let mode = tabOverview.mode.tabMode
-        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
+        let tabs = tabManager.tabs(for: mode)
         let oldTabIDs = TabManagementStore.shared.tabIDs(olderThan: cutoffDate, isPrivate: mode == .private)
         let oldTabIndices = tabs.indices.filter { oldTabIDs.contains(tabs[$0].id) }
         guard !oldTabIndices.isEmpty else {

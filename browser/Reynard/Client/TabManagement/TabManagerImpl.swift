@@ -117,7 +117,7 @@ final class TabManagerImplementation: NSObject, TabManager {
         )
     }
     
-    private func tabs(for mode: TabMode) -> [Tab] {
+    func tabs(for mode: TabMode) -> [Tab] {
         switch mode {
         case .regular:
             return regularTabs

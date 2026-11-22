@@ -632,21 +632,14 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         tabBar.setVisibility(targetTabBarVisibility, animated: animated)
     }
     
-    private var visibleTabCount: Int {
-        let tabs = tabManager.selectedTabMode == .private
-        ? tabManager.privateTabs
-        : tabManager.regularTabs
-        return tabs.count
-    }
-    
     var targetTabBarVisibility: TabBar.Visibility {
         guard browserLayout.chromeMode == .pad else {
             return .hidden
         }
         
         let showsTabBar = browserLayout.interfaceIdiom == .pad
-        ? visibleTabCount > 1
-        : visibleTabCount > 1 && Prefs.AppearanceSettings.showsLandscapeTabBar
+        ? tabManager.activeTabs.count > 1
+        : tabManager.activeTabs.count > 1 && Prefs.AppearanceSettings.showsLandscapeTabBar
         guard showsTabBar else {
             return .hidden
         }

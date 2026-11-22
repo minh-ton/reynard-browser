@@ -27,6 +27,8 @@ protocol TabManager: AnyObject {
     var selectedTabIndex: Int { get }
     var selectedTab: Tab? { get }
     
+    func tabs(for mode: TabMode) -> [Tab]
+    
     func applicationDidBecomeActive()
     func createInitialTab()
     @discardableResult

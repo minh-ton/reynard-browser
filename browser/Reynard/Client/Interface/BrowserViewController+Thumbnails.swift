@@ -12,8 +12,7 @@ extension BrowserViewController {
     
     @discardableResult
     func captureThumbnail(forTabAt index: Int, mode: TabMode) -> UIImage? {
-        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard let tab = tabs[safe: index] else {
+        guard let tab = tabManager.tabs(for: mode)[safe: index] else {
             return nil
         }
         

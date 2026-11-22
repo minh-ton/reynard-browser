@@ -176,8 +176,7 @@ extension BrowserViewController {
             target: target,
             mode: mode
         )
-        let tabs = mode == .private ? tabManager.privateTabs : tabManager.regularTabs
-        guard let tab = tabs[safe: createdIndex] else {
+        guard let tab = tabManager.tabs(for: mode)[safe: createdIndex] else {
             return
         }
         
