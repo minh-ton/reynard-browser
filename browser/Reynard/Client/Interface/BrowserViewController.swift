@@ -8,7 +8,7 @@
 import GeckoView
 import UIKit
 
-final class BrowserViewController: UIViewController, GeckoScreenOrientationDelegate {
+final class BrowserViewController: UIViewController {
     private enum UX {
         static let layoutAnimationDuration: TimeInterval = 0.22
         static let fallbackTopInset: CGFloat = 24
@@ -29,13 +29,6 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         delegate: self,
         sessionManager: sessionManager
     )
-    private var lockedOrientations: UIInterfaceOrientationMask?
-    private var pendingOrientationRequest: (
-        id: UUID,
-        orientations: UIInterfaceOrientationMask,
-        completion: (GeckoOrientationLockResult) -> Void
-    )?
-    private var preFullscreenOrientation: UIInterfaceOrientation?
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
     private var shouldRestoreContentFocus = false
@@ -79,6 +72,12 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         delegate: self,
         sessionManager: sessionManager
     )
+    private(set) lazy var screenOrientationController = ScreenOrientationController(
+        viewController: self,
+        onOrientationChange: { [weak self] interfaceOrientation in
+            self?.sidebarCoordinator.notifyScreenOrientationChanged(to: interfaceOrientation)
+        }
+    )
     
     private(set) var isShowingFullscreenMedia = false {
         didSet {
@@ -121,7 +120,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        if let lockedOrientations {
+        if let lockedOrientations = screenOrientationController.lockedOrientations {
             return lockedOrientations
         }
         
@@ -129,8 +128,9 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     }
     
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
-        let allowedOrientations = lockedOrientations ?? supportedInterfaceOrientations
-        return preferredInterfaceOrientation(allowedBy: allowedOrientations) ?? .portrait
+        return screenOrientationController.preferredInterfaceOrientation(
+            allowedBy: supportedInterfaceOrientations
+        ) ?? .portrait
     }
     
     init(canHostSidebar: Bool = true) {
@@ -143,7 +143,6 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
     }
     
     deinit {
-        stopScreenOrientationHandling()
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -1123,7 +1122,7 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         sidebarCoordinator.setFullscreen(fullScreen)
         isShowingFullscreenMedia = fullScreen
         updateBrowserLayout(animated: false)
-        updateFullscreenOrientation(fullScreen)
+        screenOrientationController.setFullscreen(fullScreen)
         requestContentKeyboardFocus(for: tabManager.selectedTab?.session)
     }
     
@@ -1134,251 +1133,5 @@ final class BrowserViewController: UIViewController, GeckoScreenOrientationDeleg
         }
         session.exitFullScreen()
         applyFullscreenState(false, for: session)
-    }
-    
-    // MARK: - Orientation
-    
-    func lockScreenOrientation(
-        to requestedOrientations: UIInterfaceOrientationMask,
-        completion: @escaping (GeckoOrientationLockResult) -> Void
-    ) {
-        guard !requestedOrientations.isEmpty else {
-            completion(.notSupported)
-            return
-        }
-        
-        rejectPendingOrientationRequest()
-        
-        if #available(iOS 16.0, *) {
-            guard let windowScene = view.window?.windowScene else {
-                completion(.notSupported)
-                return
-            }
-            
-            lockedOrientations = requestedOrientations
-            setNeedsUpdateOfSupportedInterfaceOrientations()
-            if let currentOrientationMask = orientationMask(
-                for: windowScene.interfaceOrientation
-            ), requestedOrientations.contains(currentOrientationMask) {
-                completion(.success)
-                return
-            }
-            
-            let requestID = UUID()
-            pendingOrientationRequest = (requestID, requestedOrientations, completion)
-            let geometryPreferences = UIWindowScene.GeometryPreferences.iOS(
-                interfaceOrientations: requestedOrientations
-            )
-            windowScene.requestGeometryUpdate(geometryPreferences) { [weak self] error in
-                let geometryError = error as NSError
-                let lockResult: GeckoOrientationLockResult =
-                geometryError.domain == UISceneErrorDomain &&
-                geometryError.code == UISceneError.Code.geometryRequestUnsupported.rawValue
-                ? .notSupported
-                : .rejected
-                self?.completePendingOrientationRequest(id: requestID, with: lockResult)
-            }
-            return
-        }
-        
-        guard let preferredOrientation = preferredInterfaceOrientation(
-            allowedBy: requestedOrientations
-        ) else {
-            completion(.notSupported)
-            return
-        }
-        
-        lockedOrientations = requestedOrientations
-        forceInterfaceOrientation(preferredOrientation)
-        completion(.success)
-    }
-    
-    func unlockScreenOrientation() {
-        rejectPendingOrientationRequest()
-        lockedOrientations = nil
-        if #available(iOS 16.0, *) {
-            setNeedsUpdateOfSupportedInterfaceOrientations()
-        }
-        updateFullscreenOrientation(false)
-    }
-    
-    private func updateFullscreenOrientation(_ fullScreen: Bool) {
-        guard browserLayout.interfaceIdiom == .phone else {
-            return
-        }
-        
-        if fullScreen {
-            if let interfaceOrientation = view.window?.windowScene?.interfaceOrientation,
-               interfaceOrientation != .unknown {
-                preFullscreenOrientation = interfaceOrientation
-            } else {
-                preFullscreenOrientation = .portrait
-            }
-            return
-        }
-        
-        guard !isShowingFullscreenMedia,
-              lockedOrientations == nil,
-              let preFullscreenOrientation else {
-            return
-        }
-        self.preFullscreenOrientation = nil
-        forceInterfaceOrientation(preFullscreenOrientation)
-    }
-    
-    private func completePendingOrientationRequestIfSatisfied() {
-        guard let pendingOrientationRequest,
-              let interfaceOrientation = view.window?.windowScene?.interfaceOrientation,
-              let currentOrientationMask = orientationMask(for: interfaceOrientation),
-              pendingOrientationRequest.orientations.contains(currentOrientationMask) else {
-            return
-        }
-        
-        completePendingOrientationRequest(id: pendingOrientationRequest.id, with: .success)
-    }
-    
-    private func completePendingOrientationRequest(
-        id: UUID,
-        with result: GeckoOrientationLockResult
-    ) {
-        guard let pendingOrientationRequest,
-              pendingOrientationRequest.id == id else {
-            return
-        }
-        
-        self.pendingOrientationRequest = nil
-        if result != .success {
-            lockedOrientations = nil
-            if #available(iOS 16.0, *) {
-                setNeedsUpdateOfSupportedInterfaceOrientations()
-            }
-        }
-        pendingOrientationRequest.completion(result)
-    }
-    
-    private func rejectPendingOrientationRequest() {
-        guard let pendingOrientationRequest else {
-            return
-        }
-        
-        self.pendingOrientationRequest = nil
-        pendingOrientationRequest.completion(.rejected)
-    }
-    
-    func startScreenOrientationHandling() {
-        guard allowsSidebarHosting else {
-            return
-        }
-        
-        GeckoRuntime.orientationController.delegate = self
-        guard let interfaceOrientation = view.window?.windowScene?.interfaceOrientation else {
-            return
-        }
-        screenOrientationChanged(to: interfaceOrientation)
-    }
-    
-    func stopScreenOrientationHandling() {
-        guard let registeredDelegate = GeckoRuntime.orientationController.delegate,
-              registeredDelegate === self else {
-            return
-        }
-        
-        rejectPendingOrientationRequest()
-        GeckoRuntime.orientationController.delegate = nil
-    }
-    
-    func screenOrientationChanged(to interfaceOrientation: UIInterfaceOrientation) {
-        guard interfaceOrientation != .unknown else {
-            return
-        }
-        
-        sidebarCoordinator.notifyScreenOrientationChanged(to: interfaceOrientation)
-        completePendingOrientationRequestIfSatisfied()
-    }
-    
-    private func preferredInterfaceOrientation(
-        allowedBy orientations: UIInterfaceOrientationMask
-    ) -> UIInterfaceOrientation? {
-        if let currentOrientation = view.window?.windowScene?.interfaceOrientation,
-           currentOrientation != .unknown,
-           let currentOrientationMask = orientationMask(for: currentOrientation),
-           orientations.contains(currentOrientationMask) {
-            return currentOrientation
-        }
-        
-        if orientations.contains(.portrait) {
-            return .portrait
-        }
-        if orientations.contains(.portraitUpsideDown) {
-            return .portraitUpsideDown
-        }
-        if orientations.contains(.landscapeRight) {
-            return .landscapeRight
-        }
-        if orientations.contains(.landscapeLeft) {
-            return .landscapeLeft
-        }
-        return nil
-    }
-    
-    private func orientationMask(
-        for orientation: UIInterfaceOrientation
-    ) -> UIInterfaceOrientationMask? {
-        switch orientation {
-        case .portrait:
-            return .portrait
-        case .portraitUpsideDown:
-            return .portraitUpsideDown
-        case .landscapeLeft:
-            return .landscapeLeft
-        case .landscapeRight:
-            return .landscapeRight
-        default:
-            return nil
-        }
-    }
-    
-    private func forceInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
-        let orientationMask: UIInterfaceOrientationMask
-        switch orientation {
-        case .portrait:
-            orientationMask = .portrait
-        case .portraitUpsideDown:
-            orientationMask = .portraitUpsideDown
-        case .landscapeLeft:
-            orientationMask = .landscapeLeft
-        case .landscapeRight:
-            orientationMask = .landscapeRight
-        default:
-            return
-        }
-        
-        if #available(iOS 16.0, *) {
-            guard let windowScene = view.window?.windowScene else {
-                return
-            }
-            
-            let geometryPreferences = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: orientationMask)
-            windowScene.requestGeometryUpdate(geometryPreferences)
-            UIViewController.attemptRotationToDeviceOrientation()
-            return
-        }
-        
-        let deviceOrientation: UIDeviceOrientation
-        switch orientation {
-        case .portrait:
-            deviceOrientation = .portrait
-        case .portraitUpsideDown:
-            deviceOrientation = .portraitUpsideDown
-        case .landscapeLeft:
-            deviceOrientation = .landscapeRight
-        case .landscapeRight:
-            deviceOrientation = .landscapeLeft
-        default:
-            return
-        }
-        
-        UIDevice.current.setValue(deviceOrientation.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceOrientation()
     }
 }

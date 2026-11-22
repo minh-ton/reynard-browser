@@ -36,7 +36,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         
-        browserViewController.startScreenOrientationHandling()
+        browserViewController.screenOrientationController.start()
         browserViewController.sessionManager.applicationDidBecomeActive()
         browserViewController.tabManager.applicationDidBecomeActive()
     }
@@ -46,7 +46,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         
-        browserViewController.stopScreenOrientationHandling()
+        browserViewController.screenOrientationController.stop()
         browserViewController.sessionManager.applicationWillResignActive()
     }
     
@@ -57,7 +57,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         traitCollection previousTraitCollection: UITraitCollection
     ) {
         (window?.rootViewController as? BrowserViewController)?
-            .screenOrientationChanged(to: windowScene.interfaceOrientation)
+            .screenOrientationController.screenOrientationChanged(to: windowScene.interfaceOrientation)
     }
     
     func sceneWillEnterForeground(_ scene: UIScene) {
