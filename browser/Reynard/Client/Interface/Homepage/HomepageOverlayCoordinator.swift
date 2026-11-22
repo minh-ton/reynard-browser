@@ -10,18 +10,13 @@ import UIKit
 protocol HomepageOverlayCoordinatorDelegate: AnyObject {
     var homepageLayout: BrowserLayout { get }
     var homepageGridWidth: HomepageGridWidth { get }
-    var homepageSelectedTab: Tab? { get }
     var isHomepageTabOverviewPresented: Bool { get }
     var isHomepageShowingFullscreenMedia: Bool { get }
-    var homepageChrome: BrowserChrome { get }
-    var homepageContentView: ContentView { get }
-    var homepageTabActions: ContextMenuTabActions { get }
     
     // Homepage section actions
     func openURLFromHomepage(_ url: URL, disposition: TabOpenDisposition)
     func shareURLFromHomepage(_ url: URL, sourceView: UIView)
     func openSettingsFromHomepage()
-    func restoreClosedTabFromHomepage(id: UUID) -> Bool
     
     func endHomepageEditing()
     func updateHomepageLayout(animated: Bool, duration: TimeInterval)
@@ -35,6 +30,9 @@ final class HomepageOverlayCoordinator {
     private weak var delegate: HomepageOverlayCoordinatorDelegate?
     private let overlayCoordinator: OverlayCoordinator
     private unowned let toolbarController: ToolbarController
+    private unowned let browserChrome: BrowserChrome
+    private unowned let contentView: ContentView
+    private unowned let tabManager: TabManager
     private let homepageViewController: HomepageViewController
     private var presentationIntent: HomepagePresentationIntent = .inactive
     
@@ -49,11 +47,17 @@ final class HomepageOverlayCoordinator {
     init(
         delegate: HomepageOverlayCoordinatorDelegate,
         overlayCoordinator: OverlayCoordinator,
-        toolbarController: ToolbarController
+        toolbarController: ToolbarController,
+        browserChrome: BrowserChrome,
+        contentView: ContentView,
+        tabManager: TabManager
     ) {
         self.delegate = delegate
         self.overlayCoordinator = overlayCoordinator
         self.toolbarController = toolbarController
+        self.browserChrome = browserChrome
+        self.contentView = contentView
+        self.tabManager = tabManager
         homepageViewController = HomepageViewController()
         homepageViewController.homepageDelegate = self
         homepageViewController.setPrivateBrowsing(isPrivateBrowsing)
@@ -71,8 +75,8 @@ final class HomepageOverlayCoordinator {
     }
     
     func updatePresentation(animated: Bool) {
-        let showsHomepage = delegate?.homepageSelectedTab.map(isHomepageTab) == true
-        delegate?.homepageContentView.setWebVisibility(showsHomepage ? .hidden : .visible)
+        let showsHomepage = tabManager.selectedTab.map(isHomepageTab) == true
+        contentView.setWebVisibility(showsHomepage ? .hidden : .visible)
         
         guard let presentation = homepagePresentation else {
             dismiss(animated: animated)
@@ -84,18 +88,17 @@ final class HomepageOverlayCoordinator {
     }
     
     func updateVisibleContentInsets() {
-        guard let delegate,
-              let presentation = homepagePresentation,
+        guard let presentation = homepagePresentation,
               presentation.host == .embedded,
               overlayCoordinator.contains(.homepage, on: presentation.host) else {
             return
         }
         
-        homepageViewController.setVisibleContentInsets(visibleContentInsets(in: delegate.homepageContentView))
+        homepageViewController.setVisibleContentInsets(visibleContentInsets(in: contentView))
     }
     
     func tabOverviewWillPresent() {
-        if let tab = delegate?.homepageSelectedTab,
+        if let tab = tabManager.selectedTab,
            isHomepageTab(tab) {
             return
         }
@@ -113,7 +116,7 @@ final class HomepageOverlayCoordinator {
     
     func makeThumbnail(for tab: Tab) -> UIImage? {
         guard let delegate,
-              let geometry = delegate.homepageContentView.thumbnailCaptureGeometry else {
+              let geometry = contentView.thumbnailCaptureGeometry else {
             return nil
         }
         
@@ -176,19 +179,15 @@ final class HomepageOverlayCoordinator {
     }
     
     private func configureOverlay(for presentation: HomepagePresentation) {
-        guard let delegate else {
-            return
-        }
-        
         guard presentation.host == .detached else {
-            delegate.homepageContentView.superview?.layoutIfNeeded()
-            homepageViewController.setVisibleContentInsets(visibleContentInsets(in: delegate.homepageContentView))
+            contentView.superview?.layoutIfNeeded()
+            homepageViewController.setVisibleContentInsets(visibleContentInsets(in: contentView))
             return
         }
         
         homepageViewController.setVisibleContentInsets(.zero)
-        delegate.homepageChrome.setOverlayHeightMode(.default)
-        delegate.homepageChrome.setOverlayAvailableContentHeight(delegate.homepageContentView.bounds.height)
+        browserChrome.setOverlayHeightMode(.default)
+        browserChrome.setOverlayAvailableContentHeight(contentView.bounds.height)
     }
     
     private func visibleContentInsets(in contentView: UIView) -> UIEdgeInsets {
@@ -210,7 +209,7 @@ final class HomepageOverlayCoordinator {
             return nil
         }
         
-        if let tab = delegate.homepageSelectedTab,
+        if let tab = tabManager.selectedTab,
            isHomepageTab(tab) {
             return HomepagePresentation(
                 host: .embedded,
@@ -234,7 +233,7 @@ final class HomepageOverlayCoordinator {
     }
     
     private var isSelectedTabBlankPage: Bool {
-        guard let tab = delegate?.homepageSelectedTab else {
+        guard let tab = tabManager.selectedTab else {
             return false
         }
         
@@ -242,7 +241,7 @@ final class HomepageOverlayCoordinator {
     }
     
     private var isPrivateBrowsing: Bool {
-        return delegate?.homepageSelectedTab?.isPrivate == true
+        return tabManager.selectedTab?.isPrivate == true
     }
     
     private var showsHomepageForBlankTabs: Bool {
@@ -366,12 +365,12 @@ extension HomepageOverlayCoordinator: AddressBarSearchDelegate {
     }
 }
 
-// MARK: - Homepage View Controller Delegate
+// MARK: - Homepage Section Delegate
 
-extension HomepageOverlayCoordinator: HomepageViewControllerDelegate {
-    func homepageViewController(_ controller: HomepageViewController, didRequestOpenURL url: URL, disposition: TabOpenDisposition) {
+extension HomepageOverlayCoordinator: HomepageSectionDelegate {
+    func homepageSection(_ viewController: UIViewController, didRequestOpenURL url: URL, disposition: TabOpenDisposition) {
         overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
-        delegate?.homepageChrome.setAddressBarEditingState(.inactive)
+        browserChrome.addressBar.setEditingState(.inactive)
         delegate?.updateHomepageLayout(animated: true, duration: UX.layoutAnimationDuration)
         delegate?.openURLFromHomepage(url, disposition: disposition)
         delegate?.endHomepageEditing()
@@ -379,8 +378,8 @@ extension HomepageOverlayCoordinator: HomepageViewControllerDelegate {
         dismiss(animated: true)
     }
     
-    func homepageViewController(
-        _ controller: HomepageViewController,
+    func homepageSection(
+        _ viewController: UIViewController,
         didRequestShareURL url: URL,
         sourceView: UIView
     ) {
@@ -390,15 +389,15 @@ extension HomepageOverlayCoordinator: HomepageViewControllerDelegate {
         )
     }
     
-    func homepageViewController(_ controller: HomepageViewController, didRequestHideFromSuggestions siteID: Int64) {
+    func homepageSection(_ viewController: UIViewController, didRequestHideFromSuggestions siteID: Int64) {
         HistoryStore.shared.hideFromSuggestions(siteID: siteID)
     }
     
-    func homepageViewController(_ controller: HomepageViewController, didSelectRecentlyClosedTab id: UUID) {
+    func homepageSection(_ viewController: UIViewController, didSelectRecentlyClosedTab id: UUID) {
         overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
-        delegate?.homepageChrome.setAddressBarEditingState(.inactive)
+        browserChrome.addressBar.setEditingState(.inactive)
         delegate?.updateHomepageLayout(animated: true, duration: UX.layoutAnimationDuration)
-        guard delegate?.restoreClosedTabFromHomepage(id: id) == true else {
+        guard tabManager.restoreRecentlyClosedTab(id: id) else {
             return
         }
         
@@ -407,15 +406,19 @@ extension HomepageOverlayCoordinator: HomepageViewControllerDelegate {
         dismiss(animated: true)
     }
     
-    func homepageViewControllerDidSelectSettings(_ controller: HomepageViewController) {
+    func homepageSectionDidSelectSettings(_ viewController: UIViewController) {
         overlayCoordinator.clearAddressBarScrollDismissal(for: .homepage)
-        delegate?.homepageChrome.setAddressBarEditingState(.inactive)
+        browserChrome.addressBar.setEditingState(.inactive)
         delegate?.updateHomepageLayout(animated: true, duration: UX.layoutAnimationDuration)
         delegate?.openSettingsFromHomepage()
         delegate?.endHomepageEditing()
     }
     
-    func homepageViewControllerDidStartScrolling() {
+    func homepageSection(_ viewController: UIViewController, didSelectFolder folder: BookmarkFolderSnapshot) {
+        homepageViewController.showFolder(folder)
+    }
+    
+    func homepageDidStartScrolling() {
         guard overlayCoordinator.beginAddressBarScrollDismissal(for: .homepage) else {
             return
         }

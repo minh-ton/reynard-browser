@@ -67,7 +67,7 @@ extension BrowserViewController: TabManagerDelegate {
             toolbarController.lock(for: .pageNavigation)
         }
         
-        browserChrome.setAddressBarLoadingProgress(
+        browserChrome.addressBar.setLoadingProgress(
             selectedTab.state.loadingState.progress,
             isLoading: selectedTab.state.loadingState.isLoading
         )
@@ -218,7 +218,7 @@ extension BrowserViewController: TabManagerDelegate {
             
         case .loading:
             if index == tabManager.selectedTabIndex {
-                browserChrome.setAddressBarLoadingProgress(
+                browserChrome.addressBar.setLoadingProgress(
                     tab.state.loadingState.progress,
                     isLoading: tab.state.loadingState.isLoading
                 )
@@ -266,7 +266,7 @@ extension BrowserViewController: TabManagerDelegate {
     }
     
     func tabManager(_ tabManager: TabManager, animateReturnTo tab: Tab, completion: @escaping () -> Void) {
-        browserChrome.animateAutomaticTabTransition(to: tab, returning: true, completion: completion)
+        browserChrome.addressBar.animateAutomaticTabTransition(to: tab, returning: true, completion: completion)
     }
     
     func tabManager(_ tabManager: TabManager, animateNewTabSelectionAt index: Int, completion: @escaping () -> Void) {
@@ -277,7 +277,7 @@ extension BrowserViewController: TabManagerDelegate {
         
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
         tabBar.setPendingExpansion(at: index)
-        browserChrome.animateAutomaticTabTransition(to: tabManager.activeTabs[index], completion: completion)
+        browserChrome.addressBar.animateAutomaticTabTransition(to: tabManager.activeTabs[index], completion: completion)
     }
     
     func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {

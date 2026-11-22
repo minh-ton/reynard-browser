@@ -7,41 +7,11 @@
 
 import UIKit
 
-extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoordinatorDelegate, HomepageOverlayCoordinatorDelegate, AddressBarSearchDelegate {
-    // MARK: - Content Overlay Host
-    
-    var overlayParentViewController: UIViewController {
-        return self
-    }
-    
+extension BrowserViewController: SearchOverlayCoordinatorDelegate, HomepageOverlayCoordinatorDelegate, AddressBarSearchDelegate {
     // MARK: - Search Overlay Delegate
     
     var searchLayout: BrowserLayout {
         return browserLayout
-    }
-    
-    var searchChrome: BrowserChrome {
-        return browserChrome
-    }
-    
-    var searchContentView: ContentView {
-        return contentView
-    }
-    
-    var searchSelectedTabMode: TabMode {
-        return tabManager.selectedTabMode
-    }
-    
-    var searchSelectedTabID: UUID? {
-        return tabManager.selectedTab?.id
-    }
-    
-    var searchActiveTabs: [Tab] {
-        return tabManager.activeTabs
-    }
-    
-    var isSearchAddressBarEditing: Bool {
-        return browserChrome.isAddressBarEditing
     }
     
     var searchWidthMode: SearchWidthMode {
@@ -54,14 +24,6 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
     
     func updateSearchLayout(animated: Bool, duration: TimeInterval) {
         updateBrowserLayout(animated: animated, duration: duration)
-    }
-    
-    func browseSearchTerm(_ term: String) {
-        tabManager.browse(to: term)
-    }
-    
-    func selectSearchTab(at index: Int, mode: TabMode) {
-        tabManager.selectTab(at: index, mode: mode)
     }
     
     func endSearchEditing() {
@@ -85,28 +47,12 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
         return .eightColumn
     }
     
-    var homepageSelectedTab: Tab? {
-        return tabManager.selectedTab
-    }
-    
     var isHomepageTabOverviewPresented: Bool {
         return tabOverview.isPresented
     }
     
     var isHomepageShowingFullscreenMedia: Bool {
         return isShowingFullscreenMedia
-    }
-    
-    var homepageChrome: BrowserChrome {
-        return browserChrome
-    }
-    
-    var homepageContentView: ContentView {
-        return contentView
-    }
-    
-    var homepageTabActions: ContextMenuTabActions {
-        return ContextMenuTabActions(tabManager: tabManager, sessionManager: sessionManager)
     }
     
     func openURLFromHomepage(_ url: URL, disposition: TabOpenDisposition) {
@@ -137,7 +83,7 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
         
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
         tabBar.setPendingExpansion(at: tabIndex)
-        browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
+        browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
             self?.tabManager.selectTab(at: tabIndex, mode: mode)
         }
     }
@@ -157,10 +103,6 @@ extension BrowserViewController: ContentOverlayCoordinatorHost, SearchOverlayCoo
             return
         }
         presentLibrary(initialSection: .settings)
-    }
-    
-    func restoreClosedTabFromHomepage(id: UUID) -> Bool {
-        return tabManager.restoreRecentlyClosedTab(id: id)
     }
     
     func endHomepageEditing() {

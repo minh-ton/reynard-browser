@@ -8,32 +8,14 @@
 import GeckoView
 import UIKit
 
-protocol AddonCoordinatorDataSource: AnyObject {
-    var selectedAddonSession: GeckoSession? { get }
-    var isSelectedAddonTabPrivate: Bool { get }
-    var addonTabs: [Tab] { get }
-    var selectedAddonTabMode: TabMode { get }
+protocol AddonCoordinatorDelegate: AnyObject {
     var shouldPresentAddonPopupAsPopover: Bool { get }
     
-    func indexOfAddonTab(for session: GeckoSession) -> Int?
-}
-
-protocol AddonCoordinatorDelegate: AnyObject {
     func refreshAddonChrome(_ coordinator: AddonCoordinator)
     func performAfterAddonMenuDismissal(_ coordinator: AddonCoordinator, work: @escaping () -> Void)
     func presentAddonViewController(_ coordinator: AddonCoordinator, _ viewController: UIViewController)
     func presentAddonAlert(_ coordinator: AddonCoordinator, title: String?, message: String)
     func dismissAddonModal(_ coordinator: AddonCoordinator, completion: (() -> Void)?) -> Bool
-    func createAddonTab(
-        _ coordinator: AddonCoordinator,
-        selecting: Bool,
-        url: String?,
-        windowId: String?,
-        at index: Int?,
-        loadImmediately: Bool
-    ) -> Tab?
-    func selectAddonTab(_ coordinator: AddonCoordinator, at index: Int, mode: TabMode?)
-    func closeAddonTab(_ coordinator: AddonCoordinator, at index: Int, mode: TabMode?)
     @MainActor
     func confirmAddonDownload(_ coordinator: AddonCoordinator, options: [String: Any?]) async -> DownloadStore.WebExtensionDownloadItem?
     func restoreAddonTabInteraction(_ coordinator: AddonCoordinator)
@@ -44,9 +26,9 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         static let menuIconSize: CGFloat = 18
     }
     
-    private weak var dataSource: AddonCoordinatorDataSource?
     private weak var delegate: AddonCoordinatorDelegate?
     private let sessionManager: SessionManager
+    private unowned let tabManager: TabManager
     private var browserActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private var pageActionsBySession: [ObjectIdentifier: [String: AddonAction]] = [:]
     private let iconCache = NSCache<NSString, UIImage>()
@@ -57,13 +39,13 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     let updateCoordinator: AddonUpdateCoordinator
     
     init(
-        dataSource: AddonCoordinatorDataSource,
         delegate: AddonCoordinatorDelegate,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        tabManager: TabManager
     ) {
-        self.dataSource = dataSource
         self.delegate = delegate
         self.sessionManager = sessionManager
+        self.tabManager = tabManager
         updateCoordinator = AddonUpdateCoordinator()
         super.init()
         iconCache.countLimit = 64
@@ -131,7 +113,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     // MARK: - Tab State
     
     func handleTabSelectionChange(selectedIndex: Int, previousIndex: Int?) {
-        let activeTabs = dataSource?.addonTabs ?? []
+        let activeTabs = tabManager.activeTabs
         if let previousIndex,
            activeTabs.indices.contains(previousIndex) {
             activeTabs[previousIndex].session.setAddonTabActive(false)
@@ -149,7 +131,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     private var menuAddons: [Addon] {
         let installedAddons = AddonRuntime.shared.installedAddons.filter { !$0.isBuiltIn }
-        guard dataSource?.isSelectedAddonTabPrivate == true else {
+        guard tabManager.selectedTab?.isPrivate == true else {
             return installedAddons
         }
         
@@ -159,7 +141,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     // MARK: - Menu Actions
     
     func currentSiteMenuItems() -> [AddonMenuItem] {
-        guard let session = dataSource?.selectedAddonSession else {
+        guard let session = tabManager.selectedTab?.session else {
             return []
         }
         
@@ -273,7 +255,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
             pageActionsBySession[key] = actions
         }
         
-        if session === dataSource?.selectedAddonSession {
+        if session === tabManager.selectedTab?.session {
             delegate?.refreshAddonChrome(self)
         }
     }
@@ -396,13 +378,12 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     func addonController(_ controller: AddonRuntime, updateTab session: GeckoSession, for addon: Addon, details: AddonUpdateTabDetails) -> AllowOrDeny {
         _ = addon
-        guard let dataSource,
-              let index = dataSource.indexOfAddonTab(for: session) else {
+        guard let index = tabManager.tabIndex(for: session) else {
             return .deny
         }
         
         if details.active == true {
-            delegate?.selectAddonTab(self, at: index, mode: dataSource.selectedAddonTabMode)
+            tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
         }
         
         return .allow
@@ -410,12 +391,11 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     
     func addonController(_ controller: AddonRuntime, closeTab session: GeckoSession, for addon: Addon) -> AllowOrDeny {
         _ = addon
-        guard let dataSource,
-              let index = dataSource.indexOfAddonTab(for: session) else {
+        guard let index = tabManager.tabIndex(for: session) else {
             return .deny
         }
         
-        delegate?.closeAddonTab(self, at: index, mode: dataSource.selectedAddonTabMode)
+        tabManager.removeTab(at: index, mode: tabManager.selectedTabMode, behavior: .recent)
         return .allow
     }
     
@@ -477,7 +457,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     }
     
     private func presentPopup(url: String) {
-        let isPopover = dataSource?.shouldPresentAddonPopupAsPopover == true
+        let isPopover = delegate?.shouldPresentAddonPopupAsPopover == true
         let popupViewController = AddonPopupViewController(
             url: url,
             sessionManager: sessionManager,
@@ -515,12 +495,11 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         at index: Int? = nil,
         loadImmediately: Bool = false
     ) -> Tab? {
-        let tab = delegate?.createAddonTab(
-            self,
+        let tab = tabManager.createRegularTab(
             selecting: selecting,
-            url: url,
             windowId: windowId,
-            at: index,
+            target: index.map(TabInsertionTarget.index) ?? .end,
+            url: url,
             loadImmediately: loadImmediately
         )
         delegate?.refreshAddonChrome(self)
@@ -582,7 +561,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     }
     
     func prepareMenuIcons() {
-        guard let session = dataSource?.selectedAddonSession else {
+        guard let session = tabManager.selectedTab?.session else {
             return
         }
         

@@ -50,27 +50,42 @@ final class BrowserViewController: UIViewController {
         rootView: view
     )
     
-    lazy var overlayCoordinator = OverlayCoordinator(host: self)
+    lazy var overlayCoordinator = OverlayCoordinator(
+        parentViewController: self,
+        contentView: contentView,
+        browserChrome: browserChrome
+    )
     lazy var homepageOverlayCoordinator = HomepageOverlayCoordinator(
         delegate: self,
         overlayCoordinator: overlayCoordinator,
-        toolbarController: toolbarController
+        toolbarController: toolbarController,
+        browserChrome: browserChrome,
+        contentView: contentView,
+        tabManager: tabManager
     )
     lazy var searchOverlayCoordinator = SearchOverlayCoordinator(
         delegate: self,
         overlayCoordinator: overlayCoordinator,
-        toolbarController: toolbarController
+        toolbarController: toolbarController,
+        browserChrome: browserChrome,
+        contentView: contentView,
+        tabManager: tabManager
     )
-    lazy var contextMenuCoordinator = ContextMenuCoordinator(host: self, sessionManager: sessionManager)
+    lazy var contextMenuCoordinator = ContextMenuCoordinator(
+        host: self,
+        sessionManager: sessionManager,
+        contentView: contentView,
+        tabManager: tabManager
+    )
     lazy var downloadsCoordinator = DownloadsCoordinator(delegate: self)
     lazy var sidebarCoordinator = SidebarCoordinator(
         host: self,
         canHostSidebar: allowsSidebarHosting
     )
     lazy var addonCoordinator = AddonCoordinator(
-        dataSource: self,
         delegate: self,
-        sessionManager: sessionManager
+        sessionManager: sessionManager,
+        tabManager: tabManager
     )
     private(set) lazy var screenOrientationController = ScreenOrientationController(
         viewController: self,
@@ -266,7 +281,7 @@ final class BrowserViewController: UIViewController {
                 self.syncBrowserNavigationChrome(animated: false)
                 self.browserChrome.syncSidebarButton(splitViewController: self.splitViewController)
                 self.contentView.setTransitionTransform(.identity)
-                self.browserChrome.resetHorizontalTransition()
+                self.browserChrome.addressBar.resetHorizontalTransition()
                 self.tabOverview.refreshForCurrentOrientation()
                 DispatchQueue.main.async {
                     guard self.isViewLoaded, self.view.window != nil else {
@@ -285,7 +300,7 @@ final class BrowserViewController: UIViewController {
         contentView.onAppearanceChanged = { [weak self] in
             self?.setNeedsStatusBarAppearanceUpdate()
         }
-        browserChrome.configureAddressBar(
+        browserChrome.addressBar.configure(
             delegate: self,
             searchDelegate: self,
             gestureDelegate: self
@@ -907,7 +922,7 @@ final class BrowserViewController: UIViewController {
                 return
             }
             
-            guard !browserChrome.isAddressBarEditing,
+            guard !browserChrome.addressBar.isEditingText,
                   presentedControllerInHierarchy == nil else {
                 return
             }
@@ -933,7 +948,7 @@ final class BrowserViewController: UIViewController {
     }
     
     private func restoreContentKeyboardFocus(for expectedSession: GeckoSession? = nil) {
-        guard !browserChrome.isAddressBarEditing,
+        guard !browserChrome.addressBar.isEditingText,
               let selectedSession = tabManager.selectedTab?.session else {
             return
         }

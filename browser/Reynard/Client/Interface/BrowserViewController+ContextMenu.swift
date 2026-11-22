@@ -9,22 +9,6 @@ import GeckoView
 import UIKit
 
 extension BrowserViewController: ContextMenuCoordinatorHost {
-    var contextMenuSourceView: ContentView {
-        return contentView
-    }
-    
-    var contextMenuTabActions: ContextMenuTabActions {
-        return ContextMenuTabActions(tabManager: tabManager, sessionManager: sessionManager)
-    }
-    
-    var contextMenuSelectedTabIsPrivate: Bool {
-        return tabManager.selectedTab?.isPrivate ?? false
-    }
-    
-    var contextMenuSelectedSession: GeckoSession? {
-        return tabManager.selectedTab?.session
-    }
-    
     func captureSourceTabThumbnail() {
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
     }
@@ -59,7 +43,7 @@ extension BrowserViewController: ContextMenuCoordinatorHost {
         
         captureThumbnail(forTabAt: tabManager.selectedTabIndex, mode: tabManager.selectedTabMode)
         tabBar.setPendingExpansion(at: tabIndex)
-        browserChrome.animateAutomaticTabTransition(to: tab) { [weak self] in
+        browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
             self?.tabManager.selectTab(at: tabIndex, mode: mode)
         }
     }

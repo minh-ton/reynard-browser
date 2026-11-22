@@ -9,18 +9,10 @@ import UIKit
 
 protocol SearchOverlayCoordinatorDelegate: AnyObject {
     var searchLayout: BrowserLayout { get }
-    var searchChrome: BrowserChrome { get }
-    var searchContentView: ContentView { get }
-    var searchSelectedTabMode: TabMode { get }
-    var searchSelectedTabID: UUID? { get }
-    var searchActiveTabs: [Tab] { get }
-    var isSearchAddressBarEditing: Bool { get }
     var searchWidthMode: SearchWidthMode { get }
     
     func refreshSearchAddressBar()
     func updateSearchLayout(animated: Bool, duration: TimeInterval)
-    func browseSearchTerm(_ term: String)
-    func selectSearchTab(at index: Int, mode: TabMode)
     func endSearchEditing()
 }
 
@@ -32,6 +24,9 @@ final class SearchOverlayCoordinator {
     private weak var delegate: SearchOverlayCoordinatorDelegate?
     private let overlayCoordinator: OverlayCoordinator
     private unowned let toolbarController: ToolbarController
+    private unowned let browserChrome: BrowserChrome
+    private unowned let contentView: ContentView
+    private unowned let tabManager: TabManager
     private let searchViewController: SearchViewController
     private var query = ""
     private var restoresSuggestionsOnFocus = false
@@ -48,11 +43,17 @@ final class SearchOverlayCoordinator {
     init(
         delegate: SearchOverlayCoordinatorDelegate,
         overlayCoordinator: OverlayCoordinator,
-        toolbarController: ToolbarController
+        toolbarController: ToolbarController,
+        browserChrome: BrowserChrome,
+        contentView: ContentView,
+        tabManager: TabManager
     ) {
         self.delegate = delegate
         self.overlayCoordinator = overlayCoordinator
         self.toolbarController = toolbarController
+        self.browserChrome = browserChrome
+        self.contentView = contentView
+        self.tabManager = tabManager
         searchViewController = SearchViewController()
         searchViewController.delegate = self
         searchViewController.overlayContentHeightDidChange = { [weak self] contentHeight in
@@ -112,12 +113,8 @@ final class SearchOverlayCoordinator {
     }
     
     func addressBar(_ addressBar: AddressBar, didChangeText query: String, previousText: String, isDelete: Bool) {
-        guard let delegate else {
-            return
-        }
-        
-        delegate.searchChrome.recordAddressBarEdit(previousText: previousText, currentText: query, isDelete: isDelete)
-        guard shouldShowSearchSuggestions(in: delegate.searchSelectedTabMode) else {
+        browserChrome.addressBar.recordEditForAutocomplete(previousText: previousText, currentText: query, isDelete: isDelete)
+        guard shouldShowSearchSuggestions(in: tabManager.selectedTabMode) else {
             self.query = query
             dismissSearch(animated: true) { [weak self] in
                 self?.searchViewController.clearSuggestions()
@@ -138,8 +135,8 @@ final class SearchOverlayCoordinator {
             dismissSearch(animated: true)
             searchViewController.updateQuery(
                 query,
-                activeTabMode: delegate.searchSelectedTabMode,
-                excludingTabID: delegate.searchSelectedTabID
+                activeTabMode: tabManager.selectedTabMode,
+                excludingTabID: tabManager.selectedTab?.id
             )
             return
         }
@@ -148,8 +145,8 @@ final class SearchOverlayCoordinator {
         presentSearchIfNeeded()
         searchViewController.updateQuery(
             query,
-            activeTabMode: delegate.searchSelectedTabMode,
-            excludingTabID: delegate.searchSelectedTabID
+            activeTabMode: tabManager.selectedTabMode,
+            excludingTabID: tabManager.selectedTab?.id
         )
     }
     
@@ -165,7 +162,7 @@ final class SearchOverlayCoordinator {
         dismissSearch(animated: true) { [weak self] in
             self?.clearSuggestions()
         }
-        if delegate?.isSearchAddressBarEditing != true {
+        if !browserChrome.addressBar.isEditingText {
             setFocused(false, animated: true)
         }
     }
@@ -174,7 +171,7 @@ final class SearchOverlayCoordinator {
     
     private func presentSearchIfNeeded() {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              shouldShowSearchSuggestions(in: delegate?.searchSelectedTabMode),
+              shouldShowSearchSuggestions(in: tabManager.selectedTabMode),
               !isVisible else {
             return
         }
@@ -218,12 +215,12 @@ final class SearchOverlayCoordinator {
     func endSearchSession() {
         restoresSuggestionsOnFocus = false
         overlayCoordinator.clearAddressBarScrollDismissal(for: .search)
-        delegate?.searchChrome.setAddressBarEditingState(.inactive)
+        browserChrome.addressBar.setEditingState(.inactive)
         delegate?.updateSearchLayout(animated: true, duration: UX.layoutAnimationDuration)
         dismissSearch(animated: true) {
             self.clearSuggestions()
         }
-        if delegate?.isSearchAddressBarEditing != true {
+        if !browserChrome.addressBar.isEditingText {
             setFocused(false, animated: true)
         }
         delegate?.refreshSearchAddressBar()
@@ -247,7 +244,7 @@ final class SearchOverlayCoordinator {
     // MARK: - Layout
     
     private func presentSearch(animated: Bool) {
-        guard shouldShowSearchSuggestions(in: delegate?.searchSelectedTabMode) else {
+        guard shouldShowSearchSuggestions(in: tabManager.selectedTabMode) else {
             return
         }
         
@@ -272,8 +269,8 @@ final class SearchOverlayCoordinator {
         }
         
         searchViewController.setChromeMode(delegate.searchLayout.chromeMode)
-        delegate.searchChrome.setOverlayHeightMode(.content)
-        delegate.searchChrome.setOverlayAvailableContentHeight(delegate.searchContentView.bounds.height)
+        browserChrome.setOverlayHeightMode(.content)
+        browserChrome.setOverlayAvailableContentHeight(contentView.bounds.height)
     }
     
     private func updateDetachedContentHeight(_ contentHeight: CGFloat) {
@@ -281,13 +278,13 @@ final class SearchOverlayCoordinator {
             return
         }
         
-        delegate?.searchChrome.setOverlayContentHeight(contentHeight)
+        browserChrome.setOverlayContentHeight(contentHeight)
     }
     
     func setFocused(_ focused: Bool, animated: Bool) {
         isFocused = focused
         if focused {
-            delegate?.searchContentView.resetFocusedInputRelocation()
+            contentView.resetFocusedInputRelocation()
         }
         delegate?.updateSearchLayout(animated: animated, duration: UX.layoutAnimationDuration)
     }
@@ -309,15 +306,14 @@ final class SearchOverlayCoordinator {
     }
     
     private func switchToTab(id: UUID) {
-        guard let delegate,
-              let index = delegate.searchActiveTabs.firstIndex(where: { $0.id == id }) else {
+        guard let index = tabManager.activeTabs.firstIndex(where: { $0.id == id }) else {
             return
         }
         
-        delegate.selectSearchTab(at: index, mode: delegate.searchSelectedTabMode)
+        tabManager.selectTab(at: index, mode: tabManager.selectedTabMode)
     }
     
-    private func shouldShowSearchSuggestions(in tabMode: TabMode?) -> Bool {
+    private func shouldShowSearchSuggestions(in tabMode: TabMode) -> Bool {
         guard Prefs.SearchSettings.showSearchSuggestions else {
             return false
         }
@@ -329,7 +325,7 @@ final class SearchOverlayCoordinator {
 extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControllerDelegate {
     func addressBarDidSubmit(_ searchTerm: String) {
         overlayCoordinator.clearAddressBarScrollDismissal(for: .search)
-        delegate?.browseSearchTerm(searchTerm)
+        tabManager.browse(to: searchTerm)
         delegate?.endSearchEditing()
     }
     
@@ -344,7 +340,7 @@ extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControll
             return
         }
         
-        delegate?.searchChrome.clearAddressBarAutocomplete()
+        browserChrome.addressBar.clearAutocomplete()
         delegate?.endSearchEditing()
     }
     
@@ -365,12 +361,12 @@ extension SearchOverlayCoordinator: AddressBarSearchDelegate, SearchViewControll
             return
         }
         
-        delegate?.browseSearchTerm(suggestion)
+        tabManager.browse(to: suggestion)
         delegate?.endSearchEditing()
     }
     
     func searchViewController(_ controller: SearchViewController, didUpdateAutocompleteFor query: String, result: UserDataSearchResult?, topDomain: String?) {
-        delegate?.searchChrome.applyAddressBarAutocomplete(
+        browserChrome.addressBar.applySearchAutocomplete(
             query: query,
             result: result,
             topDomain: topDomain

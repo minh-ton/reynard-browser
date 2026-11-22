@@ -200,10 +200,6 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         : topToolbar.sharePopoverSourceView()
     }
     
-    var addressBarButton: AddressBarButton {
-        return addressBar.addressBarButton
-    }
-    
     // MARK: - Layout
     
     func apply(state: State) {
@@ -486,18 +482,6 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     
     // MARK: - Address Bar
     
-    func configureAddressBar(
-        delegate: AddressBarDelegate,
-        searchDelegate: AddressBarSearchDelegate,
-        gestureDelegate: AddressBarGestureDelegate
-    ) {
-        addressBar.configure(
-            delegate: delegate,
-            searchDelegate: searchDelegate,
-            gestureDelegate: gestureDelegate
-        )
-    }
-    
     func setAddressBarText(
         _ text: String?,
         locationText: String?,
@@ -515,63 +499,12 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         _ = updateToolbarTextTransition(textCenterProgress: toolbarTextCenterProgress)
     }
     
-    func updateAddressBarMenu(url: String?, usesDesktopWebsite: Bool?, readerMode: ReaderModeState) {
-        addressBar.updateMenu(url: url, usesDesktopWebsite: usesDesktopWebsite, readerMode: readerMode)
-    }
-    
-    func updateAddressBarAudioButton(isVisible: Bool, isMuted: Bool) {
-        addressBar.updateAudioButton(isVisible: isVisible, isMuted: isMuted)
-    }
-    
-    func setAddressBarLoadingProgress(_ progress: Float, isLoading: Bool) {
-        addressBar.setLoadingProgress(progress, isLoading: isLoading)
-    }
-    
-    func setAddressBarEditingState(_ state: AddressBar.EditingState) {
-        addressBar.setEditingState(state)
-    }
-    
-    func setPreservesAddressBarAutocompleteAfterResign(_ preserves: Bool) {
-        addressBar.setPreservesAutocompleteAfterResign(preserves)
-    }
-    
-    func clearAddressBarAutocomplete() {
-        addressBar.clearAutocomplete()
-    }
-    
-    func recordAddressBarEdit(previousText: String, currentText: String, isDelete: Bool) {
-        addressBar.recordEditForAutocomplete(previousText: previousText, currentText: currentText, isDelete: isDelete)
-    }
-    
-    func applyAddressBarAutocomplete(query: String, result: UserDataSearchResult?, topDomain: String?) {
-        addressBar.applySearchAutocomplete(query: query, result: result, topDomain: topDomain)
-    }
-    
     func resetAddressBarEditing() {
         _ = addressBar.resignFirstResponder()
         addressBar.clearAutocomplete()
         addressBar.setPreservesAutocompleteAfterResign(false)
         addressBar.setEditingState(.inactive)
     }
-    
-    func resetHorizontalTransition() { addressBar.resetHorizontalTransition() }
-    
-    func performAfterTransition(_ completion: @escaping () -> Void) -> Bool {
-        addressBar.performAfterTransition(completion)
-    }
-    
-    func resignAddressBarFirstResponder() { _ = addressBar.resignFirstResponder() }
-    
-    func performAfterAddressBarMenuDismissal(_ action: @escaping () -> Void) {
-        addressBar.performAfterMenuDismissal(action)
-    }
-    
-    func animateAutomaticTabTransition(to tab: Tab, returning: Bool = false, completion: @escaping () -> Void) {
-        addressBar.animateAutomaticTabTransition(to: tab, returning: returning, completion: completion)
-    }
-    
-    var isAddressBarEditing: Bool { return addressBar.isEditingText }
-    var isShowingAddressBarAutocomplete: Bool { return addressBar.isShowingAutocomplete }
     
     // MARK: - Toolbar Updates
     

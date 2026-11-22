@@ -28,7 +28,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             showsBarMenu: displayText?.isEmpty != false && selectedURL?.isEmpty == false,
             isErrorPage: selectedTab?.state.loadError != nil
         )
-        browserChrome.setAddressBarLoadingProgress(
+        browserChrome.addressBar.setLoadingProgress(
             selectedTab?.state.loadingState.progress ?? 0,
             isLoading: selectedTab?.state.loadingState.isLoading ?? false
         )
@@ -38,7 +38,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                 sessionManager.isDesktopMode(for: url, tabID: tab.id)
             }
         }
-        browserChrome.updateAddressBarMenu(
+        browserChrome.addressBar.updateMenu(
             url: selectedURL,
             usesDesktopWebsite: usesDesktopWebsite,
             readerMode: selectedTab?.state.readerMode ?? ReaderModeState()
@@ -50,7 +50,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func refreshAddressBarAudioButton() {
         let selectedTab = tabManager.selectedTab
         let playingTabs = tabsPlayingAudio
-        browserChrome.updateAddressBarAudioButton(
+        browserChrome.addressBar.updateAudioButton(
             isVisible: !playingTabs.isEmpty,
             isMuted: selectedTab?.isMuted == true ||
             (!playingTabs.isEmpty && playingTabs.allSatisfy(\.isMuted))
@@ -165,7 +165,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             }
         }
         if let popover = controller.popoverPresentationController {
-            let sourceButton = browserChrome.addressBarButton
+            let sourceButton = browserChrome.addressBar.addressBarButton
             popover.sourceView = sourceButton
             popover.sourceRect = sourceButton.bounds
             popover.permittedArrowDirections = [.up, .down]

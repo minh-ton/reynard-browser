@@ -40,4 +40,6 @@ protocol HomepageSectionDelegate: AnyObject {
     func homepageSection(_ viewController: UIViewController, didRequestHideFromSuggestions siteID: Int64)
     func homepageSection(_ viewController: UIViewController, didSelectRecentlyClosedTab id: UUID)
     func homepageSectionDidSelectSettings(_ viewController: UIViewController)
+    func homepageSection(_ viewController: UIViewController, didSelectFolder folder: BookmarkFolderSnapshot)
+    func homepageDidStartScrolling()
 }

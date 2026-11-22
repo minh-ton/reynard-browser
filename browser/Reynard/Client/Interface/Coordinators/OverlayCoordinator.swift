@@ -7,12 +7,6 @@
 
 import UIKit
 
-protocol ContentOverlayCoordinatorHost: AnyObject {
-    var overlayParentViewController: UIViewController { get }
-    var contentView: ContentView { get }
-    var browserChrome: BrowserChrome { get }
-}
-
 final class OverlayCoordinator {
     enum Page: Hashable {
         case homepage
@@ -43,13 +37,21 @@ final class OverlayCoordinator {
         }
     }
     
-    private weak var host: ContentOverlayCoordinatorHost?
+    private unowned let parentViewController: UIViewController
+    private unowned let contentView: ContentView
+    private unowned let browserChrome: BrowserChrome
     private var activeEntries: [Host: Entry] = [:]
     private var previousEntries: [Host: Entry] = [:]
     private var addressBarScrollDismissal: AddressBarScrollDismissalState?
     
-    init(host: ContentOverlayCoordinatorHost) {
-        self.host = host
+    init(
+        parentViewController: UIViewController,
+        contentView: ContentView,
+        browserChrome: BrowserChrome
+    ) {
+        self.parentViewController = parentViewController
+        self.contentView = contentView
+        self.browserChrome = browserChrome
     }
     
     // MARK: - State Queries
@@ -91,16 +93,15 @@ final class OverlayCoordinator {
     
     @discardableResult
     func beginAddressBarScrollDismissal(for page: Page) -> Bool {
-        guard let overlayHost = host,
-              overlayHost.browserChrome.isAddressBarEditing else {
+        guard browserChrome.addressBar.isEditingText else {
             return false
         }
         
         addressBarScrollDismissal = .pending(page)
-        overlayHost.browserChrome.setPreservesAddressBarAutocompleteAfterResign(
-            overlayHost.browserChrome.isShowingAddressBarAutocomplete
+        browserChrome.addressBar.setPreservesAutocompleteAfterResign(
+            browserChrome.addressBar.isShowingAutocomplete
         )
-        overlayHost.browserChrome.resignAddressBarFirstResponder()
+        _ = browserChrome.addressBar.resignFirstResponder()
         return true
     }
     
@@ -112,8 +113,8 @@ final class OverlayCoordinator {
         }
         
         addressBarScrollDismissal = .dismissed(page)
-        host?.browserChrome.setAddressBarEditingState(.composing)
-        host?.browserChrome.setPreservesAddressBarAutocompleteAfterResign(true)
+        browserChrome.addressBar.setEditingState(.composing)
+        browserChrome.addressBar.setPreservesAutocompleteAfterResign(true)
         return true
     }
     
@@ -123,7 +124,7 @@ final class OverlayCoordinator {
         }
         
         addressBarScrollDismissal = nil
-        host?.browserChrome.setPreservesAddressBarAutocompleteAfterResign(false)
+        browserChrome.addressBar.setPreservesAutocompleteAfterResign(false)
     }
     
     @discardableResult
@@ -133,8 +134,8 @@ final class OverlayCoordinator {
         }
         
         addressBarScrollDismissal = nil
-        host?.browserChrome.setAddressBarEditingState(.inactive)
-        host?.browserChrome.setPreservesAddressBarAutocompleteAfterResign(false)
+        browserChrome.addressBar.setEditingState(.inactive)
+        browserChrome.addressBar.setPreservesAutocompleteAfterResign(false)
         return true
     }
     
@@ -256,65 +257,48 @@ final class OverlayCoordinator {
     }
     
     private func hide(_ host: Host, animated: Bool, completion: (() -> Void)?) {
-        guard let overlayHost = self.host else {
-            completion?()
-            return
-        }
-        
         switch host {
         case .embedded:
-            overlayHost.contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            contentView.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         case .detached:
-            overlayHost.browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
+            browserChrome.setOverlayPresentation(.hidden, animated: animated, completion: completion)
         }
     }
     
     private func layout(_ host: Host) {
-        guard let overlayHost = self.host else {
-            return
-        }
-        
         UIView.performWithoutAnimation {
             switch host {
             case .embedded:
-                overlayHost.contentView.layoutOverlayIfNeeded()
+                contentView.layoutOverlayIfNeeded()
             case .detached:
-                overlayHost.browserChrome.layoutIfNeeded()
+                browserChrome.layoutIfNeeded()
             }
         }
     }
     
     private func setController(_ viewController: UIViewController, for page: Page, on host: Host) {
-        guard let overlayHost = self.host else {
-            return
-        }
-        
         switch host {
         case .embedded:
-            overlayHost.contentView.setOverlayController(
+            contentView.setOverlayController(
                 viewController,
                 for: embeddedPage(for: page),
-                in: overlayHost.overlayParentViewController
+                in: parentViewController
             )
         case .detached:
-            overlayHost.browserChrome.setOverlayController(
+            browserChrome.setOverlayController(
                 viewController,
                 for: detachedPage(for: page),
-                in: overlayHost.overlayParentViewController
+                in: parentViewController
             )
         }
     }
     
     private func removeController(for page: Page, from host: Host) {
-        guard let overlayHost = self.host else {
-            return
-        }
-        
         switch host {
         case .embedded:
-            overlayHost.contentView.removeOverlayController(for: embeddedPage(for: page))
+            contentView.removeOverlayController(for: embeddedPage(for: page))
         case .detached:
-            overlayHost.browserChrome.removeOverlayController(for: detachedPage(for: page))
+            browserChrome.removeOverlayController(for: detachedPage(for: page))
         }
     }
     
@@ -324,20 +308,15 @@ final class OverlayCoordinator {
         animated: Bool,
         completion: (() -> Void)?
     ) {
-        guard let overlayHost = self.host else {
-            completion?()
-            return
-        }
-        
         switch host {
         case .embedded:
-            overlayHost.contentView.setOverlayPresentation(
+            contentView.setOverlayPresentation(
                 .visible(embeddedPage(for: page)),
                 animated: animated,
                 completion: completion
             )
         case .detached:
-            overlayHost.browserChrome.setOverlayPresentation(
+            browserChrome.setOverlayPresentation(
                 .visible(detachedPage(for: page)),
                 animated: animated,
                 completion: completion
