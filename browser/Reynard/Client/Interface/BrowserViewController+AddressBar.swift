@@ -286,7 +286,12 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     func createTabForSwipe() -> Tab {
         captureThumbnail(for: tabManager.selectedTab)
         let tab = tabManager.createTab(selecting: false)
-        applyNewTabDisplayOption(to: tab)
+        
+        if Prefs.NewTabSettings.newTabDisplayOption == .customURL {
+            applyNewTabDisplayOption(to: tab)
+        } else {
+            captureThumbnail(for: tab)
+        }
         return tab
     }
     

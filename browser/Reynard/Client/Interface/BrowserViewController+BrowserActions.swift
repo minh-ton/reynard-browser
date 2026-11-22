@@ -130,7 +130,6 @@ extension BrowserViewController {
         dismissAddressBarEditingAndOverlays()
         
         if tabOverview.isPresented {
-            tabOverview.prepareNextTabChangesWithoutAnimation()
             createTabFromOverview(mode: targetMode)
         } else {
             let tab = tabManager.createTab(selecting: true, mode: targetMode)
@@ -173,10 +172,15 @@ extension BrowserViewController {
             target: target,
             mode: mode
         )
-        applyNewTabDisplayOption(to: tab)
-        tabBar.setPendingExpansion(to: tab)
-        browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
-            self?.tabManager.selectTab(tab)
+        applyNewTabDisplayOption(to: tab) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.tabBar.setPendingExpansion(to: tab)
+            self.browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
+                self?.tabManager.selectTab(tab)
+            }
         }
     }
 }

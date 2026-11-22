@@ -324,18 +324,17 @@ extension BrowserViewController: TabManagerDelegate {
 }
 
 extension BrowserViewController {
-    @discardableResult
-    func applyNewTabDisplayOption(to tab: Tab) -> UIImage? {
+    func applyNewTabDisplayOption(to tab: Tab, completion: ((UIImage?) -> Void)? = nil) {
         switch Prefs.NewTabSettings.newTabDisplayOption {
         case .homepage, .blankPage:
-            return captureThumbnail(for: tab)
-        case .customURL:
-            guard URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil else {
-                return nil
+            DispatchQueue.main.async { [weak self] in
+                completion?(self?.captureThumbnail(for: tab))
             }
-            
-            tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
-            return nil
+        case .customURL:
+            if URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil {
+                tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
+            }
+            completion?(nil)
         }
     }
 }

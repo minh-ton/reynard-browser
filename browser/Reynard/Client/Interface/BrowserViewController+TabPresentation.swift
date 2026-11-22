@@ -56,7 +56,6 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
            tabManager.regularTabs.count == 1 {
             tabOverview.prepareNextTabChangesWithoutAnimation()
             tabManager.removeTab(tab, behavior: .none)
-            tabOverview.prepareNextTabChangesWithoutAnimation()
             createTabFromOverview(mode: .regular)
             return
         }
@@ -216,7 +215,6 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             tabOverview.prepareNextTabChangesWithoutAnimation()
         }
         tabManager.removeAllTabs(mode: .regular)
-        tabOverview.prepareNextTabChangesWithoutAnimation()
         createTabFromOverview(mode: .regular)
     }
     
@@ -243,15 +241,26 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     }
     
     func createTabFromOverview(mode: TabMode) {
+        tabOverview.holdTabChanges()
         let tab = tabManager.createTab(
             selecting: true,
             target: .end,
             mode: mode
         )
-        let previewImage = applyNewTabDisplayOption(to: tab)
-        tabOverview.prepareDismissSelection(to: tabManager.selectedTabIndex, mode: mode, previewImage: previewImage)
-        scrollTabOverviewToTab(at: tabManager.selectedTabIndex)
-        tabBar.setPendingExpansion(to: tab)
-        setTabOverviewVisible(false, animated: true)
+        applyNewTabDisplayOption(to: tab) { [weak self] previewImage in
+            guard let self else {
+                return
+            }
+            
+            self.tabOverview.releaseTabChanges()
+            guard self.tabManager.selectedTab === tab else {
+                return
+            }
+            
+            self.tabOverview.prepareDismissSelection(to: self.tabManager.selectedTabIndex, mode: mode, previewImage: previewImage)
+            self.scrollTabOverviewToTab(at: self.tabManager.selectedTabIndex)
+            self.tabBar.setPendingExpansion(to: tab)
+            self.setTabOverviewVisible(false, animated: true)
+        }
     }
 }
