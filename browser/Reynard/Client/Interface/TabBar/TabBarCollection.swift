@@ -44,7 +44,7 @@ private final class TabBarCollectionLayout: UICollectionViewFlowLayout {
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
         var attributes = super.layoutAttributesForElements(in: rect) ?? []
         guard let collectionView,
-              let dataSourceTabCount = tabBar?.dataSource?.tabs.count else {
+              let dataSourceTabCount = tabBar?.dataSource?.activeTabs.count else {
             return attributes
         }
         let tabCount = min(collectionView.numberOfItems(inSection: 0), dataSourceTabCount)
@@ -79,7 +79,7 @@ private final class TabBarCollectionLayout: UICollectionViewFlowLayout {
     private func showsSeparator(after index: Int) -> Bool {
         guard let collectionView,
               let tabBar,
-              let dataSourceTabCount = tabBar.dataSource?.tabs.count else {
+              let dataSourceTabCount = tabBar.dataSource?.activeTabs.count else {
             return false
         }
         let tabCount = min(collectionView.numberOfItems(inSection: 0), dataSourceTabCount)
@@ -232,7 +232,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
         let hasSingleChangeType = insertedIndices.isEmpty != deletedIndices.isEmpty
         guard let tabBar,
               hasSingleChangeType,
-              let tabCount = tabBar.dataSource?.tabs.count,
+              let tabCount = tabBar.dataSource?.activeTabs.count,
               currentCount + insertedIndices.count - deletedIndices.count == tabCount,
               insertedIndices.allSatisfy((0..<tabCount).contains),
               deletedIndices.allSatisfy((0..<currentCount).contains) else {
@@ -313,12 +313,12 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     }
     
     private func updateScrollability() {
-        let tabCount = tabBar?.dataSource?.tabs.count ?? 0
+        let tabCount = tabBar?.dataSource?.activeTabs.count ?? 0
         let horizontalInsets = adjustedContentInset.left + adjustedContentInset.right
         let baseWidth = bounds.width > 1 ? bounds.width : tabBar?.bounds.width ?? 0
         let availableWidth = max(0, baseWidth - horizontalInsets)
-        let selectedIndex = tabBar?.dataSource?.selectedTabID.flatMap { selectedTabID in
-            tabBar?.dataSource?.tabs.firstIndex { $0.id == selectedTabID }
+        let selectedIndex = tabBar?.dataSource?.selectedTab.flatMap { selectedTab in
+            tabBar?.dataSource?.activeTabs.firstIndex { $0.id == selectedTab.id }
         }
         let pendingIndex = tabBar?.pendingExpandedTabIndex
         
@@ -361,7 +361,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     private func revealSelectedTab() {
         guard isScrollEnabled,
               let tabBar,
-              let tabs = tabBar.dataSource?.tabs,
+              let tabs = tabBar.dataSource?.activeTabs,
               let selectedIndex = tabs.indices.first(where: tabBar.isTabSelected(at:)),
               selectedIndex < numberOfItems(inSection: 0),
               let attributes = layoutAttributesForItem(
@@ -375,7 +375,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     
     private func configure(_ tabBarCell: TabBarCell, at indexPath: IndexPath) {
         guard let tabBar,
-              let tabs = tabBar.dataSource?.tabs,
+              let tabs = tabBar.dataSource?.activeTabs,
               tabs.indices.contains(indexPath.item) else {
             return
         }
@@ -526,7 +526,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
     private func updateDragDestination(at location: CGPoint, previousX: CGFloat?) {
         guard let previousX,
               let currentDestinationIndex = dragDestinationIndex,
-              let tabCount = tabBar?.dataSource?.tabs.count else {
+              let tabCount = tabBar?.dataSource?.activeTabs.count else {
             return
         }
         
@@ -722,7 +722,7 @@ final class TabBarCollection: UICollectionView, UIGestureRecognizerDelegate {
 
 extension TabBarCollection: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        tabBar?.dataSource?.tabs.count ?? 0
+        tabBar?.dataSource?.activeTabs.count ?? 0
     }
     
     func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
@@ -736,7 +736,7 @@ extension TabBarCollection: UICollectionViewDataSource {
         ) as! TabBarCell
         
         guard let tabBar,
-              let tabs = tabBar.dataSource?.tabs,
+              let tabs = tabBar.dataSource?.activeTabs,
               tabs.indices.contains(indexPath.item) else {
             return tabBarCell
         }

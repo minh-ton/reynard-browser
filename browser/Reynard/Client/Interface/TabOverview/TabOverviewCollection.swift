@@ -104,7 +104,7 @@ final class TabOverviewCollection: NSObject {
     }
     
     func itemIndex(forTabAt index: Int) -> Int? {
-        guard let selectedMode = tabOverview?.dataSource?.selectedMode else { return nil }
+        guard let selectedMode = tabOverview?.dataSource?.selectedTabMode else { return nil }
         guard selectedMode == mode.tabMode,
               tabs(for: mode).indices.contains(index) else {
             return nil

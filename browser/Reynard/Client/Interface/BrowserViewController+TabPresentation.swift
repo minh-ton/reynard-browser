@@ -8,19 +8,33 @@
 import UIKit
 
 extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOverviewDelegate, TabOverviewPresentationContext {
-    // MARK: - Shared Tab Data
+    // MARK: - TabListSource
     
-    var tabs: [Tab] {
+    var regularTabs: [Tab] {
+        return tabManager.regularTabs
+    }
+    
+    var privateTabs: [Tab] {
+        return tabManager.privateTabs
+    }
+    
+    var activeTabs: [Tab] {
         return tabManager.activeTabs
     }
     
-    var selectedTabID: UUID? {
-        return tabManager.selectedTab?.id
-    }
-    
-    var selectedMode: TabMode {
+    var selectedTabMode: TabMode {
         return tabManager.selectedTabMode
     }
+    
+    var selectedTabIndex: Int {
+        return tabManager.selectedTabIndex
+    }
+    
+    var selectedTab: Tab? {
+        return tabManager.selectedTab
+    }
+    
+    // MARK: - Shared Tab Actions
     
     func selectTab(at index: Int, mode: TabMode) {
         browserChrome.dismissActionBar(animated: false)
@@ -71,18 +85,6 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
     }
     
     // MARK: - TabOverviewDataSource
-    
-    var regularTabs: [Tab] {
-        return tabManager.regularTabs
-    }
-    
-    var privateTabs: [Tab] {
-        return tabManager.privateTabs
-    }
-    
-    var selectedIndex: Int {
-        return tabManager.selectedTabIndex
-    }
     
     func captureThumbnail(forTabAt index: Int, mode: TabMode) -> UIImage? {
         return captureThumbnail(for: tabManager.tabs(for: mode)[safe: index])

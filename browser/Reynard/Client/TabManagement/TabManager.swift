@@ -40,6 +40,15 @@ enum TabManagerUpdateReason {
     case audio
 }
 
+protocol TabListSource: AnyObject {
+    var regularTabs: [Tab] { get }
+    var privateTabs: [Tab] { get }
+    var activeTabs: [Tab] { get }
+    var selectedTabMode: TabMode { get }
+    var selectedTabIndex: Int { get }
+    var selectedTab: Tab? { get }
+}
+
 protocol TabManagerDelegate: AnyObject {
     func tabManagerDidChangeTabs(_ tabManager: TabManager)
     func tabManagerDidTerminateSelectedTab(_ tabManager: TabManager)

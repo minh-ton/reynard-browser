@@ -7,12 +7,7 @@
 
 import UIKit
 
-protocol TabOverviewDataSource: AnyObject {
-    var regularTabs: [Tab] { get }
-    var privateTabs: [Tab] { get }
-    var selectedMode: TabMode { get }
-    var selectedIndex: Int { get }
-    
+protocol TabOverviewDataSource: TabListSource {
     func selectTab(at index: Int, mode: TabMode)
     func closeTab(at index: Int, mode: TabMode)
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
@@ -282,7 +277,7 @@ final class TabOverview: UIView {
     
     func prepareDismissSelectionForCurrentTab() {
         guard let dataSource else { return }
-        presentation.prepareDismissSelection(to: dataSource.selectedIndex, mode: dataSource.selectedMode, previewImage: nil)
+        presentation.prepareDismissSelection(to: dataSource.selectedTabIndex, mode: dataSource.selectedTabMode, previewImage: nil)
     }
     
     // MARK: - View Setup

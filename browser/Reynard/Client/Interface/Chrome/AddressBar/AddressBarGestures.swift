@@ -7,16 +7,13 @@
 
 import UIKit
 
-protocol AddressBarGestureDelegate: AnyObject {
+protocol AddressBarGestureDelegate: TabListSource {
     var transitionContainerView: UIView { get }
     var transitionContentView: ContentView { get }
     var chromeMode: BrowserChromeMode { get }
     var isSearchFocused: Bool { get }
     var isTabOverviewPresented: Bool { get }
     var isTabOverviewTransitionRunning: Bool { get }
-    var selectedTabIndex: Int { get }
-    var selectedTabMode: TabMode { get }
-    var activeTabs: [Tab] { get }
     
     func selectTabFromGesture(at index: Int, mode: TabMode)
     func pageBackgroundColor(for tab: Tab) -> UIColor

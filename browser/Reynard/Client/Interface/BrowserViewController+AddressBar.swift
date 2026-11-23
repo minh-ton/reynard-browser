@@ -279,18 +279,6 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         return tabOverview.isTransitionRunning
     }
     
-    var selectedTabIndex: Int {
-        return tabManager.selectedTabIndex
-    }
-    
-    var selectedTabMode: TabMode {
-        return tabManager.selectedTabMode
-    }
-    
-    var activeTabs: [Tab] {
-        return tabManager.activeTabs
-    }
-    
     func pageBackgroundColor(for tab: Tab) -> UIColor {
         return sessionManager.pageBackgroundColor(for: tab.session)
     }
