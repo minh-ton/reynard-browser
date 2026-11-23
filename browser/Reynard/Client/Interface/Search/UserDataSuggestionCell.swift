@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class UserDataSuggestionCell: UITableViewCell {
+final class UserDataSuggestionCell: SuggestionCell {
     private enum UX {
         static let iconSize: CGFloat = 19.5
         static let textLeadingSpacing: CGFloat = 13
@@ -68,7 +68,6 @@ final class UserDataSuggestionCell: UITableViewCell {
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        configureAppearance()
         configureHierarchy()
         configureConstraints()
     }
@@ -90,7 +89,6 @@ final class UserDataSuggestionCell: UITableViewCell {
         subtitleLabel.text = nil
         sourceIconView.image = UIImage(named: "reynard.globe")
         sourceIconView.tintColor = .label
-        setFilledBackgroundVisible(false)
     }
     
     // MARK: - Configuration
@@ -122,18 +120,6 @@ final class UserDataSuggestionCell: UITableViewCell {
         resolveFavicon(for: result.url)
     }
     
-    func setFilledBackgroundVisible(_ visible: Bool) {
-        contentView.backgroundColor = visible ? .secondarySystemBackground : .clear
-    }
-    
-    private func configureAppearance() {
-        selectionStyle = .none
-        clipsToBounds = true
-        contentView.clipsToBounds = true
-        backgroundColor = .clear
-        contentView.backgroundColor = .secondarySystemBackground
-    }
-    
     private func configureHierarchy() {
         contentView.addSubview(sourceIconView)
         contentView.addSubview(textStackView)
@@ -143,13 +129,13 @@ final class UserDataSuggestionCell: UITableViewCell {
     
     private func configureConstraints() {
         NSLayoutConstraint.activate([
-            sourceIconView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            sourceIconView.leadingAnchor.constraint(equalTo: highlightView.layoutMarginsGuide.leadingAnchor),
             sourceIconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             sourceIconView.widthAnchor.constraint(equalToConstant: UX.iconSize),
             sourceIconView.heightAnchor.constraint(equalToConstant: UX.iconSize),
             
             textStackView.leadingAnchor.constraint(equalTo: sourceIconView.trailingAnchor, constant: UX.textLeadingSpacing),
-            textStackView.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            textStackView.trailingAnchor.constraint(equalTo: highlightView.layoutMarginsGuide.trailingAnchor),
             textStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             textStackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: UX.textTopInset),
             textStackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -UX.textBottomInset),

@@ -7,7 +7,59 @@
 
 import UIKit
 
-final class SearchSuggestionCell: UITableViewCell {
+class SuggestionCell: UITableViewCell {
+    private enum UX {
+        static let modernHighlightCornerRadius: CGFloat = 22
+        static let highlightCornerRadius: CGFloat = 10
+        static let highlightContentInset: CGFloat = 16
+    }
+    
+    let highlightView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .secondarySystemBackground
+        view.isHidden = true
+        view.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 0, leading: UX.highlightContentInset, bottom: 0, trailing: UX.highlightContentInset)
+        view.layer.cornerCurve = .continuous
+        if #available(iOS 26.0, *) {
+            view.layer.cornerRadius = UX.modernHighlightCornerRadius
+        } else {
+            view.layer.cornerRadius = UX.highlightCornerRadius
+        }
+        return view
+    }()
+    
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
+        backgroundColor = .clear
+        
+        contentView.addSubview(highlightView)
+        NSLayoutConstraint.activate([
+            highlightView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            highlightView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            highlightView.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            highlightView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    nonisolated deinit {}
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        setFilledBackgroundVisible(false)
+    }
+    
+    func setFilledBackgroundVisible(_ visible: Bool) {
+        highlightView.isHidden = !visible
+    }
+}
+
+final class SearchSuggestionCell: SuggestionCell {
     private enum UX {
         static let iconSize: CGFloat = 19.5
         static let titleLeadingSpacing: CGFloat = 13
@@ -49,7 +101,6 @@ final class SearchSuggestionCell: UITableViewCell {
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        configureAppearance()
         configureHierarchy()
         configureConstraints()
     }
@@ -64,7 +115,6 @@ final class SearchSuggestionCell: UITableViewCell {
         titleLabel.attributedText = nil
         setTrailingIconVisible(true)
         setTrailingIconDirection(upward: false)
-        setFilledBackgroundVisible(false)
     }
     
     // MARK: - Configuration
@@ -77,24 +127,12 @@ final class SearchSuggestionCell: UITableViewCell {
         iconImageView.image = image
     }
     
-    func setFilledBackgroundVisible(_ visible: Bool) {
-        contentView.backgroundColor = visible ? .secondarySystemBackground : .clear
-    }
-    
     func setTrailingIconVisible(_ visible: Bool) {
         trailingIconView.isHidden = !visible
     }
     
     func setTrailingIconDirection(upward: Bool) {
         trailingIconView.image = UIImage(named: upward ? "reynard.arrow.up.left.circle" : "reynard.arrow.down.left.circle")
-    }
-    
-    private func configureAppearance() {
-        selectionStyle = .none
-        clipsToBounds = true
-        contentView.clipsToBounds = true
-        backgroundColor = .clear
-        contentView.backgroundColor = .clear
     }
     
     private func configureHierarchy() {
@@ -105,12 +143,12 @@ final class SearchSuggestionCell: UITableViewCell {
     
     private func configureConstraints() {
         NSLayoutConstraint.activate([
-            iconImageView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            iconImageView.leadingAnchor.constraint(equalTo: highlightView.layoutMarginsGuide.leadingAnchor),
             iconImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: UX.iconSize),
             iconImageView.heightAnchor.constraint(equalToConstant: UX.iconSize),
             
-            trailingIconView.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            trailingIconView.trailingAnchor.constraint(equalTo: highlightView.layoutMarginsGuide.trailingAnchor),
             trailingIconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             trailingIconView.widthAnchor.constraint(equalToConstant: UX.iconSize),
             trailingIconView.heightAnchor.constraint(equalToConstant: UX.iconSize),
