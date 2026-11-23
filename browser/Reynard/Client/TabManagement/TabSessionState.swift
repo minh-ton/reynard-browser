@@ -1,5 +1,5 @@
 //
-//  TabState.swift
+//  TabSessionState.swift
 //  Reynard
 //
 //  Created by Minh Ton on 16/6/26.
@@ -42,12 +42,6 @@ enum TabDisplayState: Equatable {
     case pending(String)
 }
 
-enum TabInsertionTarget: Equatable {
-    case end
-    case afterSelected
-    case index(Int)
-}
-
 final class TabSessionState {
     var readerMode = ReaderModeState()
     var tabSessionState: GeckoSessionState?
@@ -65,4 +59,16 @@ final class TabSessionState {
     var isPlayingAudio = false
     var showsStartupHomepage = false
     var selectionOrder = 0
+}
+
+extension TabSessionState {
+    var matchingHistoryEntry: GeckoSessionHistoryIdentifier? {
+        guard let tabSessionState,
+              let currentHistoryIndex = tabSessionState.currentHistoryIndex,
+              let entry = tabSessionState.history[safe: currentHistoryIndex],
+              entry.url == committedEngineURL else {
+            return nil
+        }
+        return entry.identifier
+    }
 }

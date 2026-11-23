@@ -114,9 +114,10 @@ enum LibrarySharedUtils {
         
         let openTab = {
             browserViewController.loadViewIfNeeded()
-            browserViewController.tabManager.createRegularTab(
+            browserViewController.tabManager.createTab(
                 selecting: true,
                 target: .end,
+                mode: .regular,
                 url: trimmedURLString,
                 loadImmediately: true
             )

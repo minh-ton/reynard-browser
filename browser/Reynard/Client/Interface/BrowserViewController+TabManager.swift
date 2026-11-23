@@ -104,18 +104,6 @@ extension BrowserViewController: TabManagerDelegate {
         addonCoordinator.handleSelectedTabSessionReplacement(from: previousSession, to: replacementSession)
     }
     
-    func tabManager(_ tabManager: TabManager, didRequestContentKeyboardFocusFor session: GeckoSession) {
-        requestContentKeyboardFocus(for: session)
-    }
-    
-    func tabManager(_ tabManager: TabManager, didRequestFindInPage query: String, in session: GeckoSession) {
-        guard tabManager.selectedTab?.session === session else {
-            return
-        }
-        
-        browserChrome.showActionBar(.findInPage(query: query), animated: true)
-    }
-    
     func tabManager(_ tabManager: TabManager, captureHistoryThumbnailFor tab: Tab, url: String) {
         guard tab === tabManager.selectedTab,
               tab.url == url else {
@@ -123,40 +111,6 @@ extension BrowserViewController: TabManagerDelegate {
         }
         
         captureHistoryThumbnail()
-    }
-    
-    func tabManager(_ tabManager: TabManager, didRequestContextMenuAt point: CGPoint, for element: ContextElement, in session: GeckoSession) {
-        guard contentView.isDisplaying(session: session) else {
-            return
-        }
-        
-        if element.type == .image,
-           let source = element.srcUri?.trimmingCharacters(in: .whitespacesAndNewlines),
-           let url = URL(string: source) {
-            let linkURL = element.linkUri
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .flatMap { URL(string: $0) }
-            contextMenuCoordinator.present(
-                at: point,
-                target: .image(url, linkURL: linkURL),
-                allowsPreview: !element.isMouseInput
-            )
-            return
-        }
-        
-        guard let link = element.linkUri?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: link) else {
-            return
-        }
-        
-        contextMenuCoordinator.present(at: point, target: .link(url), allowsPreview: !element.isMouseInput)
-    }
-    
-    func tabManager(_ tabManager: TabManager, didChangeFullscreen fullScreen: Bool, for session: GeckoSession) {
-        guard tabManager.selectedTab?.session === session else {
-            return
-        }
-        applyFullscreenState(fullScreen, for: session)
     }
     
     func tabManager(_ tabManager: TabManager, didUpdate tab: Tab, reason: TabManagerUpdateReason) {
@@ -274,13 +228,58 @@ extension BrowserViewController: TabManagerDelegate {
         browserChrome.addressBar.animateAutomaticTabTransition(to: tab, completion: completion)
     }
     
-    func tabManager(_ tabManager: TabManager, didRequestDownload download: DownloadStore.PendingDownload) {
+    func reloadTerminatedTab() {
+        guard let tab = tabManager.selectedTab,
+              !tab.session.isOpen() else {
+            return
+        }
+        
+        tabManager.selectTab(tab)
+    }
+}
+
+extension BrowserViewController: TabSessionHandlerDelegate {
+    func tabSessionHandler(_ handler: TabSessionHandler, didRequestContextMenuAt point: CGPoint, for element: ContextElement, in session: GeckoSession) {
+        guard contentView.isDisplaying(session: session) else {
+            return
+        }
+        
+        if element.type == .image,
+           let source = element.srcUri?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let url = URL(string: source) {
+            let linkURL = element.linkUri
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .flatMap { URL(string: $0) }
+            contextMenuCoordinator.present(
+                at: point,
+                target: .image(url, linkURL: linkURL),
+                allowsPreview: !element.isMouseInput
+            )
+            return
+        }
+        
+        guard let link = element.linkUri?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: link) else {
+            return
+        }
+        
+        contextMenuCoordinator.present(at: point, target: .link(url), allowsPreview: !element.isMouseInput)
+    }
+    
+    func tabSessionHandler(_ handler: TabSessionHandler, didChangeFullscreen fullScreen: Bool, for session: GeckoSession) {
+        guard tabManager.selectedTab?.session === session else {
+            return
+        }
+        applyFullscreenState(fullScreen, for: session)
+    }
+    
+    func tabSessionHandler(_ handler: TabSessionHandler, didRequestDownload download: DownloadStore.PendingDownload) {
         DispatchQueue.main.async { [weak self] in
             self?.downloadsCoordinator.enqueueConfirmation(download)
         }
     }
     
-    func tabManager(_ tabManager: TabManager, shouldStartExternalResponse response: ExternalResponseInfo, for session: GeckoSession) async -> Bool {
+    func tabSessionHandler(_ handler: TabSessionHandler, shouldStartExternalResponse response: ExternalResponseInfo, for session: GeckoSession) async -> Bool {
         if addonCoordinator.handleExternalResponse(response) {
             return true
         }
@@ -290,7 +289,7 @@ extension BrowserViewController: TabManagerDelegate {
         return await downloadsCoordinator.confirm(download)
     }
     
-    func tabManager(_ tabManager: TabManager, shouldContinueExternalResponseAt localFilePath: String, bytesReceived: Int64) -> Bool {
+    func tabSessionHandler(_ handler: TabSessionHandler, shouldContinueExternalResponseAt localFilePath: String, bytesReceived: Int64) -> Bool {
         if addonCoordinator.shouldContinueExternalResponse(localFilePath: localFilePath) {
             return true
         }
@@ -300,7 +299,7 @@ extension BrowserViewController: TabManagerDelegate {
         )
     }
     
-    func tabManager(_ tabManager: TabManager, didCompleteExternalResponseAt localFilePath: String, succeeded: Bool) {
+    func tabSessionHandler(_ handler: TabSessionHandler, didCompleteExternalResponseAt localFilePath: String, succeeded: Bool) {
         if addonCoordinator.completeExternalResponse(
             localFilePath: localFilePath,
             succeeded: succeeded
@@ -311,15 +310,6 @@ extension BrowserViewController: TabManagerDelegate {
             localFilePath: localFilePath,
             succeeded: succeeded
         )
-    }
-    
-    func reloadTerminatedTab() {
-        guard let tab = tabManager.selectedTab,
-              !tab.session.isOpen() else {
-            return
-        }
-        
-        tabManager.selectTab(tab)
     }
 }
 

@@ -167,6 +167,14 @@ final class FaviconStore {
         }
     }
     
+    func cachedFavicon(for pageURLString: String?) -> UIImage? {
+        guard let pageURL = URLUtils.webURL(from: pageURLString) else {
+            return nil
+        }
+        
+        return cachedFavicon(for: pageURL)
+    }
+    
     func cachedFaviconPresentation(for pageURL: URL) -> FaviconPresentation? {
         stateQueue.sync {
             guard let cached = cachedAssociationImageLocked(for: pageURL, now: Date()) else {

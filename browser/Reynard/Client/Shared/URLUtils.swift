@@ -43,6 +43,26 @@ enum URLUtils {
         return true
     }
     
+    static func webURL(from value: String?) -> URL? {
+        guard let trimmedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: trimmedValue),
+              isWebURL(url) else {
+            return nil
+        }
+        
+        return url
+    }
+    
+    static func restorableURL(from value: String?) -> String? {
+        guard let trimmedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmedValue.isEmpty,
+              trimmedValue.lowercased() != "about:blank" else {
+            return nil
+        }
+        
+        return trimmedValue
+    }
+    
     static func fixTLDTypo(in value: String) -> String {
         let hasScheme = value.contains("://")
         let prefixedValue = hasScheme ? value : "https://\(value)"

@@ -25,10 +25,46 @@ final class BrowserViewController: UIViewController {
     // MARK: - State
     
     let sessionManager = SessionManager()
-    lazy var tabManager = TabManagerImplementation(
-        delegate: self,
-        sessionManager: sessionManager
+    private lazy var promptCoordinator = PromptCoordinator(
+        presenter: PromptPresenter(),
+        onPromptFinished: { [weak self] session in
+            self?.requestContentKeyboardFocus(for: session)
+        }
     )
+    private lazy var permissionCoordinator = PermissionCoordinator(
+        promptPresenter: PermissionPromptPresenter(),
+        onPromptFinished: { [weak self] session in
+            self?.requestContentKeyboardFocus(for: session)
+        }
+    )
+    private lazy var pagePrintCoordinator = PagePrintCoordinator { [weak self] session in
+        return self?.tabManager.tab(for: session)?.title
+    }
+    private lazy var selectionActionCoordinator = SelectionActionCoordinator(
+        presenter: SelectionActionPresenter(
+            onMenuDismissed: { [weak self] session in
+                self?.requestContentKeyboardFocus(for: session)
+            },
+            onFindInPage: { [weak self] session, query in
+                guard let self,
+                      self.tabManager.selectedTab?.session === session else {
+                    return
+                }
+                
+                self.browserChrome.showActionBar(.findInPage(query: query), animated: true)
+            }
+        )
+    )
+    lazy var tabManager: TabManager = TabManager(
+        delegate: self,
+        sessionHandlerDelegate: self,
+        sessionManager: sessionManager,
+        promptCoordinator: promptCoordinator,
+        permissionCoordinator: permissionCoordinator,
+        pagePrintCoordinator: pagePrintCoordinator,
+        selectionActionCoordinator: selectionActionCoordinator
+    )
+    
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
     private var shouldRestoreContentFocus = false
@@ -363,7 +399,7 @@ final class BrowserViewController: UIViewController {
         browserChrome.configureNavigationMenus(
             itemsProvider: { [weak self] direction in
                 guard let tab = self?.tabManager.selectedTab,
-                      let sessionState = self?.tabManager.displayedSessionState(for: tab) else {
+                      let sessionState = tab.displayedSessionState else {
                     return []
                 }
                 
@@ -381,12 +417,7 @@ final class BrowserViewController: UIViewController {
                 
                 self.toolbarController.reset(preserveManualCollapse: true)
                 self.captureHistoryThumbnail(isPreparedForNavigation: true)
-                switch direction {
-                case .back:
-                    self.tabManager.goBack(to: index)
-                case .forward:
-                    self.tabManager.goForward(to: index)
-                }
+                self.tabManager.goToHistory(offset: direction == .back ? -(index + 1) : index + 1)
             }
         )
         browserChrome.configureLibraryMenus { [weak self] section in
@@ -437,7 +468,7 @@ final class BrowserViewController: UIViewController {
                 return
             }
             guard let tab = self.tabManager.selectedTab,
-                  let url = self.tabManager.shareableURL(for: tab) else {
+                  let url = tab.shareableURL else {
                 return
             }
             let sourceView = self.browserChrome.sharePopoverSourceView()
@@ -721,7 +752,7 @@ final class BrowserViewController: UIViewController {
             return
         }
         
-        tabManager.invalidateNavigationThumbnails()
+        NavigationHistoryStore.shared.invalidateThumbnails()
         updateNavigationButtons()
     }
     
@@ -1102,10 +1133,10 @@ final class BrowserViewController: UIViewController {
         browserChrome.updateNavigation(
             canGoBack: tabManager.canGoBack,
             canGoForward: tab.state.navigationState.canGoForward,
-            canShare: tabManager.shareableURL(for: tab) != nil
+            canShare: tab.shareableURL != nil
         )
         
-        let previewImages = tabManager.navigationPreviewImages(for: tab)
+        let previewImages = tab.navigationPreviewImages
         contentView.setHistoryNavigation(
             canGoBack: tabManager.canGoBack,
             canGoForward: tab.state.navigationState.canGoForward,

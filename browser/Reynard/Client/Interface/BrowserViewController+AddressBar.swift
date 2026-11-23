@@ -208,7 +208,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             return nil
         }
         
-        return tabManager.shareableURL(for: selectedTab)
+        return selectedTab.shareableURL
     }
     
     func addressBarTabCount(_ addressBar: AddressBar) -> Int {

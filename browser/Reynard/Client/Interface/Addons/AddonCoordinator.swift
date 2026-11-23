@@ -488,10 +488,11 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         at index: Int? = nil,
         loadImmediately: Bool = false
     ) -> Tab {
-        let tab = tabManager.createRegularTab(
+        let tab = tabManager.createTab(
             selecting: selecting,
             windowId: windowId,
             target: index.map(TabInsertionTarget.index) ?? .end,
+            mode: .regular,
             url: url,
             loadImmediately: loadImmediately
         )
