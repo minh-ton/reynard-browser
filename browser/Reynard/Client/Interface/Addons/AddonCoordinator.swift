@@ -546,9 +546,10 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
             )
             DispatchQueue.main.async {
                 self.loadingIconIDs.remove(addon.id)
-                if let image {
-                    self.iconCache.setObject(image, forKey: cacheKey)
+                guard let image else {
+                    return
                 }
+                self.iconCache.setObject(image, forKey: cacheKey)
                 self.delegate?.refreshAddonChrome(self)
             }
         }
