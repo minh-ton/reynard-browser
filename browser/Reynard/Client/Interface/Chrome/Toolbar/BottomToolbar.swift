@@ -23,6 +23,8 @@ final class BottomToolbar: UIView {
         static let addressBarDockedVerticalAdjustment: CGFloat = 36
         static let keyboardDockedBlurTopExtension: CGFloat = 24
         static let borderWidth: CGFloat = 0.5
+        static let menuRestoreDelay: TimeInterval = 1
+        static let menuSwapDuration: TimeInterval = 0.3
     }
     
     enum LayoutState {
@@ -74,6 +76,7 @@ final class BottomToolbar: UIView {
     private var itemButtons: [ToolbarItem: ToolbarButton] = [:]
     private var arrangedItems: [ToolbarItem] = []
     private var downloadSummary: DownloadStoreSummary?
+    private var pendingMenuRestore: DispatchWorkItem?
     private let buttonMenus = ToolbarButtonMenus()
     
     private lazy var buttons: UIStackView = {
@@ -306,7 +309,7 @@ final class BottomToolbar: UIView {
         return button
     }
     
-    private func arrangeButtons() {
+    private var displayedItems: [ToolbarItem] {
         var items = ToolbarPlacement.bottomToolbar.items
         if !items.contains(.downloads),
            let downloadSummary,
@@ -320,13 +323,65 @@ final class BottomToolbar: UIView {
             }
         }
         
+        return items
+    }
+    
+    private func arrangeButtons() {
+        let items = displayedItems
         guard items != arrangedItems else {
+            pendingMenuRestore?.cancel()
+            pendingMenuRestore = nil
             return
         }
         
+        let isRestoringMenu = !arrangedItems.isEmpty
+        && !arrangedItems.contains(.library)
+        && items.contains(.library)
+        guard isRestoringMenu else {
+            pendingMenuRestore?.cancel()
+            pendingMenuRestore = nil
+            applyArrangement(items)
+            return
+        }
+        
+        guard pendingMenuRestore == nil else {
+            return
+        }
+        
+        let menuRestore = DispatchWorkItem { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            self.pendingMenuRestore = nil
+            self.applyArrangement(self.displayedItems)
+        }
+        pendingMenuRestore = menuRestore
+        DispatchQueue.main.asyncAfter(deadline: .now() + UX.menuRestoreDelay, execute: menuRestore)
+    }
+    
+    private func applyArrangement(_ items: [ToolbarItem]) {
+        let isSwappingMenu = !arrangedItems.isEmpty
+        && arrangedItems.contains(.library) != items.contains(.library)
         arrangedItems = items
-        buttons.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        items.forEach { buttons.addArrangedSubview(button(for: $0)) }
+        
+        let rearrange = {
+            self.buttons.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            items.forEach { self.buttons.addArrangedSubview(self.button(for: $0)) }
+            self.buttons.layoutIfNeeded()
+        }
+        guard isSwappingMenu else {
+            rearrange()
+            return
+        }
+        
+        UIView.transition(
+            with: buttons,
+            duration: UX.menuSwapDuration,
+            options: [.transitionCrossDissolve, .allowUserInteraction]
+        ) {
+            UIView.performWithoutAnimation(rearrange)
+        }
     }
     
     // MARK: - View Setup
