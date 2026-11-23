@@ -36,6 +36,7 @@ enum TabManagerUpdateReason {
     case loadError
     case thumbnail
     case pageBackgroundColor
+    case firstContentfulPaint
     case readerMode
     case audio
 }

@@ -38,9 +38,7 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
         case idle // No history swipe is active.
         case swiping(HistorySwipeDirection) // Gesture is tracking the user's drag.
         case settling // Swipe completed; finish animation is running.
-        case settled // Location changed before finish animation ended.
-        case loaded // Page load completed before finish animation ended.
-        case loading // Finish animation ended; waiting for page load.
+        case loading // Finish animation ended; waiting for the new page to paint or load.
         case resetting // Location changed without a load; reset on next run loop.
     }
     
@@ -755,11 +753,9 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
                     self.webContentView.transform = CGAffineTransform(translationX: width, y: 0)
                     self.historyPreviewImageView.transform = .identity
                     self.updateHistoryTransitionOverlay(direction: direction, progress: 1)
-                    self.onBack?()
                 case .forward:
                     self.historyPreviewImageView.transform = .identity
                     self.updateHistoryTransitionOverlay(direction: direction, progress: 1)
-                    self.onForward?()
                 }
             } else {
                 self.webContentView.transform = .identity
@@ -780,18 +776,12 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
                 return
             }
             
-            if case .loaded = self.historySwipeState {
-                self.resetHistoryNavigation()
-                return
-            }
-            
-            switch self.historySwipeState {
-            case .settling:
-                self.historySwipeState = .loading
-            case .settled:
-                self.scheduleHistoryLocationReset()
-            default:
-                break
+            self.historySwipeState = .loading
+            switch direction {
+            case .back:
+                self.onBack?()
+            case .forward:
+                self.onForward?()
             }
         }
     }
@@ -928,22 +918,18 @@ final class ContentView: UIView, UIGestureRecognizerDelegate {
     
     func finishHistoryLoad() {
         switch historySwipeState {
-        case .settling, .settled:
-            historySwipeState = .loaded
         case .loading, .resetting:
             resetHistoryNavigation()
-        case .idle, .swiping, .loaded:
+        case .idle, .swiping, .settling:
             break
         }
     }
     
-    func noteHistoryLocationChange() {
+    func noteHistoryLocationChange(isLoading: Bool) {
         switch historySwipeState {
-        case .settling:
-            historySwipeState = .settled
-        case .loading:
+        case .loading where !isLoading:
             scheduleHistoryLocationReset()
-        case .idle, .swiping, .settled, .loaded, .resetting:
+        case .idle, .swiping, .settling, .loading, .resetting:
             break
         }
     }

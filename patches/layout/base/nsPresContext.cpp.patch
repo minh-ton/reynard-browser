@@ -1,7 +1,16 @@
 diff --git a/layout/base/nsPresContext.cpp b/layout/base/nsPresContext.cpp
-index 9fcc7d7d0d1b..b9ea5acd4bb1 100644
+index 9fcc7d7d0d1b..1978f1f65b2a 100644
 --- a/layout/base/nsPresContext.cpp
 +++ b/layout/base/nsPresContext.cpp
+@@ -7,7 +7,7 @@
+ #include "nsPresContext.h"
+ 
+ #include "nsPresContextInlines.h"
+-#if defined(MOZ_WIDGET_ANDROID)
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_UIKIT)
+ #  include "mozilla/AsyncEventDispatcher.h"
+ #endif
+ #include "COLRFonts.h"
 @@ -245,6 +245,7 @@ nsPresContext::nsPresContext(dom::Document* aDocument, nsPresContextType aType)
        mLastFontInflationScreenSize(gfxSize(-1.0, -1.0)),
        mCurAppUnitsPerDevPixel(0),
@@ -25,6 +34,15 @@ index 9fcc7d7d0d1b..b9ea5acd4bb1 100644
          mDynamicToolbarHeight = mDynamicToolbarMaxHeight;
        }
      }
+@@ -2737,7 +2739,7 @@ void nsPresContext::NotifyContentfulPaint() {
+   }
+ 
+   if (!mHadNonTickContentfulPaint) {
+-#ifdef MOZ_WIDGET_ANDROID
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_UIKIT)
+     (new AsyncEventDispatcher(mDocument, u"MozFirstContentfulPaint"_ns,
+                               CanBubble::eYes, ChromeOnlyDispatch::eYes))
+         ->PostDOMEvent();
 @@ -2907,18 +2909,27 @@ void nsPresContext::SetInitialVisibleArea(const nsRect& aRect) {
    SetVisibleArea(aRect);
  }

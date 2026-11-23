@@ -253,7 +253,13 @@ extension TabSessionHandler: ContentDelegate {
     
     func onFirstComposite(session: GeckoSession) {}
     
-    func onFirstContentfulPaint(session: GeckoSession) {}
+    func onFirstContentfulPaint(session: GeckoSession) {
+        guard let tab = currentTab(for: session) else {
+            return
+        }
+        
+        tabManager.notifyUpdate(for: tab, reason: .firstContentfulPaint)
+    }
     
     func onPaintStatusReset(session: GeckoSession) {}
     

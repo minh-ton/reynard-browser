@@ -141,7 +141,7 @@ extension BrowserViewController: TabManagerDelegate {
                 browserChrome.addressBar.clearKeyCommandHint()
                 contentView.resetScrollTracking()
                 toolbarController.reset(preserveManualCollapse: true)
-                contentView.noteHistoryLocationChange()
+                contentView.noteHistoryLocationChange(isLoading: tab.state.loadingState.isLoading)
                 refreshAddressBar()
                 browserChrome.updatePageZoomLevel(tab.session.settings.pageZoom.level)
                 updateNavigationButtons()
@@ -208,6 +208,11 @@ extension BrowserViewController: TabManagerDelegate {
             }
             
             contentView.setPageBackgroundColor(sessionManager.pageBackgroundColor(for: tab.session))
+            
+        case .firstContentfulPaint:
+            if isSelectedTab {
+                contentView.finishHistoryLoad()
+            }
             
         case .readerMode:
             if isSelectedTab {
