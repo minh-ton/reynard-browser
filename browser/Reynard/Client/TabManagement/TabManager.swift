@@ -159,7 +159,7 @@ final class TabManager: NSObject {
         return selectedTab?.state.navigationState.canGoBack == true || openerTab != nil
     }
     
-    private(set) weak var delegate: TabManagerDelegate?
+    private weak var delegate: TabManagerDelegate?
     private weak var sessionHandlerDelegate: TabSessionHandlerDelegate?
     let sessionManager: SessionManager
     private let promptCoordinator: PromptCoordinator
@@ -290,6 +290,14 @@ final class TabManager: NSObject {
         } else {
             delegate?.tabManagerDidChangeTabs(self)
         }
+    }
+    
+    func notifyFinishedLoading(_ session: GeckoSession) {
+        delegate?.tabManager(self, didFinishLoading: session)
+    }
+    
+    func requestHistoryThumbnail(for tab: Tab, url: String) {
+        delegate?.tabManager(self, captureHistoryThumbnailFor: tab, url: url)
     }
     
     // MARK: - Startup

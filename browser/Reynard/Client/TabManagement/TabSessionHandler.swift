@@ -265,7 +265,7 @@ extension TabSessionHandler: ContentDelegate {
             return
         }
         
-        tabManager.delegate?.tabManager(tabManager, didUpdate: tab, reason: .pageBackgroundColor)
+        tabManager.notifyUpdate(for: tab, reason: .pageBackgroundColor)
     }
     
     func onWebAppManifest(session: GeckoSession, manifest: Any) {
@@ -383,11 +383,7 @@ extension TabSessionHandler: NavigationDelegate {
             if let currentURL = tab.url,
                currentURL != url,
                tab.state.preparedNavigationThumbnailURL != currentURL {
-                tabManager.delegate?.tabManager(
-                    tabManager,
-                    captureHistoryThumbnailFor: tab,
-                    url: currentURL
-                )
+                tabManager.requestHistoryThumbnail(for: tab, url: currentURL)
             }
         }
         
@@ -582,11 +578,11 @@ extension TabSessionHandler: ProgressDelegate {
         tab.state.loadingState = .idle
         tabManager.notifyUpdate(for: tab, reason: .loading)
         tabManager.notifyUpdate(for: tab, reason: .thumbnail)
-        tabManager.delegate?.tabManager(tabManager, didFinishLoading: session)
+        tabManager.notifyFinishedLoading(session)
     }
     
     func onReloadCancelled(session: GeckoSession) {
-        tabManager.delegate?.tabManager(tabManager, didFinishLoading: session)
+        tabManager.notifyFinishedLoading(session)
     }
     
     func onProgressChange(session: GeckoSession, progress: Int) {
