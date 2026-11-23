@@ -922,8 +922,12 @@ final class TabManager: NSObject {
         sessionManager.close(session)
         prepareRestoration(for: tab)
         tab.state.loadingState = .idle
-        tab.state.loadError = WebRequestError(kind: .contentCrashed, uri: tab.displayedURL)
-        notifyUpdate(for: tab, reason: .loadError)
+        
+        if !recoverAutomatically {
+            tab.state.loadError = WebRequestError(kind: .contentCrashed, uri: tab.displayedURL)
+            notifyUpdate(for: tab, reason: .loadError)
+        }
+        
         notifyUpdate(for: tab, reason: .loading)
         persistState()
         
