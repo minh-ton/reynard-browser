@@ -719,22 +719,13 @@ final class BrowserViewController: UIViewController {
     }
     
     private func resolveBrowserLayout() -> BrowserLayout {
-        let interfaceIdiom = traitCollection.userInterfaceIdiom
-        let orientation = currentViewportOrientation()
-        
-        if interfaceIdiom == .pad {
-            return isCompactPadLayout
-            ? resolveCompactLayout(interfaceIdiom: .pad, orientation: orientation)
-            : resolvePadLayout(interfaceIdiom: .pad, orientation: orientation)
-        }
-        
-        guard orientation == .portrait else {
-            return resolvePadLayout(interfaceIdiom: .phone, orientation: .landscape)
-        }
-        
-        return Prefs.AppearanceSettings.addressBarPosition == .top
-        ? resolveCompactLayout(interfaceIdiom: .phone, orientation: .portrait)
-        : resolvePhoneLayout()
+        return BrowserLayout.resolve(
+            interfaceIdiom: traitCollection.userInterfaceIdiom,
+            orientation: currentViewportOrientation(),
+            addressBarPosition: Prefs.AppearanceSettings.addressBarPosition,
+            isCompactPadLayout: isCompactPadLayout,
+            isHalfSplitScreenOrSmaller: isHalfSplitScreenOrSmaller
+        )
     }
     
     private func currentViewportOrientation() -> BrowserLayout.ViewportOrientation {
@@ -796,45 +787,6 @@ final class BrowserViewController: UIViewController {
         }
         
         return rootView.bounds.width
-    }
-    
-    private func resolvePhoneLayout() -> BrowserLayout {
-        return BrowserLayout(
-            interfaceIdiom: .phone,
-            orientation: .portrait,
-            chromeMode: .phone,
-            chromePosition: .bottom,
-            tabOverviewToolbarPosition: .bottom,
-            overlayHost: .embedded
-        )
-    }
-    
-    private func resolveCompactLayout(
-        interfaceIdiom: UIUserInterfaceIdiom,
-        orientation: BrowserLayout.ViewportOrientation
-    ) -> BrowserLayout {
-        return BrowserLayout(
-            interfaceIdiom: interfaceIdiom,
-            orientation: orientation,
-            chromeMode: .compact,
-            chromePosition: interfaceIdiom == .phone ? .top : .bottom,
-            tabOverviewToolbarPosition: .bottom,
-            overlayHost: .embedded
-        )
-    }
-    
-    private func resolvePadLayout(
-        interfaceIdiom: UIUserInterfaceIdiom,
-        orientation: BrowserLayout.ViewportOrientation
-    ) -> BrowserLayout {
-        return BrowserLayout(
-            interfaceIdiom: interfaceIdiom,
-            orientation: orientation,
-            chromeMode: .pad,
-            chromePosition: .bottom,
-            tabOverviewToolbarPosition: isHalfSplitScreenOrSmaller ? .bottom : .top,
-            overlayHost: .detached
-        )
     }
     
     private func browserTopInset() -> CGFloat {

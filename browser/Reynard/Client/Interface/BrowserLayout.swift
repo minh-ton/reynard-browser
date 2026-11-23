@@ -19,13 +19,68 @@ struct BrowserLayout: Equatable {
     let overlayHost: OverlayCoordinator.Host
     
     static func initial(interfaceIdiom: UIUserInterfaceIdiom) -> BrowserLayout {
-        BrowserLayout(
+        return interfaceIdiom == .pad
+        ? pad(interfaceIdiom: .pad, orientation: .portrait, isHalfSplitScreenOrSmaller: false)
+        : phone
+    }
+    
+    static func resolve(
+        interfaceIdiom: UIUserInterfaceIdiom,
+        orientation: ViewportOrientation,
+        addressBarPosition: BrowserChromePosition,
+        isCompactPadLayout: Bool,
+        isHalfSplitScreenOrSmaller: Bool
+    ) -> BrowserLayout {
+        if interfaceIdiom == .pad {
+            return isCompactPadLayout
+            ? compact(interfaceIdiom: .pad, orientation: orientation)
+            : pad(interfaceIdiom: .pad, orientation: orientation, isHalfSplitScreenOrSmaller: isHalfSplitScreenOrSmaller)
+        }
+        
+        guard orientation == .portrait else {
+            return pad(interfaceIdiom: .phone, orientation: .landscape, isHalfSplitScreenOrSmaller: isHalfSplitScreenOrSmaller)
+        }
+        
+        return addressBarPosition == .top
+        ? compact(interfaceIdiom: .phone, orientation: .portrait)
+        : phone
+    }
+    
+    private static let phone = BrowserLayout(
+        interfaceIdiom: .phone,
+        orientation: .portrait,
+        chromeMode: .phone,
+        chromePosition: .bottom,
+        tabOverviewToolbarPosition: .bottom,
+        overlayHost: .embedded
+    )
+    
+    private static func compact(
+        interfaceIdiom: UIUserInterfaceIdiom,
+        orientation: ViewportOrientation
+    ) -> BrowserLayout {
+        return BrowserLayout(
             interfaceIdiom: interfaceIdiom,
-            orientation: .portrait,
-            chromeMode: interfaceIdiom == .pad ? .pad : .phone,
+            orientation: orientation,
+            chromeMode: .compact,
+            chromePosition: interfaceIdiom == .phone ? .top : .bottom,
+            tabOverviewToolbarPosition: .bottom,
+            overlayHost: .embedded
+        )
+    }
+    
+    private static func pad(
+        interfaceIdiom: UIUserInterfaceIdiom,
+        orientation: ViewportOrientation,
+        isHalfSplitScreenOrSmaller: Bool
+    ) -> BrowserLayout {
+        return BrowserLayout(
+            interfaceIdiom: interfaceIdiom,
+            orientation: orientation,
+            chromeMode: .pad,
             chromePosition: .bottom,
-            tabOverviewToolbarPosition: interfaceIdiom == .pad ? .top : .bottom,
-            overlayHost: interfaceIdiom == .pad ? .detached : .embedded
+            tabOverviewToolbarPosition: isHalfSplitScreenOrSmaller ? .bottom : .top,
+            overlayHost: .detached
         )
     }
 }
