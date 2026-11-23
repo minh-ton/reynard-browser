@@ -41,9 +41,11 @@ extension BrowserViewController: SearchOverlayCoordinatorDelegate, HomepageOverl
         if isHalfSplitScreenOrSmaller {
             return .fourColumn
         }
+        
         if isSidebarOverlayLayout {
             return .sixColumn
         }
+        
         return .eightColumn
     }
     
@@ -98,6 +100,7 @@ extension BrowserViewController: SearchOverlayCoordinatorDelegate, HomepageOverl
             sidebarCoordinator.showSection(.settings)
             return
         }
+        
         presentLibrary(initialSection: .settings)
     }
     

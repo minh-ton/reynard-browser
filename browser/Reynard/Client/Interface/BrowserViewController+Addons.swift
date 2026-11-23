@@ -26,6 +26,7 @@ extension BrowserViewController: AddonCoordinatorDelegate {
             guard let self else {
                 return
             }
+            
             UIApplication.shared.topViewController(from: self).present(viewController, animated: true)
         }
         
@@ -59,12 +60,16 @@ extension BrowserViewController: AddonCoordinatorDelegate {
     }
     
     @MainActor
-    func confirmAddonDownload(_ coordinator: AddonCoordinator, options: [String: Any?]) async -> DownloadStore.WebExtensionDownloadItem? {
+    func confirmAddonDownload(
+        _ coordinator: AddonCoordinator,
+        options: [String: Any?]
+    ) async -> DownloadStore.WebExtensionDownloadItem? {
         guard let pendingDownload = DownloadStore.shared.pendingDownload(
             from: options
         ) else {
             return nil
         }
+        
         return await downloadsCoordinator.confirmWebExtensionDownload(pendingDownload)
     }
     

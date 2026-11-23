@@ -291,6 +291,7 @@ final class BrowserViewController: UIViewController {
                   !self.sidebarCoordinator.refreshHostVisibility() else {
                 return
             }
+            
             self.syncBrowserNavigationChrome(animated: false)
             self.browserChrome.syncSidebarButton(splitViewController: self.splitViewController)
             self.refreshAddressBar()
@@ -306,6 +307,7 @@ final class BrowserViewController: UIViewController {
         if let readerSettings = presentedViewController as? ReaderSettingsViewController {
             readerSettings.dismiss(animated: false)
         }
+        
         performContentLifecycle {
             toolbarController.reset(animated: false)
             coordinator.animate { _ in
@@ -320,9 +322,11 @@ final class BrowserViewController: UIViewController {
                 self.browserChrome.addressBar.resetHorizontalTransition()
                 self.tabOverview.refreshForCurrentOrientation()
                 DispatchQueue.main.async {
-                    guard self.isViewLoaded, self.view.window != nil else {
+                    guard self.isViewLoaded,
+                          self.view.window != nil else {
                         return
                     }
+                    
                     self.updateBrowserLayout(animated: false)
                 }
             }
@@ -336,6 +340,7 @@ final class BrowserViewController: UIViewController {
         contentView.onAppearanceChanged = { [weak self] in
             self?.setNeedsStatusBarAppearanceUpdate()
         }
+        
         browserChrome.addressBar.configure(
             delegate: self,
             searchDelegate: self,
@@ -383,9 +388,11 @@ final class BrowserViewController: UIViewController {
         contentView.onErrorAction = { [weak self] action in
             self?.performErrorPageAction(action)
         }
+        
         browserChrome.onSidebar = { [weak self] in
             self?.sidebarCoordinator.toggle(animated: true)
         }
+        
         browserChrome.onBack = { [weak self] in
             self?.toolbarController.reset(preserveManualCollapse: true)
             self?.captureHistoryThumbnail(isPreparedForNavigation: true)
@@ -420,6 +427,7 @@ final class BrowserViewController: UIViewController {
                 self.tabManager.goToHistory(offset: direction == .back ? -(index + 1) : index + 1)
             }
         )
+        
         browserChrome.configureLibraryMenus { [weak self] section in
             self?.presentLibrary(initialSection: section)
         }
@@ -428,6 +436,7 @@ final class BrowserViewController: UIViewController {
                 guard let self else {
                     return false
                 }
+                
                 return self.tabManager.selectedTabMode == .regular
             },
             itemsProvider: {
@@ -446,6 +455,7 @@ final class BrowserViewController: UIViewController {
                 _ = self.tabManager.restoreRecentlyClosedTab(id: id)
             }
         )
+        
         browserChrome.configureTabOverviewMenus(
             tabCountProvider: { [weak self] in
                 self?.tabManager.activeTabs.count ?? 0
@@ -463,14 +473,14 @@ final class BrowserViewController: UIViewController {
                 self?.createNewTabAnimated(mode: .regular)
             }
         )
+        
         browserChrome.onShare = { [weak self] in
-            guard let self else {
-                return
-            }
-            guard let tab = self.tabManager.selectedTab,
+            guard let self,
+                  let tab = self.tabManager.selectedTab,
                   let url = tab.shareableURL else {
                 return
             }
+            
             let sourceView = self.browserChrome.sharePopoverSourceView()
             self.presentShareSheet(
                 items: [url],
@@ -486,6 +496,7 @@ final class BrowserViewController: UIViewController {
                     guard let self else {
                         return
                     }
+                    
                     if activityType == BookmarkActivity.identifier {
                         self.presentBookmarkEditor(addToFavorites: false)
                     } else if activityType == AddToFavoritesActivity.identifier {
@@ -496,12 +507,14 @@ final class BrowserViewController: UIViewController {
                 }
             )
         }
+        
         browserChrome.onLibrary = { [weak self] in
             self?.presentLibrary()
         }
         browserChrome.onDownloads = { [weak self] in
             self?.presentLibrary(initialSection: .downloads)
         }
+        
         browserChrome.onNewTab = { [weak self] in
             self?.createNewTab()
         }
@@ -512,6 +525,7 @@ final class BrowserViewController: UIViewController {
             self?.toolbarController.reset()
             self?.dismissAddressBarEditingAndChromeOverlay()
         }
+        
         browserChrome.onPageZoomOut = { [weak self] in
             self?.setSelectedPageZoomToPreviousLevel()
         }
@@ -521,6 +535,7 @@ final class BrowserViewController: UIViewController {
         browserChrome.onPageZoomReset = { [weak self] in
             self?.setSelectedPageZoomLevel(Prefs.BrowsingSettings.defaultPageZoomLevel)
         }
+        
         browserChrome.onFindInPage = { [weak self] query, backwards in
             guard let self,
                   let session = self.tabManager.selectedTab?.session else {
@@ -530,13 +545,16 @@ final class BrowserViewController: UIViewController {
             if query != nil {
                 session.setFindInPageMatchHighlighting(true)
             }
+            
             let result = try? await session.findInPage(query, backwards: backwards)
             guard self.tabManager.selectedTab?.session === session else {
                 return nil
             }
+            
             guard let result else {
                 return nil
             }
+            
             return (result.current, result.total)
         }
         browserChrome.onClearFindInPage = { [weak self] in
@@ -550,6 +568,7 @@ final class BrowserViewController: UIViewController {
                 self?.requestContentKeyboardFocus()
             }
         }
+        
         browserChrome.onKeyboardDismissal = { [weak self] in
             self?.tabManager.selectedTab?.session.dismissSoftwareKeyboard()
         }
@@ -573,8 +592,10 @@ final class BrowserViewController: UIViewController {
             if let readerSettings = presentedViewController as? ReaderSettingsViewController {
                 readerSettings.dismiss(animated: false)
             }
+            
             dismissAddressBarEditingAndOverlays()
         }
+        
         applyBrowserLayout(animated: animated)
         homepageOverlayCoordinator.updatePresentation(animated: false)
         searchOverlayCoordinator.updatePresentedLayout()
@@ -688,6 +709,7 @@ final class BrowserViewController: UIViewController {
         guard showsTabBar else {
             return .hidden
         }
+        
         return tabOverview.isPresented ? .layoutReserved : .visible
     }
     
@@ -699,9 +721,14 @@ final class BrowserViewController: UIViewController {
     }
     
     private func applyBrowserChromeLayout(animated: Bool) {
-        let searchState = isShowingFullscreenMedia
-        ? BrowserChrome.SearchState.inactive
-        : (overlayCoordinator.chromeStateForAddressBarScrollDismissal(layout: browserLayout) ?? searchOverlayCoordinator.chromeState)
+        let searchState: BrowserChrome.SearchState
+        if isShowingFullscreenMedia {
+            searchState = .inactive
+        } else {
+            searchState = overlayCoordinator.chromeStateForAddressBarScrollDismissal(layout: browserLayout)
+            ?? searchOverlayCoordinator.chromeState
+        }
+        
         browserChrome.apply(state: BrowserChrome.State(
             position: browserLayout.chromePosition,
             mode: browserLayout.chromeMode,
@@ -916,16 +943,21 @@ final class BrowserViewController: UIViewController {
     
     func requestContentKeyboardFocus(for expectedSession: GeckoSession? = nil) {
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                return
+            }
+            
             if let presentedController = presentedControllerInHierarchy {
                 guard let transitionCoordinator = presentedController.transitionCoordinator else {
                     return
                 }
+                
                 transitionCoordinator.animate(alongsideTransition: nil) { [weak self] _ in
                     self?.requestContentKeyboardFocus(for: expectedSession)
                 }
                 return
             }
+            
             restoreContentKeyboardFocus(for: expectedSession)
         }
     }
@@ -935,9 +967,12 @@ final class BrowserViewController: UIViewController {
               let selectedSession = tabManager.selectedTab?.session else {
             return
         }
-        if let expectedSession, expectedSession !== selectedSession {
+        
+        if let expectedSession,
+           expectedSession !== selectedSession {
             return
         }
+        
         guard contentView.isDisplaying(session: selectedSession),
               let engineView = selectedSession.engineView,
               let window = engineView.window,
@@ -945,6 +980,7 @@ final class BrowserViewController: UIViewController {
               window.windowScene?.activationState == .foregroundActive else {
             return
         }
+        
         selectedSession.focusForHardwareKeyboard()
     }
     
@@ -954,8 +990,10 @@ final class BrowserViewController: UIViewController {
             if let presentedController = currentController.presentedViewController {
                 return presentedController
             }
+            
             controller = currentController.parent
         }
+        
         return nil
     }
     
@@ -976,7 +1014,6 @@ final class BrowserViewController: UIViewController {
         }
         
         let isHardwareKeyboardMode = tabManager.selectedTab?.session.isInHardwareKeyboardMode() == true
-        
         if !isHardwareKeyboardMode {
             browserChrome.addressBar.restoreEditingLayout()
         }
@@ -984,21 +1021,23 @@ final class BrowserViewController: UIViewController {
         let keyboardFrame = view.convert(frameValue.cgRectValue, from: nil)
         let keyboardOverlap = max(0, view.bounds.maxY - keyboardFrame.minY)
         let keyboardInset = max(0, keyboardOverlap - view.safeAreaInsets.bottom)
+        
         let spansWindow = view.bounds.width > 0
         && keyboardFrame.width >= view.bounds.width * UX.floatingKeyboardWidthRatio
         let sitsFlushWithBottom = keyboardFrame.maxY >= view.bounds.maxY - 8
-        let isFloatingKeyboard = browserLayout.interfaceIdiom == .pad
-        && !(spansWindow && sitsFlushWithBottom)
+        let isDockedKeyboard = spansWindow && sitsFlushWithBottom
+        let isFloatingKeyboard = browserLayout.interfaceIdiom == .pad && !isDockedKeyboard
+        
         let shouldAdjustForKeyboard = keyboardInset > 0
         && !isFloatingKeyboard
         && !tabOverview.isPresented
         && !isHardwareKeyboardMode
         
-        let presentedController = presentedControllerInHierarchy
+        let isPresentingOverContent = presentedControllerInHierarchy.map { !$0.isBeingDismissed } ?? false
         let shouldRelocateInput = shouldAdjustForKeyboard
         && !searchOverlayCoordinator.isFocused
         && !browserChrome.isShowingFindInPage
-        && (presentedController == nil || presentedController?.isBeingDismissed == true)
+        && !isPresentingOverContent
         
         if shouldRelocateInput {
             toolbarController.lock(for: .inputRelocation)
@@ -1006,16 +1045,19 @@ final class BrowserViewController: UIViewController {
             toolbarController.unlock(for: .inputRelocation)
         }
         
-        let animation = keyboardAnimation(from: notification)
         if shouldRelocateInput && browserLayout.interfaceIdiom == .phone {
             browserChrome.showActionBar(.keyboardDismissal, animated: false)
         } else if browserChrome.isShowingKeyboardDismissal {
             browserChrome.dismissActionBar(animated: false)
         }
-        let shouldDockActionBar = shouldAdjustForKeyboard
-        && (browserChrome.isShowingFindInPage || browserChrome.isShowingKeyboardDismissal)
+        
+        let isShowingActionBar = browserChrome.isShowingFindInPage || browserChrome.isShowingKeyboardDismissal
+        let shouldDockActionBar = shouldAdjustForKeyboard && isShowingActionBar
         let shouldDockAddressBar = shouldAdjustForKeyboard
-        && browserLayout.chromeMode == .phone && searchOverlayCoordinator.isFocused
+        && browserLayout.chromeMode == .phone
+        && searchOverlayCoordinator.isFocused
+        
+        let animation = keyboardAnimation(from: notification)
         browserChrome.dockActionBar(offset: shouldDockActionBar ? -keyboardOverlap : 0)
         browserChrome.dockAddressBar(offset: shouldDockAddressBar ? -keyboardInset : 0)
         animateLayout(animation)
@@ -1030,10 +1072,12 @@ final class BrowserViewController: UIViewController {
     
     @objc private func keyboardWillHide(_ notification: Notification) {
         toolbarController.unlock(for: .inputRelocation)
-        let animation = keyboardAnimation(from: notification)
+        
         if browserChrome.isShowingKeyboardDismissal {
             browserChrome.dismissActionBar(animated: false)
         }
+        
+        let animation = keyboardAnimation(from: notification)
         contentView.resetFocusedInputRelocation(
             animationDuration: animation.duration,
             animationOptions: animation.curve
@@ -1044,10 +1088,10 @@ final class BrowserViewController: UIViewController {
     }
     
     private func keyboardAnimation(from notification: Notification) -> KeyboardAnimation {
-        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval
-        ?? UX.keyboardAnimationDuration
-        let rawCurve = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
-        ?? UX.keyboardAnimationCurve
+        let userInfo = notification.userInfo
+        let duration = userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? UX.keyboardAnimationDuration
+        let rawCurve = userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? UX.keyboardAnimationCurve
+        
         return KeyboardAnimation(
             duration: duration,
             curve: UIView.AnimationOptions(rawValue: rawCurve << 16)
@@ -1113,6 +1157,7 @@ final class BrowserViewController: UIViewController {
             if tabOverview.isPresented {
                 tabOverview.setPresented(false, animated: false)
             }
+            
             searchOverlayCoordinator.setFocused(false, animated: false)
             view.endEditing(true)
         }
@@ -1129,6 +1174,7 @@ final class BrowserViewController: UIViewController {
               let session = fullscreenSession else {
             return
         }
+        
         session.exitFullScreen()
         applyFullscreenState(false, for: session)
     }

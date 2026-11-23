@@ -21,17 +21,21 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         }
         
         let selectedURL = selectedTab?.url
+        let hasDisplayText = displayText?.isEmpty == false
+        let hasSelectedURL = selectedURL?.isEmpty == false
         browserChrome.setAddressBarText(
-            displayText?.isEmpty == false ? displayText : selectedURL,
+            hasDisplayText ? displayText : selectedURL,
             locationText: selectedURL,
             locationTitle: selectedTab?.title,
-            showsBarMenu: displayText?.isEmpty != false && selectedURL?.isEmpty == false,
+            showsBarMenu: !hasDisplayText && hasSelectedURL,
             isErrorPage: selectedTab?.state.loadError != nil
         )
+        
         browserChrome.addressBar.setLoadingProgress(
             selectedTab?.state.loadingState.progress ?? 0,
             isLoading: selectedTab?.state.loadingState.isLoading ?? false
         )
+        
         addonCoordinator.prepareMenuIcons()
         let usesDesktopWebsite = selectedTab.flatMap { tab in
             tab.url.flatMap { url in
@@ -68,6 +72,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         guard !playingTabs.isEmpty else {
             return nil
         }
+        
         let selectedTab = tabManager.selectedTab
         return AddressBarMenu.AudioState(
             playingTabs: playingTabs.map { tab in
@@ -108,6 +113,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             guard let tab = tabManager.activeTabs.first(where: { $0.id == tabID }) else {
                 return
             }
+            
             tabManager.selectTab(tab)
         case let .setMuted(tabID, muted):
             tabManager.setMuted(muted, for: tabID)
@@ -138,7 +144,10 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
     }
     
     func addressBarDidRequestReader(_ addressBar: AddressBar) {
-        guard let tab = tabManager.selectedTab else { return }
+        guard let tab = tabManager.selectedTab else {
+            return
+        }
+        
         guard tab.state.readerMode.isActive else {
             _ = tabManager.readerMode.enter(in: tab)
             return
@@ -150,13 +159,21 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             readerMode: tabManager.readerMode
         )
         controller.onFindInPage = { [weak self] in
-            guard let self, self.tabManager.selectedTab === tab else { return }
+            guard let self,
+                  self.tabManager.selectedTab === tab else {
+                return
+            }
+            
             self.browserChrome.showActionBar(.findInPage(), animated: true)
         }
+        
         controller.configurePresentation(asPopover: browserLayout.chromeMode == .pad)
         if controller.modalPresentationStyle == .pageSheet {
             controller.onVisibilityChanged = { [weak self] visible in
-                guard let self else { return }
+                guard let self else {
+                    return
+                }
+                
                 if visible {
                     self.toolbarController.collapseBottomToolbar()
                 } else if !self.browserChrome.isShowingFindInPage {
@@ -164,6 +181,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
                 }
             }
         }
+        
         if let popover = controller.popoverPresentationController {
             let sourceButton = browserChrome.addressBar.addressBarButton
             popover.sourceView = sourceButton
@@ -171,6 +189,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
             popover.permittedArrowDirections = [.up, .down]
             popover.delegate = controller
         }
+        
         present(controller, animated: true)
     }
     
@@ -280,6 +299,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         guard let tab = tabManager.tabs(for: mode)[safe: index] else {
             return
         }
+        
         tabManager.selectTab(tab)
     }
     
@@ -292,6 +312,7 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         } else {
             captureThumbnail(for: tab)
         }
+        
         return tab
     }
     
@@ -308,72 +329,12 @@ extension BrowserViewController: AddressBarDelegate, AddressBarGestureDelegate {
         guard prepareForGesture else {
             return
         }
+        
         browserChrome.dismissActionBar(animated: false)
         captureThumbnail(for: tabManager.selectedTab)
     }
     
     func addressBarTransitionDidEnd() {
         toolbarController.unlock(for: .addressBarTransition)
-    }
-    
-    // MARK: - Page Zoom
-    
-    func setSelectedPageZoomToPreviousLevel() {
-        setSelectedPageZoomLevel(browserChrome.previousPageZoomLevel())
-    }
-    
-    func setSelectedPageZoomToNextLevel() {
-        setSelectedPageZoomLevel(browserChrome.nextPageZoomLevel())
-    }
-    
-    func setSelectedPageZoomLevel(_ level: Int) {
-        guard let selectedTab = tabManager.selectedTab,
-              let url = selectedTab.url else {
-            return
-        }
-        
-        browserChrome.setPageZoomLevel(level)
-        sessionManager.setPageZoom(level, of: selectedTab.session, for: url, tabID: selectedTab.id)
-    }
-    
-    // MARK: - Website Actions
-    
-    private func presentWebsiteSettings() {
-        guard let selectedTab = tabManager.selectedTab,
-              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: urlString),
-              let settingsController = SiteSettingsViewController(
-                url: url,
-                session: selectedTab.session,
-                trackingProtection: sessionManager.trackingProtection
-              ) else {
-            return
-        }
-        
-        presentContentModal(settingsController)
-    }
-    
-    func presentBookmarkEditor(addToFavorites: Bool) {
-        guard let selectedTab = tabManager.selectedTab,
-              let urlString = selectedTab.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: urlString) else {
-            return
-        }
-        
-        let title = selectedTab.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let bookmarkController: EditBookmarkViewController
-        if addToFavorites {
-            bookmarkController = EditBookmarkViewController(
-                title: title,
-                url: url,
-                limitsToFavorites: true
-            )
-        } else if let bookmark = BookmarkStore.shared.bookmark(savedFor: url) {
-            bookmarkController = EditBookmarkViewController(bookmark: bookmark)
-        } else {
-            bookmarkController = EditBookmarkViewController(title: title, url: url)
-        }
-        
-        presentContentModal(bookmarkController)
     }
 }

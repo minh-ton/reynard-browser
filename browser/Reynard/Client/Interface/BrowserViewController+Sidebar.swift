@@ -37,6 +37,7 @@ extension BrowserViewController: SidebarContentController, SidebarCoordinatorHos
         guard tabManager.selectedTab?.session.engineView?.isFirstResponder != true else {
             return
         }
+        
         requestContentKeyboardFocus()
     }
     

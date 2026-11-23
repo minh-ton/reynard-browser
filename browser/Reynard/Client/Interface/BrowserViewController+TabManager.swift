@@ -22,12 +22,14 @@ extension BrowserViewController: TabManagerDelegate {
             browserChrome.addressBar.clearKeyCommandHint()
             contentView.setTab(nil)
         }
+        
         refreshAddressBar()
         updateNavigationButtons()
         
         if !tabOverview.isPresented {
             tabOverview.setMode(TabOverview.Mode(tabMode: tabManager.selectedTabMode), animated: false)
         }
+        
         tabOverview.applyPendingTabChanges()
         let animateTabBarVisibility = tabBar.visibility != targetTabBarVisibility
         tabBar.reloadTabs()
@@ -72,6 +74,7 @@ extension BrowserViewController: TabManagerDelegate {
             tabOverview.setMode(TabOverview.Mode(tabMode: tabManager.selectedTabMode), animated: false)
             tabOverview.reloadTabs()
         }
+        
         let animateTabBarVisibility = tabBar.visibility != targetTabBarVisibility
         tabBar.reloadTabs()
         homepageOverlayCoordinator.updatePresentation(animated: false)
@@ -101,6 +104,7 @@ extension BrowserViewController: TabManagerDelegate {
                 }
             )
         }
+        
         addonCoordinator.handleSelectedTabSessionReplacement(from: previousSession, to: replacementSession)
     }
     
@@ -125,6 +129,7 @@ extension BrowserViewController: TabManagerDelegate {
             if isSelectedTab {
                 refreshAddressBar()
             }
+            
             tabBar.reloadTab(at: index)
             tabOverview.isPresented
             ? tabOverview.refreshTab(at: index, mode: tabManager.selectedTabMode)
@@ -201,6 +206,7 @@ extension BrowserViewController: TabManagerDelegate {
             guard isSelectedTab else {
                 return
             }
+            
             contentView.setPageBackgroundColor(sessionManager.pageBackgroundColor(for: tab.session))
             
         case .readerMode:
@@ -270,6 +276,7 @@ extension BrowserViewController: TabSessionHandlerDelegate {
         guard tabManager.selectedTab?.session === session else {
             return
         }
+        
         applyFullscreenState(fullScreen, for: session)
     }
     
@@ -283,9 +290,11 @@ extension BrowserViewController: TabSessionHandlerDelegate {
         if addonCoordinator.handleExternalResponse(response) {
             return true
         }
+        
         guard let download = DownloadStore.shared.pendingDownload(from: response, session: session) else {
             return false
         }
+        
         return await downloadsCoordinator.confirm(download)
     }
     
@@ -293,6 +302,7 @@ extension BrowserViewController: TabSessionHandlerDelegate {
         if addonCoordinator.shouldContinueExternalResponse(localFilePath: localFilePath) {
             return true
         }
+        
         return DownloadStore.shared.updateCapturedDownload(
             localFilePath: localFilePath,
             bytesReceived: bytesReceived
@@ -306,25 +316,10 @@ extension BrowserViewController: TabSessionHandlerDelegate {
         ) {
             return
         }
+        
         DownloadStore.shared.completeCapturedDownload(
             localFilePath: localFilePath,
             succeeded: succeeded
         )
-    }
-}
-
-extension BrowserViewController {
-    func applyNewTabDisplayOption(to tab: Tab, completion: ((UIImage?) -> Void)? = nil) {
-        switch Prefs.NewTabSettings.newTabDisplayOption {
-        case .homepage, .blankPage:
-            DispatchQueue.main.async { [weak self] in
-                completion?(self?.captureThumbnail(for: tab))
-            }
-        case .customURL:
-            if URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil {
-                tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
-            }
-            completion?(nil)
-        }
     }
 }

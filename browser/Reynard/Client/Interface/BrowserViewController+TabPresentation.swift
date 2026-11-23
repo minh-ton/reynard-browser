@@ -40,6 +40,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             tabManager.selectTab(tab)
             return
         }
+        
         tabManager.selectTab(tab)
     }
     
@@ -157,9 +158,87 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
             homepageOverlayCoordinator.tabOverviewWillPresent()
             searchOverlayCoordinator.tabOverviewWillPresent()
         }
+        
         tabOverview.setPresented(visible, animated: animated)
         if !visible {
             homepageOverlayCoordinator.updatePresentation(animated: animated)
+        }
+    }
+    
+    // MARK: - Tab Actions
+    
+    func createNewTab(mode: TabMode? = nil) {
+        let targetMode = mode ?? (tabOverview.isPresented ? tabOverview.mode.tabMode : tabManager.selectedTabMode)
+        toolbarController.reset()
+        dismissAddressBarEditingAndOverlays()
+        
+        if tabOverview.isPresented {
+            createTabFromOverview(mode: targetMode)
+        } else {
+            let tab = tabManager.createTab(selecting: true, mode: targetMode)
+            applyNewTabDisplayOption(to: tab)
+            tabBar.setPendingExpansion(to: tab)
+            setTabOverviewVisible(false, animated: true)
+        }
+    }
+    
+    func createNewTabAnimated(mode: TabMode) {
+        captureThumbnail(for: tabManager.selectedTab)
+        toolbarController.reset()
+        dismissAddressBarEditingAndOverlays()
+        let target: TabInsertionTarget = tabManager.selectedTabMode == mode ? .afterSelected : .end
+        let tab = tabManager.createTab(
+            selecting: false,
+            target: target,
+            mode: mode
+        )
+        applyNewTabDisplayOption(to: tab) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.tabBar.setPendingExpansion(to: tab)
+            self.browserChrome.addressBar.animateAutomaticTabTransition(to: tab) { [weak self] in
+                self?.tabManager.selectTab(tab)
+            }
+        }
+    }
+    
+    func applyNewTabDisplayOption(to tab: Tab, completion: ((UIImage?) -> Void)? = nil) {
+        switch Prefs.NewTabSettings.newTabDisplayOption {
+        case .homepage, .blankPage:
+            DispatchQueue.main.async { [weak self] in
+                completion?(self?.captureThumbnail(for: tab))
+            }
+        case .customURL:
+            if URLUtils.normalizedNewTabURL(from: Prefs.NewTabSettings.customNewTabURL) != nil {
+                tabManager.browse(to: Prefs.NewTabSettings.customNewTabURL, in: tab)
+            }
+            
+            completion?(nil)
+        }
+    }
+    
+    func closeTab() {
+        guard tabManager.selectedTab != nil else {
+            return
+        }
+        
+        let mode = tabManager.selectedTabMode
+        closeTab(at: tabManager.selectedTabIndex, mode: mode)
+        if mode == .regular && tabManager.regularTabs.isEmpty {
+            createNewTab(mode: .regular)
+        }
+    }
+    
+    func closeAllTabs() {
+        toolbarController.reset()
+        dismissAddressBarEditingAndOverlays()
+        let mode = tabManager.selectedTabMode
+        let shouldCreateNewTab = mode == .regular && !tabManager.regularTabs.isEmpty
+        tabManager.removeAllTabs(mode: mode)
+        if shouldCreateNewTab {
+            createNewTab(mode: .regular)
         }
     }
     
@@ -177,9 +256,11 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
                let tab = tabs.max(by: { $0.state.selectionOrder < $1.state.selectionOrder }) {
                 tabManager.selectTab(tab)
             }
+            
             scrollTabOverviewToTab(at: tabManager.selectedTabIndex)
             tabOverview.prepareDismissSelectionForCurrentTab()
         }
+        
         setTabOverviewVisible(false, animated: true)
     }
     
@@ -214,6 +295,7 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
         if !tabManager.regularTabs.isEmpty {
             tabOverview.prepareNextTabChangesWithoutAnimation()
         }
+        
         tabManager.removeAllTabs(mode: .regular)
         createTabFromOverview(mode: .regular)
     }
