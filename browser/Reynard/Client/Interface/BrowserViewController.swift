@@ -511,12 +511,32 @@ final class BrowserViewController: UIViewController {
         browserChrome.onLibrary = { [weak self] in
             self?.presentLibrary()
         }
+        browserChrome.onHistory = { [weak self] in
+            self?.presentLibrary(initialSection: .history)
+        }
+        browserChrome.onBookmarks = { [weak self] in
+            self?.presentLibrary(initialSection: .bookmarks)
+        }
+        browserChrome.onAddBookmark = { [weak self] in
+            self?.presentBookmarkEditor(addToFavorites: false)
+        }
         browserChrome.onDownloads = { [weak self] in
             self?.presentLibrary(initialSection: .downloads)
         }
+        browserChrome.onSettings = { [weak self] in
+            self?.presentLibrary(initialSection: .settings)
+        }
         
         browserChrome.onNewTab = { [weak self] in
-            self?.createNewTab()
+            guard let self else {
+                return
+            }
+            
+            if self.browserLayout.chromeMode == .phone {
+                self.createNewTabAnimated(mode: self.tabManager.selectedTabMode)
+            } else {
+                self.createNewTab()
+            }
         }
         browserChrome.onTabOverview = { [weak self] in
             self?.setTabOverviewVisible(true, animated: true)
@@ -524,6 +544,19 @@ final class BrowserViewController: UIViewController {
         browserChrome.onOverlayDismiss = { [weak self] in
             self?.toolbarController.reset()
             self?.dismissAddressBarEditingAndChromeOverlay()
+        }
+        
+        browserChrome.onShowReader = { [weak self] in
+            self?.showReader()
+        }
+        browserChrome.onShowFindInPage = { [weak self] in
+            self?.showFindInPage()
+        }
+        browserChrome.onShowPageZoom = { [weak self] in
+            self?.showPageZoom()
+        }
+        browserChrome.onHideToolbar = { [weak self] in
+            self?.toolbarController.collapseUntilReset()
         }
         
         browserChrome.onPageZoomOut = { [weak self] in
@@ -887,6 +920,12 @@ final class BrowserViewController: UIViewController {
             name: .newTabDisplayOptionDidChange,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(bookmarkStoreDidChange),
+            name: .bookmarkStoreDidChange,
+            object: nil
+        )
     }
     
     @objc private func newTabDisplayOptionDidChange() {
@@ -908,6 +947,10 @@ final class BrowserViewController: UIViewController {
     
     @objc func applyUpdateMenuButtonBadge() {
         browserChrome.setMenuButtonIndicatesUpdate(BrowserUpdates.shared.hasUpdate)
+    }
+    
+    @objc private func bookmarkStoreDidChange() {
+        updatePageActionButtons()
     }
     
     // MARK: - Keyboard
@@ -1139,6 +1182,17 @@ final class BrowserViewController: UIViewController {
             backPreviewImage: tab.state.navigationState.canGoBack ? previewImages.backImage : nil,
             forwardPreviewImage: previewImages.forwardImage,
             isSwipeEnabled: true
+        )
+    }
+    
+    func updatePageActionButtons() {
+        let readerMode = tabManager.selectedTab?.state.readerMode ?? ReaderModeState()
+        let url = tabManager.selectedTab?.url.flatMap(URL.init(string:))
+        
+        browserChrome.updatePageActions(
+            canUsePageTools: url?.host != nil,
+            canShowReader: readerMode.isReaderable || readerMode.isActive,
+            isBookmarked: url.map { BookmarkStore.shared.bookmark(savedFor: $0) != nil } ?? false
         )
     }
     

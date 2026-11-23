@@ -24,14 +24,8 @@ final class ToolbarButton: UIButton {
         static let downloadSymbolPointSize: CGFloat = 17
     }
     
-    enum ButtonType {
-        case back
-        case forward
-        case share
-        case library
-        case tabOverview
-        case download
-        case newTab
+    enum ButtonType: Equatable {
+        case item(ToolbarItem)
         case sidebar
     }
     
@@ -65,7 +59,7 @@ final class ToolbarButton: UIButton {
     
     private lazy var downloadProgressFillWidthConstraint = downloadProgressFillView.widthAnchor.constraint(equalToConstant: 0)
     
-    private let toolbarButtonType: ButtonType
+    let toolbarButtonType: ButtonType
     private(set) var isShowingDownloads = false
     
     // MARK: - Lifecycle
@@ -99,7 +93,7 @@ final class ToolbarButton: UIButton {
     }
     
     override var intrinsicContentSize: CGSize {
-        let sideLength = toolbarButtonType == .download
+        let sideLength = toolbarButtonType == .item(.downloads)
         ? UX.downloadButtonSideLength
         : UX.standardButtonSideLength
         return CGSize(width: sideLength, height: sideLength)
@@ -108,7 +102,7 @@ final class ToolbarButton: UIButton {
     // MARK: - Updates
     
     func applyDownloadSummary(_ summary: DownloadStoreSummary) {
-        guard toolbarButtonType == .download else {
+        guard toolbarButtonType == .item(.downloads) else {
             return
         }
         
@@ -119,9 +113,6 @@ final class ToolbarButton: UIButton {
                 playDownloadBounceAnimation()
             }
         }
-        
-        let configuration = UIImage.SymbolConfiguration(pointSize: UX.downloadSymbolPointSize, weight: .regular)
-        downloadIconView.image = UIImage(named: "reynard.arrow.down.circle", in: .main, with: configuration)
         
         let progress = min(max(CGFloat(summary.aggregateProgress), 0), 1)
         let showsProgress = summary.activeCount > 0
@@ -141,11 +132,11 @@ final class ToolbarButton: UIButton {
     }
     
     private func configureImage() {
-        guard toolbarButtonType != .download else {
+        guard toolbarButtonType != .item(.downloads) else {
             return
         }
         setImage(UIImage(named: symbolName), for: .normal)
-        let pointSize = toolbarButtonType == .newTab
+        let pointSize = toolbarButtonType == .item(.newTab)
         ? UX.newTabSymbolPointSize
         : UX.standardSymbolPointSize
         setPreferredSymbolConfiguration(
@@ -159,9 +150,12 @@ final class ToolbarButton: UIButton {
     }
     
     private func configureDownloadViewsIfNeeded() {
-        guard toolbarButtonType == .download else {
+        guard toolbarButtonType == .item(.downloads) else {
             return
         }
+        
+        let configuration = UIImage.SymbolConfiguration(pointSize: UX.downloadSymbolPointSize, weight: .regular)
+        downloadIconView.image = UIImage(named: "reynard.arrow.down.circle", in: .main, with: configuration)
         
         layer.masksToBounds = false
         clipsToBounds = false
@@ -196,13 +190,7 @@ final class ToolbarButton: UIButton {
     
     private var symbolName: String {
         switch toolbarButtonType {
-        case .back: return "reynard.chevron.backward"
-        case .forward: return "reynard.chevron.forward"
-        case .share: return "reynard.square.and.arrow.up"
-        case .library: return "reynard.ellipsis.circle"
-        case .tabOverview: return "reynard.square.on.square"
-        case .download: return "reynard.arrow.down.circle"
-        case .newTab: return "reynard.plus"
+        case .item(let item): return item.symbolName
         case .sidebar: return "reynard.sidebar.left"
         }
     }

@@ -13,6 +13,7 @@ final class TopToolbar: UIView {
         static let topToolbarContentHeight: CGFloat = 60
         static let topToolbarButtonStackHeight: CGFloat = 30
         static let topToolbarStandardButtonStackWidth: CGFloat = 126
+        static let topToolbarTrailingButtonWidth: CGFloat = 42
         static let topToolbarHorizontalInset: CGFloat = 12
         static let topToolbarButtonSpacing: CGFloat = 10
         static let topToolbarAddressBarSpacing: CGFloat = 12
@@ -29,13 +30,7 @@ final class TopToolbar: UIView {
     }
     
     var onSidebar: (() -> Void)?
-    var onBack: (() -> Void)?
-    var onForward: (() -> Void)?
-    var onLibrary: (() -> Void)?
-    var onDownloads: (() -> Void)?
-    var onShare: (() -> Void)?
-    var onNewTab: (() -> Void)?
-    var onTabOverview: (() -> Void)?
+    var onItem: ((ToolbarItem) -> Void)?
     
     private let contentView: UIView = {
         let view = UIView()
@@ -71,46 +66,19 @@ final class TopToolbar: UIView {
         target: self,
         action: #selector(sidebarTapped)
     )
-    private lazy var backButton = ToolbarButton(
-        buttonType: .back,
-        target: self,
-        action: #selector(backTapped)
-    )
-    private lazy var forwardButton = ToolbarButton(
-        buttonType: .forward,
-        target: self,
-        action: #selector(forwardTapped)
-    )
-    private lazy var libraryButton = ToolbarButton(
-        buttonType: .library,
-        target: self,
-        action: #selector(libraryTapped)
-    )
-    private lazy var downloadButton = ToolbarButton(
-        buttonType: .download,
-        target: self,
-        action: #selector(downloadsTapped)
-    )
-    private lazy var shareButton = ToolbarButton(
-        buttonType: .share,
-        target: self,
-        action: #selector(shareTapped)
-    )
-    private lazy var newTabButton = ToolbarButton(
-        buttonType: .newTab,
-        target: self,
-        action: #selector(newTabTapped)
-    )
-    private lazy var tabOverviewButton = ToolbarButton(
-        buttonType: .tabOverview,
-        target: self,
-        action: #selector(tabOverviewTapped)
-    )
+    private var itemButtons: [ToolbarItem: ToolbarButton] = [:]
+    private var trailingItems: [ToolbarItem] = []
     private let buttonMenus = ToolbarButtonMenus()
     
     private lazy var leadingButtons: UIStackView = {
-        downloadButton.isHidden = true
-        let stack = UIStackView(arrangedSubviews: [sidebarButton, downloadButton, backButton, forwardButton, libraryButton])
+        button(for: .downloads).isHidden = true
+        let stack = UIStackView(arrangedSubviews: [
+            sidebarButton,
+            button(for: .downloads),
+            button(for: .back),
+            button(for: .forward),
+            button(for: .library),
+        ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.spacing = UX.topToolbarButtonSpacing
@@ -119,7 +87,7 @@ final class TopToolbar: UIView {
     }()
     
     private lazy var trailingButtons: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [shareButton, newTabButton, tabOverviewButton])
+        let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.spacing = UX.topToolbarButtonSpacing
@@ -164,6 +132,8 @@ final class TopToolbar: UIView {
         configureAppearance()
         configureHierarchy()
         configureConstraints()
+        configureObservers()
+        arrangeTrailingButtons()
     }
     
     required init?(coder: NSCoder) {
@@ -218,7 +188,7 @@ final class TopToolbar: UIView {
     }
     
     func sharePopoverSourceView() -> UIView {
-        return shareButton
+        return button(for: .share)
     }
     
     func extendBackground(to bottomAnchor: NSLayoutYAxisAnchor) {
@@ -253,13 +223,13 @@ final class TopToolbar: UIView {
             leadingWidthConstraint.constant = isCompact ? 0 : leadingWidth(
                 interfaceIdiom: interfaceIdiom,
                 sidebarButtonVisible: sidebarButtonVisible,
-                showsDownloads: downloadButton.isShowingDownloads
+                showsDownloads: showsLeadingDownloadButton
             )
-            trailingWidthConstraint.constant = isCompact ? 0 : UX.topToolbarStandardButtonStackWidth
+            trailingWidthConstraint.constant = isCompact ? 0 : trailingWidth
             
             sidebarButton.isHidden = interfaceIdiom != .pad || !sidebarButtonVisible
-            libraryButton.isHidden = interfaceIdiom == .pad
-            downloadButton.isHidden = isCompact || !downloadButton.isShowingDownloads
+            button(for: .library).isHidden = interfaceIdiom == .pad
+            button(for: .downloads).isHidden = isCompact || !showsDownloadButton
             
             NSLayoutConstraint.deactivate(standardAddressBarConstraints + widthLimitedStandardAddressBarConstraints + compactAddressBarConstraints)
             isUsingStandardAddressBarWidthLimit = false
@@ -279,9 +249,33 @@ final class TopToolbar: UIView {
     // MARK: - Updates
     
     func updateNavigation(canGoBack: Bool, canGoForward: Bool, canShare: Bool) {
-        backButton.isEnabled = canGoBack
-        forwardButton.isEnabled = canGoForward
-        shareButton.isEnabled = canShare
+        button(for: .back).isEnabled = canGoBack
+        button(for: .forward).isEnabled = canGoForward
+        button(for: .share).isEnabled = canShare
+    }
+    
+    func updatePageActions(canUsePageTools: Bool, canShowReader: Bool, isBookmarked: Bool) {
+        button(for: .findInPage).isEnabled = canUsePageTools
+        button(for: .pageZoom).isEnabled = canUsePageTools
+        button(for: .reader).isEnabled = canShowReader
+        
+        button(for: .addBookmark).isEnabled = canUsePageTools
+        button(for: .addBookmark).setImage(
+            isBookmarked ? UIImage(named: "reynard.bookmark.fill") : UIImage(named: "reynard.bookmark"),
+            for: .normal
+        )
+    }
+    
+    func updateDownload(_ summary: DownloadStoreSummary) {
+        button(for: .downloads).applyDownloadSummary(summary)
+        updateButtonLayout()
+    }
+    
+    func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
+        button(for: .library).setImage(
+            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
+            for: .normal
+        )
     }
     
     func configureNavigationMenus(
@@ -289,8 +283,8 @@ final class TopToolbar: UIView {
         onSelect: @escaping (ToolbarButtonMenus.NavigationDirection, Int) -> Void
     ) {
         buttonMenus.installNavigationMenus(
-            on: backButton,
-            forwardButton: forwardButton,
+            on: button(for: .back),
+            forwardButton: button(for: .forward),
             itemsProvider: itemsProvider,
             onSelect: onSelect,
             isReversed: false
@@ -303,7 +297,7 @@ final class TopToolbar: UIView {
         onSelect: @escaping (UUID) -> Void
     ) {
         buttonMenus.installRecentlyClosedTabsMenu(
-            on: newTabButton,
+            on: button(for: .newTab),
             isAvailable: isAvailable,
             itemsProvider: itemsProvider,
             onSelect: onSelect
@@ -312,7 +306,7 @@ final class TopToolbar: UIView {
     
     func configureLibraryMenus(onSelect: @escaping (LibrarySection) -> Void) {
         buttonMenus.installLibraryMenus(
-            on: [sidebarButton, libraryButton],
+            on: [sidebarButton, button(for: .library)],
             onSelect: onSelect
         )
     }
@@ -325,24 +319,12 @@ final class TopToolbar: UIView {
         onNewTab: @escaping () -> Void
     ) {
         buttonMenus.installTabOverviewMenus(
-            on: [tabOverviewButton],
+            on: [button(for: .tabOverview)],
             tabCountProvider: tabCountProvider,
             onCloseAllTabs: onCloseAllTabs,
             onCloseTab: onCloseTab,
             onNewPrivateTab: onNewPrivateTab,
             onNewTab: onNewTab
-        )
-    }
-    
-    func updateDownload(_ summary: DownloadStoreSummary) {
-        downloadButton.applyDownloadSummary(summary)
-        updateDownloadButtonVisibility()
-    }
-    
-    func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
-        libraryButton.setImage(
-            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
-            for: .normal
         )
     }
     
@@ -363,13 +345,41 @@ final class TopToolbar: UIView {
     // MARK: - Action Wiring
     
     @objc private func sidebarTapped() { onSidebar?() }
-    @objc private func backTapped() { onBack?() }
-    @objc private func forwardTapped() { onForward?() }
-    @objc private func libraryTapped() { onLibrary?() }
-    @objc private func downloadsTapped() { onDownloads?() }
-    @objc private func shareTapped() { onShare?() }
-    @objc private func newTabTapped() { onNewTab?() }
-    @objc private func tabOverviewTapped() { onTabOverview?() }
+    
+    @objc private func itemTapped(_ sender: ToolbarButton) {
+        guard case .item(let item) = sender.toolbarButtonType else {
+            return
+        }
+        
+        onItem?(item)
+    }
+    
+    @objc private func toolbarItemsDidChange() {
+        arrangeTrailingButtons()
+        updateButtonLayout()
+    }
+    
+    // MARK: - Buttons
+    
+    private func button(for item: ToolbarItem) -> ToolbarButton {
+        if let button = itemButtons[item] {
+            return button
+        }
+        
+        let button = ToolbarButton(buttonType: .item(item), target: self, action: #selector(itemTapped(_:)))
+        itemButtons[item] = button
+        return button
+    }
+    
+    private func arrangeTrailingButtons() {
+        trailingItems = ToolbarPlacement.topToolbar.items
+        trailingButtons.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        trailingItems.forEach { trailingButtons.addArrangedSubview(button(for: $0)) }
+        
+        if !trailingItems.contains(.downloads) {
+            leadingButtons.insertArrangedSubview(button(for: .downloads), at: 1)
+        }
+    }
     
     // MARK: - View Setup
     
@@ -420,6 +430,27 @@ final class TopToolbar: UIView {
             trailingWidthConstraint,
             trailingButtons.heightAnchor.constraint(equalToConstant: UX.topToolbarButtonStackHeight),
         ])
+    }
+    
+    private func configureObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(toolbarItemsDidChange),
+            name: .toolbarItemsDidChange,
+            object: nil
+        )
+    }
+    
+    private var showsDownloadButton: Bool {
+        return trailingItems.contains(.downloads) || button(for: .downloads).isShowingDownloads
+    }
+    
+    private var showsLeadingDownloadButton: Bool {
+        return !trailingItems.contains(.downloads) && button(for: .downloads).isShowingDownloads
+    }
+    
+    private var trailingWidth: CGFloat {
+        return CGFloat(trailingItems.count) * UX.topToolbarTrailingButtonWidth
     }
     
     private func leadingWidth(
@@ -480,14 +511,15 @@ final class TopToolbar: UIView {
         isUsingStandardAddressBarWidthLimit = isEnabled
     }
     
-    private func updateDownloadButtonVisibility() {
+    private func updateButtonLayout() {
         let isCompact = layoutState == .compact
-        downloadButton.isHidden = layoutState != .standard || !downloadButton.isShowingDownloads
+        button(for: .downloads).isHidden = layoutState != .standard || !showsDownloadButton
         leadingWidthConstraint.constant = isCompact ? 0 : leadingWidth(
             interfaceIdiom: layoutInterfaceIdiom,
             sidebarButtonVisible: layoutSidebarButtonVisible,
-            showsDownloads: downloadButton.isShowingDownloads
+            showsDownloads: showsLeadingDownloadButton
         )
+        trailingWidthConstraint.constant = isCompact ? 0 : trailingWidth
         updateStandardAddressBarLayout()
         layoutIfNeeded()
     }

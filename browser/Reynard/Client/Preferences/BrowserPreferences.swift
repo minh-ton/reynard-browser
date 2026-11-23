@@ -1075,6 +1075,34 @@ final class BrowserPreferences {
             }
         }
         
+        static var bottomToolbarItems: [ToolbarItem] {
+            get {
+                guard let data = prefs.data(forSetting: "AppearanceSettings", key: "bottomToolbarItems"),
+                      let items = try? JSONDecoder().decode([ToolbarItem].self, from: data) else {
+                    return ToolbarPlacement.bottomToolbar.defaultItems
+                }
+                return items
+            }
+            set {
+                prefs.set(try? JSONEncoder().encode(newValue), forSetting: "AppearanceSettings", key: "bottomToolbarItems")
+                NotificationCenter.default.post(name: .toolbarItemsDidChange, object: nil)
+            }
+        }
+        
+        static var topToolbarItems: [ToolbarItem] {
+            get {
+                guard let data = prefs.data(forSetting: "AppearanceSettings", key: "topToolbarItems"),
+                      let items = try? JSONDecoder().decode([ToolbarItem].self, from: data) else {
+                    return ToolbarPlacement.topToolbar.defaultItems
+                }
+                return items
+            }
+            set {
+                prefs.set(try? JSONEncoder().encode(newValue), forSetting: "AppearanceSettings", key: "topToolbarItems")
+                NotificationCenter.default.post(name: .toolbarItemsDidChange, object: nil)
+            }
+        }
+        
     }
     
     // MARK: - JIT

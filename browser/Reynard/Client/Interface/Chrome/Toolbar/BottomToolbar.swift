@@ -32,12 +32,7 @@ final class BottomToolbar: UIView {
         case compact
     }
     
-    var onBack: (() -> Void)?
-    var onForward: (() -> Void)?
-    var onShare: (() -> Void)?
-    var onLibrary: (() -> Void)?
-    var onDownloads: (() -> Void)?
-    var onTabOverview: (() -> Void)?
+    var onItem: ((ToolbarItem) -> Void)?
     
     private let contentView: UIView = {
         let view = UIView()
@@ -76,16 +71,13 @@ final class BottomToolbar: UIView {
         return view
     }()
     
-    private lazy var backButton = ToolbarButton(buttonType: .back, target: self, action: #selector(backTapped))
-    private lazy var forwardButton = ToolbarButton(buttonType: .forward, target: self, action: #selector(forwardTapped))
-    private lazy var shareButton = ToolbarButton(buttonType: .share, target: self, action: #selector(shareTapped))
-    private lazy var libraryButton = ToolbarButton(buttonType: .library, target: self, action: #selector(libraryTapped))
-    private lazy var downloadButton = ToolbarButton(buttonType: .download, target: self, action: #selector(downloadsTapped))
-    private lazy var tabOverviewButton = ToolbarButton(buttonType: .tabOverview, target: self, action: #selector(tabOverviewTapped))
+    private var itemButtons: [ToolbarItem: ToolbarButton] = [:]
+    private var arrangedItems: [ToolbarItem] = []
+    private var downloadSummary: DownloadStoreSummary?
     private let buttonMenus = ToolbarButtonMenus()
     
     private lazy var buttons: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [backButton, forwardButton, shareButton, libraryButton, downloadButton, tabOverviewButton])
+        let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -116,6 +108,7 @@ final class BottomToolbar: UIView {
         configureAppearance()
         configureHierarchy()
         configureConstraints()
+        configureObservers()
         configureInitialState()
     }
     
@@ -171,7 +164,7 @@ final class BottomToolbar: UIView {
     }
     
     func sharePopoverSourceView() -> UIView {
-        return shareButton
+        return button(for: .share)
     }
     
     func apply(state: LayoutState, hidesButtons: Bool) {
@@ -200,41 +193,33 @@ final class BottomToolbar: UIView {
     // MARK: - Updates
     
     func updateNavigation(canGoBack: Bool, canGoForward: Bool, canShare: Bool) {
-        backButton.isEnabled = canGoBack
-        forwardButton.isEnabled = canGoForward
-        shareButton.isEnabled = canShare
+        button(for: .back).isEnabled = canGoBack
+        button(for: .forward).isEnabled = canGoForward
+        button(for: .share).isEnabled = canShare
     }
     
-    func configureNavigationMenus(
-        itemsProvider: @escaping (ToolbarButtonMenus.NavigationDirection) -> [GeckoSessionHistoryItem],
-        onSelect: @escaping (ToolbarButtonMenus.NavigationDirection, Int) -> Void
-    ) {
-        buttonMenus.installNavigationMenus(
-            on: backButton,
-            forwardButton: forwardButton,
-            itemsProvider: itemsProvider,
-            onSelect: onSelect
+    func updatePageActions(canUsePageTools: Bool, canShowReader: Bool, isBookmarked: Bool) {
+        button(for: .findInPage).isEnabled = canUsePageTools
+        button(for: .pageZoom).isEnabled = canUsePageTools
+        button(for: .reader).isEnabled = canShowReader
+        
+        button(for: .addBookmark).isEnabled = canUsePageTools
+        button(for: .addBookmark).setImage(
+            isBookmarked ? UIImage(named: "reynard.bookmark.fill") : UIImage(named: "reynard.bookmark"),
+            for: .normal
         )
     }
     
-    func configureLibraryMenus(onSelect: @escaping (LibrarySection) -> Void) {
-        buttonMenus.installLibraryMenus(on: [libraryButton], onSelect: onSelect)
+    func updateDownload(_ summary: DownloadStoreSummary) {
+        downloadSummary = summary
+        button(for: .downloads).applyDownloadSummary(summary)
+        arrangeButtons()
     }
     
-    func configureTabOverviewMenus(
-        tabCountProvider: @escaping () -> Int,
-        onCloseAllTabs: @escaping () -> Void,
-        onCloseTab: @escaping () -> Void,
-        onNewPrivateTab: @escaping () -> Void,
-        onNewTab: @escaping () -> Void
-    ) {
-        buttonMenus.installTabOverviewMenus(
-            on: [tabOverviewButton],
-            tabCountProvider: tabCountProvider,
-            onCloseAllTabs: onCloseAllTabs,
-            onCloseTab: onCloseTab,
-            onNewPrivateTab: onNewPrivateTab,
-            onNewTab: onNewTab
+    func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
+        button(for: .library).setImage(
+            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
+            for: .normal
         )
     }
     
@@ -249,26 +234,100 @@ final class BottomToolbar: UIView {
         contentView.alpha = alpha
     }
     
-    func updateDownload(_ summary: DownloadStoreSummary) {
-        downloadButton.applyDownloadSummary(summary)
-        downloadButton.isHidden = !downloadButton.isShowingDownloads
+    func configureNavigationMenus(
+        itemsProvider: @escaping (ToolbarButtonMenus.NavigationDirection) -> [GeckoSessionHistoryItem],
+        onSelect: @escaping (ToolbarButtonMenus.NavigationDirection, Int) -> Void
+    ) {
+        buttonMenus.installNavigationMenus(
+            on: button(for: .back),
+            forwardButton: button(for: .forward),
+            itemsProvider: itemsProvider,
+            onSelect: onSelect
+        )
     }
     
-    func setMenuButtonIndicatesUpdate(_ hasUpdate: Bool) {
-        libraryButton.setImage(
-            hasUpdate ? UIImage(named: "reynard.ellipsis.circle.badge") : UIImage(named: "reynard.ellipsis.circle"),
-            for: .normal
+    func configureRecentlyClosedTabsMenu(
+        isAvailable: @escaping () -> Bool,
+        itemsProvider: @escaping () -> [TabManagementStore.RecentlyClosedTabSnapshot],
+        onSelect: @escaping (UUID) -> Void
+    ) {
+        buttonMenus.installRecentlyClosedTabsMenu(
+            on: button(for: .newTab),
+            isAvailable: isAvailable,
+            itemsProvider: itemsProvider,
+            onSelect: onSelect
+        )
+    }
+    
+    func configureLibraryMenus(onSelect: @escaping (LibrarySection) -> Void) {
+        buttonMenus.installLibraryMenus(on: [button(for: .library)], onSelect: onSelect)
+    }
+    
+    func configureTabOverviewMenus(
+        tabCountProvider: @escaping () -> Int,
+        onCloseAllTabs: @escaping () -> Void,
+        onCloseTab: @escaping () -> Void,
+        onNewPrivateTab: @escaping () -> Void,
+        onNewTab: @escaping () -> Void
+    ) {
+        buttonMenus.installTabOverviewMenus(
+            on: [button(for: .tabOverview)],
+            tabCountProvider: tabCountProvider,
+            onCloseAllTabs: onCloseAllTabs,
+            onCloseTab: onCloseTab,
+            onNewPrivateTab: onNewPrivateTab,
+            onNewTab: onNewTab
         )
     }
     
     // MARK: - Action Wiring
     
-    @objc private func backTapped() { onBack?() }
-    @objc private func forwardTapped() { onForward?() }
-    @objc private func shareTapped() { onShare?() }
-    @objc private func libraryTapped() { onLibrary?() }
-    @objc private func downloadsTapped() { onDownloads?() }
-    @objc private func tabOverviewTapped() { onTabOverview?() }
+    @objc private func itemTapped(_ sender: ToolbarButton) {
+        guard case .item(let item) = sender.toolbarButtonType else {
+            return
+        }
+        
+        onItem?(item)
+    }
+    
+    @objc private func toolbarItemsDidChange() {
+        arrangeButtons()
+    }
+    
+    // MARK: - Buttons
+    
+    private func button(for item: ToolbarItem) -> ToolbarButton {
+        if let button = itemButtons[item] {
+            return button
+        }
+        
+        let button = ToolbarButton(buttonType: .item(item), target: self, action: #selector(itemTapped(_:)))
+        itemButtons[item] = button
+        return button
+    }
+    
+    private func arrangeButtons() {
+        var items = ToolbarPlacement.bottomToolbar.items
+        if !items.contains(.downloads),
+           let downloadSummary,
+           let menuIndex = items.firstIndex(of: .library) {
+            if items.count < ToolbarPlacement.bottomToolbar.maximumItemCount {
+                if downloadSummary.showsToolbarButton {
+                    items.insert(.downloads, at: menuIndex)
+                }
+            } else if downloadSummary.activeCount > 0 {
+                items[menuIndex] = .downloads
+            }
+        }
+        
+        guard items != arrangedItems else {
+            return
+        }
+        
+        arrangedItems = items
+        buttons.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        items.forEach { buttons.addArrangedSubview(button(for: $0)) }
+    }
     
     // MARK: - View Setup
     
@@ -325,9 +384,18 @@ final class BottomToolbar: UIView {
         ])
     }
     
+    private func configureObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(toolbarItemsDidChange),
+            name: .toolbarItemsDidChange,
+            object: nil
+        )
+    }
+    
     private func configureInitialState() {
-        shareButton.isEnabled = false
-        downloadButton.isHidden = true
+        button(for: .share).isEnabled = false
+        arrangeButtons()
     }
     
 }

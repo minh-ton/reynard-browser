@@ -63,9 +63,17 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     var onForward: (() -> Void)?
     var onShare: (() -> Void)?
     var onLibrary: (() -> Void)?
+    var onHistory: (() -> Void)?
+    var onBookmarks: (() -> Void)?
+    var onAddBookmark: (() -> Void)?
     var onDownloads: (() -> Void)?
+    var onSettings: (() -> Void)?
     var onNewTab: (() -> Void)?
     var onTabOverview: (() -> Void)?
+    var onShowReader: (() -> Void)?
+    var onShowFindInPage: (() -> Void)?
+    var onShowPageZoom: (() -> Void)?
+    var onHideToolbar: (() -> Void)?
     var onOverlayDismiss: (() -> Void)?
     var onPageZoomOut: (() -> Void)?
     var onPageZoomIn: (() -> Void)?
@@ -513,6 +521,19 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         bottomToolbar.updateNavigation(canGoBack: canGoBack, canGoForward: canGoForward, canShare: canShare)
     }
     
+    func updatePageActions(canUsePageTools: Bool, canShowReader: Bool, isBookmarked: Bool) {
+        topToolbar.updatePageActions(
+            canUsePageTools: canUsePageTools,
+            canShowReader: canShowReader,
+            isBookmarked: isBookmarked
+        )
+        bottomToolbar.updatePageActions(
+            canUsePageTools: canUsePageTools,
+            canShowReader: canShowReader,
+            isBookmarked: isBookmarked
+        )
+    }
+    
     func configureNavigationMenus(
         itemsProvider: @escaping (ToolbarButtonMenus.NavigationDirection) -> [GeckoSessionHistoryItem],
         onSelect: @escaping (ToolbarButtonMenus.NavigationDirection, Int) -> Void
@@ -527,6 +548,11 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         onSelect: @escaping (UUID) -> Void
     ) {
         topToolbar.configureRecentlyClosedTabsMenu(
+            isAvailable: isAvailable,
+            itemsProvider: itemsProvider,
+            onSelect: onSelect
+        )
+        bottomToolbar.configureRecentlyClosedTabsMenu(
             isAvailable: isAvailable,
             itemsProvider: itemsProvider,
             onSelect: onSelect
@@ -589,20 +615,8 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         }
         
         topToolbar.onSidebar = { [weak self] in self?.onSidebar?() }
-        topToolbar.onBack = { [weak self] in self?.onBack?() }
-        topToolbar.onForward = { [weak self] in self?.onForward?() }
-        topToolbar.onShare = { [weak self] in self?.onShare?() }
-        topToolbar.onLibrary = { [weak self] in self?.onLibrary?() }
-        topToolbar.onDownloads = { [weak self] in self?.onDownloads?() }
-        topToolbar.onNewTab = { [weak self] in self?.onNewTab?() }
-        topToolbar.onTabOverview = { [weak self] in self?.onTabOverview?() }
-        
-        bottomToolbar.onBack = { [weak self] in self?.onBack?() }
-        bottomToolbar.onForward = { [weak self] in self?.onForward?() }
-        bottomToolbar.onShare = { [weak self] in self?.onShare?() }
-        bottomToolbar.onLibrary = { [weak self] in self?.onLibrary?() }
-        bottomToolbar.onDownloads = { [weak self] in self?.onDownloads?() }
-        bottomToolbar.onTabOverview = { [weak self] in self?.onTabOverview?() }
+        topToolbar.onItem = { [weak self] item in self?.performToolbarItem(item) }
+        bottomToolbar.onItem = { [weak self] item in self?.performToolbarItem(item) }
         
         actionBar.onPageZoomOut = { [weak self] in self?.onPageZoomOut?() }
         actionBar.onPageZoomIn = { [weak self] in self?.onPageZoomIn?() }
@@ -617,6 +631,26 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
     
     @objc private func expandToolbar() {
         onToolbarExpansionRequested?()
+    }
+    
+    private func performToolbarItem(_ item: ToolbarItem) {
+        switch item {
+        case .back: onBack?()
+        case .forward: onForward?()
+        case .share: onShare?()
+        case .library: onLibrary?()
+        case .tabOverview: onTabOverview?()
+        case .newTab: onNewTab?()
+        case .history: onHistory?()
+        case .bookmarks: onBookmarks?()
+        case .addBookmark: onAddBookmark?()
+        case .downloads: onDownloads?()
+        case .settings: onSettings?()
+        case .reader: onShowReader?()
+        case .findInPage: onShowFindInPage?()
+        case .pageZoom: onShowPageZoom?()
+        case .hideToolbar: onHideToolbar?()
+        }
     }
     
     // MARK: - Transitions
