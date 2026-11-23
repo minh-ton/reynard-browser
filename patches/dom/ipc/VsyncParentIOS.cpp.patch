@@ -1,9 +1,9 @@
 diff --git a/dom/ipc/VsyncParentIOS.cpp b/dom/ipc/VsyncParentIOS.cpp
 new file mode 100644
-index 000000000000..f7c7f4494172
+index 000000000000..606574cd30e7
 --- /dev/null
 +++ b/dom/ipc/VsyncParentIOS.cpp
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,65 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -13,7 +13,6 @@ index 000000000000..f7c7f4494172
 +
 +// Referenced from
 +// https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/graphics/AnimationFrameRate.cpp
-+// https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/cocoa/ThermalMitigationNotifier.mm
 +
 +#include "VsyncParentIOS.h"
 +
@@ -30,7 +29,6 @@ index 000000000000..f7c7f4494172
 +namespace mozilla::dom {
 +
 +static Atomic<bool, Relaxed> sIsLowPowerModeEnabled(false);
-+static Atomic<bool, Relaxed> sIsThermalMitigationEnabled(false);
 +
 +class SystemPowerStateObserver final : public nsIObserver {
 + public:
@@ -46,14 +44,7 @@ index 000000000000..f7c7f4494172
 +NS_IMETHODIMP
 +SystemPowerStateObserver::Observe(nsISupports* aSubject, const char* aTopic,
 +                                  const char16_t* aData) {
-+  nsDependentString state(aData);
-+  if (!strcmp(aTopic, "system-power-state-changed")) {
-+    sIsLowPowerModeEnabled = state.EqualsLiteral("low-power");
-+  } else {
-+    sIsThermalMitigationEnabled =
-+        state.EqualsLiteral("serious") || state.EqualsLiteral("critical");
-+  }
-+
++  sIsLowPowerModeEnabled = nsDependentString(aData).EqualsLiteral("low-power");
 +  return NS_OK;
 +}
 +
@@ -65,13 +56,12 @@ index 000000000000..f7c7f4494172
 +  nsCOMPtr<nsIObserverService> observerService = services::GetObserverService();
 +  RefPtr<SystemPowerStateObserver> observer = new SystemPowerStateObserver();
 +  observerService->AddObserver(observer, "system-power-state-changed", false);
-+  observerService->AddObserver(observer, "system-thermal-state-changed", false);
 +}
 +
 +int32_t VsyncParentIOS::GetFrameRateDivisor(const TimeDuration& aVsyncRate) {
 +  double fullSpeedRatio = 1000.0 / aVsyncRate.ToMilliseconds() / 60.0;
 +  int32_t divisor = std::max(1, int32_t(std::ceil(fullSpeedRatio - 0.5)));
-+  if (sIsLowPowerModeEnabled || sIsThermalMitigationEnabled) {
++  if (sIsLowPowerModeEnabled) {
 +    divisor *= 2;
 +  }
 +
