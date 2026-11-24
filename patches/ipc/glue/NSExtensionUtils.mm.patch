@@ -1,9 +1,9 @@
 diff --git a/ipc/glue/NSExtensionUtils.mm b/ipc/glue/NSExtensionUtils.mm
 new file mode 100644
-index 000000000000..5ceaae76a77d
+index 000000000000..723d09eac3bc
 --- /dev/null
 +++ b/ipc/glue/NSExtensionUtils.mm
-@@ -0,0 +1,408 @@
+@@ -0,0 +1,479 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -118,6 +118,65 @@ index 000000000000..5ceaae76a77d
 +  return [[NSBundle bundleWithURL:extensionURL] bundleIdentifier];
 +}
 +
++static UIWindow* _Nullable ForegroundWindow() {
++  for (UIScene* scene in UIApplication.sharedApplication.connectedScenes) {
++    if (scene.activationState != UISceneActivationStateForegroundActive ||
++        ![scene isKindOfClass:UIWindowScene.class]) {
++      continue;
++    }
++
++    UIWindow* visibleWindow = nil;
++    for (UIWindow* window in ((UIWindowScene*)scene).windows) {
++      if (window.hidden || window.windowLevel != UIWindowLevelNormal) {
++        continue;
++      }
++      if (window.isKeyWindow) {
++        return window;
++      }
++      if (!visibleWindow) {
++        visibleWindow = window;
++      }
++    }
++
++    if (visibleWindow) {
++      return visibleWindow;
++    }
++  }
++  return nil;
++}
++
++static void MoveToForegroundWindow(UIView* view) {
++  UIWindowScene* windowScene = view.window.windowScene;
++  if (windowScene && !view.window.hidden &&
++      windowScene.activationState == UISceneActivationStateForegroundActive) {
++    return;
++  }
++
++  if (UIWindow* foregroundWindow = ForegroundWindow()) {
++    [foregroundWindow addSubview:view];
++  }
++}
++
++static void HostView(UIView* view, NSMutableArray* observers) {
++  view.frame = CGRectMake(0, 0, 1, 1);
++  view.userInteractionEnabled = NO;
++  MoveToForegroundWindow(view);
++
++  for (NSNotificationName name in @[
++         UISceneDidActivateNotification, UISceneDidEnterBackgroundNotification,
++         UISceneDidDisconnectNotification, UIWindowDidBecomeHiddenNotification
++       ]) {
++    id observer = [NSNotificationCenter.defaultCenter
++        addObserverForName:name
++                    object:nil
++                     queue:NSOperationQueue.mainQueue
++                usingBlock:^(NSNotification* notification) {
++                  MoveToForegroundWindow(view);
++                }];
++    [observers addObject:observer];
++  }
++}
++
 +@interface ExtensionProcess : NSObject {
 + @private
 +  NSExtension* mExtension;
@@ -126,6 +185,7 @@ index 000000000000..5ceaae76a77d
 +  NSXPCConnection* mConnection;
 +  NSUUID* mRequestIdentifier;
 +  UIViewController* mRemoteViewController;
++  NSMutableArray* mHostObservers;
 +  xpc_connection_t mLibXPCConnection;
 +  bool mInvalidated;
 +}
@@ -241,16 +301,21 @@ index 000000000000..5ceaae76a77d
 +                                    return;
 +                                  }
 +
++                                  if (mInvalidated) {
++                                    return;
++                                  }
++
 +                                  mRequestIdentifier =
 +                                      [requestIdentifier retain];
 +                                  mRemoteViewController =
 +                                      [viewController retain];
++                                  mHostObservers =
++                                      [[NSMutableArray alloc] init];
++                                  NSMutableArray* hostObservers =
++                                      mHostObservers;
 +                                  dispatch_async(dispatch_get_main_queue(), ^{
-+                                    UIView* view = viewController.view;
-+                                    view.frame = CGRectMake(0, 0, 1, 1);
-+                                    view.userInteractionEnabled = NO;
-+                                    [UIApplication.sharedApplication.windows
-+                                            .firstObject addSubview:view];
++                                    HostView(viewController.view,
++                                             hostObservers);
 +                                  });
 +                                }];
 +      return;
@@ -309,8 +374,14 @@ index 000000000000..5ceaae76a77d
 +
 +  if (mRemoteViewController) {
 +    UIViewController* viewController = mRemoteViewController;
++    NSMutableArray* hostObservers = mHostObservers;
 +    mRemoteViewController = nil;
++    mHostObservers = nil;
 +    dispatch_async(dispatch_get_main_queue(), ^{
++      for (id observer in hostObservers) {
++        [NSNotificationCenter.defaultCenter removeObserver:observer];
++      }
++      [hostObservers release];
 +      [viewController.view removeFromSuperview];
 +      [viewController release];
 +    });
