@@ -190,6 +190,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
         AlertPresenter.show(
             title: nil,
             message: NSLocalizedString("This will clear selected browsing data. This action cannot be undone.", comment: ""),
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Clear", comment: "Destructive button"), style: .destructive) { [weak self] in
                     self?.clearSelectedData()
@@ -219,7 +220,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
         }
         
         if selectedCategories.contains(.openedTabs) {
-            clearOpenedTabs()
+            BrowserWindowManager.shared.removeAllTabs()
         }
         
         if selectedCategories.contains(.browsingHistory) {
@@ -231,17 +232,9 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
         }
     }
     
-    private func clearOpenedTabs() {
-        guard let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
-            return
-        }
-        
-        browserViewController.tabManager.removeAllTabs(mode: .regular)
-        browserViewController.tabManager.removeAllTabs(mode: .private)
-        browserViewController.tabManager.createTab(selecting: true, mode: .regular)
-    }
-    
     private func clearSelectedEngineData(for selectedCategories: Set<BrowsingDataCategory>) async {
+        let window = view.window
+        
         do {
             if selectedCategories.contains(.browsingHistory) {
                 try await GeckoStorageController.clearHistory(since: nil)
@@ -259,7 +252,7 @@ final class ClearBrowsingDataViewController: SettingsTableViewController {
                 try await GeckoStorageController.clearData(flags: GeckoStorageClearFlags.allCaches)
             }
         } catch {
-            AlertPresenter.show(title: NSLocalizedString("Couldn’t Clear Browsing Data", comment: ""), message: "\(error)")
+            AlertPresenter.show(title: NSLocalizedString("Couldn’t Clear Browsing Data", comment: ""), message: "\(error)", in: window)
         }
     }
 }

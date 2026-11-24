@@ -62,7 +62,7 @@ final class UniversalLinkManager {
         }
         
         guard URLUtils.isWebURL(url) else {
-            guard await confirmOpen() else {
+            guard await confirmOpen(in: session.engineView?.window) else {
                 return .deny
             }
             return await open(url, universalLinksOnly: false) ? .deny : .allow
@@ -118,11 +118,16 @@ final class UniversalLinkManager {
     }
     
     @MainActor
-    private func confirmOpen() async -> Bool {
+    private func confirmOpen(in window: UIWindow?) async -> Bool {
+        guard let window else {
+            return false
+        }
+        
         return await withCheckedContinuation { continuation in
             AlertPresenter.show(
                 title: NSLocalizedString("Open this page in another app?", comment: ""),
                 message: nil,
+                in: window,
                 buttons: [
                     AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: ""), style: .cancel) {
                         continuation.resume(returning: false)

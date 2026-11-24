@@ -9,6 +9,8 @@ import GeckoView
 import UIKit
 
 struct PermissionPromptPresenter: PermissionPromptPresenting {
+    let window: () -> UIWindow?
+    
     @MainActor
     func request(
         title: String,
@@ -16,7 +18,7 @@ struct PermissionPromptPresenter: PermissionPromptPresenting {
         cancelTitle: String,
         for session: GeckoSession
     ) async -> Bool {
-        guard let presenter = UIApplication.shared.topViewController() else {
+        guard let presenter = UIApplication.shared.topViewController(in: window()) else {
             return false
         }
         

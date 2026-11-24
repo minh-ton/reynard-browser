@@ -52,6 +52,11 @@ protocol ReaderModeControllerDelegate: AnyObject {
 }
 
 final class ReaderModeController: AddonMessageDelegate, AddonPortDelegate {
+    struct PortHandoff {
+        let contentPort: AddonPort?
+        let activePort: AddonPort?
+    }
+    
     private static let extensionID = "readerview@mozac.org"
     private static let extensionLocation = "resource://app/extensions/readerview/"
     private static let contentPortName = "mozacReaderview"
@@ -85,6 +90,24 @@ final class ReaderModeController: AddonMessageDelegate, AddonPortDelegate {
                 nativeApp: nativeApp
             )
         }
+    }
+    
+    func detach(_ session: GeckoSession) -> PortHandoff {
+        let sessionID = ObjectIdentifier(session)
+        return PortHandoff(
+            contentPort: contentPorts.removeValue(forKey: sessionID),
+            activePort: activePorts.removeValue(forKey: sessionID)
+        )
+    }
+    
+    func attach(_ session: GeckoSession, ports: PortHandoff) {
+        registerMessageHandlers(for: session)
+        
+        let sessionID = ObjectIdentifier(session)
+        ports.contentPort?.delegate = self
+        ports.activePort?.delegate = self
+        contentPorts[sessionID] = ports.contentPort
+        activePorts[sessionID] = ports.activePort
     }
     
     @discardableResult

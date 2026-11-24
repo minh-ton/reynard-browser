@@ -55,4 +55,12 @@ final class WebsiteModeSettingManager {
     func clearWebsiteOverrides(for tabID: UUID) {
         websiteMode.clearOverrides(for: tabID)
     }
+    
+    func takeWebsiteOverrides(for tabID: UUID) -> [String: Bool]? {
+        return websiteMode.takeOverrides(for: tabID)
+    }
+    
+    func restoreWebsiteOverrides(_ overrides: [String: Bool]?, for tabID: UUID) {
+        websiteMode.restoreOverrides(overrides, for: tabID)
+    }
 }

@@ -33,10 +33,10 @@ final class PagePrintActivity: UIActivity {
     override func perform() {
         Task { @MainActor in
             do {
-                let pdfFileURL = try await PagePrintPreparationAlert.prepare {
+                let pdfFileURL = try await PagePrintPreparationAlert.prepare(in: session.engineView?.window) {
                     try await self.session.printToPDF()
                 }
-                try await PagePrintPresenter.present(pdfFileURL: pdfFileURL, jobName: jobName)
+                try await PagePrintPresenter.present(pdfFileURL: pdfFileURL, jobName: jobName, in: session.engineView?.window)
                 activityDidFinish(true)
             } catch {
                 activityDidFinish(false)

@@ -63,7 +63,7 @@ extension FilePicker {
     
     @available(iOS 14.0, *)
     private func presentPhotoLibraryPicker() {
-        guard let presenter = UIApplication.shared.topViewController(),
+        guard let presenter = UIApplication.shared.topViewController(in: geckoView?.window),
               let filter = photoLibraryFilter else {
             finish(with: nil)
             return
@@ -82,7 +82,7 @@ extension FilePicker {
     }
     
     private func presentLegacyMediaPicker(sourceType: UIImagePickerController.SourceType) {
-        guard let presenter = UIApplication.shared.topViewController() else {
+        guard let presenter = UIApplication.shared.topViewController(in: geckoView?.window) else {
             finish(with: nil)
             return
         }

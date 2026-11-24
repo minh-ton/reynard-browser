@@ -18,10 +18,6 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         return tabCount + (includesInsertionPlaceholder ? 1 : 0)
     }
     
-    func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
-        !isInsertionPlaceholder(in: collectionView, at: indexPath)
-    }
-    
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         if isInsertionPlaceholder(in: collectionView, at: indexPath) {
             return insertionPlaceholderCell(in: collectionView, at: indexPath)
@@ -66,20 +62,6 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
     
     func collectionView(
         _ collectionView: UICollectionView,
-        moveItemAt sourceIndexPath: IndexPath,
-        to destinationIndexPath: IndexPath
-    ) {
-        guard let tabMode = tabMode(for: collectionView) else { return }
-        tabOverview?.dataSource?.moveTab(
-            from: sourceIndexPath.item,
-            to: destinationIndexPath.item,
-            mode: tabMode.tabMode
-        )
-        refreshTabIdentitySnapshot()
-    }
-    
-    func collectionView(
-        _ collectionView: UICollectionView,
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
@@ -102,14 +84,6 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
     }
     
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let longPressGesture = gestureRecognizer as? UILongPressGestureRecognizer,
-           let collectionView = longPressGesture.view as? UICollectionView,
-           let indexPath = collectionView.indexPathForItem(at: longPressGesture.location(in: collectionView)),
-           let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard {
-            let locationInCard = collectionView.convert(longPressGesture.location(in: collectionView), to: tabCard)
-            return !tabCard.isCloseButton(at: locationInCard)
-        }
-        
         if let panGesture = gestureRecognizer as? UIPanGestureRecognizer,
            let collectionView = panGesture.view as? UICollectionView {
             let velocity = panGesture.velocity(in: collectionView)
@@ -139,5 +113,76 @@ extension TabOverviewCollection: UICollectionViewDataSource, UICollectionViewDel
         placeholderCell.contentView.alpha = 0
         placeholderCell.backgroundColor = .clear
         return placeholderCell
+    }
+}
+
+extension TabOverviewCollection: UICollectionViewDragDelegate {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        itemsForBeginning session: UIDragSession,
+        at indexPath: IndexPath
+    ) -> [UIDragItem] {
+        guard let tabMode = tabMode(for: collectionView),
+              let tab = tabs(for: tabMode)[safe: indexPath.item],
+              let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard,
+              !tabCard.isCloseButton(at: session.location(in: tabCard)) else {
+            return []
+        }
+        
+        return [UIDragItem(tab: tab)]
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        dragPreviewParametersForItemAt indexPath: IndexPath
+    ) -> UIDragPreviewParameters? {
+        let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard
+        return tabCard?.makeDragPreviewParameters()
+    }
+}
+
+extension TabOverviewCollection: UICollectionViewDropDelegate {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        dropSessionDidUpdate session: UIDropSession,
+        withDestinationIndexPath destinationIndexPath: IndexPath?
+    ) -> UICollectionViewDropProposal {
+        guard let tab = session.localDragSession?.items.first?.draggedTab,
+              tab.mode == tabMode(for: collectionView)?.tabMode else {
+            return UICollectionViewDropProposal(operation: .forbidden)
+        }
+        
+        return UICollectionViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, performDropWith coordinator: UICollectionViewDropCoordinator) {
+        guard let tabMode = tabMode(for: collectionView),
+              let item = coordinator.items.first,
+              let tab = item.dragItem.draggedTab else {
+            return
+        }
+        
+        let tabCount = tabs(for: tabMode).count
+        guard let sourceIndexPath = item.sourceIndexPath else {
+            tabOverview?.dataSource?.moveTab(withID: tab.id, to: coordinator.destinationIndexPath?.item ?? tabCount)
+            return
+        }
+        
+        let destinationItem = min(coordinator.destinationIndexPath?.item ?? tabCount, tabCount - 1)
+        let destinationIndexPath = IndexPath(item: destinationItem, section: 0)
+        collectionView.performBatchUpdates {
+            tabOverview?.dataSource?.moveTab(from: sourceIndexPath.item, to: destinationItem, mode: tabMode.tabMode)
+            collectionView.moveItem(at: sourceIndexPath, to: destinationIndexPath)
+        }
+        refreshTabIdentitySnapshot()
+        coordinator.drop(item.dragItem, toItemAt: destinationIndexPath)
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        dropPreviewParametersForItemAt indexPath: IndexPath
+    ) -> UIDragPreviewParameters? {
+        let tabCard = collectionView.cellForItem(at: indexPath) as? TabOverviewCard
+        return tabCard?.makeDragPreviewParameters()
     }
 }

@@ -9,6 +9,7 @@ import UIKit
 
 protocol DownloadsCoordinatorDelegate: AnyObject {
     var downloadsShouldRefreshLayoutForStoreChange: Bool { get }
+    var downloadsConfirmationWindow: UIWindow? { get }
     
     func downloadsCoordinator(_ coordinator: DownloadsCoordinator, didUpdate summary: DownloadStoreSummary)
     func downloadsCoordinatorDidRequestLayoutRefresh(_ coordinator: DownloadsCoordinator)
@@ -21,6 +22,7 @@ final class DownloadsCoordinator {
     }
     
     private weak var delegate: DownloadsCoordinatorDelegate?
+    private let initiatorID = UUID()
     private var confirmationQueue: [ConfirmationRequest] = []
     private var isShowingConfirmationAlert = false
     private var storeObserver: NSObjectProtocol?
@@ -50,7 +52,7 @@ final class DownloadsCoordinator {
     }
     
     func syncToolbarButtonState() {
-        let summary = DownloadStore.shared.currentSnapshot().summary
+        let summary = DownloadStore.shared.summary(for: initiatorID)
         delegate?.downloadsCoordinator(self, didUpdate: summary)
         if delegate?.downloadsShouldRefreshLayoutForStoreChange == true {
             delegate?.downloadsCoordinatorDidRequestLayoutRefresh(self)
@@ -60,18 +62,18 @@ final class DownloadsCoordinator {
     // MARK: - Download Confirmation
     
     func enqueueConfirmation(_ pendingDownload: DownloadStore.PendingDownload) {
-        queueConfirmation(pendingDownload) { shouldStart in
+        queueConfirmation(pendingDownload) { [initiatorID] shouldStart in
             if shouldStart {
-                DownloadStore.shared.startDownload(pendingDownload)
+                DownloadStore.shared.startDownload(pendingDownload, initiatorID: initiatorID)
             }
         }
     }
     
     func confirm(_ pendingDownload: DownloadStore.PendingDownload) async -> Bool {
         return await withCheckedContinuation { continuation in
-            queueConfirmation(pendingDownload) { shouldStart in
+            queueConfirmation(pendingDownload) { [initiatorID] shouldStart in
                 if shouldStart {
-                    DownloadStore.shared.startDownload(pendingDownload)
+                    DownloadStore.shared.startDownload(pendingDownload, initiatorID: initiatorID)
                 }
                 continuation.resume(returning: shouldStart)
             }
@@ -80,12 +82,12 @@ final class DownloadsCoordinator {
     
     func confirmWebExtensionDownload(_ pendingDownload: DownloadStore.PendingDownload) async -> DownloadStore.WebExtensionDownloadItem? {
         return await withCheckedContinuation { continuation in
-            queueConfirmation(pendingDownload) { shouldStart in
+            queueConfirmation(pendingDownload) { [initiatorID] shouldStart in
                 guard shouldStart else {
                     continuation.resume(returning: nil)
                     return
                 }
-                continuation.resume(returning: DownloadStore.shared.startDownload(pendingDownload))
+                continuation.resume(returning: DownloadStore.shared.startDownload(pendingDownload, initiatorID: initiatorID))
             }
         }
     }
@@ -111,6 +113,7 @@ final class DownloadsCoordinator {
         AlertPresenter.show(
             title: String(format: NSLocalizedString("Do you want to download \"%@\"?", comment: "File name"), request.download.fileName),
             message: nil,
+            in: delegate?.downloadsConfirmationWindow,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: ""), style: .cancel) { [weak self] in
                     self?.resolveConfirmation(shouldStartDownload: false)

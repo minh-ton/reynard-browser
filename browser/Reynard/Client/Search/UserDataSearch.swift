@@ -27,6 +27,12 @@ struct UserDataSearchResults {
 }
 
 final class UserDataSearch {
+    struct OpenTab {
+        let id: UUID
+        let title: String
+        let url: String?
+    }
+    
     private enum Limits {
         static let bestMatchCandidateCount = 10
         static let resultCount = 5
@@ -34,51 +40,27 @@ final class UserDataSearch {
     
     private let bookmarkStore: BookmarkStore
     private let historyStore: HistoryStore
-    private let tabManagementStore: TabManagementStore
     
     init(
         bookmarkStore: BookmarkStore = .shared,
-        historyStore: HistoryStore = .shared,
-        tabManagementStore: TabManagementStore = .shared
+        historyStore: HistoryStore = .shared
     ) {
         self.bookmarkStore = bookmarkStore
         self.historyStore = historyStore
-        self.tabManagementStore = tabManagementStore
     }
     
     // MARK: - Search
     
-    func search(
-        query: String,
-        activeTabMode: TabMode?,
-        excludingTabID: UUID?
-    ) -> UserDataSearchResults {
-        let bestMatch = findBestMatch(
-            query: query,
-            activeTabMode: activeTabMode,
-            excludingTabID: excludingTabID
-        )
-        let results = findResults(
-            query: query,
-            activeTabMode: activeTabMode,
-            bestMatch: bestMatch,
-            excludingTabID: excludingTabID
-        )
+    func search(query: String, openTabs: [OpenTab]) -> UserDataSearchResults {
+        let bestMatch = findBestMatch(query: query, openTabs: openTabs)
+        let results = findResults(query: query, openTabs: openTabs, bestMatch: bestMatch)
         return UserDataSearchResults(bestMatch: bestMatch, results: results)
     }
     
-    private func findBestMatch(
-        query: String,
-        activeTabMode: TabMode?,
-        excludingTabID: UUID?
-    ) -> UserDataSearchResult? {
+    private func findBestMatch(query: String, openTabs: [OpenTab]) -> UserDataSearchResult? {
         let limit = Limits.bestMatchCandidateCount
         let tabMatches = Prefs.SearchSettings.searchOpenedTabs
-        ? tabManagementStore.tabs(
-            matching: query,
-            limit: limit,
-            isPrivate: activeTabMode == .private
-        ).filter { $0.id != excludingTabID }
+        ? matchingOpenTabs(openTabs, query: query, limit: limit)
         : []
         let historyMatches = Prefs.SearchSettings.searchBrowsingHistory
         ? historyStore.search(matching: query, limit: limit).items
@@ -103,17 +85,12 @@ final class UserDataSearch {
     
     private func findResults(
         query: String,
-        activeTabMode: TabMode?,
-        bestMatch: UserDataSearchResult?,
-        excludingTabID: UUID?
+        openTabs: [OpenTab],
+        bestMatch: UserDataSearchResult?
     ) -> [UserDataSearchResult] {
         let limit = Limits.resultCount
         let tabMatches = Prefs.SearchSettings.searchOpenedTabs
-        ? tabManagementStore.tabs(
-            matching: query,
-            limit: limit,
-            isPrivate: activeTabMode == .private
-        ).filter { $0.id != excludingTabID }
+        ? matchingOpenTabs(openTabs, query: query, limit: limit)
         : []
         let historyMatches = Prefs.SearchSettings.searchBrowsingHistory
         ? historyStore.search(matching: query, limit: limit).items
@@ -132,6 +109,24 @@ final class UserDataSearch {
         return SearchRanking.rankedMatches(from: matches, query: query, limit: limit)
     }
     
+    private func matchingOpenTabs(_ openTabs: [OpenTab], query: String, limit: Int) -> [OpenTab] {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedQuery.isEmpty, limit > 0 else {
+            return []
+        }
+        
+        let strippedQuery = URLUtils.normalizedURLMatchString(from: normalizedQuery)
+        let matches = openTabs.lazy.filter { tab in
+            let title = tab.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let urlValue = tab.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let strippedURL = URLUtils.normalizedURLMatchString(from: urlValue)
+            let titleMatches = !title.isEmpty && title.contains(normalizedQuery)
+            let urlMatches = !strippedURL.isEmpty && !strippedQuery.isEmpty && strippedURL.hasPrefix(strippedQuery)
+            return titleMatches || urlMatches
+        }
+        return Array(matches.prefix(limit))
+    }
+    
     // MARK: - Result Mapping
     
     private func bookmarkResult(from bookmark: BookmarkSnapshot) -> UserDataSearchResult {
@@ -144,7 +139,7 @@ final class UserDataSearch {
         )
     }
     
-    private func tabResult(from tab: TabManagementStore.TabSnapshot) -> UserDataSearchResult? {
+    private func tabResult(from tab: OpenTab) -> UserDataSearchResult? {
         guard let urlString = tab.url, let url = URL(string: urlString) else {
             return nil
         }

@@ -63,14 +63,17 @@ extension UIApplication {
     }
     
     func topViewController() -> UIViewController? {
-        let rootViewController = connectedScenes
+        let keyWindow = connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .filter { $0.activationState == .foregroundActive }
             .flatMap(\.windows)
-            .first(where: \.isKeyWindow)?
-            .rootViewController
+            .first(where: \.isKeyWindow)
         
-        guard let rootViewController else {
+        return topViewController(in: keyWindow)
+    }
+    
+    func topViewController(in window: UIWindow?) -> UIViewController? {
+        guard let rootViewController = window?.rootViewController else {
             return nil
         }
         

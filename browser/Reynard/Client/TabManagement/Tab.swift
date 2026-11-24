@@ -11,7 +11,6 @@ import UIKit
 final class Tab {
     let id: UUID
     var session: GeckoSession
-    let sessionHandler: TabSessionHandler
     var title: String
     var url: String?
     let createdAt: Date?
@@ -23,6 +22,12 @@ final class Tab {
     
     var mode: TabMode {
         return isPrivate ? .private : .regular
+    }
+    
+    var sessionHandler: TabSessionHandler {
+        didSet {
+            sessionHandler.tab = self
+        }
     }
     
     init(

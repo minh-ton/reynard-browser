@@ -19,6 +19,8 @@ protocol SystemMediaSessionPlaybackObserver: AnyObject {
 }
 
 final class SystemMediaSession: MediaSessionDelegate {
+    static let shared = SystemMediaSession()
+    
     enum PlaybackState {
         case none
         case paused
@@ -37,6 +39,14 @@ final class SystemMediaSession: MediaSessionDelegate {
         }
     }
     
+    private final class WeakPlaybackObserver {
+        weak var value: SystemMediaSessionPlaybackObserver?
+        
+        init(_ value: SystemMediaSessionPlaybackObserver) {
+            self.value = value
+        }
+    }
+    
     private weak var activeSession: GeckoSession?
     private weak var selectedSession: GeckoSession?
     private let nowPlayingCenter = MPNowPlayingInfoCenter.default()
@@ -46,7 +56,7 @@ final class SystemMediaSession: MediaSessionDelegate {
     private var interruptedPlaybackSessions: Set<ObjectIdentifier> = []
     private var preservedPlaybackSessions: Set<ObjectIdentifier> = []
     private var commandTargets: [Any] = []
-    weak var playbackObserver: SystemMediaSessionPlaybackObserver?
+    private var playbackObservers: [WeakPlaybackObserver] = []
     
     struct Snapshot {
         let session: GeckoSession
@@ -64,8 +74,7 @@ final class SystemMediaSession: MediaSessionDelegate {
         )
     }
     
-    init(playbackObserver: SystemMediaSessionPlaybackObserver) {
-        self.playbackObserver = playbackObserver
+    private init() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAudioSessionInterruption(_:)),
@@ -89,9 +98,14 @@ final class SystemMediaSession: MediaSessionDelegate {
         unregisterRemoteCommands()
     }
     
+    func addPlaybackObserver(_ observer: SystemMediaSessionPlaybackObserver) {
+        playbackObservers.removeAll { $0.value == nil || $0.value === observer }
+        playbackObservers.append(WeakPlaybackObserver(observer))
+    }
+    
     func onActivated(session: GeckoSession) {
         _ = state(for: session)
-        playbackObserver?.systemMediaSessionDidActivate(for: session)
+        notifyPlaybackObservers { $0.systemMediaSessionDidActivate(for: session) }
     }
     
     func onDeactivated(session: GeckoSession) {
@@ -250,7 +264,12 @@ final class SystemMediaSession: MediaSessionDelegate {
     
     private func notifyPlaybackStateChanged(for session: GeckoSession) {
         let playbackState = sessionStates[ObjectIdentifier(session)]?.playbackState ?? .none
-        playbackObserver?.systemMediaSessionPlaybackStateDidChange(playbackState, for: session)
+        notifyPlaybackObservers { $0.systemMediaSessionPlaybackStateDidChange(playbackState, for: session) }
+    }
+    
+    private func notifyPlaybackObservers(_ notify: (SystemMediaSessionPlaybackObserver) -> Void) {
+        playbackObservers.removeAll { $0.value == nil }
+        playbackObservers.compactMap(\.value).forEach(notify)
     }
     
     private func activate(_ session: GeckoSession, state: SessionState) {

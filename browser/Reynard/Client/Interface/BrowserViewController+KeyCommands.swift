@@ -83,10 +83,10 @@ extension BrowserViewController {
         
         Task { @MainActor in
             do {
-                let pdfFileURL = try await PagePrintPreparationAlert.prepare {
+                let pdfFileURL = try await PagePrintPreparationAlert.prepare(in: view.window) {
                     try await tab.session.printToPDF()
                 }
-                try await PagePrintPresenter.present(pdfFileURL: pdfFileURL, jobName: tab.title)
+                try await PagePrintPresenter.present(pdfFileURL: pdfFileURL, jobName: tab.title, in: view.window)
             } catch {
                 return
             }

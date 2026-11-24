@@ -107,16 +107,8 @@ final class SearchViewController: UIViewController, UITableViewDataSource, UITab
     
     // MARK: - Public API
     
-    func updateQuery(
-        _ query: String,
-        activeTabMode: TabMode?,
-        excludingTabID: UUID?
-    ) {
-        viewModel.updateQuery(
-            query,
-            activeTabMode: activeTabMode,
-            excludingTabID: excludingTabID
-        )
+    func updateQuery(_ query: String, openTabs: [UserDataSearch.OpenTab]) {
+        viewModel.updateQuery(query, openTabs: openTabs)
     }
     
     func clearSuggestions() {

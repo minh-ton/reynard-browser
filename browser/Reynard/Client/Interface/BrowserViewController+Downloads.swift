@@ -14,6 +14,10 @@ extension BrowserViewController: DownloadsCoordinatorDelegate {
         && browserLayout.chromeMode == .pad
     }
     
+    var downloadsConfirmationWindow: UIWindow? {
+        return view.window
+    }
+    
     func downloadsCoordinator(_ coordinator: DownloadsCoordinator, didUpdate summary: DownloadStoreSummary) {
         browserChrome.updateDownload(summary)
     }

@@ -10,9 +10,10 @@ import UIKit
 @MainActor
 enum PagePrintPreparationAlert {
     static func prepare(
+        in window: UIWindow?,
         _ operation: @escaping @MainActor () async throws -> URL
     ) async throws -> URL {
-        guard let presenter = UIApplication.shared.topViewController() else {
+        guard let presenter = UIApplication.shared.topViewController(in: window) else {
             throw PagePrintPreparationError.unavailable
         }
         return try await PagePrintPreparation(operation: operation).run(from: presenter)

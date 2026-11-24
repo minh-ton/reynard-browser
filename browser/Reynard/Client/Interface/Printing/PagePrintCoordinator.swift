@@ -16,12 +16,13 @@ final class PagePrintCoordinator: PrintDelegate {
     }
     
     func onPrint(session: GeckoSession, browsingContextId: Int64?) async throws {
-        let pdfFileURL = try await PagePrintPreparationAlert.prepare {
+        let pdfFileURL = try await PagePrintPreparationAlert.prepare(in: session.engineView?.window) {
             try await session.printToPDF(browsingContextId: browsingContextId)
         }
         try await PagePrintPresenter.present(
             pdfFileURL: pdfFileURL,
-            jobName: jobName(session)
+            jobName: jobName(session),
+            in: session.engineView?.window
         )
     }
 }

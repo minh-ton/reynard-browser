@@ -211,12 +211,14 @@ final class ExportPreferencesViewController: SettingsTableViewController {
                 }
                 AlertPresenter.show(
                     title: NSLocalizedString("Export Complete", comment: ""),
-                    message: NSLocalizedString("Your data has been exported.", comment: "")
+                    message: NSLocalizedString("Your data has been exported.", comment: ""),
+                    in: view.window
                 )
             } catch {
                 AlertPresenter.show(
                     title: NSLocalizedString("Export Failed", comment: ""),
-                    message: ImportExportViewUtils.exportErrorMessage(for: error)
+                    message: ImportExportViewUtils.exportErrorMessage(for: error),
+                    in: view.window
                 )
             }
         }

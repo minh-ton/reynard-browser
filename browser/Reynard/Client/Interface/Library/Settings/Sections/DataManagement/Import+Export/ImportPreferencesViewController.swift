@@ -241,13 +241,14 @@ final class ImportPreferencesViewController: SettingsTableViewController {
         }
         
         if let failureMessage {
-            AlertPresenter.show(title: NSLocalizedString("Import Failed", comment: ""), message: failureMessage)
+            AlertPresenter.show(title: NSLocalizedString("Import Failed", comment: ""), message: failureMessage, in: view.window)
         } else {
             AlertPresenter.show(
                 title: NSLocalizedString("Import Complete", comment: ""),
                 message: summary.hasImportedData
                 ? NSLocalizedString("Your data has been imported.", comment: "")
-                : NSLocalizedString("No data was imported.", comment: "")
+                : NSLocalizedString("No data was imported.", comment: ""),
+                in: view.window
             )
         }
     }

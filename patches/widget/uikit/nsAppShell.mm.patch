@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsAppShell.mm b/widget/uikit/nsAppShell.mm
-index c412407b112a..6b29e2048325 100644
+index c412407b112a..43713b9ce2e6 100644
 --- a/widget/uikit/nsAppShell.mm
 +++ b/widget/uikit/nsAppShell.mm
 @@ -3,17 +3,25 @@
@@ -38,7 +38,7 @@ index c412407b112a..6b29e2048325 100644
  #include "nsIRollupListener.h"
  #include "nsIWidget.h"
  #include "nsMemoryPressure.h"
-@@ -42,25 +52,145 @@
+@@ -42,25 +52,146 @@
    fprintf(stderr, "\n")
  
  static void ApplicationWillTerminate(bool aCallExit);
@@ -128,22 +128,16 @@ index c412407b112a..6b29e2048325 100644
 +
 +  NSNotificationCenter* notificationCenter =
 +      [NSNotificationCenter defaultCenter];
-+  [notificationCenter addObserver:self
-+                         selector:@selector(sceneDidBecomeActive:)
-+                             name:UISceneDidActivateNotification
-+                           object:nil];
-+  [notificationCenter addObserver:self
-+                         selector:@selector(sceneWillResignActive:)
-+                             name:UISceneWillDeactivateNotification
-+                           object:nil];
-+  [notificationCenter addObserver:self
-+                         selector:@selector(sceneWillEnterForeground:)
-+                             name:UISceneWillEnterForegroundNotification
-+                           object:nil];
-+  [notificationCenter addObserver:self
-+                         selector:@selector(sceneDidEnterBackground:)
-+                             name:UISceneDidEnterBackgroundNotification
-+                           object:nil];
++  for (NSNotificationName name in @[
++         UISceneDidActivateNotification, UISceneWillDeactivateNotification,
++         UISceneWillEnterForegroundNotification,
++         UISceneDidEnterBackgroundNotification, UISceneDidDisconnectNotification
++       ]) {
++    [notificationCenter addObserver:self
++                           selector:@selector(sceneStateDidChange:)
++                               name:name
++                             object:nil];
++  }
 +  [notificationCenter addObserver:self
 +                         selector:@selector(thermalStateDidChange:)
 +                             name:NSProcessInfoThermalStateDidChangeNotification
@@ -176,6 +170,13 @@ index c412407b112a..6b29e2048325 100644
    return YES;
  }
  
++- (void)application:(UIApplication*)application
++    didDiscardSceneSessions:(NSSet<UISceneSession*>*)sceneSessions {
++  [[NSNotificationCenter defaultCenter]
++      postNotificationName:@"GeckoView.DidDiscardSceneSessions"
++                    object:sceneSessions];
++}
++
 +- (void)dealloc {
 +  [[NSNotificationCenter defaultCenter] removeObserver:self];
 +  dispatch_release(mMemoryPressureSource);
@@ -185,7 +186,7 @@ index c412407b112a..6b29e2048325 100644
  - (void)applicationWillTerminate:(UIApplication*)application {
    ALOG("[AppShellDelegate applicationWillTerminate:]");
    ApplicationWillTerminate(/* aCallExit */ false);
-@@ -68,18 +198,162 @@ - (void)applicationWillTerminate:(UIApplication*)application {
+@@ -68,18 +199,166 @@ - (void)applicationWillTerminate:(UIApplication*)application {
  
  - (void)applicationDidBecomeActive:(UIApplication*)application {
    ALOG("[AppShellDelegate applicationDidBecomeActive:]");
@@ -231,21 +232,25 @@ index c412407b112a..6b29e2048325 100644
 +  NotifyObserverTopic("application-protected-data-available");
 +}
 +
-+- (void)sceneDidBecomeActive:(NSNotification*)notification {
-+  [self handleForegroundTransition:YES];
-+  [self handleActiveTransition:YES];
-+}
++- (void)sceneStateDidChange:(NSNotification*)notification {
++  dispatch_async(dispatch_get_main_queue(), ^{
++    BOOL isForeground = NO;
++    BOOL isActive = NO;
++    for (UIScene* scene in UIApplication.sharedApplication.connectedScenes) {
++      UISceneActivationState state = scene.activationState;
++      isActive |= state == UISceneActivationStateForegroundActive;
++      isForeground |= state == UISceneActivationStateForegroundActive ||
++                      state == UISceneActivationStateForegroundInactive;
++    }
 +
-+- (void)sceneWillResignActive:(NSNotification*)notification {
-+  [self handleActiveTransition:NO];
-+}
-+
-+- (void)sceneWillEnterForeground:(NSNotification*)notification {
-+  [self handleForegroundTransition:YES];
-+}
-+
-+- (void)sceneDidEnterBackground:(NSNotification*)notification {
-+  [self handleForegroundTransition:NO];
++    if (isForeground) {
++      [self handleForegroundTransition:YES];
++      [self handleActiveTransition:isActive];
++    } else {
++      [self handleActiveTransition:NO];
++      [self handleForegroundTransition:NO];
++    }
++  });
 +}
 +
 +- (void)thermalStateDidChange:(NSNotification*)notification {
@@ -349,7 +354,7 @@ index c412407b112a..6b29e2048325 100644
  // nsAppShell implementation
  
  NS_IMETHODIMP
-@@ -112,6 +386,7 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -112,6 +391,7 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
    }
  
    gAppShell = NULL;
@@ -357,7 +362,7 @@ index c412407b112a..6b29e2048325 100644
  }
  
  // Init
-@@ -154,6 +429,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -154,6 +434,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
  
    nsresult rv = nsBaseAppShell::Init();
  
@@ -368,7 +373,7 @@ index c412407b112a..6b29e2048325 100644
    nsCOMPtr<nsIObserverService> obsServ =
        mozilla::services::GetObserverService();
    if (obsServ) {
-@@ -280,8 +559,26 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -280,8 +564,26 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
  nsAppShell::Run(void) {
    ALOG("nsAppShell::Run");
  
@@ -396,7 +401,7 @@ index c412407b112a..6b29e2048325 100644
      char argv[1][4] = {"app"};
      UIApplicationMain(1, (char**)argv, nil, @"AppShellDelegate");
      // UIApplicationMain doesn't exit. :-(
-@@ -289,6 +586,11 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -289,6 +591,11 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
      rv = nsBaseAppShell::Run();
    }
  
@@ -408,7 +413,7 @@ index c412407b112a..6b29e2048325 100644
    return rv;
  }
  
-@@ -298,7 +600,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
+@@ -298,7 +605,10 @@ - (void)applicationDidReceiveMemoryWarning:(UIApplication*)application {
  
    mTerminated = true;
  
@@ -420,7 +425,7 @@ index c412407b112a..6b29e2048325 100644
      // Dispatch a native event to the main queue to terminate. XPCOM doesn't
      // like being shut down from within an XPCOM runnable, so we cannot use
      // `NS_DispatchToMainThread` here.
-@@ -318,6 +623,11 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -318,6 +628,11 @@ static void ApplicationWillTerminate(bool aCallExit) {
      return;
    }
  
@@ -432,7 +437,7 @@ index c412407b112a..6b29e2048325 100644
    // Perform the steps which would normally happen after nsAppShell::Run, such
    // as `~ScopedXPCOMStartup`, as UIApplicationMain will never shutdown.
    if (nsCOMPtr<nsIAppStartup> appStartup = components::AppStartup::Service()) {
-@@ -330,12 +640,18 @@ static void ApplicationWillTerminate(bool aCallExit) {
+@@ -330,12 +645,18 @@ static void ApplicationWillTerminate(bool aCallExit) {
  
    gDirServiceProvider->DoShutdown();
  

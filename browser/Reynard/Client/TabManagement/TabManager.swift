@@ -27,6 +27,17 @@ enum TabInsertionTarget: Equatable {
     case index(Int)
 }
 
+struct TabStartup {
+    let windowID: UUID
+    let transfer: TabTransfer?
+}
+
+struct TabTransfer {
+    let tab: Tab
+    let session: SessionManager.SessionHandoff
+    let readerMode: ReaderModeController.PortHandoff
+}
+
 enum TabManagerUpdateReason {
     case title
     case location
@@ -172,9 +183,11 @@ final class TabManager: NSObject {
     private let historyStore: HistoryStore
     
     private(set) lazy var readerMode = ReaderModeController(delegate: self)
-    private lazy var systemMediaSession = SystemMediaSession(playbackObserver: self)
+    private let systemMediaSession = SystemMediaSession.shared
     private let networkMonitor = NWPathMonitor()
     private var selectionCounter = 0
+    
+    private var windowID: UUID?
     
     private lazy var lenientURLExpression: NSRegularExpression = {
         let pattern = "^\\s*(\\w+-+)*[\\w\\[]+(://[/]*|:|\\.)(\\w+-+)*[\\w\\[:]+([\\S&&[^\\w-]]\\S*)?\\s*$"
@@ -205,6 +218,7 @@ final class TabManager: NSObject {
         self.historyStore = historyStore
         super.init()
         
+        systemMediaSession.addPlaybackObserver(self)
         networkMonitor.start(queue: .global(qos: .utility))
     }
     
@@ -272,7 +286,12 @@ final class TabManager: NSObject {
     // MARK: - State Updates
     
     func persistState() {
+        guard let windowID else {
+            return
+        }
+        
         store.persistTabs(
+            windowID: windowID,
             regularTabs: regularTabs,
             privateTabs: privateTabs,
             selectedRegularTabID: regularTabList.selectedTab?.id,
@@ -303,8 +322,14 @@ final class TabManager: NSObject {
     
     // MARK: - Startup
     
-    func createInitialTab() {
-        let didRestoreTabs = restoreTabsIfNeeded()
+    func createInitialTab(_ startup: TabStartup) {
+        windowID = startup.windowID
+        if let transfer = startup.transfer {
+            adopt(transfer, at: nil)
+            return
+        }
+        
+        let didRestoreTabs = restoreTabsIfNeeded(windowID: startup.windowID)
         
         switch Prefs.HomepageSettings.openingScreen {
         case .lastTab:
@@ -336,12 +361,12 @@ final class TabManager: NSObject {
         }
     }
     
-    private func restoreTabsIfNeeded() -> Bool {
+    private func restoreTabsIfNeeded(windowID: UUID) -> Bool {
         guard regularTabs.isEmpty && privateTabs.isEmpty else {
             return true
         }
         
-        let snapshot = store.currentSnapshot()
+        let snapshot = store.snapshot(forWindow: windowID)
         guard !snapshot.regularTabs.isEmpty || !snapshot.privateTabs.isEmpty else {
             return false
         }
@@ -585,6 +610,24 @@ final class TabManager: NSObject {
         return true
     }
     
+    func adopt(_ transfer: TabTransfer, at insertionIndex: Int?) {
+        let tab = transfer.tab
+        let sessionHandler = makeSessionHandler()
+        tab.sessionHandler = sessionHandler
+        
+        sessionManager.attach(
+            tab.session,
+            asTab: tab.id,
+            handoff: transfer.session,
+            delegates: sessionDelegates(for: sessionHandler)
+        )
+        readerMode.attach(tab.session, ports: transfer.readerMode)
+        
+        insert(tab, at: insertionIndex)
+        delegate?.tabManagerDidChangeTabs(self)
+        selectTab(tab)
+    }
+    
     private func insert(_ tab: Tab, at insertionIndex: Int?) {
         let tabList = self.tabList(for: tab.mode)
         let count = tabList.tabs.count
@@ -697,34 +740,56 @@ final class TabManager: NSObject {
     }
     
     func removeTab(_ tab: Tab, behavior: TabRemovalBehavior) {
-        guard let index = index(of: tab) else {
+        guard takeOutOfTabList(tab, behavior: behavior) else {
             return
+        }
+        
+        saveClosedTabIfNeeded(tab)
+        delegate?.tabManagerDidChangeTabs(self)
+        sessionManager.discard(tab.session, forTab: tab.id, keepingHistory: tab.mode == .regular)
+    }
+    
+    func detachTab(withID tabID: UUID) -> TabTransfer? {
+        guard let tab = tab(withID: tabID),
+              takeOutOfTabList(tab, behavior: .recent) else {
+            return nil
+        }
+        
+        let transfer = TabTransfer(
+            tab: tab,
+            session: sessionManager.detach(tab.session, forTab: tab.id),
+            readerMode: readerMode.detach(tab.session)
+        )
+        
+        if selectedTab == nil {
+            createTab(selecting: true, mode: .regular)
+        }
+        delegate?.tabManagerDidChangeTabs(self)
+        return transfer
+    }
+    
+    private func takeOutOfTabList(_ tab: Tab, behavior: TabRemovalBehavior) -> Bool {
+        guard let index = index(of: tab) else {
+            return false
         }
         
         let mode = tab.mode
         let isRemovingSelectedTab = mode == selectedTabMode && index == selectedTabIndex
-        let removedTab = tabList(for: mode).remove(at: index)
-        
-        defer {
-            delegate?.tabManagerDidChangeTabs(self)
-            sessionManager.discard(removedTab.session, forTab: removedTab.id, keepingHistory: mode == .regular)
-        }
-        
-        saveClosedTabIfNeeded(removedTab)
+        _ = tabList(for: mode).remove(at: index)
         
         if isRemovingSelectedTab {
-            sessionManager.deactivate(removedTab.session)
+            sessionManager.deactivate(tab.session)
         }
-        removedTab.sessionHandler.cancelFaviconUpdate()
+        tab.sessionHandler.cancelFaviconUpdate()
         
         if regularTabs.isEmpty && privateTabs.isEmpty {
             persistState()
-            return
+            return true
         }
         
         guard isRemovingSelectedTab else {
             persistState()
-            return
+            return true
         }
         
         let remainingTabs = tabs(for: mode)
@@ -748,7 +813,7 @@ final class TabManager: NSObject {
         
         guard let replacementLocation else {
             persistState()
-            return
+            return true
         }
         
         switch behavior {
@@ -759,6 +824,7 @@ final class TabManager: NSObject {
             tabList(for: replacementLocation.mode).selectedIndex = replacementLocation.index
             persistState()
         }
+        return true
     }
     
     func removeAllTabs(mode: TabMode? = nil) {
@@ -787,6 +853,18 @@ final class TabManager: NSObject {
         delegate?.tabManagerDidChangeTabs(self)
         
         removedTabs.forEach { sessionManager.discard($0.session, forTab: $0.id, keepingHistory: mode == .regular) }
+    }
+    
+    func discardAllTabs() {
+        windowID = nil
+        let discardedTabs = regularTabs + privateTabs
+        regularTabList.removeAll()
+        privateTabList.removeAll()
+        
+        for tab in discardedTabs {
+            tab.sessionHandler.cancelFaviconUpdate()
+            sessionManager.discard(tab.session, forTab: tab.id, keepingHistory: true)
+        }
     }
     
     private func saveClosedTabIfNeeded(_ tab: Tab) {

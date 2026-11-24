@@ -654,6 +654,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
         AlertPresenter.show(
             title: nil,
             message: NSLocalizedString("This will reset settings for this website. This action cannot be undone.", comment: ""),
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Reset", comment: "Destructive button"), style: .destructive) { [weak self] in
                     self?.performResetWebsiteSettings()
@@ -670,6 +671,7 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
                 format: NSLocalizedString("Removing cookies and website data for %@ may require you to sign in again.", comment: "Website host"),
                 host
             ),
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Clear", comment: "Destructive button"), style: .destructive) { [weak self] in
                     self?.clearWebsiteData()
@@ -680,6 +682,8 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
     }
     
     private func clearWebsiteData() {
+        let window = view.window
+        
         Task { [weak self] in
             guard let self else {
                 return
@@ -698,7 +702,8 @@ final class SiteSettingsViewController: UITableViewController, UINavigationContr
             } catch {
                 AlertPresenter.show(
                     title: NSLocalizedString("Couldn’t Clear Cookies and Website Data", comment: ""),
-                    message: "\(error)"
+                    message: "\(error)",
+                    in: window
                 )
             }
         }

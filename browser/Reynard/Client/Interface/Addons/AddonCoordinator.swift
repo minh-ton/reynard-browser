@@ -36,7 +36,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     private var loadingIconIDs = Set<String>()
     private var pendingAddonDownloadPaths = Set<String>()
     private var pendingWebExtensionDownloadsByPath: [String: DownloadStore.WebExtensionDownloadItem] = [:]
-    let updateCoordinator: AddonUpdateCoordinator
+    private let updateCoordinator = AddonUpdateCoordinator.shared
     
     init(
         delegate: AddonCoordinatorDelegate,
@@ -46,7 +46,6 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
         self.delegate = delegate
         self.sessionManager = sessionManager
         self.tabManager = tabManager
-        updateCoordinator = AddonUpdateCoordinator()
         super.init()
         iconCache.countLimit = 64
     }
@@ -54,7 +53,7 @@ final class AddonCoordinator: NSObject, AddonEmbedderDelegate {
     // MARK: - Runtime Lifecycle
     
     func start() async {
-        AddonRuntime.shared.delegate = self
+        AddonEventRouter.shared.start()
         _ = try? await AddonRuntime.shared.list()
         updateCoordinator.start()
         delegate?.refreshAddonChrome(self)

@@ -151,7 +151,7 @@ enum LibrarySharedUtils {
         }
         
         if let browserViewController = controller as? BrowserViewController {
-            return resolvedHostedBrowserViewController(from: browserViewController)
+            return browserViewController.contentBrowserViewController
         }
         
         if let navigationController = controller as? UINavigationController {
@@ -169,15 +169,6 @@ enum LibrarySharedUtils {
         }
         
         return controller.children.compactMap { resolvedBrowserViewController(in: $0) }.first
-    }
-    
-    private static func resolvedHostedBrowserViewController(from browserViewController: BrowserViewController) -> BrowserViewController {
-        guard let sidebarViewController = browserViewController.children.compactMap({ $0 as? SidebarViewController }).first,
-              let contentBrowserViewController = sidebarViewController.contentBrowser.sidebarContentViewController as? BrowserViewController else {
-            return browserViewController
-        }
-        
-        return contentBrowserViewController
     }
 }
 

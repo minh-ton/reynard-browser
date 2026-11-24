@@ -229,14 +229,12 @@ final class HistoryViewController: UIViewController, UITableViewDataSource, UITa
     @objc private func showClearHistory() {
         searchBar.resignFirstResponder()
         
-        let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self)
-        let viewController = ClearHistoryViewController(tabCount: browserViewController?.tabManager.regularTabs.count ?? 0) { [weak browserViewController] startDate, shouldCloseTabs in
+        let tabCount = BrowserWindowManager.shared.browsers.reduce(0) { $0 + $1.tabManager.regularTabs.count }
+        let viewController = ClearHistoryViewController(tabCount: tabCount) { startDate, shouldCloseTabs in
             HistoryStore.shared.clearVisits(since: startDate)
             
             if shouldCloseTabs {
-                browserViewController?.tabManager.removeAllTabs(mode: .regular)
-                browserViewController?.tabManager.removeAllTabs(mode: .private)
-                browserViewController?.tabManager.createTab(selecting: true, mode: .regular)
+                BrowserWindowManager.shared.removeAllTabs()
             }
         }
         let navigationController = UINavigationController(rootViewController: viewController)

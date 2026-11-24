@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index c1c4c3deb341..256c32a914c6 100644
+index c1c4c3deb341..00afb7443053 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,12 +11,15 @@
@@ -222,7 +222,7 @@ index c1c4c3deb341..256c32a914c6 100644
  
    // This is managed with weak references by the notification center so that we
    // do not need to call removeObserver.
-@@ -201,18 +230,39 @@ - (id)initWithFrame:(CGRect)inFrame geckoChild:(nsWindow*)inChild {
+@@ -201,19 +230,40 @@ - (id)initWithFrame:(CGRect)inFrame geckoChild:(nsWindow*)inChild {
  }
  
  - (void)widgetDestroyed {
@@ -262,16 +262,19 @@ index c1c4c3deb341..256c32a914c6 100644
  - (void)activateWindow:(NSNotification*)notification {
 -  ALOG("[[ChildView[%p] activateWindow]", (void*)self);
 -
-   if (!mGeckoChild) {
+-  if (!mGeckoChild) {
++  if (!mGeckoChild || notification.object != self.window) {
      return;
    }
+ 
 @@ -223,142 +273,172 @@ - (void)activateWindow:(NSNotification*)notification {
  }
  
  - (void)deactivateWindow:(NSNotification*)notification {
 -  ALOG("[[ChildView[%p] deactivateWindow]", (void*)self);
 -
-   if (!mGeckoChild) {
+-  if (!mGeckoChild) {
++  if (!mGeckoChild || notification.object != self.window) {
      return;
    }
  
@@ -403,10 +406,7 @@ index c1c4c3deb341..256c32a914c6 100644
 -  if (!mGeckoChild) return;
 +- (void)traitCollectionDidChange:(UITraitCollection*)previousTraitCollection {
 +  [super traitCollectionDidChange:previousTraitCollection];
- 
--  [self sendTouchEvent:eTouchMove
--               touches:[event allTouches]
--                widget:mGeckoChild];
++
 +  self.backgroundColor = [UIColor clearColor];
 +
 +  if (previousTraitCollection &&
@@ -414,7 +414,10 @@ index c1c4c3deb341..256c32a914c6 100644
 +          previousTraitCollection.userInterfaceStyle) {
 +    return;
 +  }
-+
+ 
+-  [self sendTouchEvent:eTouchMove
+-               touches:[event allTouches]
+-                widget:mGeckoChild];
 +  nsLookAndFeel::SetSystemUsesDarkTheme(
 +      self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
  }
@@ -955,10 +958,7 @@ index c1c4c3deb341..256c32a914c6 100644
 -  CGPoint temp = [mNativeView convertPoint:temp toView:nil];
 +  return offset;
 +}
- 
--  if (!mParent && mNativeView.window) {
--    // convert to screen coords
--    temp = [mNativeView.window convertPoint:temp toWindow:nil];
++
 +// Focus and input
 +
 +void nsWindow::SetFocus(Raise, mozilla::dom::CallerType) {
@@ -969,28 +969,31 @@ index c1c4c3deb341..256c32a914c6 100644
 +bool nsWindow::FocusForHardwareKeyboard() {
 +  if (!mNativeView || ![mNativeView window]) {
 +    return false;
-   }
++  }
  
--  offset.x += static_cast<int32_t>(temp.x);
--  offset.y += static_cast<int32_t>(temp.y);
+-  if (!mParent && mNativeView.window) {
+-    // convert to screen coords
+-    temp = [mNativeView.window convertPoint:temp toWindow:nil];
 +  const bool wasSuppressed = mSoftwareKeyboardSuppressed;
 +  mSoftwareKeyboardSuppressed = true;
 +  if (![mNativeView becomeFirstResponder]) {
 +    mSoftwareKeyboardSuppressed = wasSuppressed;
 +    return false;
-+  }
+   }
 +  [mNativeView reloadInputViews];
 +  return true;
 +}
- 
--  return offset;
++
 +void nsWindow::DismissSoftwareKeyboard() {
 +  mSoftwareKeyboardSuppressed = true;
 +  [mNativeView dismissSoftwareKeyboard];
 +}
-+
+ 
+-  offset.x += static_cast<int32_t>(temp.x);
+-  offset.y += static_cast<int32_t>(temp.y);
 +// Rendering
-+
+ 
+-  return offset;
 +void nsWindow::Invalidate(const LayoutDeviceIntRect& aRect) {
 +  if (!mNativeView || !mVisible) return;
 +

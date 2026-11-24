@@ -84,6 +84,11 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
         tabManager.moveTab(from: sourceIndex, to: destinationIndex, mode: mode)
     }
     
+    func moveTab(withID tabID: UUID, to destinationIndex: Int) {
+        toolbarController.reset()
+        BrowserWindowManager.shared.moveTab(withID: tabID, to: self, at: destinationIndex)
+    }
+    
     // MARK: - TabOverviewDataSource
     
     func captureThumbnail(forTabAt index: Int, mode: TabMode) -> UIImage? {
@@ -310,8 +315,12 @@ extension BrowserViewController: TabBarDataSource, TabOverviewDataSource, TabOve
         tabBar.setPendingExpansion(to: nil)
         let mode = tabOverview.mode.tabMode
         let tabs = tabManager.tabs(for: mode)
-        let oldTabIDs = TabManagementStore.shared.tabIDs(olderThan: cutoffDate, isPrivate: mode == .private)
-        let oldTabs = tabs.filter { oldTabIDs.contains($0.id) }
+        let oldTabs = tabs.filter { tab in
+            guard let createdAt = tab.createdAt else {
+                return false
+            }
+            return createdAt < cutoffDate
+        }
         guard !oldTabs.isEmpty else {
             return
         }

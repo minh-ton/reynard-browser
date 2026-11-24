@@ -9,7 +9,14 @@ import Darwin
 import GeckoView
 
 enum RuntimePreferences {
+    private static var isApplied = false
+    
     static func apply() {
+        guard !isApplied else {
+            return
+        }
+        isApplied = true
+        
         // On sites with heavy graphics, the GPU process would crash
         // multiple times during user interactions on the iPad Air 2.
         // I originally thought this is due to OOM, but it turns out

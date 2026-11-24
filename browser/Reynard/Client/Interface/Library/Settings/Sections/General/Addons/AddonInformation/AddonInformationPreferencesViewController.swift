@@ -240,6 +240,8 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
+        let window = view.window
+        
         do {
             let refreshedAddon = try await AddonRuntime.shared.addon(byID: addonID)
             await MainActor.run {
@@ -254,7 +256,7 @@ final class AddonInformationPreferencesViewController: SettingsTableViewControll
             }
         } catch {
             await MainActor.run {
-                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)")
+                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)", in: window)
             }
         }
     }

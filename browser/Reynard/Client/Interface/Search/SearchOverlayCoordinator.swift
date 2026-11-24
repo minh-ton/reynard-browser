@@ -80,6 +80,12 @@ final class SearchOverlayCoordinator {
         )
     }
     
+    private var searchableOpenTabs: [UserDataSearch.OpenTab] {
+        return tabManager.activeTabs
+            .filter { $0 !== tabManager.selectedTab }
+            .map { UserDataSearch.OpenTab(id: $0.id, title: $0.title, url: $0.url) }
+    }
+    
     var preservesAddressBarText: Bool {
         return overlayCoordinator.isAddressBarScrollDismissed(for: .search) && isVisible
     }
@@ -133,21 +139,13 @@ final class SearchOverlayCoordinator {
         guard !trimmedQuery.isEmpty else {
             self.query = query
             dismissSearch(animated: true)
-            searchViewController.updateQuery(
-                query,
-                activeTabMode: tabManager.selectedTabMode,
-                excludingTabID: tabManager.selectedTab?.id
-            )
+            searchViewController.updateQuery(query, openTabs: searchableOpenTabs)
             return
         }
         
         self.query = query
         presentSearchIfNeeded()
-        searchViewController.updateQuery(
-            query,
-            activeTabMode: tabManager.selectedTabMode,
-            excludingTabID: tabManager.selectedTab?.id
-        )
+        searchViewController.updateQuery(query, openTabs: searchableOpenTabs)
     }
     
     func addressBarDidEndEditing(_ addressBar: AddressBar) {

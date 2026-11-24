@@ -304,6 +304,7 @@ final class SitePermissionsViewController: SettingsTableViewController {
         AlertPresenter.show(
             title: nil,
             message: NSLocalizedString("This will reset permissions for all websites. This action cannot be undone.", comment: ""),
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Reset", comment: "Destructive button"), style: .destructive) {
                     SiteSettingsUtils.resetStoredSitePermissions()

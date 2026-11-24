@@ -257,6 +257,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     
     @objc private func privateBrowsingSwitchChanged(_ sender: UISwitch) {
         let desiredState = sender.isOn
+        let window = view.window
         
         Task { [weak self] in
             guard let self, let addon = self.addon else {
@@ -282,7 +283,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Update Private Browsing Access", comment: ""), message: "\(error)")
+                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Update Private Browsing Access", comment: ""), message: "\(error)", in: window)
                 }
             }
         }
@@ -290,6 +291,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     
     @objc private func enableSwitchChanged(_ sender: UISwitch) {
         let desiredState = sender.isOn
+        let window = view.window
         
         Task { [weak self] in
             guard let self, let addon = self.addon else {
@@ -317,7 +319,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: desiredState ? NSLocalizedString("Couldn’t Enable Add-on", comment: "") : NSLocalizedString("Couldn’t Disable Add-on", comment: ""), message: "\(error)")
+                    AlertPresenter.show(title: desiredState ? NSLocalizedString("Couldn’t Enable Add-on", comment: "") : NSLocalizedString("Couldn’t Disable Add-on", comment: ""), message: "\(error)", in: window)
                 }
             }
         }
@@ -335,6 +337,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
+        let window = view.window
+        
         do {
             let refreshedAddon = try await AddonRuntime.shared.addon(byID: addonID)
             await MainActor.run {
@@ -347,7 +351,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
             }
         } catch {
             await MainActor.run {
-                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)")
+                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)", in: window)
             }
         }
     }
@@ -449,6 +453,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
         AlertPresenter.show(
             title: String(format: NSLocalizedString("Remove %@?", comment: "Add-on name"), addonName),
             message: nil,
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Cancel", comment: ""), style: .cancel),
                 AlertPresenter.Button(title: NSLocalizedString("Remove", comment: ""), style: .destructive) { [weak self] in
@@ -459,6 +464,8 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
     }
     
     private func uninstallAddon() {
+        let window = view.window
+        
         Task { [weak self] in
             guard let self, let addon = self.addon else {
                 return
@@ -478,7 +485,7 @@ final class AddonDetailsPreferencesViewController: SettingsTableViewController {
                 await MainActor.run {
                     self.isUpdatingAddon = false
                     self.display(addon: addon)
-                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Remove Add-on", comment: ""), message: "\(error)")
+                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Remove Add-on", comment: ""), message: "\(error)", in: window)
                 }
             }
         }

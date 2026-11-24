@@ -11,6 +11,7 @@ protocol TabBarDataSource: TabListSource {
     func selectTab(at index: Int, mode: TabMode)
     func closeTab(at index: Int, mode: TabMode)
     func moveTab(from sourceIndex: Int, to destinationIndex: Int, mode: TabMode)
+    func moveTab(withID tabID: UUID, to destinationIndex: Int)
 }
 
 final class TabBar: UIView {
@@ -25,12 +26,6 @@ final class TabBar: UIView {
         case visible
     }
     
-    enum ReorderState: Equatable {
-        case idle
-        case pending
-        case active
-    }
-    
     struct CellLayout {
         let width: CGFloat
         let mode: TabBarCell.LayoutMode
@@ -39,7 +34,6 @@ final class TabBar: UIView {
     weak var dataSource: TabBarDataSource?
     
     private(set) var visibility: Visibility = .hidden
-    private(set) var reorderState: ReorderState = .idle
     private var pendingExpandedTabID: UUID?
     private var displayedTabIDs: [UUID]?
     
@@ -215,10 +209,6 @@ final class TabBar: UIView {
     
     // MARK: - Collection Coordination
     
-    func updateReorderState(_ state: ReorderState) {
-        reorderState = state
-    }
-    
     func requestSelectTab(at index: Int) {
         guard let dataSource else {
             return
@@ -240,6 +230,10 @@ final class TabBar: UIView {
         }
         dataSource.moveTab(from: sourceIndex, to: destinationIndex, mode: dataSource.selectedTabMode)
         displayedTabIDs = dataSource.activeTabs.map { $0.id }
+    }
+    
+    func requestMoveTab(_ tab: Tab, to destinationIndex: Int) {
+        dataSource?.moveTab(withID: tab.id, to: destinationIndex)
     }
     
     // MARK: - View Setup

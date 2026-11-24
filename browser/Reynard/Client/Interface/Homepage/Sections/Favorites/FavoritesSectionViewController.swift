@@ -422,7 +422,7 @@ final class FavoritesSectionViewController: UIViewController {
         let viewController = EditBookmarkViewController(bookmark: bookmark, store: bookmarkStore)
         let navigationController = UINavigationController(rootViewController: viewController)
         navigationController.modalPresentationStyle = .pageSheet
-        UIApplication.shared.topViewController()?.present(navigationController, animated: true)
+        UIApplication.shared.topViewController(in: view.window)?.present(navigationController, animated: true)
     }
     
     func deleteFavoriteBookmark(_ bookmark: BookmarkSnapshot) {

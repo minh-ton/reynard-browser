@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..ea1839d5b389
+index 000000000000..7c1312095c8d
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4327 @@
+@@ -0,0 +1,4329 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -4254,7 +4254,9 @@ index 000000000000..ea1839d5b389
 +  }
 +
 +  id<GeckoKeyboardAutofillState> keyboardState =
-+      (id<GeckoKeyboardAutofillState>)[keyboard keyboardStateManager];
++      [keyboard respondsToSelector:@selector(keyboardStateManager)]
++          ? (id<GeckoKeyboardAutofillState>)[keyboard keyboardStateManager]
++          : (id<GeckoKeyboardAutofillState>)keyboard;
 +  [keyboardState.autofillController.autofillGroup removeObjectsForKeys:@[
 +    UITextContentTypeUsername, UITextContentTypePassword,
 +    UITextContentTypeOneTimeCode

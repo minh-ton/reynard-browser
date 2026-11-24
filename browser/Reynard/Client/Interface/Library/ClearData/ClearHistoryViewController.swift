@@ -111,12 +111,13 @@ final class ClearHistoryViewController: UITableViewController {
     
     @objc private func confirmClearHistory() {
         let startDate = selectedTimeframe.cutoffDate()
+        let window = view.window
         onClear(startDate, closeAllTabsSwitch.isOn)
         Task {
             do {
                 try await GeckoStorageController.clearHistory(since: startDate)
             } catch {
-                AlertPresenter.show(title: NSLocalizedString("Couldn’t Clear History", comment: ""), message: "\(error)")
+                AlertPresenter.show(title: NSLocalizedString("Couldn’t Clear History", comment: ""), message: "\(error)", in: window)
             }
         }
         dismiss(animated: true)

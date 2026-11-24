@@ -247,6 +247,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
     @objc private func permissionSwitchDidChange(_ sender: UISwitch) {
         let section = sender.tag / 1000
         let row = sender.tag % 1000
+        let window = view.window
         
         guard permissionSections.indices.contains(section),
               permissionSections[section].displayedRows.indices.contains(row),
@@ -298,7 +299,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
                     self.isUpdatingPermissions = false
                     self.addon = addon
                     self.tableView.reloadData()
-                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Update Permissions", comment: ""), message: "\(error)")
+                    AlertPresenter.show(title: NSLocalizedString("Couldn’t Update Permissions", comment: ""), message: "\(error)", in: window)
                 }
             }
         }
@@ -307,6 +308,8 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
     // MARK: - Add-on Loading
     
     private func refreshAddon() async {
+        let window = view.window
+        
         do {
             let refreshedAddon = try await AddonRuntime.shared.addon(byID: addonID)
             await MainActor.run {
@@ -321,7 +324,7 @@ final class AddonPermissionsPreferencesViewController: SettingsTableViewControll
             }
         } catch {
             await MainActor.run {
-                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)")
+                AlertPresenter.show(title: NSLocalizedString("Couldn’t Reload Add-on", comment: ""), message: "\(error)", in: window)
             }
         }
     }

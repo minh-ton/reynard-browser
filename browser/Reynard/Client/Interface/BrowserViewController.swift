@@ -26,13 +26,13 @@ final class BrowserViewController: UIViewController {
     
     let sessionManager = SessionManager()
     private lazy var promptCoordinator = PromptCoordinator(
-        presenter: PromptPresenter(),
+        presenter: PromptPresenter(window: { [weak self] in self?.view.window }),
         onPromptFinished: { [weak self] session in
             self?.requestContentKeyboardFocus(for: session)
         }
     )
     private lazy var permissionCoordinator = PermissionCoordinator(
-        promptPresenter: PermissionPromptPresenter(),
+        promptPresenter: PermissionPromptPresenter(window: { [weak self] in self?.view.window }),
         onPromptFinished: { [weak self] session in
             self?.requestContentKeyboardFocus(for: session)
         }
@@ -67,6 +67,7 @@ final class BrowserViewController: UIViewController {
     
     weak var fullscreenSession: GeckoSession?
     private let allowsSidebarHosting: Bool
+    private(set) var startup: TabStartup?
     private var shouldRestoreContentFocus = false
     private(set) var browserLayout = BrowserLayout.initial(
         interfaceIdiom: UIDevice.current.userInterfaceIdiom
@@ -184,8 +185,9 @@ final class BrowserViewController: UIViewController {
         ) ?? .portrait
     }
     
-    init(canHostSidebar: Bool = true) {
+    init(canHostSidebar: Bool = true, startup: TabStartup?) {
         self.allowsSidebarHosting = canHostSidebar
+        self.startup = startup
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -202,6 +204,7 @@ final class BrowserViewController: UIViewController {
         view.backgroundColor = .systemBackground
         
         if sidebarCoordinator.installHostIfNeeded() {
+            startup = nil
             return
         }
         
@@ -212,12 +215,15 @@ final class BrowserViewController: UIViewController {
         contextMenuCoordinator.configure()
         downloadsCoordinator.startObservingStore()
         downloadsCoordinator.syncToolbarButtonState()
-        tabOverview.restoreMode(TabOverview.Mode(tabMode: TabManagementStore.shared.preferredRestoredMode()))
         syncBrowserNavigationChrome(animated: false)
         browserChrome.syncSidebarButton(splitViewController: splitViewController)
         applyUpdateMenuButtonBadge()
         
-        tabManager.createInitialTab()
+        if let startup {
+            tabManager.createInitialTab(startup)
+            self.startup = nil
+        }
+        tabOverview.restoreMode(TabOverview.Mode(tabMode: tabManager.selectedTabMode))
         refreshAddressBar()
         homepageOverlayCoordinator.updatePresentation(animated: false)
         
@@ -1052,7 +1058,8 @@ final class BrowserViewController: UIViewController {
     }
     
     @objc private func keyboardFrameWillChange(_ notification: Notification) {
-        guard let frameValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue else {
+        guard let frameValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue,
+              let screen = view.window?.screen else {
             return
         }
         
@@ -1061,7 +1068,7 @@ final class BrowserViewController: UIViewController {
             browserChrome.addressBar.restoreEditingLayout()
         }
         
-        let keyboardFrame = view.convert(frameValue.cgRectValue, from: nil)
+        let keyboardFrame = view.convert(frameValue.cgRectValue, from: screen.coordinateSpace)
         let keyboardOverlap = max(0, view.bounds.maxY - keyboardFrame.minY)
         let keyboardInset = max(0, keyboardOverlap - view.safeAreaInsets.bottom)
         

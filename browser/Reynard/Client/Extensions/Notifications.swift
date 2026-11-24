@@ -20,6 +20,8 @@ extension Notification.Name {
     static let downloadStoreDidChange = Notification.Name("DownloadStore.DidChange")
     static let downloadStoreDidStartDownload = Notification.Name("DownloadStore.DidStartDownload")
     static let historyStoreDidChange = Notification.Name("HistoryStore.DidChange")
+    static let recentlyClosedTabsDidChange = Notification.Name("TabManagementStore.RecentlyClosedTabsDidChange")
+    static let sceneSessionsDidDiscard = Notification.Name("GeckoView.DidDiscardSceneSessions")
     static let geckoRuntimeChildProcessDidStart = Notification.Name("GeckoRuntime.ChildProcessDidStart")
     static let selectionSystemUIDidDismiss = Notification.Name("Selection.SystemUIDidDismiss")
     static let jitEndpointMonitorDidFail = Notification.Name("JIT.EndpointMonitorDidFail")

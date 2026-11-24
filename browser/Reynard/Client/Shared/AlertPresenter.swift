@@ -27,10 +27,11 @@ enum AlertPresenter {
     static func show(
         title: String?,
         message: String?,
+        in window: UIWindow?,
         buttons: [Button] = [Button(title: NSLocalizedString("OK", comment: ""))]
     ) {
         DispatchQueue.main.async {
-            guard let presenter = UIApplication.shared.topViewController() else {
+            guard let presenter = UIApplication.shared.topViewController(in: window) else {
                 return
             }
             

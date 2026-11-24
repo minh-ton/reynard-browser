@@ -46,7 +46,7 @@ extension BrowserViewController: AddonCoordinatorDelegate {
     }
     
     func presentAddonAlert(_ coordinator: AddonCoordinator, title: String?, message: String) {
-        AlertPresenter.show(title: title, message: message)
+        AlertPresenter.show(title: title, message: message, in: view.window)
     }
     
     func dismissAddonModal(_ coordinator: AddonCoordinator, completion: (() -> Void)?) -> Bool {

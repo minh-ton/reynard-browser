@@ -16,12 +16,14 @@ struct AddonUpdateBatchResult {
 }
 
 final class AddonUpdateCoordinator {
+    static let shared = AddonUpdateCoordinator()
+    
     private var shouldRunAutomaticCheck: Bool
     private var isRunningBatch = false
     private var shouldPresentUpdatePrompts = false
     private var isSettingsVisible = false
     
-    init() {
+    private init() {
         if let lastGlobalCheckAt = Prefs.AddonSettings.lastGlobalCheckAt {
             shouldRunAutomaticCheck = Date().timeIntervalSince(lastGlobalCheckAt) >= 12 * 60 * 60
         } else {

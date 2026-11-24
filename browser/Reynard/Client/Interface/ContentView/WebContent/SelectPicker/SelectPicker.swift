@@ -116,7 +116,7 @@ final class SelectPicker: NSObject, UIAdaptivePresentationControllerDelegate {
     }
     
     private func showSingleSelectFallback(in geckoView: UIView) {
-        guard let presenter = UIApplication.shared.topViewController() else {
+        guard let presenter = UIApplication.shared.topViewController(in: geckoView.window) else {
             finish(nil)
             return
         }
@@ -224,7 +224,7 @@ final class SelectPicker: NSObject, UIAdaptivePresentationControllerDelegate {
     
     private func showMultiSelect() {
         guard let geckoView = geckoView,
-              let presenter = UIApplication.shared.topViewController() else {
+              let presenter = UIApplication.shared.topViewController(in: geckoView.window) else {
             finish(nil)
             return
         }

@@ -499,11 +499,10 @@ final class TrackingProtectionPreferencesViewController: SettingsTableViewContro
     }
     
     private func reloadAllTabs() {
-        guard let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
-            return
-        }
-        for tab in browserViewController.tabManager.regularTabs + browserViewController.tabManager.privateTabs {
-            tab.session.reload()
+        for browserViewController in BrowserWindowManager.shared.browsers {
+            for tab in browserViewController.tabManager.regularTabs + browserViewController.tabManager.privateTabs {
+                tab.session.reload()
+            }
         }
     }
     

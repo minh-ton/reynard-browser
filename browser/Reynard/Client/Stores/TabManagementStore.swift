@@ -69,6 +69,14 @@ final class TabManagementStore {
         let lastTabOverview: LastTabOverview
     }
     
+    private struct PersistedWindow {
+        let id: UUID
+        let sceneID: String?
+        let selectedRegularTabID: UUID?
+        let selectedPrivateTabID: UUID?
+        let selectedTabMode: TabMode
+    }
+    
     private let fileManager: FileManager
     private let storage: StorageURLs
     private let stateQueue = DispatchQueue(label: "com.minh-ton.Reynard.TabManagementStore.Queue", qos: .userInitiated)
@@ -115,46 +123,109 @@ final class TabManagementStore {
         }
     }
     
+    // MARK: - Windows
+    
+    func windowID(forSceneID sceneID: String) -> UUID {
+        stateQueue.sync {
+            if let window = fetchWindowLocked(sceneID: sceneID) {
+                return window.id
+            }
+            
+            if let window = fetchWindowLocked(sceneID: nil) {
+                _ = linkWindowLocked(window.id, toSceneID: sceneID)
+                return window.id
+            }
+            
+            return insertWindowLocked(sceneID: sceneID)
+        }
+    }
+    
+    func createWindow(sceneID: String) -> UUID {
+        stateQueue.sync {
+            insertWindowLocked(sceneID: sceneID)
+        }
+    }
+    
+    func removeWindows(notMatchingSceneIDs sceneIDs: Set<String>, supportsMultipleScenes: Bool) {
+        stateQueue.async {
+            defer {
+                self.pruneThumbCacheLocked(validTabIDs: self.fetchTabIDsLocked())
+            }
+            
+            let windows = self.fetchWindowsLocked()
+            let closedWindows = windows.filter { window in
+                window.sceneID.map { !sceneIDs.contains($0) } ?? false
+            }
+            guard !closedWindows.isEmpty else {
+                return
+            }
+            
+            let replacesSingleSession = closedWindows.count == 1
+            && sceneIDs.count == 1
+            && (!supportsMultipleScenes || windows.count == 1)
+            if replacesSingleSession,
+               let sceneID = sceneIDs.first {
+                _ = self.linkWindowLocked(closedWindows[0].id, toSceneID: sceneID)
+                return
+            }
+            
+            guard self.executeLocked("BEGIN IMMEDIATE TRANSACTION;") else {
+                return
+            }
+            
+            var privateTabIDs: [UUID] = []
+            for window in closedWindows {
+                for tab in self.fetchTabsLocked(windowID: window.id, isPrivate: false) {
+                    if let url = URLUtils.restorableURL(from: tab.url) {
+                        _ = self.insertRecentlyClosedTabLocked(
+                            id: tab.id,
+                            title: tab.title,
+                            url: url,
+                            tabSessionState: tab.tabSessionState
+                        )
+                    }
+                }
+                privateTabIDs += self.fetchTabsLocked(windowID: window.id, isPrivate: true).map(\.id)
+                
+                guard self.deleteWindowLocked(window.id) else {
+                    _ = self.executeLocked("ROLLBACK TRANSACTION;")
+                    return
+                }
+            }
+            
+            guard let expiredTabIDs = self.pruneRecentlyClosedTabsLocked(),
+                  self.executeLocked("COMMIT TRANSACTION;") else {
+                _ = self.executeLocked("ROLLBACK TRANSACTION;")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                (expiredTabIDs + privateTabIDs).forEach { tabID in
+                    NavigationHistoryStore.shared.removeThumbnails(for: tabID)
+                }
+            }
+            self.postRecentlyClosedTabsDidChange()
+        }
+    }
+    
     // MARK: - Tabs
     
-    func currentSnapshot() -> Snapshot {
+    func snapshot(forWindow windowID: UUID) -> Snapshot {
         stateQueue.sync {
-            let state = persistedStateLocked()
+            let window = fetchWindowLocked(id: windowID)
             return Snapshot(
-                regularTabs: fetchTabsLocked(isPrivate: false),
-                privateTabs: fetchTabsLocked(isPrivate: true),
-                selectedRegularTabID: state.selectedRegularTabID,
-                selectedPrivateTabID: state.selectedPrivateTabID,
-                selectedTabMode: state.selectedTabMode,
-                lastTabOverview: state.lastTabOverview
+                regularTabs: fetchTabsLocked(windowID: windowID, isPrivate: false),
+                privateTabs: fetchTabsLocked(windowID: windowID, isPrivate: true),
+                selectedRegularTabID: window?.selectedRegularTabID,
+                selectedPrivateTabID: window?.selectedPrivateTabID,
+                selectedTabMode: window?.selectedTabMode ?? .regular,
+                lastTabOverview: persistedStateLocked().lastTabOverview
             )
         }
     }
     
-    func preferredRestoredMode() -> TabMode {
-        let snapshot = currentSnapshot()
-        if snapshot.selectedTabMode == .private, !snapshot.privateTabs.isEmpty {
-            return .private
-        }
-        if snapshot.selectedTabMode == .regular, !snapshot.regularTabs.isEmpty {
-            return .regular
-        }
-        if !snapshot.regularTabs.isEmpty {
-            return .regular
-        }
-        if !snapshot.privateTabs.isEmpty {
-            return .private
-        }
-        return .regular
-    }
-    
-    func tabIDs(olderThan date: Date, isPrivate: Bool) -> Set<UUID> {
-        stateQueue.sync {
-            fetchTabIDsLocked(olderThan: date, isPrivate: isPrivate)
-        }
-    }
-    
     func persistTabs(
+        windowID: UUID,
         regularTabs: [Tab],
         privateTabs: [Tab],
         selectedRegularTabID: UUID?,
@@ -185,21 +256,19 @@ final class TabManagementStore {
         }
         
         stateQueue.async {
-            let lastTabOverview = self.persistedStateLocked().lastTabOverview
-            
             guard self.executeLocked("BEGIN IMMEDIATE TRANSACTION;") else {
                 return
             }
             
-            guard self.executeLocked("DELETE FROM tabs;"),
-                  self.saveStateLocked(
+            guard self.deleteTabsLocked(windowID: windowID),
+                  self.saveWindowSelectionLocked(
+                    windowID: windowID,
                     selectedRegularTabID: selectedRegularTabID,
                     selectedPrivateTabID: selectedPrivateTabID,
-                    selectedTabMode: selectedTabMode,
-                    lastTabOverview: lastTabOverview
+                    selectedTabMode: selectedTabMode
                   ),
-                  self.insertTabsLocked(persistedRegularTabs, isPrivate: false),
-                  self.insertTabsLocked(persistedPrivateTabs, isPrivate: true) else {
+                  self.insertTabsLocked(persistedRegularTabs, windowID: windowID, isPrivate: false),
+                  self.insertTabsLocked(persistedPrivateTabs, windowID: windowID, isPrivate: true) else {
                 _ = self.executeLocked("ROLLBACK TRANSACTION;")
                 return
             }
@@ -208,8 +277,6 @@ final class TabManagementStore {
                 _ = self.executeLocked("ROLLBACK TRANSACTION;")
                 return
             }
-            
-            self.pruneThumbCacheLocked(validTabIDs: Set((persistedRegularTabs + persistedPrivateTabs).map(\.id)))
         }
     }
     
@@ -245,12 +312,6 @@ final class TabManagementStore {
             }
             
             try? data.write(to: fileURL, options: .atomic)
-        }
-    }
-    
-    func tabs(matching query: String, limit: Int, isPrivate: Bool) -> [TabSnapshot] {
-        stateQueue.sync {
-            searchTabsLocked(matching: query, limit: limit, isPrivate: isPrivate)
         }
     }
     
@@ -291,6 +352,7 @@ final class TabManagementStore {
                     NavigationHistoryStore.shared.removeThumbnails(for: tabID)
                 }
             }
+            self.postRecentlyClosedTabsDidChange()
         }
     }
     
@@ -311,6 +373,7 @@ final class TabManagementStore {
                 return nil
             }
             
+            self.postRecentlyClosedTabsDidChange()
             return snapshot
         }
     }
@@ -341,6 +404,7 @@ final class TabManagementStore {
         }
         
         NavigationHistoryStore.shared.removeThumbnails(for: id)
+        postRecentlyClosedTabsDidChange()
         return true
     }
     
@@ -372,7 +436,14 @@ final class TabManagementStore {
         tabIDs.forEach { tabID in
             NavigationHistoryStore.shared.removeThumbnails(for: tabID)
         }
+        postRecentlyClosedTabsDidChange()
         return true
+    }
+    
+    private func postRecentlyClosedTabsDidChange() {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .recentlyClosedTabsDidChange, object: self)
+        }
     }
     
     // MARK: - Storage
@@ -436,6 +507,14 @@ final class TabManagementStore {
         
         CREATE INDEX IF NOT EXISTS idx_tabs_private_position ON tabs(is_private, position ASC);
         
+        CREATE TABLE IF NOT EXISTS windows (
+            id TEXT PRIMARY KEY,
+            scene_id TEXT,
+            selected_regular_tab_id TEXT,
+            selected_private_tab_id TEXT,
+            selected_tab_mode TEXT NOT NULL
+        );
+        
         CREATE TABLE IF NOT EXISTS recently_closed_tabs (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -450,6 +529,9 @@ final class TabManagementStore {
         ensureColumnLocked(name: "tab_session_state", table: "tabs", definition: "TEXT")
         ensureColumnLocked(name: "is_muted", table: "tabs", definition: "INTEGER NOT NULL DEFAULT 0")
         ensureColumnLocked(name: "tab_session_state", table: "recently_closed_tabs", definition: "TEXT")
+        ensureColumnLocked(name: "window_id", table: "tabs", definition: "TEXT")
+        _ = executeLocked("CREATE INDEX IF NOT EXISTS idx_tabs_window_position ON tabs(window_id, is_private, position ASC);")
+        moveTabsWithoutWindowLocked()
     }
     
     // MARK: - Schema Migration
@@ -473,6 +555,34 @@ final class TabManagementStore {
         }
         
         _ = executeLocked("ALTER TABLE \(table) ADD COLUMN \(name) \(definition);")
+    }
+    
+    private func moveTabsWithoutWindowLocked() {
+        guard let statement = prepareStatementLocked(
+            """
+            INSERT INTO windows (id, scene_id, selected_regular_tab_id, selected_private_tab_id, selected_tab_mode)
+            SELECT ?, NULL, selected_regular_tab_id, selected_private_tab_id, selected_tab_mode
+            FROM tab_state
+            WHERE id = 1
+              AND EXISTS (SELECT 1 FROM tabs WHERE window_id IS NULL);
+            """
+        ) else {
+            return
+        }
+        
+        let windowID = UUID().uuidString
+        bind(windowID, to: statement, at: 1)
+        let didInsertWindow = sqlite3_step(statement) == SQLITE_DONE && sqlite3_changes(database) > 0
+        sqlite3_finalize(statement)
+        
+        guard didInsertWindow,
+              let statement = prepareStatementLocked("UPDATE tabs SET window_id = ? WHERE window_id IS NULL;") else {
+            return
+        }
+        
+        bind(windowID, to: statement, at: 1)
+        sqlite3_step(statement)
+        sqlite3_finalize(statement)
     }
     
     private func ensureStateRowLocked() {
@@ -553,14 +663,136 @@ final class TabManagementStore {
         return sqlite3_step(statement) == SQLITE_DONE
     }
     
+    // MARK: - Window Persistence
+    
+    private func fetchWindowLocked(sceneID: String?) -> PersistedWindow? {
+        return fetchWindowsLocked().first { $0.sceneID == sceneID }
+    }
+    
+    private func fetchWindowLocked(id: UUID) -> PersistedWindow? {
+        return fetchWindowsLocked().first { $0.id == id }
+    }
+    
+    private func fetchWindowsLocked() -> [PersistedWindow] {
+        guard let statement = prepareStatementLocked(
+            """
+            SELECT id, scene_id, selected_regular_tab_id, selected_private_tab_id, selected_tab_mode
+            FROM windows
+            ORDER BY rowid ASC;
+            """
+        ) else {
+            return []
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        var windows: [PersistedWindow] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let id = UUID(uuidString: string(from: statement, at: 0)) else {
+                continue
+            }
+            
+            windows.append(
+                PersistedWindow(
+                    id: id,
+                    sceneID: optionalString(from: statement, at: 1),
+                    selectedRegularTabID: optionalString(from: statement, at: 2).flatMap { UUID(uuidString: $0) },
+                    selectedPrivateTabID: optionalString(from: statement, at: 3).flatMap { UUID(uuidString: $0) },
+                    selectedTabMode: TabMode(rawValue: string(from: statement, at: 4)) ?? .regular
+                )
+            )
+        }
+        
+        return windows
+    }
+    
+    private func insertWindowLocked(sceneID: String) -> UUID {
+        let windowID = UUID()
+        guard let statement = prepareStatementLocked(
+            """
+            INSERT INTO windows (id, scene_id, selected_tab_mode)
+            VALUES (?, ?, ?);
+            """
+        ) else {
+            return windowID
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bind(windowID.uuidString, to: statement, at: 1)
+        bind(sceneID, to: statement, at: 2)
+        bind(TabMode.regular.rawValue, to: statement, at: 3)
+        sqlite3_step(statement)
+        return windowID
+    }
+    
+    private func linkWindowLocked(_ windowID: UUID, toSceneID sceneID: String) -> Bool {
+        guard let statement = prepareStatementLocked("UPDATE windows SET scene_id = ? WHERE id = ?;") else {
+            return false
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bind(sceneID, to: statement, at: 1)
+        bind(windowID.uuidString, to: statement, at: 2)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+    
+    private func saveWindowSelectionLocked(
+        windowID: UUID,
+        selectedRegularTabID: UUID?,
+        selectedPrivateTabID: UUID?,
+        selectedTabMode: TabMode
+    ) -> Bool {
+        guard let statement = prepareStatementLocked(
+            """
+            UPDATE windows
+            SET selected_regular_tab_id = ?, selected_private_tab_id = ?, selected_tab_mode = ?
+            WHERE id = ?;
+            """
+        ) else {
+            return false
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bindOptional(selectedRegularTabID?.uuidString, to: statement, at: 1)
+        bindOptional(selectedPrivateTabID?.uuidString, to: statement, at: 2)
+        bind(selectedTabMode.rawValue, to: statement, at: 3)
+        bind(windowID.uuidString, to: statement, at: 4)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+    
+    private func deleteWindowLocked(_ windowID: UUID) -> Bool {
+        guard deleteTabsLocked(windowID: windowID),
+              let statement = prepareStatementLocked("DELETE FROM windows WHERE id = ?;") else {
+            return false
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bind(windowID.uuidString, to: statement, at: 1)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+    
     // MARK: - Tab Queries
     
-    private func fetchTabsLocked(isPrivate: Bool) -> [TabSnapshot] {
+    private func fetchTabsLocked(windowID: UUID, isPrivate: Bool) -> [TabSnapshot] {
         guard let statement = prepareStatementLocked(
             """
             SELECT id, title, url, created_at, tab_session_state, is_muted, opened_from
             FROM tabs
-            WHERE is_private = ?
+            WHERE window_id = ? AND is_private = ?
             ORDER BY position ASC;
             """
         ) else {
@@ -571,7 +803,8 @@ final class TabManagementStore {
             sqlite3_finalize(statement)
         }
         
-        sqlite3_bind_int64(statement, 1, isPrivate ? 1 : 0)
+        bind(windowID.uuidString, to: statement, at: 1)
+        sqlite3_bind_int64(statement, 2, isPrivate ? 1 : 0)
         
         var tabs: [TabSnapshot] = []
         while sqlite3_step(statement) == SQLITE_ROW {
@@ -597,16 +830,8 @@ final class TabManagementStore {
         return tabs
     }
     
-    private func fetchTabIDsLocked(olderThan date: Date, isPrivate: Bool) -> Set<UUID> {
-        guard let statement = prepareStatementLocked(
-            """
-            SELECT id
-            FROM tabs
-            WHERE is_private = ?
-              AND created_at IS NOT NULL
-              AND created_at < ?;
-            """
-        ) else {
+    private func fetchTabIDsLocked() -> Set<UUID> {
+        guard let statement = prepareStatementLocked("SELECT id FROM tabs;") else {
             return []
         }
         
@@ -614,49 +839,14 @@ final class TabManagementStore {
             sqlite3_finalize(statement)
         }
         
-        sqlite3_bind_int64(statement, 1, isPrivate ? 1 : 0)
-        sqlite3_bind_double(statement, 2, date.timeIntervalSince1970)
-        
         var tabIDs = Set<UUID>()
         while sqlite3_step(statement) == SQLITE_ROW {
-            guard let id = UUID(uuidString: string(from: statement, at: 0)) else {
-                continue
+            if let id = UUID(uuidString: string(from: statement, at: 0)) {
+                tabIDs.insert(id)
             }
-            
-            tabIDs.insert(id)
         }
         
         return tabIDs
-    }
-    
-    private func searchTabsLocked(matching query: String, limit: Int, isPrivate: Bool) -> [TabSnapshot] {
-        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !normalizedQuery.isEmpty, limit > 0 else {
-            return []
-        }
-        
-        let strippedQuery = URLUtils.normalizedURLMatchString(from: normalizedQuery)
-        let tabs = fetchTabsLocked(isPrivate: isPrivate)
-        var matches: [TabSnapshot] = []
-        matches.reserveCapacity(min(limit, tabs.count))
-        
-        for tab in tabs {
-            let title = tab.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let urlValue = tab.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let strippedURL = URLUtils.normalizedURLMatchString(from: urlValue)
-            let titleMatches = !title.isEmpty && title.contains(normalizedQuery)
-            let urlMatches = !strippedURL.isEmpty && !strippedQuery.isEmpty && strippedURL.hasPrefix(strippedQuery)
-            guard titleMatches || urlMatches else {
-                continue
-            }
-            
-            matches.append(tab)
-            if matches.count >= limit {
-                break
-            }
-        }
-        
-        return matches
     }
     
     private func fetchRecentlyClosedTabsLocked(limit: Int) -> [RecentlyClosedTabSnapshot] {
@@ -756,11 +946,24 @@ final class TabManagementStore {
     
     // MARK: - Tab Persistence
     
-    private func insertTabsLocked(_ tabs: [PersistedTab], isPrivate: Bool) -> Bool {
+    private func deleteTabsLocked(windowID: UUID) -> Bool {
+        guard let statement = prepareStatementLocked("DELETE FROM tabs WHERE window_id = ?;") else {
+            return false
+        }
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        bind(windowID.uuidString, to: statement, at: 1)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+    
+    private func insertTabsLocked(_ tabs: [PersistedTab], windowID: UUID, isPrivate: Bool) -> Bool {
         guard let statement = prepareStatementLocked(
             """
-            INSERT INTO tabs (id, title, url, created_at, tab_session_state, is_muted, is_private, position, opened_from)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT OR REPLACE INTO tabs (id, title, url, created_at, tab_session_state, is_muted, is_private, position, opened_from, window_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
         ) else {
             return false
@@ -782,6 +985,7 @@ final class TabManagementStore {
             sqlite3_bind_int64(statement, 7, isPrivate ? 1 : 0)
             sqlite3_bind_int64(statement, 8, Int64(index))
             bindOptional(tab.openerTabID?.uuidString, to: statement, at: 9)
+            bind(windowID.uuidString, to: statement, at: 10)
             
             guard sqlite3_step(statement) == SQLITE_DONE else {
                 return false

@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoTouchSupport.mm b/widget/uikit/GeckoTouchSupport.mm
 new file mode 100644
-index 000000000000..7623d054b11d
+index 000000000000..d745ec98678e
 --- /dev/null
 +++ b/widget/uikit/GeckoTouchSupport.mm
-@@ -0,0 +1,469 @@
+@@ -0,0 +1,473 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -436,6 +436,10 @@ index 000000000000..7623d054b11d
 +  // The page may keep its hidden input focused after the keyboard is dismissed.
 +  if ((hasDirectTouch || hasPrimaryPointerPress) && !self.isFirstResponder) {
 +    [self becomeFirstResponder];
++  }
++
++  if ((hasDirectTouch || hasPrimaryPointerPress) && mGeckoChild) {
++    mGeckoChild->NotifyWindowActivationState(true);
 +  }
 +
 +  if (touches.count > 0) {

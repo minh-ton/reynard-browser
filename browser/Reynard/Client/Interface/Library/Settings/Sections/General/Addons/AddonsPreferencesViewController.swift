@@ -83,8 +83,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
         if isCheckingForAddonUpdates {
             return NSLocalizedString("Updating Add-ons…", comment: "")
         }
-        if let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self),
-           browserViewController.addonCoordinator.updateCoordinator.hasPendingApprovals {
+        if AddonUpdateCoordinator.shared.hasPendingApprovals {
             return NSLocalizedString("Complete Add-on Updates", comment: "")
         }
         return NSLocalizedString("Update All Add-ons", comment: "")
@@ -109,14 +108,14 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        LibrarySharedUtils.resolvedBrowserViewController(from: self)?.addonCoordinator.updateCoordinator.setSettingsVisible(true)
+        AddonUpdateCoordinator.shared.setSettingsVisible(true)
         clearUpdateStatus()
         loadCachedAddons()
     }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        LibrarySharedUtils.resolvedBrowserViewController(from: self)?.addonCoordinator.updateCoordinator.setSettingsVisible(false)
+        AddonUpdateCoordinator.shared.setSettingsVisible(false)
     }
     
     // MARK: - Table Data Source
@@ -374,6 +373,8 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }
     
     private func installAddonPackage(from packageURL: URL) {
+        let window = view.window
+        
         isInstallingAddonFromFile = true
         reloadActionSection()
         
@@ -402,7 +403,7 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
                     guard !presentation.isUserCancelled else {
                         return
                     }
-                    AlertPresenter.show(title: nil, message: presentation.alertMessage)
+                    AlertPresenter.show(title: nil, message: presentation.alertMessage, in: window)
                 }
             }
         }
@@ -509,10 +510,6 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
     }
     
     private func updateAddons() {
-        guard let browserViewController = LibrarySharedUtils.resolvedBrowserViewController(from: self) else {
-            return
-        }
-        
         isCheckingForAddonUpdates = true
         addonStatusTextByID.removeAll()
         updateFooterMessage = nil
@@ -524,12 +521,12 @@ final class AddonsPreferencesViewController: SettingsTableViewController {
             }
             
             let result: AddonUpdateBatchResult
-            if browserViewController.addonCoordinator.updateCoordinator.hasPendingApprovals {
-                result = await browserViewController.addonCoordinator.updateCoordinator.completePendingUpdates { [weak self] addonID, statusText in
+            if AddonUpdateCoordinator.shared.hasPendingApprovals {
+                result = await AddonUpdateCoordinator.shared.completePendingUpdates { [weak self] addonID, statusText in
                     self?.applyUpdateStatus(statusText, toAddonID: addonID)
                 }
             } else {
-                result = await browserViewController.addonCoordinator.updateCoordinator.updateAllAddons { [weak self] addonID, statusText in
+                result = await AddonUpdateCoordinator.shared.updateAllAddons { [weak self] addonID, statusText in
                     self?.applyUpdateStatus(statusText, toAddonID: addonID)
                 }
             }

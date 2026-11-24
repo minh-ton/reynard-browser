@@ -11,18 +11,16 @@ import UniformTypeIdentifiers
 import MobileCoreServices
 
 struct DownloadStoreSummary {
-    let totalCount: Int
     let activeCount: Int
     let aggregateProgress: Float
     let hasUnviewedCompletedDownloads: Bool
     
     var showsToolbarButton: Bool {
-        return activeCount > 0 || (hasUnviewedCompletedDownloads && totalCount > 0)
+        return activeCount > 0 || hasUnviewedCompletedDownloads
     }
 }
 
 struct DownloadStoreSnapshot {
-    let summary: DownloadStoreSummary
     let items: [DownloadItemSnapshot]
 }
 
@@ -63,7 +61,7 @@ final class DownloadStore: NSObject {
     
     struct PendingDownload {
         let fileName: String
-        fileprivate let startHandler: () -> WebExtensionDownloadItem?
+        fileprivate let startHandler: (_ initiatorID: UUID) -> WebExtensionDownloadItem?
     }
     
     private struct StorageURLs {
@@ -102,6 +100,7 @@ final class DownloadStore: NSObject {
     
     private final class ActiveDownload {
         let id: UUID
+        let initiatorID: UUID
         let sourceURL: URL
         let originalURL: URL?
         let fileName: String
@@ -117,6 +116,7 @@ final class DownloadStore: NSObject {
         
         init(
             id: UUID,
+            initiatorID: UUID,
             sourceURL: URL,
             originalURL: URL?,
             fileName: String,
@@ -126,6 +126,7 @@ final class DownloadStore: NSObject {
             task: URLSessionDownloadTask
         ) {
             self.id = id
+            self.initiatorID = initiatorID
             self.sourceURL = sourceURL
             self.originalURL = originalURL
             self.fileName = fileName
@@ -148,6 +149,7 @@ final class DownloadStore: NSObject {
     
     private final class CapturedDownload {
         let id: UUID
+        let initiatorID: UUID
         let localFilePath: String
         let sourceURL: URL
         let fileName: String
@@ -164,6 +166,7 @@ final class DownloadStore: NSObject {
         
         init(
             id: UUID,
+            initiatorID: UUID,
             localFilePath: String,
             sourceURL: URL,
             fileName: String,
@@ -175,6 +178,7 @@ final class DownloadStore: NSObject {
             originatingSession: GeckoSession? = nil
         ) {
             self.id = id
+            self.initiatorID = initiatorID
             self.localFilePath = localFilePath
             self.sourceURL = sourceURL
             self.fileName = fileName
@@ -205,7 +209,7 @@ final class DownloadStore: NSObject {
     private var capturedDownloads: [String: CapturedDownload] = [:]
     private var persistedDownloads: [PersistedDownloadEntry] = []
     private var lastSessionProgressNotificationTime: TimeInterval = 0
-    private var hasUnviewedCompletedDownloads = false
+    private var unviewedDownloadInitiatorIDs: [UUID: UUID] = [:]
     private var nextWebExtensionDownloadID = 1
     
     // MARK: - Lifecycle
@@ -246,6 +250,12 @@ final class DownloadStore: NSObject {
         }
     }
     
+    func summary(for initiatorID: UUID) -> DownloadStoreSummary {
+        stateQueue.sync {
+            makeSummaryLocked(for: initiatorID)
+        }
+    }
+    
     // MARK: - Pending Downloads
     
     func pendingDownload(from response: ExternalResponseInfo, session: GeckoSession) -> PendingDownload? {
@@ -265,8 +275,9 @@ final class DownloadStore: NSObject {
         
         return PendingDownload(
             fileName: fileName,
-            startHandler: { [weak self] in
+            startHandler: { [weak self] initiatorID in
                 self?.beginCapturedDownload(
+                    initiatorID: initiatorID,
                     localFilePath: response.localFilePath,
                     sourceURL: sourceURL,
                     fileName: fileName,
@@ -292,8 +303,9 @@ final class DownloadStore: NSObject {
                 sourceURL: sourceURL,
                 mimeType: "application/pdf"
             ),
-            startHandler: { [weak self] in
+            startHandler: { [weak self] initiatorID in
                 self?.enqueueDownload(
+                    initiatorID: initiatorID,
                     sourceURL: sourceURL,
                     originalURL: URL(string: request.originalUrl ?? ""),
                     suggestedFileName: request.filename,
@@ -319,8 +331,9 @@ final class DownloadStore: NSObject {
                 sourceURL: sourceURL,
                 mimeType: mimeType
             ),
-            startHandler: { [weak self] in
+            startHandler: { [weak self] initiatorID in
                 self?.beginWebExtensionDownload(
+                    initiatorID: initiatorID,
                     sourceURL: sourceURL,
                     suggestedFileName: suggestedFileName,
                     mimeType: mimeType
@@ -330,8 +343,8 @@ final class DownloadStore: NSObject {
     }
     
     @discardableResult
-    func startDownload(_ pendingDownload: PendingDownload) -> WebExtensionDownloadItem? {
-        return pendingDownload.startHandler()
+    func startDownload(_ pendingDownload: PendingDownload, initiatorID: UUID) -> WebExtensionDownloadItem? {
+        return pendingDownload.startHandler(initiatorID)
     }
     
     // MARK: - Captured Download Events
@@ -527,11 +540,11 @@ final class DownloadStore: NSObject {
     
     func markCompletedAsViewed() {
         stateQueue.async {
-            guard self.hasUnviewedCompletedDownloads else {
+            guard !self.unviewedDownloadInitiatorIDs.isEmpty else {
                 return
             }
             
-            self.hasUnviewedCompletedDownloads = false
+            self.unviewedDownloadInitiatorIDs.removeAll()
             self.postDidChange()
         }
     }
@@ -539,6 +552,7 @@ final class DownloadStore: NSObject {
     // MARK: - Captured Downloads
     
     private func beginCapturedDownload(
+        initiatorID: UUID,
         localFilePath: String,
         sourceURL: URL,
         fileName: String,
@@ -553,6 +567,7 @@ final class DownloadStore: NSObject {
             let destinationURL = self.makeUniqueDestinationURLLocked(for: fileName)
             let active = CapturedDownload(
                 id: UUID(),
+                initiatorID: initiatorID,
                 localFilePath: localFilePath,
                 sourceURL: sourceURL,
                 fileName: destinationURL.lastPathComponent,
@@ -573,6 +588,7 @@ final class DownloadStore: NSObject {
     }
     
     private func beginWebExtensionDownload(
+        initiatorID: UUID,
         sourceURL: URL,
         suggestedFileName: String?,
         mimeType: String?
@@ -598,6 +614,7 @@ final class DownloadStore: NSObject {
             
             let active = CapturedDownload(
                 id: UUID(),
+                initiatorID: initiatorID,
                 localFilePath: localFilePath,
                 sourceURL: sourceURL,
                 fileName: destinationURL.lastPathComponent,
@@ -626,6 +643,7 @@ final class DownloadStore: NSObject {
     // MARK: - URL Session Downloads
     
     private func enqueueDownload(
+        initiatorID: UUID,
         sourceURL: URL,
         originalURL: URL?,
         suggestedFileName: String?,
@@ -644,6 +662,7 @@ final class DownloadStore: NSObject {
             let task = self.session.downloadTask(with: sourceURL)
             let active = ActiveDownload(
                 id: UUID(),
+                initiatorID: initiatorID,
                 sourceURL: sourceURL,
                 originalURL: originalURL,
                 fileName: destinationURL.lastPathComponent,
@@ -742,12 +761,16 @@ final class DownloadStore: NSObject {
                 )
             }
         
-        return DownloadStoreSnapshot(summary: makeSummaryLocked(), items: activeItems + terminalItems)
+        return DownloadStoreSnapshot(items: activeItems + terminalItems)
     }
     
-    private func makeSummaryLocked() -> DownloadStoreSummary {
-        let activeProgress = activeDownloads.values.map { ($0.expectedBytes, $0.downloadedBytes) }
-        + capturedDownloads.values.map { ($0.expectedBytes, $0.downloadedBytes) }
+    private func makeSummaryLocked(for initiatorID: UUID) -> DownloadStoreSummary {
+        let activeProgress = activeDownloads.values
+            .filter { $0.initiatorID == initiatorID }
+            .map { ($0.expectedBytes, $0.downloadedBytes) }
+        + capturedDownloads.values
+            .filter { $0.initiatorID == initiatorID }
+            .map { ($0.expectedBytes, $0.downloadedBytes) }
         let hasUnknownExpectedBytes = activeProgress.contains { $0.0 == nil }
         let totalExpectedBytes = activeProgress.reduce(Int64(0)) { partialResult, item in
             partialResult + max(item.0 ?? 0, 0)
@@ -762,9 +785,10 @@ final class DownloadStore: NSObject {
             aggregateProgress = 0
         }
         
-        let terminalCount = persistedDownloads.lazy.filter { $0.effectiveState != .inProgress }.count
+        let hasUnviewedCompletedDownloads = persistedDownloads.contains {
+            unviewedDownloadInitiatorIDs[$0.id] == initiatorID
+        }
         return DownloadStoreSummary(
-            totalCount: terminalCount + activeProgress.count,
             activeCount: activeProgress.count,
             aggregateProgress: min(max(aggregateProgress, 0), 1),
             hasUnviewedCompletedDownloads: hasUnviewedCompletedDownloads
@@ -1014,7 +1038,7 @@ final class DownloadStore: NSObject {
         storePersistedEntryLocked(
             makePersistedEntry(for: active, state: .completed, fileSize: fileSize)
         )
-        hasUnviewedCompletedDownloads = true
+        unviewedDownloadInitiatorIDs[active.id] = active.initiatorID
         postDidChange()
     }
     
@@ -1071,7 +1095,7 @@ final class DownloadStore: NSObject {
             storePersistedEntryLocked(
                 makePersistedEntry(for: active, state: .completed, fileSize: fileSize)
             )
-            hasUnviewedCompletedDownloads = true
+            unviewedDownloadInitiatorIDs[active.id] = active.initiatorID
         } catch {
             try? fileManager.removeItem(at: temporaryLocation)
             storePersistedEntryLocked(

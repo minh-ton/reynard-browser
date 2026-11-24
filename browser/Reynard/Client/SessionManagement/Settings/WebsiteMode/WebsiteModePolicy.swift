@@ -80,6 +80,14 @@ final class WebsiteModePolicy {
         desktopOverridesByTab.removeValue(forKey: tabID)
     }
     
+    func takeOverrides(for tabID: UUID) -> [String: Bool]? {
+        return desktopOverridesByTab.removeValue(forKey: tabID)
+    }
+    
+    func restoreOverrides(_ overrides: [String: Bool]?, for tabID: UUID) {
+        desktopOverridesByTab[tabID] = overrides
+    }
+    
     private func storedMode(for url: String) -> Bool {
         guard let host = URL(string: url)?.host,
               let mode = SiteSettingsStore.shared.settings(for: host)?.websiteMode else {

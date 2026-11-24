@@ -206,7 +206,7 @@ final class AppearancePreferencesViewController: SettingsTableViewController {
     
     @objc private func scrollToHideToolbarSwitchDidChange() {
         Prefs.AppearanceSettings.scrollToHideToolbarEnabled = scrollToHideToolbarSwitch.isOn
-        LibrarySharedUtils.resolvedBrowserViewController(from: self)?.toolbarController.reset(animated: true)
+        BrowserWindowManager.shared.browsers.forEach { $0.toolbarController.reset(animated: true) }
     }
     
     @objc private func swipeAddressBarSidewaysSwitchDidChange() {

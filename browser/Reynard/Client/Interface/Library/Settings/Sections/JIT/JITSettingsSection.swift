@@ -151,6 +151,8 @@ final class JITSettingsSection: NSObject {
     }
     
     func savePairingFile(from url: URL) {
+        let window = settingsController?.view.window
+        
         backgroundQueue.async { [weak self] in
             guard let self else {
                 return
@@ -164,7 +166,7 @@ final class JITSettingsSection: NSObject {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    AlertPresenter.show(title: NSLocalizedString("Import Failed", comment: ""), message: error.localizedDescription)
+                    AlertPresenter.show(title: NSLocalizedString("Import Failed", comment: ""), message: error.localizedDescription, in: window)
                 }
             }
         }
@@ -231,7 +233,7 @@ final class JITSettingsSection: NSObject {
                     Prefs.JITSettings.isJITEnabled = false
                     sender.setOn(false, animated: true)
                     SettingsViewUtils.dismissPresentedAlert(alert, from: settingsController) {
-                        AlertPresenter.show(title: NSLocalizedString("Download Failed", comment: ""), message: error.localizedDescription)
+                        AlertPresenter.show(title: NSLocalizedString("Download Failed", comment: ""), message: error.localizedDescription, in: settingsController.view.window)
                     }
                 }
             }

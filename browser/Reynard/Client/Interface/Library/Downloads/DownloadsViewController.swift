@@ -625,6 +625,7 @@ final class DownloadsViewController: UIViewController, UITableViewDataSource, UI
         AlertPresenter.show(
             title: NSLocalizedString("Cancel Download?", comment: ""),
             message: String(format: NSLocalizedString("Do you want to stop downloading %@?", comment: "File name"), item.fileName),
+            in: view.window,
             buttons: [
                 AlertPresenter.Button(title: NSLocalizedString("Keep Downloading", comment: ""), style: .cancel) {
                     completion(false)

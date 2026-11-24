@@ -58,11 +58,7 @@ final class SearchViewModel {
         resultsDidChange?(.empty)
     }
     
-    func updateQuery(
-        _ query: String,
-        activeTabMode: TabMode?,
-        excludingTabID: UUID?
-    ) {
+    func updateQuery(_ query: String, openTabs: [UserDataSearch.OpenTab]) {
         guard !query.isEmpty else {
             clear()
             return
@@ -81,11 +77,7 @@ final class SearchViewModel {
                 return
             }
             
-            let userData = self.userDataSearch.search(
-                query: query,
-                activeTabMode: activeTabMode,
-                excludingTabID: excludingTabID
-            )
+            let userData = self.userDataSearch.search(query: query, openTabs: openTabs)
             
             DispatchQueue.main.async {
                 guard activeRequestID == self.requestID else {

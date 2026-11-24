@@ -44,7 +44,7 @@ final class AddonPopupViewController: UIViewController, ContentDelegate, Navigat
         return view
     }()
     private let session: GeckoSession
-    private let promptCoordinator = PromptCoordinator(presenter: PromptPresenter())
+    private lazy var promptCoordinator = PromptCoordinator(presenter: PromptPresenter(window: { [weak self] in self?.view.window }))
     private var outsideTapGestureRecognizer: UITapGestureRecognizer?
     private var hasClosedSession = false
     private var hasNotifiedDismissal = false
