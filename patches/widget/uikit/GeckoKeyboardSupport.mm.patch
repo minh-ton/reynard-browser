@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoKeyboardSupport.mm b/widget/uikit/GeckoKeyboardSupport.mm
 new file mode 100644
-index 000000000000..69466b62683d
+index 000000000000..ce52372171d8
 --- /dev/null
 +++ b/widget/uikit/GeckoKeyboardSupport.mm
-@@ -0,0 +1,1098 @@
+@@ -0,0 +1,1099 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -999,6 +999,7 @@ index 000000000000..69466b62683d
 +
 +  if ([self isFirstResponder] && isHardwareKeyboardEvent && mGeckoChild &&
 +      !mGeckoChild->Destroyed()) {
++    mGeckoChild->NotifyWindowActivationState(true);
 +    if (mozilla::widget::TextInputHandler* handler =
 +            mGeckoChild->GetTextInputHandler()) {
 +      if (handler->HandleKeyCommand(event)) {
