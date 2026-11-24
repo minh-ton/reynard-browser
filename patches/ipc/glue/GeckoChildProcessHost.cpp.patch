@@ -1,5 +1,5 @@
 diff --git a/ipc/glue/GeckoChildProcessHost.cpp b/ipc/glue/GeckoChildProcessHost.cpp
-index b65b042b4403..ade85f49d5f1 100644
+index b65b042b4403..4208255c9a42 100644
 --- a/ipc/glue/GeckoChildProcessHost.cpp
 +++ b/ipc/glue/GeckoChildProcessHost.cpp
 @@ -34,6 +34,13 @@
@@ -233,7 +233,7 @@ index b65b042b4403..ade85f49d5f1 100644
      xpc_dictionary_set_mach_send(sendRightWrapper.get(), "port",
                                   sendRight.get());
      xpc_array_set_value(sendRightsArray.get(), XPC_ARRAY_APPEND,
-@@ -1616,34 +1698,46 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+@@ -1616,34 +1698,50 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
                             sendRightsArray.get());
  
    auto promise = MakeRefPtr<ProcessLaunchPromise::Private>(__func__);
@@ -249,7 +249,11 @@ index b65b042b4403..ade85f49d5f1 100644
 +  // longer on the GPU and graphics-related tasks just lag. So we do a
 +  // workaround here by starting the GPU process as a super tiny hosted view on
 +  // the app (see NSExtensionUtils.mm) so that iOS just mark it as foreground!
-+  bool hostsView = mProcessType == GeckoProcessType_GPU;
++  // Note that this only works on iOS 26+
++  bool hostsView = false;
++  if (__builtin_available(iOS 26.0, *)) {
++    hostsView = mProcessType == GeckoProcessType_GPU;
++  }
 +
 +  NSExtensionProcess::StartProcess(hostsView, [self = RefPtr{this}, promise,
 +                                               didSettle,
@@ -299,7 +303,7 @@ index b65b042b4403..ade85f49d5f1 100644
  
      // Send our bootstrap message to the content and wait for it to reply with
      // the task port before resolving.
-@@ -1653,22 +1747,28 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+@@ -1653,22 +1751,28 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
      xpc_connection_send_message_with_reply(
          self->mResults.mXPCConnection.get(), bootstrapMessage.get(), nullptr,
          ^(xpc_object_t reply) {
@@ -337,7 +341,7 @@ index b65b042b4403..ade85f49d5f1 100644
              return;
            }
  
-@@ -1681,10 +1781,30 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
+@@ -1681,10 +1785,30 @@ RefPtr<ProcessLaunchPromise> IosProcessLauncher::DoLaunch() {
            // this point, so we should be able to trust it.
            pid_t pid =
                static_cast<pid_t>(xpc_dictionary_get_int64(reply, "pid"));
