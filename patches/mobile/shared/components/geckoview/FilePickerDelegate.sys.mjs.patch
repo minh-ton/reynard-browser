@@ -1,8 +1,8 @@
 diff --git a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
-index 9aba9986ea0f..ca84edf27e6e 100644
+index c5604f0f7483..70d13f57e5c5 100644
 --- a/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
 +++ b/mobile/shared/components/geckoview/FilePickerDelegate.sys.mjs
-@@ -54,6 +54,10 @@ export class FilePickerDelegate {
+@@ -55,6 +55,10 @@ export class FilePickerDelegate {
    }
  
    open(aFilePickerShownCallback) {
@@ -13,7 +13,7 @@ index 9aba9986ea0f..ca84edf27e6e 100644
      if (!this._browsingContext.canOpenModalPicker) {
        // File pickers are not allowed to open, so we respond to the callback
        // with returnCancel.
-@@ -63,6 +67,12 @@ export class FilePickerDelegate {
+@@ -64,6 +68,12 @@ export class FilePickerDelegate {
  
      this._msg.mimeTypes = this._mimeTypes;
      this._msg.capture = this._capture;
@@ -26,7 +26,7 @@ index 9aba9986ea0f..ca84edf27e6e 100644
      this._prompt.asyncShowPrompt(this._msg, result => {
        // OK: result
        // Cancel: !result
-@@ -280,7 +290,7 @@ export class FilePickerDelegate {
+@@ -281,7 +291,7 @@ export class FilePickerDelegate {
    *_getDOMFilesInWebKitDirectory() {
      if (
        this._mode != Ci.nsIFilePicker.modeGetFolder ||

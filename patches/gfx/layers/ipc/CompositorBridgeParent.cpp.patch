@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.cpp b/gfx/layers/ipc/CompositorBridgeParent.cpp
-index 0bee67c5fb22..0a3659bdd438 100644
+index 50529a8cfc6c..0c524c63dd9d 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.cpp
 +++ b/gfx/layers/ipc/CompositorBridgeParent.cpp
-@@ -849,10 +849,12 @@ void CompositorBridgeParent::SetConfirmedTargetAPZC(
+@@ -844,10 +844,12 @@ void CompositorBridgeParent::SetConfirmedTargetAPZC(
    mApzUpdater->RunOnUpdaterThread(aLayersId, task.forget());
  }
  
@@ -18,7 +18,7 @@ index 0bee67c5fb22..0a3659bdd438 100644
    }
  
    ScheduleComposition(wr::RenderReasons::RESIZE);
-@@ -1623,7 +1625,7 @@ CompositorBridgeParent::AllocPCompositorWidgetParent(
+@@ -1632,7 +1634,7 @@ CompositorBridgeParent::AllocPCompositorWidgetParent(
  #endif
  }
  

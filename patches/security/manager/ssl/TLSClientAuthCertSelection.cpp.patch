@@ -1,8 +1,8 @@
 diff --git a/security/manager/ssl/TLSClientAuthCertSelection.cpp b/security/manager/ssl/TLSClientAuthCertSelection.cpp
-index d9407d7e6688..f9916b48a73b 100644
+index 70994cc23844..7aa9cf08633c 100644
 --- a/security/manager/ssl/TLSClientAuthCertSelection.cpp
 +++ b/security/manager/ssl/TLSClientAuthCertSelection.cpp
-@@ -714,7 +714,12 @@ SelectClientAuthCertificate::Run() {
+@@ -704,7 +704,12 @@ SelectClientAuthCertificate::Run() {
      return NS_OK;
    }
  

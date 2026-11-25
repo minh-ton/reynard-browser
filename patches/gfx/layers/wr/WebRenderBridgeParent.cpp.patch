@@ -1,18 +1,18 @@
 diff --git a/gfx/layers/wr/WebRenderBridgeParent.cpp b/gfx/layers/wr/WebRenderBridgeParent.cpp
-index b32bf4975d9f..c1ac4aacbeea 100644
+index a000b17dd9a9..254fcce8c6e0 100644
 --- a/gfx/layers/wr/WebRenderBridgeParent.cpp
 +++ b/gfx/layers/wr/WebRenderBridgeParent.cpp
-@@ -843,7 +843,8 @@ bool WebRenderBridgeParent::UpdateResources(
- 
-         wr::Vec<uint8_t> bytes;
-         if (reader.Read(op.bytes(), bytes)) {
--          aUpdates.AddFontDescriptor(op.key(), bytes, op.fontIndex());
-+          aUpdates.AddFontDescriptor(op.key(), bytes, op.fontIndex(),
+@@ -910,7 +910,8 @@ bool WebRenderBridgeParent::UpdateResources(
+         uint32_t fontIndex = op.fontIndex();
+         if (reader.Read(op.bytes(), bytes) &&
+             ValidateFontDescriptor(bytes, fontIndex)) {
+-          aUpdates.AddFontDescriptor(op.key(), bytes, fontIndex);
++          aUpdates.AddFontDescriptor(op.key(), bytes, fontIndex,
 +                                     op.isSystemFont(), op.systemFontTraits());
          } else {
            gfxCriticalNote << "TOpAddFontDescriptor failed";
            success = false;
-@@ -1356,6 +1357,15 @@ void WebRenderBridgeParent::SetAPZSampleTime() {
+@@ -1423,6 +1424,15 @@ void WebRenderBridgeParent::SetAPZSampleTime() {
        animationTime = mLateInit->mCompositorScheduler->GetLastComposeTime();
      }
      TimeDuration frameInterval = cbp->GetVsyncInterval();

@@ -1,8 +1,8 @@
 diff --git a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
-index e1c073c86237..c3013d7d8a22 100644
+index 359ef5a15d5c..8573e4cdc675 100644
 --- a/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
 +++ b/mobile/shared/components/geckoview/GeckoViewPrompt.sys.mjs
-@@ -19,6 +19,7 @@ const { debug, warn } = GeckoViewUtils.initLogging("GeckoViewPrompt");
+@@ -20,6 +20,7 @@ const { debug, warn } = GeckoViewUtils.initLogging("GeckoViewPrompt");
  export class PromptFactory {
    constructor() {
      this.wrappedJSObject = this;
@@ -10,7 +10,7 @@ index e1c073c86237..c3013d7d8a22 100644
    }
  
    handleEvent(aEvent) {
-@@ -73,6 +74,17 @@ export class PromptFactory {
+@@ -74,6 +75,17 @@ export class PromptFactory {
      }
  
      const type = target.type;
@@ -28,7 +28,7 @@ index e1c073c86237..c3013d7d8a22 100644
      if (type === "month" || type === "week") {
        // TODO(bug 888320, bug 1283382, bug 1283383): Remove this once we
        // support UA widgets for month/week inputs.
-@@ -84,7 +96,7 @@ export class PromptFactory {
+@@ -85,7 +97,7 @@ export class PromptFactory {
    // Maps the select's list items, as computed by
    // HTMLSelectElement::GetListItems, onto the native choice items.
    _generateSelectItems(aElement) {
@@ -37,7 +37,7 @@ index e1c073c86237..c3013d7d8a22 100644
      let id = 0;
      const map = {};
  
-@@ -118,7 +130,7 @@ export class PromptFactory {
+@@ -119,7 +131,7 @@ export class PromptFactory {
    }
  
    _handleSelect(aElement, aIsDropDown) {
@@ -46,7 +46,7 @@ index e1c073c86237..c3013d7d8a22 100644
      const [items] = this._generateSelectItems(aElement);
  
      if (aIsDropDown) {
-@@ -159,11 +171,22 @@ export class PromptFactory {
+@@ -160,11 +172,22 @@ export class PromptFactory {
        mozSystemGroup: true,
      });
  
@@ -69,7 +69,7 @@ index e1c073c86237..c3013d7d8a22 100644
        },
        result => {
          deferredUpdate.disarm();
-@@ -228,28 +251,43 @@ export class PromptFactory {
+@@ -229,28 +252,43 @@ export class PromptFactory {
    }
  
    _handleDateTime(aElement) {
@@ -121,7 +121,7 @@ index e1c073c86237..c3013d7d8a22 100644
        }
      }
  
-@@ -261,15 +299,16 @@ export class PromptFactory {
+@@ -262,15 +300,16 @@ export class PromptFactory {
          min: aElement.min,
          max: aElement.max,
          step: aElement.step,
@@ -144,7 +144,7 @@ index e1c073c86237..c3013d7d8a22 100644
            chromeEventHandler.removeEventListener(
              "MozCloseDateTimePicker",
              dismissPrompt
-@@ -277,6 +316,10 @@ export class PromptFactory {
+@@ -278,6 +317,10 @@ export class PromptFactory {
            dateTimeBoxElement.dispatchEvent(
              new win.CustomEvent("MozSetDateTimePickerState", { detail: false })
            );
@@ -155,7 +155,7 @@ index e1c073c86237..c3013d7d8a22 100644
          }
  
          // OK: result
-@@ -291,6 +334,52 @@ export class PromptFactory {
+@@ -292,6 +335,52 @@ export class PromptFactory {
          aElement.value = result.datetime;
          this._dispatchEvents(aElement);
        }

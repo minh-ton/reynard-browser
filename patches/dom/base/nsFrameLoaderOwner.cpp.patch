@@ -1,5 +1,5 @@
 diff --git a/dom/base/nsFrameLoaderOwner.cpp b/dom/base/nsFrameLoaderOwner.cpp
-index b345dbf80996..c77b4ce027e4 100644
+index a371c346dcf7..20cac647e185 100644
 --- a/dom/base/nsFrameLoaderOwner.cpp
 +++ b/dom/base/nsFrameLoaderOwner.cpp
 @@ -437,6 +437,9 @@ bool nsFrameLoaderOwner::RestoreFrameLoaderFromBFCache(

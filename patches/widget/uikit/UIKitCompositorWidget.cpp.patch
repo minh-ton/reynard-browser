@@ -1,6 +1,6 @@
 diff --git a/widget/uikit/UIKitCompositorWidget.cpp b/widget/uikit/UIKitCompositorWidget.cpp
 new file mode 100644
-index 000000000000..d580e0fa4daa
+index 000000000000..aa55fd3ae451
 --- /dev/null
 +++ b/widget/uikit/UIKitCompositorWidget.cpp
 @@ -0,0 +1,124 @@
@@ -123,7 +123,7 @@ index 000000000000..d580e0fa4daa
 +    const nsTArray<NativeTextInputScrollUpdate>& aUpdates) {
 +  aTransaction.Notify(
 +      wr::Checkpoint::FrameTexturesUpdated,
-+      MakeUnique<NativeTextInputScrollNotification>(aWindowId, aUpdates));
++      std::make_unique<NativeTextInputScrollNotification>(aWindowId, aUpdates));
 +}
 +
 +}  // namespace widget

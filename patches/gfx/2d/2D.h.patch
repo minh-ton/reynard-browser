@@ -1,5 +1,5 @@
 diff --git a/gfx/2d/2D.h b/gfx/2d/2D.h
-index b44630358ea1..cf30566a1511 100644
+index 8bf0728d6c73..e6cd6ee57a07 100644
 --- a/gfx/2d/2D.h
 +++ b/gfx/2d/2D.h
 @@ -1311,6 +1311,12 @@ class AutoLockSharedFTFace {
@@ -28,7 +28,7 @@ index b44630358ea1..cf30566a1511 100644
    virtual already_AddRefed<ScaledFont> CreateScaledFont(
        Float aGlyphSize, const uint8_t* aInstanceData,
        uint32_t aInstanceDataLength, const wr::FontVariation* aVariations,
-@@ -2331,7 +2343,8 @@ class GFX2D_API Factory {
+@@ -2341,7 +2353,8 @@ class GFX2D_API Factory {
     */
    static already_AddRefed<UnscaledFont> CreateUnscaledFontFromFontDescriptor(
        FontType aType, const uint8_t* aData, uint32_t aDataLength,

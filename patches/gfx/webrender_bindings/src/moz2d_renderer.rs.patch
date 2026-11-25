@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/src/moz2d_renderer.rs b/gfx/webrender_bindings/src/moz2d_renderer.rs
-index 463c61318693..9a1ad938eaaf 100644
+index 2d6d921ba309..65e847720566 100644
 --- a/gfx/webrender_bindings/src/moz2d_renderer.rs
 +++ b/gfx/webrender_bindings/src/moz2d_renderer.rs
 @@ -22,6 +22,8 @@ use std::collections::btree_map::BTreeMap;
@@ -20,7 +20,7 @@ index 463c61318693..9a1ad938eaaf 100644
  #[cfg(any(target_os = "macos", target_os = "ios"))]
  use foreign_types::ForeignType;
  
-@@ -737,6 +741,50 @@ impl BlobImageHandler for Moz2dBlobImageHandler {
+@@ -738,6 +742,50 @@ impl BlobImageHandler for Moz2dBlobImageHandler {
  
  use bindings::{WrFontInstanceKey, WrFontKey, WrIdNamespace};
  
@@ -71,7 +71,7 @@ index 463c61318693..9a1ad938eaaf 100644
  #[allow(improper_ctypes)] // this is needed so that rustc doesn't complain about passing the &Arc<Vec> to an extern function
  extern "C" {
      fn HasFontData(key: WrFontKey) -> bool;
-@@ -810,11 +858,14 @@ impl Moz2dBlobImageHandler {
+@@ -811,11 +859,14 @@ impl Moz2dBlobImageHandler {
          }
  
          #[cfg(target_os = "windows")]
@@ -82,16 +82,16 @@ index 463c61318693..9a1ad938eaaf 100644
 +        ) -> Result<(), NativeFontResolutionError> {
              if let Some(file) = dwrote::FontFile::new_from_path(&handle.path) {
                  if let Ok(face) = file.create_face(handle.index, dwrote::DWRITE_FONT_SIMULATIONS_NONE) {
-                     unsafe { AddNativeFontHandle(key, face.as_ptr() as *mut c_void, 0) };
+                     unsafe { AddNativeFontHandle(key, face.as_ptr() as *mut c_void, 0, 0) };
 -                    return;
 +                    return Ok(());
                  }
              }
  
-@@ -836,29 +887,71 @@ impl Moz2dBlobImageHandler {
+@@ -837,30 +888,72 @@ impl Moz2dBlobImageHandler {
                  .unwrap();
              let face = font.create_font_face();
-             unsafe { AddNativeFontHandle(key, face.as_ptr() as *mut c_void, 0) };
+             unsafe { AddNativeFontHandle(key, face.as_ptr() as *mut c_void, 0, 0) };
 +            Ok(())
          }
  
@@ -126,7 +126,7 @@ index 463c61318693..9a1ad938eaaf 100644
 +                    resolved,
 +                });
 +            }
-+            unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0) };
++            unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0, 0) };
 +            Ok(())
 +        }
 +
@@ -158,7 +158,7 @@ index 463c61318693..9a1ad938eaaf 100644
 +                }
 +                font
              };
-             unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0) };
+             unsafe { AddNativeFontHandle(key, font.as_ptr() as *mut c_void, 0, 0) };
 +            Ok(())
          }
  
@@ -169,12 +169,13 @@ index 463c61318693..9a1ad938eaaf 100644
 +            handle: &NativeFontHandle,
 +        ) -> Result<(), NativeFontResolutionError> {
              let cstr = CString::new(handle.path.as_os_str().as_bytes()).unwrap();
-             unsafe { AddNativeFontHandle(key, cstr.as_ptr() as *mut c_void, handle.index) };
+             let size = cstr.to_bytes().len();
+             unsafe { AddNativeFontHandle(key, cstr.as_ptr() as *mut c_void, size, handle.index) };
 +            Ok(())
          }
  
          fn process_fonts(
-@@ -873,21 +966,34 @@ impl Moz2dBlobImageHandler {
+@@ -875,21 +968,34 @@ impl Moz2dBlobImageHandler {
                  if scaled_fonts.contains(&font.font_instance_key) {
                      continue;
                  }
@@ -213,7 +214,7 @@ index 463c61318693..9a1ad938eaaf 100644
                      }
                      unsafe {
                          AddBlobFont(
-@@ -900,6 +1006,7 @@ impl Moz2dBlobImageHandler {
+@@ -902,6 +1008,7 @@ impl Moz2dBlobImageHandler {
                              instance.variations.len(),
                          );
                      }

@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/RenderCompositorNative.cpp b/gfx/webrender_bindings/RenderCompositorNative.cpp
-index 9548f96f9c70..7fffb2ac93f3 100644
+index c02c8fe2d72c..225d8e0bb6f9 100644
 --- a/gfx/webrender_bindings/RenderCompositorNative.cpp
 +++ b/gfx/webrender_bindings/RenderCompositorNative.cpp
 @@ -117,7 +117,7 @@ bool RenderCompositorNative::Resume() { return true; }

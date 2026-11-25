@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/wr/WebRenderImageHost.cpp b/gfx/layers/wr/WebRenderImageHost.cpp
-index 20441740bff4..1a7bc6623354 100644
+index ba306e53d26b..e65f29e3750a 100644
 --- a/gfx/layers/wr/WebRenderImageHost.cpp
 +++ b/gfx/layers/wr/WebRenderImageHost.cpp
 @@ -378,6 +378,20 @@ TextureHost* WebRenderImageHost::GetAsTextureHostForComposite(

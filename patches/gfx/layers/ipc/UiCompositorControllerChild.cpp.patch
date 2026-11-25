@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/UiCompositorControllerChild.cpp b/gfx/layers/ipc/UiCompositorControllerChild.cpp
-index 94a9b3093944..ba3a8b88307b 100644
+index efc8c7b7f650..55d84b29a526 100644
 --- a/gfx/layers/ipc/UiCompositorControllerChild.cpp
 +++ b/gfx/layers/ipc/UiCompositorControllerChild.cpp
 @@ -22,8 +22,10 @@
@@ -50,10 +50,10 @@ index 94a9b3093944..ba3a8b88307b 100644
 +#endif
 +
  void UiCompositorControllerChild::Destroy() {
-   MOZ_ASSERT(NS_IsMainThread());
+   MOZ_RELEASE_ASSERT(NS_IsMainThread());
  
 +  auto destroy = [this]() {
-+    MOZ_ASSERT(GetUiThread()->IsOnCurrentThread());
++    MOZ_RELEASE_ASSERT(GetUiThread()->IsOnCurrentThread());
 +
 +    // Clear the process token so that we don't notify the GPUProcessManager
 +    // about an abnormal shutdown, thereby tearing down the GPU process.
@@ -82,7 +82,7 @@ index 94a9b3093944..ba3a8b88307b 100644
    layers::SynchronousTask task("UiCompositorControllerChild::Destroy");
    GetUiThread()->Dispatch(NS_NewRunnableFunction(
 -      "layers::UiCompositorControllerChild::Destroy", [&]() {
--        MOZ_ASSERT(GetUiThread()->IsOnCurrentThread());
+-        MOZ_RELEASE_ASSERT(GetUiThread()->IsOnCurrentThread());
 +      "layers::UiCompositorControllerChild::Destroy", [destroy, &task]() {
          AutoCompleteTask complete(&task);
 -

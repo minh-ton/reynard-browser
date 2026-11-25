@@ -1,8 +1,8 @@
 diff --git a/netwerk/build/components.conf b/netwerk/build/components.conf
-index 660fbb2eaada..a892999f09f9 100644
+index fa718393c511..cd39bbef6523 100644
 --- a/netwerk/build/components.conf
 +++ b/netwerk/build/components.conf
-@@ -896,6 +896,12 @@ elif toolkit == 'android':
+@@ -874,6 +874,12 @@ elif toolkit == 'android':
          'headers': ['/netwerk/system/android/nsAndroidNetworkLinkService.h'],
          'init_method': 'Init',
      }

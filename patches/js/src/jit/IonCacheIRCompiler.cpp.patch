@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/IonCacheIRCompiler.cpp b/js/src/jit/IonCacheIRCompiler.cpp
-index 2e70eb2b5bf1..8d118370e321 100644
+index ae8525c7b39a..d24cab0cecbd 100644
 --- a/js/src/jit/IonCacheIRCompiler.cpp
 +++ b/js/src/jit/IonCacheIRCompiler.cpp
 @@ -52,6 +52,7 @@ IonCacheIRCompiler::IonCacheIRCompiler(JSContext* cx, TempAllocator& alloc,
@@ -38,5 +38,5 @@ index 2e70eb2b5bf1..8d118370e321 100644
    AutoCreatedBy acb(masm, "IonCacheIRCompiler::compile");
 +  currentStub_ = stub;
  
+   masm.indirectTarget(TargetKind::Jump);
    masm.setFramePushed(ionScript_->frameSize());
-   if (cx_->runtime()->geckoProfiler().enabled()) {

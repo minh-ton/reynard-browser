@@ -1,5 +1,5 @@
 diff --git a/toolkit/components/processtools/ProcInfo.h b/toolkit/components/processtools/ProcInfo.h
-index f88c888cc9a1..accab484f684 100644
+index e6c48f175ab0..2ddf16e7ae8a 100644
 --- a/toolkit/components/processtools/ProcInfo.h
 +++ b/toolkit/components/processtools/ProcInfo.h
 @@ -13,6 +13,11 @@

@@ -1,5 +1,5 @@
 diff --git a/third_party/angle/src/libANGLE/renderer/metal/angle_metal_backend_gn/moz.build b/third_party/angle/src/libANGLE/renderer/metal/angle_metal_backend_gn/moz.build
-index 829d191e2cd7..864746fd866b 100644
+index efbb449badb2..4f93a61c3ac5 100644
 --- a/third_party/angle/src/libANGLE/renderer/metal/angle_metal_backend_gn/moz.build
 +++ b/third_party/angle/src/libANGLE/renderer/metal/angle_metal_backend_gn/moz.build
 @@ -38,15 +38,21 @@ LOCAL_INCLUDES += [

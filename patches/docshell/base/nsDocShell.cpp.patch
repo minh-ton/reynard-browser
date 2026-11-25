@@ -1,8 +1,8 @@
 diff --git a/docshell/base/nsDocShell.cpp b/docshell/base/nsDocShell.cpp
-index 3c78b92b661f..f3886ffb79bc 100644
+index d5ad55ab1721..7d9dbf940f08 100644
 --- a/docshell/base/nsDocShell.cpp
 +++ b/docshell/base/nsDocShell.cpp
-@@ -2487,6 +2487,48 @@ nsDocShell::ClearCachedUserAgent() {
+@@ -2492,6 +2492,48 @@ nsDocShell::ClearCachedUserAgent() {
    return NS_OK;
  }
  
@@ -103,7 +103,7 @@ index 3c78b92b661f..f3886ffb79bc 100644
  }
  
  NS_IMETHODIMP
-@@ -7361,6 +7417,11 @@ nsresult nsDocShell::CreateDocumentViewer(const nsACString& aContentType,
+@@ -7371,6 +7427,11 @@ nsresult nsDocShell::CreateDocumentViewer(const nsACString& aContentType,
    NS_ENSURE_SUCCESS(Embed(viewer, nullptr, false, aOpenedChannel, previousURI),
                      NS_ERROR_FAILURE);
  
@@ -115,7 +115,7 @@ index 3c78b92b661f..f3886ffb79bc 100644
    if (!mBrowsingContext->GetHasLoadedNonInitialDocument()) {
      MOZ_ALWAYS_SUCCEEDS(mBrowsingContext->SetHasLoadedNonInitialDocument(true));
    }
-@@ -8742,6 +8803,45 @@ static void MaybeConvertToReplaceLoad(nsDocShellLoadState* aLoadState,
+@@ -8755,6 +8816,45 @@ static void MaybeConvertToReplaceLoad(nsDocShellLoadState* aLoadState,
    }
  }
  
@@ -161,7 +161,7 @@ index 3c78b92b661f..f3886ffb79bc 100644
  // InternalLoad performs several of the steps from
  // https://html.spec.whatwg.org/#navigate.
  nsresult nsDocShell::InternalLoad(nsDocShellLoadState* aLoadState,
-@@ -8795,6 +8895,15 @@ nsresult nsDocShell::InternalLoad(nsDocShellLoadState* aLoadState,
+@@ -8808,6 +8908,15 @@ nsresult nsDocShell::InternalLoad(nsDocShellLoadState* aLoadState,
  
    MOZ_TRY(CheckDisallowedJavascriptLoad(aLoadState));
  
@@ -177,7 +177,7 @@ index 3c78b92b661f..f3886ffb79bc 100644
    // If we don't have a target, we're loading into ourselves, and our load
    // delegate may want to intercept that load.
    SameDocumentNavigationState sameDocumentNavigationState;
-@@ -12471,6 +12580,15 @@ nsresult nsDocShell::OnLinkClick(
+@@ -12496,6 +12605,15 @@ nsresult nsDocShell::OnLinkClick(
  
    bool noOpenerImplied = false;
    nsAutoString target(aTargetSpec);

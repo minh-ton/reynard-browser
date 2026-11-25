@@ -1,5 +1,5 @@
 diff --git a/netwerk/protocol/http/HttpConnectionUDP.cpp b/netwerk/protocol/http/HttpConnectionUDP.cpp
-index db77675dde60..30d2a9d6079e 100644
+index d4a41be57941..12d2bb6233b9 100644
 --- a/netwerk/protocol/http/HttpConnectionUDP.cpp
 +++ b/netwerk/protocol/http/HttpConnectionUDP.cpp
 @@ -34,6 +34,10 @@
@@ -13,7 +13,7 @@ index db77675dde60..30d2a9d6079e 100644
  namespace mozilla {
  namespace net {
  
-@@ -317,6 +321,23 @@ nsresult HttpConnectionUDP::InitCommon(nsIUDPSocket* aSocket,
+@@ -325,6 +329,23 @@ nsresult HttpConnectionUDP::InitCommon(nsIUDPSocket* aSocket,
      return rv;
    }
  

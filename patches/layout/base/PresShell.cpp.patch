@@ -1,8 +1,8 @@
 diff --git a/layout/base/PresShell.cpp b/layout/base/PresShell.cpp
-index f22d9718cbab..0e8b1fb4f154 100644
+index 1e82a46f424e..b042de7f64d7 100644
 --- a/layout/base/PresShell.cpp
 +++ b/layout/base/PresShell.cpp
-@@ -47,6 +47,7 @@
+@@ -48,6 +48,7 @@
  #include "mozilla/IntegerRange.h"
  #include "mozilla/Likely.h"
  #include "mozilla/Logging.h"
@@ -10,7 +10,7 @@ index f22d9718cbab..0e8b1fb4f154 100644
  #include "mozilla/MemoryReporting.h"
  #include "mozilla/MouseEvents.h"
  #include "mozilla/PerfStats.h"
-@@ -1884,7 +1885,19 @@ void PresShell::ResizeReflow(const nsSize& aSize,
+@@ -1900,7 +1901,19 @@ void PresShell::ResizeReflow(const nsSize& aSize,
      mMobileViewportManager->RequestReflow(false);
      return;
    }
@@ -31,7 +31,7 @@ index f22d9718cbab..0e8b1fb4f154 100644
  }
  
  bool PresShell::SimpleResizeReflow(const nsSize& aSize) {
-@@ -5781,7 +5794,32 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() const {
+@@ -5792,7 +5805,32 @@ nscolor PresShell::GetDefaultBackgroundColorToDraw() const {
  }
  
  void PresShell::UpdateCanvasBackground() {
@@ -65,7 +65,7 @@ index f22d9718cbab..0e8b1fb4f154 100644
  }
  
  static SingleCanvasBackground ComputeSingleCanvasBackground(nsIFrame* aCanvas) {
-@@ -12532,6 +12570,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
+@@ -12555,6 +12593,17 @@ nsPoint PresShell::GetVisualViewportOffsetRelativeToLayoutViewport() const {
    return GetVisualViewportOffset() - GetLayoutViewportOffset();
  }
  
@@ -83,7 +83,7 @@ index f22d9718cbab..0e8b1fb4f154 100644
  nsPoint PresShell::GetLayoutViewportOffset() const {
    nsPoint result;
    if (ScrollContainerFrame* sf = GetRootScrollContainerFrame()) {
-@@ -12577,7 +12626,7 @@ nsSize PresShell::GetFixedViewportSize() const {
+@@ -12600,7 +12649,7 @@ nsSize PresShell::GetFixedViewportSize() const {
      return layoutViewportSize;
    }
    layoutViewportSize.height +=

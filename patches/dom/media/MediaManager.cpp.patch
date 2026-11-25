@@ -1,5 +1,5 @@
 diff --git a/dom/media/MediaManager.cpp b/dom/media/MediaManager.cpp
-index a3d6a13aa50e..1dbe66cfcae7 100644
+index 796924095cce..298a5c0784f4 100644
 --- a/dom/media/MediaManager.cpp
 +++ b/dom/media/MediaManager.cpp
 @@ -991,7 +991,8 @@ NS_IMPL_ISUPPORTS(LocalMediaDevice, nsIMediaDevice)

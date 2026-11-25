@@ -1,5 +1,5 @@
 diff --git a/editor/libeditor/PendingStyles.cpp b/editor/libeditor/PendingStyles.cpp
-index 061cde5d9223..a8c9ab197d77 100644
+index 7b43b1ae66ad..d284ef05f5dd 100644
 --- a/editor/libeditor/PendingStyles.cpp
 +++ b/editor/libeditor/PendingStyles.cpp
 @@ -294,6 +294,7 @@ void PendingStyles::OnSelectionChange(const HTMLEditor& aHTMLEditor,

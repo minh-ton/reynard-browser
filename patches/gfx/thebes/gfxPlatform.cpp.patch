@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/gfxPlatform.cpp b/gfx/thebes/gfxPlatform.cpp
-index 5acefcdb75c0..da2382eeb5a2 100644
+index 38a9bd36903e..d63cec275383 100644
 --- a/gfx/thebes/gfxPlatform.cpp
 +++ b/gfx/thebes/gfxPlatform.cpp
 @@ -46,6 +46,7 @@
@@ -33,7 +33,7 @@ index 5acefcdb75c0..da2382eeb5a2 100644
      layers::CompositorManagerChild* manager =
          CompositorManagerChild::GetInstance();
      if (manager) {
-@@ -3210,7 +3226,7 @@ void gfxPlatform::InitWebGPUConfig() {
+@@ -3267,7 +3283,7 @@ void gfxPlatform::InitWebGPUConfig() {
      featureExternalTexture.Disable(FeatureStatus::Blocklisted, message.get(),
                                     failureId);
    }

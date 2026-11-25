@@ -1,8 +1,8 @@
 diff --git a/layout/base/AccessibleCaretManager.cpp b/layout/base/AccessibleCaretManager.cpp
-index 7f557d35840d..6e283712b007 100644
+index e6027c6baad9..54654896f3f6 100644
 --- a/layout/base/AccessibleCaretManager.cpp
 +++ b/layout/base/AccessibleCaretManager.cpp
-@@ -258,6 +258,9 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
+@@ -259,6 +259,9 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
      const UpdateCaretsHintSet& aHints) {
    AC_LOG("%s, selection: %p", __FUNCTION__, GetSelection());
  
@@ -12,7 +12,7 @@ index 7f557d35840d..6e283712b007 100644
    int32_t offset = 0;
    nsIFrame* frame = nullptr;
    if (!IsCaretDisplayableInCursorMode(&frame, &offset)) {
-@@ -265,6 +268,8 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
+@@ -266,6 +269,8 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
      return;
    }
  
@@ -21,7 +21,7 @@ index 7f557d35840d..6e283712b007 100644
    auto result = PositionChangedResult::NotChanged;
    {
      // Mutating the caret elements may run scripts that destroy the PresShell
-@@ -359,6 +364,14 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
+@@ -360,6 +365,14 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
      return;
    }
  
@@ -36,7 +36,7 @@ index 7f557d35840d..6e283712b007 100644
    auto UpdateSingleCaret = [aHints](AccessibleCaret* aCaret, nsIFrame* aFrame,
                                      int32_t aOffset) -> PositionChangedResult {
      PositionChangedResult result = aCaret->SetPosition(aFrame, aOffset);
-@@ -436,15 +449,8 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
+@@ -437,15 +450,8 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
    if (!aHints.contains(UpdateCaretsHint::RespectOldAppearance)) {
      nsAutoScriptBlocker scriptBlocker;
  

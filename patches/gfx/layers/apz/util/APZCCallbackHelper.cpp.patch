@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/util/APZCCallbackHelper.cpp b/gfx/layers/apz/util/APZCCallbackHelper.cpp
-index 99a9c48c2b96..fa31479e6e0f 100644
+index 31aea3a3241a..3527b64da9a0 100644
 --- a/gfx/layers/apz/util/APZCCallbackHelper.cpp
 +++ b/gfx/layers/apz/util/APZCCallbackHelper.cpp
 @@ -164,10 +164,15 @@ static DisplayPortMargins ScrollFrame(nsIContent* aContent,

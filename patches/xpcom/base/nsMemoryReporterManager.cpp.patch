@@ -1,8 +1,8 @@
 diff --git a/xpcom/base/nsMemoryReporterManager.cpp b/xpcom/base/nsMemoryReporterManager.cpp
-index ceb971189b9e..a0a3f1c09e04 100644
+index e3b1fe37a843..f66517e83c34 100644
 --- a/xpcom/base/nsMemoryReporterManager.cpp
 +++ b/xpcom/base/nsMemoryReporterManager.cpp
-@@ -401,13 +401,15 @@ static void XMappingIter(int64_t& aVsize, int64_t& aResident,
+@@ -400,13 +400,15 @@ static void XMappingIter(int64_t& aVsize, int64_t& aResident,
    return NS_OK;
  }
  
@@ -22,7 +22,7 @@ index ceb971189b9e..a0a3f1c09e04 100644
  
  [[nodiscard]] static bool GetTaskBasicInfo(struct task_basic_info* aTi) {
    mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
-@@ -461,7 +463,8 @@ static void XMappingIter(int64_t& aVsize, int64_t& aResident,
+@@ -460,7 +462,8 @@ static void XMappingIter(int64_t& aVsize, int64_t& aResident,
    return ResidentDistinguishedAmountHelper(aN, /* doPurge = */ true);
  }
  
@@ -32,7 +32,7 @@ index ceb971189b9e..a0a3f1c09e04 100644
  
  static bool InSharedRegion(mach_vm_address_t aAddr, cpu_type_t aType) {
    mach_vm_address_t base;
-@@ -600,6 +603,7 @@ static bool InSharedRegion(mach_vm_address_t aAddr, cpu_type_t aType) {
+@@ -599,6 +602,7 @@ static bool InSharedRegion(mach_vm_address_t aAddr, cpu_type_t aType) {
    *aN = task_vm_info.phys_footprint;
    return NS_OK;
  }

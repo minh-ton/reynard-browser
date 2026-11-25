@@ -1,5 +1,5 @@
 diff --git a/dom/base/nsFrameLoader.cpp b/dom/base/nsFrameLoader.cpp
-index d053fbe719de..4281c75e4f2d 100644
+index 3515f61cea47..579d72be3cb4 100644
 --- a/dom/base/nsFrameLoader.cpp
 +++ b/dom/base/nsFrameLoader.cpp
 @@ -1794,6 +1794,30 @@ nsresult nsFrameLoader::SwapWithOtherLoader(nsFrameLoader* aOther,

@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/CoreTextFontList.h b/gfx/thebes/CoreTextFontList.h
-index 780964a8755e..06b3a4c818c8 100644
+index 41a070fab7f1..1dfbb9dc41f6 100644
 --- a/gfx/thebes/CoreTextFontList.h
 +++ b/gfx/thebes/CoreTextFontList.h
 @@ -35,6 +35,11 @@ class CTFontEntry final : public gfxFontEntry {

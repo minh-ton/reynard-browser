@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/apz/src/InputBlockState.h b/gfx/layers/apz/src/InputBlockState.h
-index 29d193a4888c..8ca8ec7dc756 100644
+index 2eb23b345c0b..1f1cc2129a73 100644
 --- a/gfx/layers/apz/src/InputBlockState.h
 +++ b/gfx/layers/apz/src/InputBlockState.h
-@@ -625,7 +625,7 @@ class TouchBlockState : public CancelableBlockState {
+@@ -649,7 +649,7 @@ class TouchBlockState : public BrowserGesturableBlockState {
    // triggering a long-press event.
    bool mNeedsWaitTouchMove;
    apz::SingleTapState mSingleTapState;

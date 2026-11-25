@@ -1,9 +1,9 @@
 diff --git a/gfx/thebes/PrintTargetUIKit.h b/gfx/thebes/PrintTargetUIKit.h
 new file mode 100644
-index 000000000000..27840a712de7
+index 000000000000..8e46b6325523
 --- /dev/null
 +++ b/gfx/thebes/PrintTargetUIKit.h
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,49 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this file,
 + * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -36,13 +36,16 @@ index 000000000000..27840a712de7
 +  nsresult BeginPage(const IntSize& aSizeInPoints) final;
 +  nsresult EndPage() final;
 +
++  already_AddRefed<DrawTarget> MakeDrawTarget(
++      const IntSize& aSize, DrawEventRecorder* aRecorder = nullptr) final;
 +  already_AddRefed<DrawTarget> GetReferenceDrawTarget() final;
 +
 + private:
-+  PrintTargetUIKit(CGContextRef aPDFContext, const IntSize& aSize);
++  explicit PrintTargetUIKit(CGContextRef aPDFContext);
 +  ~PrintTargetUIKit();
 +
 +  CGContextRef mPDFContext;
++  cairo_surface_t* mCairoSurface = nullptr;
 +  RefPtr<DrawTarget> mReferenceDrawTarget;
 +  bool mDidClose = false;
 +};

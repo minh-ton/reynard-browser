@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/APZSampler.cpp b/gfx/layers/apz/src/APZSampler.cpp
-index 8d7f1bfddfc5..12990f96dd85 100644
+index 8b435a7c3011..bff103260025 100644
 --- a/gfx/layers/apz/src/APZSampler.cpp
 +++ b/gfx/layers/apz/src/APZSampler.cpp
 @@ -68,7 +68,7 @@ void APZSampler::SampleForWebRender(const wr::WrWindowId& aWindowId,

@@ -1,5 +1,5 @@
 diff --git a/xpcom/threads/TaskController.cpp b/xpcom/threads/TaskController.cpp
-index 531c21cdba01..543429ab52ae 100644
+index b85f69fab1e4..5232d57d94d2 100644
 --- a/xpcom/threads/TaskController.cpp
 +++ b/xpcom/threads/TaskController.cpp
 @@ -59,7 +59,7 @@ int32_t TaskController::GetPoolThreadCount() {

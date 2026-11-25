@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/TextInputHandler.mm b/widget/uikit/TextInputHandler.mm
-index e8f05ad59f6f..275b91c41e83 100644
+index e8f05ad59f6f..cf796313d567 100644
 --- a/widget/uikit/TextInputHandler.mm
 +++ b/widget/uikit/TextInputHandler.mm
 @@ -2,16 +2,22 @@
@@ -194,7 +194,7 @@ index e8f05ad59f6f..275b91c41e83 100644
 +    : mWidget(aWidget),
 +      mDispatcher(aWidget->GetTextEventDispatcher()),
 +      mMarkedRange(NSMakeRange(NSNotFound, 0)),
-+      mKeyboardSupport(MakeUnique<GeckoKeyboardSupport>(this)) {}
++      mKeyboardSupport(std::make_unique<GeckoKeyboardSupport>(this)) {}
 +
 +TextInputHandler::~TextInputHandler() = default;
 +
@@ -345,7 +345,7 @@ index e8f05ad59f6f..275b91c41e83 100644
 +  }
 +
 +  RefPtr<nsWindow> widget(mWidget);
-+  auto state = MakeUnique<KeyEventState>(
++  auto state = std::make_unique<KeyEventState>(
 +      aEvent, mKeyboardSupport->NextUniqueId(), aForceRepeat);
 +  KeyEventState* currentKeyEvent = state.get();
 +  mCurrentKeyEvents.AppendElement(std::move(state));

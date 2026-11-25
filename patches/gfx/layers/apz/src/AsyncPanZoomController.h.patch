@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/apz/src/AsyncPanZoomController.h b/gfx/layers/apz/src/AsyncPanZoomController.h
-index f7baa4c101f0..1e25c793dc30 100644
+index 623bcdeb707e..b43324ee71d7 100644
 --- a/gfx/layers/apz/src/AsyncPanZoomController.h
 +++ b/gfx/layers/apz/src/AsyncPanZoomController.h
 @@ -40,6 +40,8 @@
@@ -23,7 +23,7 @@ index f7baa4c101f0..1e25c793dc30 100644
    MOZ_CAN_RUN_SCRIPT void NotifyMozMouseScrollEvent(
        const nsString& aString) const;
  
-@@ -1349,6 +1356,10 @@ class AsyncPanZoomController {
+@@ -1360,6 +1367,10 @@ class AsyncPanZoomController {
      return Metrics().GetLayoutScrollOffset();
    }
  
@@ -34,7 +34,7 @@ index f7baa4c101f0..1e25c793dc30 100644
    // Returns the delta for the given InputData.
    ParentLayerPoint GetDeltaForEvent(const InputData& aEvent) const;
  
-@@ -1593,7 +1604,6 @@ class AsyncPanZoomController {
+@@ -1604,7 +1615,6 @@ class AsyncPanZoomController {
    /**
     * Internal helpers for checking general state of this apzc.
     */
@@ -42,7 +42,7 @@ index f7baa4c101f0..1e25c793dc30 100644
    static bool IsTransformingState(PanZoomState aState);
  
    /* ===================================================================
-@@ -1928,6 +1938,7 @@ class AsyncPanZoomController {
+@@ -1939,6 +1949,7 @@ class AsyncPanZoomController {
  
   public:
    bool IsInPanningState() const;
@@ -50,7 +50,7 @@ index f7baa4c101f0..1e25c793dc30 100644
  
    // Returns whether being in the middle of a gesture. E.g., this APZC has
    // started handling a pan gesture but hasn't yet received pan-end, etc.
-@@ -1970,11 +1981,16 @@ class AsyncPanZoomController {
+@@ -1981,11 +1992,16 @@ class AsyncPanZoomController {
      return mState == PINCHING || mState == ANIMATING_ZOOM;
    }
  
@@ -68,7 +68,7 @@ index f7baa4c101f0..1e25c793dc30 100644
    // The start time of the latest autoscroll animation.
    TimeStamp mAutoscrollStartTime;
    // Used for interpolating touch events that cross the touch-start
-@@ -1997,6 +2013,9 @@ class AsyncPanZoomController {
+@@ -2008,6 +2024,9 @@ class AsyncPanZoomController {
    ScrollSnapTargetIds mLastSnapTargetIds;
    // This variable needs to be protected by |mRecursiveMutex|.
    ScreenMargin mCompositorFixedLayerMargins;

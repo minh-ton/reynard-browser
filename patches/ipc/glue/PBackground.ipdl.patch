@@ -1,8 +1,8 @@
 diff --git a/ipc/glue/PBackground.ipdl b/ipc/glue/PBackground.ipdl
-index e9deb87ebccb..33c0ffe8404a 100644
+index 6a9d18bbe872..5e1cc6734051 100644
 --- a/ipc/glue/PBackground.ipdl
 +++ b/ipc/glue/PBackground.ipdl
-@@ -298,7 +298,9 @@ parent:
+@@ -299,7 +299,9 @@ parent:
  
    async PFetch();
  

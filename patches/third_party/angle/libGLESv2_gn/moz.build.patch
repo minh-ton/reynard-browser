@@ -1,9 +1,9 @@
 diff --git a/third_party/angle/libGLESv2_gn/moz.build b/third_party/angle/libGLESv2_gn/moz.build
-index f7fc76233e26..1027e2fb5aa2 100644
+index 2a0d65cdd386..9acf17239d18 100644
 --- a/third_party/angle/libGLESv2_gn/moz.build
 +++ b/third_party/angle/libGLESv2_gn/moz.build
-@@ -80,15 +80,25 @@ if CONFIG["OS_TARGET"] == "Darwin":
-     DEFINES["__STDC_FORMAT_MACROS"] = True
+@@ -112,15 +112,25 @@ if CONFIG["OS_TARGET"] == "Darwin":
+     ]
  
      OS_LIBS += [
 -        "-framework Cocoa",

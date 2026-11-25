@@ -1,8 +1,8 @@
 diff --git a/widget/uikit/GfxInfo.cpp b/widget/uikit/GfxInfo.cpp
-index fee105480ec6..2724eed5614c 100644
+index 2ff40276d636..4d924a56514a 100644
 --- a/widget/uikit/GfxInfo.cpp
 +++ b/widget/uikit/GfxInfo.cpp
-@@ -177,7 +177,8 @@ nsresult GfxInfo::GetFeatureStatusImpl(
+@@ -171,7 +171,8 @@ nsresult GfxInfo::GetFeatureStatusImpl(
    // This early return is so we avoid potentially slow
    // GLStrings initialization on startup when we initialize GL layers.
    if (aFeature == nsIGfxInfo::FEATURE_OPENGL_LAYERS ||

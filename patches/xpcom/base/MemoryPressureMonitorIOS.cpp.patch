@@ -1,6 +1,6 @@
 diff --git a/xpcom/base/MemoryPressureMonitorIOS.cpp b/xpcom/base/MemoryPressureMonitorIOS.cpp
 new file mode 100644
-index 000000000000..79055ae201e2
+index 000000000000..3139721e1cc5
 --- /dev/null
 +++ b/xpcom/base/MemoryPressureMonitorIOS.cpp
 @@ -0,0 +1,217 @@
@@ -41,7 +41,7 @@ index 000000000000..79055ae201e2
 +
 +void MemoryPressureMonitorIOS::Initialize() {
 +  MOZ_ASSERT(!sSingleton);
-+  sSingleton = MakeUnique<MemoryPressureMonitorIOS>();
++  sSingleton = std::make_unique<MemoryPressureMonitorIOS>();
 +}
 +
 +void MemoryPressureMonitorIOS::Shutdown() { sSingleton = nullptr; }

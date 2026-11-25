@@ -1,8 +1,8 @@
 diff --git a/editor/libeditor/EditorBase.h b/editor/libeditor/EditorBase.h
-index cec5dce92827..e49e02f424ad 100644
+index 28db9016ef27..c4417ff6f02f 100644
 --- a/editor/libeditor/EditorBase.h
 +++ b/editor/libeditor/EditorBase.h
-@@ -2761,9 +2761,9 @@ class EditorBase : public nsIEditor,
+@@ -2776,9 +2776,9 @@ class EditorBase : public nsIEditor,
        case nsIEditor::eNextWord:
        case nsIEditor::eToBeginningOfLine:
        case nsIEditor::eToEndOfLine:

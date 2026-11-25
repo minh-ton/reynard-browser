@@ -1,9 +1,9 @@
 diff --git a/gfx/thebes/PrintTargetUIKit.mm b/gfx/thebes/PrintTargetUIKit.mm
 new file mode 100644
-index 000000000000..093b25744437
+index 000000000000..b632f74ac460
 --- /dev/null
 +++ b/gfx/thebes/PrintTargetUIKit.mm
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,155 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this file,
 + * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -47,11 +47,13 @@ index 000000000000..093b25744437
 +  NS_RELEASE(stream);
 +}
 +
-+PrintTargetUIKit::PrintTargetUIKit(CGContextRef aPDFContext,
-+                                   const IntSize& aSize)
-+    : PrintTarget(nullptr, aSize), mPDFContext(aPDFContext) {}
++PrintTargetUIKit::PrintTargetUIKit(CGContextRef aPDFContext)
++    : mPDFContext(aPDFContext) {}
 +
 +PrintTargetUIKit::~PrintTargetUIKit() {
++  if (mCairoSurface) {
++    cairo_surface_destroy(mCairoSurface);
++  }
 +  if (!mDidClose) {
 +    CGPDFContextClose(mPDFContext);
 +  }
@@ -74,8 +76,23 @@ index 000000000000..093b25744437
 +    return nullptr;
 +  }
 +
-+  RefPtr<PrintTargetUIKit> target = new PrintTargetUIKit(pdfContext, aSize);
++  RefPtr<PrintTargetUIKit> target = new PrintTargetUIKit(pdfContext);
 +  return target.forget();
++}
++
++already_AddRefed<DrawTarget> PrintTargetUIKit::MakeDrawTarget(
++    const IntSize& aSize, DrawEventRecorder* aRecorder) {
++  MOZ_ASSERT(mHasActivePage, "We can't guarantee a valid DrawTarget");
++
++  RefPtr<DrawTarget> dt =
++      Factory::CreateDrawTargetForCairoSurface(mCairoSurface, aSize);
++  if (!dt || !dt->IsValid()) {
++    return nullptr;
++  }
++  if (aRecorder) {
++    return CreateRecordingDrawTarget(aRecorder, dt);
++  }
++  return dt.forget();
 +}
 +
 +already_AddRefed<DrawTarget> PrintTargetUIKit::GetReferenceDrawTarget() {
@@ -134,6 +151,7 @@ index 000000000000..093b25744437
 +
 +nsresult PrintTargetUIKit::EndPage() {
 +  cairo_surface_finish(mCairoSurface);
++  cairo_surface_destroy(mCairoSurface);
 +  mCairoSurface = nullptr;
 +  CGContextRestoreGState(mPDFContext);
 +  CGContextEndPage(mPDFContext);

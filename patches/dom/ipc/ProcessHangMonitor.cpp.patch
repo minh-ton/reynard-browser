@@ -1,5 +1,5 @@
 diff --git a/dom/ipc/ProcessHangMonitor.cpp b/dom/ipc/ProcessHangMonitor.cpp
-index 880e469cbae4..ee3842d6d654 100644
+index 048c8791d435..103be70a6cdb 100644
 --- a/dom/ipc/ProcessHangMonitor.cpp
 +++ b/dom/ipc/ProcessHangMonitor.cpp
 @@ -45,11 +45,18 @@
@@ -22,7 +22,7 @@ index 880e469cbae4..ee3842d6d654 100644
  using namespace mozilla;
  using namespace mozilla::dom;
  using namespace mozilla::ipc;
-@@ -131,6 +138,9 @@ class HangMonitorChild : public PProcessHangMonitorChild,
+@@ -127,6 +134,9 @@ class HangMonitorChild : public PProcessHangMonitorChild,
        const mozilla::Maybe<nsCString>& aNavigationURI,
        const int32_t& aEpoch) override;
  
@@ -32,7 +32,7 @@ index 880e469cbae4..ee3842d6d654 100644
    mozilla::ipc::IPCResult RecvSetMainThreadQoSPriority(
        const nsIThread::QoSPriority& aQoSPriority) override;
  
-@@ -167,8 +177,8 @@ class HangMonitorChild : public PProcessHangMonitorChild,
+@@ -163,8 +173,8 @@ class HangMonitorChild : public PProcessHangMonitorChild,
  
    const RefPtr<ProcessHangMonitor> mHangMonitor;
  
@@ -43,7 +43,7 @@ index 880e469cbae4..ee3842d6d654 100644
    // can't recover this from a PRThread*, we need to record it when the
    // HangMonitorChild is initially created on the main thread.
    const pthread_t mMainPThread;
-@@ -284,6 +294,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
+@@ -278,6 +288,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
        nsIRemoteTab::NavigationType aNavigationType,
        const dom::CancelContentJSOptions& aCancelContentJSOptions);
  
@@ -51,7 +51,7 @@ index 880e469cbae4..ee3842d6d654 100644
    void SetMainThreadQoSPriority(nsIThread::QoSPriority aQoSPriority);
  
    void TerminateScript();
-@@ -309,7 +320,9 @@ class HangMonitorParent : public PProcessHangMonitorParent {
+@@ -301,7 +312,9 @@ class HangMonitorParent : public PProcessHangMonitorParent {
        TabId aTabId, nsIRemoteTab::NavigationType aNavigationType,
        int32_t aNavigationIndex, nsIURI* aNavigationURI, int32_t aEpoch);
  
@@ -62,7 +62,7 @@ index 880e469cbae4..ee3842d6d654 100644
    void SetMainThreadQoSPriorityOnThread(nsIThread::QoSPriority aQoSPriority);
  #endif
  
-@@ -337,7 +350,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
+@@ -329,7 +342,7 @@ class HangMonitorParent : public PProcessHangMonitorParent {
  
  HangMonitorChild::HangMonitorChild(ProcessHangMonitor* aMonitor)
      : mHangMonitor(aMonitor),
@@ -71,7 +71,7 @@ index 880e469cbae4..ee3842d6d654 100644
        mMainPThread(pthread_self()),
  #endif
        mMonitor("HangMonitorChild lock"),
-@@ -651,6 +664,20 @@ mozilla::ipc::IPCResult HangMonitorChild::RecvCancelContentJSExecutionIfRunning(
+@@ -625,6 +638,20 @@ mozilla::ipc::IPCResult HangMonitorChild::RecvCancelContentJSExecutionIfRunning(
    return IPC_OK();
  }
  
@@ -92,7 +92,7 @@ index 880e469cbae4..ee3842d6d654 100644
  const char* DefineQoS(const nsIThread::QoSPriority& aQoSPriority) {
    if (aQoSPriority == nsIThread::QOS_PRIORITY_LOW) {
      return "BACKGROUND";
-@@ -667,11 +694,11 @@ mozilla::ipc::IPCResult HangMonitorChild::RecvSetMainThreadQoSPriority(
+@@ -641,11 +668,11 @@ mozilla::ipc::IPCResult HangMonitorChild::RecvSetMainThreadQoSPriority(
            ("Priority change %s recieved by content process.",
             DefineQoS(aQoSPriority)));
  
@@ -106,7 +106,7 @@ index 880e469cbae4..ee3842d6d654 100644
    // reserved for main threads.
    qos_class_t qosClass = aQoSPriority == nsIThread::QOS_PRIORITY_LOW
                               ? QOS_CLASS_BACKGROUND
-@@ -922,10 +949,24 @@ void HangMonitorParent::CancelContentJSExecutionIfRunningOnThread(
+@@ -876,10 +903,24 @@ void HangMonitorParent::CancelContentJSExecutionIfRunningOnThread(
    }
  }
  
@@ -132,7 +132,7 @@ index 880e469cbae4..ee3842d6d654 100644
  
    Dispatch(NewNonOwningRunnableMethod<nsIThread::QoSPriority>(
        "HangMonitorParent::SetMainThreadQoSPriorityOnThread", this,
-@@ -933,7 +974,7 @@ void HangMonitorParent::SetMainThreadQoSPriority(
+@@ -887,7 +928,7 @@ void HangMonitorParent::SetMainThreadQoSPriority(
  #endif
  }
  
@@ -141,7 +141,7 @@ index 880e469cbae4..ee3842d6d654 100644
  void HangMonitorParent::SetMainThreadQoSPriorityOnThread(
      nsIThread::QoSPriority aQoSPriority) {
    MOZ_RELEASE_ASSERT(IsOnThread());
-@@ -1209,8 +1250,8 @@ ProcessHangMonitor::ProcessHangMonitor() : mReplyTimeout(false) {
+@@ -1121,8 +1162,8 @@ ProcessHangMonitor::ProcessHangMonitor() : mReplyTimeout(false) {
    if (NS_FAILED(NS_NewNamedThread("ProcessHangMon", getter_AddRefs(mThread)))) {
      mThread = nullptr;
    }
@@ -152,7 +152,7 @@ index 880e469cbae4..ee3842d6d654 100644
    // high cpu load. USER_INITIATED class threads are prioritized just below
    // the main thread.
    mThread->Dispatch(NS_NewRunnableFunction(
-@@ -1410,6 +1451,14 @@ void ProcessHangMonitor::CancelContentJSExecutionIfRunning(
+@@ -1317,6 +1358,14 @@ void ProcessHangMonitor::CancelContentJSExecutionIfRunning(
                                              aCancelContentJSOptions);
  }
  

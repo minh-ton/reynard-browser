@@ -1,5 +1,5 @@
 diff --git a/dom/media/mediaelement/HTMLVideoElement.cpp b/dom/media/mediaelement/HTMLVideoElement.cpp
-index 2da1c3ce8b9b..35083c91675a 100644
+index aea78ad28b01..5242d0565880 100644
 --- a/dom/media/mediaelement/HTMLVideoElement.cpp
 +++ b/dom/media/mediaelement/HTMLVideoElement.cpp
 @@ -429,6 +429,11 @@ bool HTMLVideoElement::MozHasAudio() const {

@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/CompositorBridgeParent.h b/gfx/layers/ipc/CompositorBridgeParent.h
-index ff2cb35922f3..7bf499d582e9 100644
+index 93b4cfa1be4d..4865f3a69b41 100644
 --- a/gfx/layers/ipc/CompositorBridgeParent.h
 +++ b/gfx/layers/ipc/CompositorBridgeParent.h
-@@ -255,7 +255,7 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
+@@ -254,7 +254,7 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
    void InitSameProcess(widget::CompositorWidget* aWidget,
                         const LayersId& aLayerTreeId);
  
@@ -11,7 +11,7 @@ index ff2cb35922f3..7bf499d582e9 100644
    // macOS platform-specific initdata uses move semantics, which
    // changes the method signature. Other platforms don't need to
    // override the existing method.
-@@ -337,7 +337,10 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
+@@ -335,7 +335,10 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
    void SetConfirmedTargetAPZC(
        const LayersId& aLayersId, const uint64_t& aInputBlockId,
        nsTArray<ScrollableLayerGuid>&& aTargets) override;

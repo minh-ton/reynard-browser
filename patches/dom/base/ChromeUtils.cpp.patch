@@ -1,10 +1,10 @@
 diff --git a/dom/base/ChromeUtils.cpp b/dom/base/ChromeUtils.cpp
-index 0614a8547318..f5e0fbc816cc 100644
+index 42d7fde34a28..69249f4ca20d 100644
 --- a/dom/base/ChromeUtils.cpp
 +++ b/dom/base/ChromeUtils.cpp
 @@ -2031,7 +2031,10 @@ already_AddRefed<Promise> ChromeUtils::RequestProcInfo(GlobalObject& aGlobal,
  #ifdef XP_MACOSX
-         ,
+             ,
          /* aChildTask = */ geckoProcess->GetChildTask()
 -#endif  // XP_MACOSX
 +#elif defined(XP_IOS)

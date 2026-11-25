@@ -1,8 +1,8 @@
 diff --git a/docshell/base/CanonicalBrowsingContext.h b/docshell/base/CanonicalBrowsingContext.h
-index be089602a01f..cdf1bc0d9336 100644
+index 389fd9466a95..04d537bf9f6f 100644
 --- a/docshell/base/CanonicalBrowsingContext.h
 +++ b/docshell/base/CanonicalBrowsingContext.h
-@@ -295,6 +295,8 @@ class CanonicalBrowsingContext final : public BrowsingContext {
+@@ -293,6 +293,8 @@ class CanonicalBrowsingContext final : public BrowsingContext {
    MOZ_CAN_RUN_SCRIPT
    void Reload(uint32_t aReloadFlags);
    void Stop(uint32_t aStopFlags);

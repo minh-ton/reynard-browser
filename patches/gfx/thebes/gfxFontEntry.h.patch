@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/gfxFontEntry.h b/gfx/thebes/gfxFontEntry.h
-index a17fb01e67cf..ca2a76078bc4 100644
+index 6b6a42eed63c..e4e6c6e58bbe 100644
 --- a/gfx/thebes/gfxFontEntry.h
 +++ b/gfx/thebes/gfxFontEntry.h
 @@ -838,7 +838,7 @@ class gfxFontEntry {

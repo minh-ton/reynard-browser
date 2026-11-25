@@ -1,14 +1,14 @@
 diff --git a/dom/system/mac/CoreLocationLocationProvider.mm b/dom/system/mac/CoreLocationLocationProvider.mm
-index 7f7952c8b5bc..c244f6726dc7 100644
+index ebe805eb84e7..f38b108960dd 100644
 --- a/dom/system/mac/CoreLocationLocationProvider.mm
 +++ b/dom/system/mac/CoreLocationLocationProvider.mm
-@@ -20,9 +20,6 @@
+@@ -19,9 +19,6 @@
  #include <CoreLocation/CLLocationManager.h>
  #include <CoreLocation/CLLocationManagerDelegate.h>
  
 -#include <objc/objc-runtime.h>
 -#include <objc/objc.h>
 -
- #include "nsObjCExceptions.h"
+ #include <memory>
  
- using namespace mozilla;
+ #include "nsObjCExceptions.h"

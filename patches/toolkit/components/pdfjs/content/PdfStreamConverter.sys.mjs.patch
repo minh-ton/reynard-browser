@@ -1,8 +1,8 @@
 diff --git a/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs b/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
-index 2ff845c35866..3476eee498b2 100644
+index 14155ac3843e..0a1b5f6ba87c 100644
 --- a/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
 +++ b/toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs
-@@ -35,6 +35,8 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+@@ -30,6 +30,8 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
  import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
  import { isEmbeddedPdfLoad } from "resource://gre/modules/pdfjs.sys.mjs";
  
@@ -11,7 +11,7 @@ index 2ff845c35866..3476eee498b2 100644
  // Non-pdfjs preferences to get when the viewer is created and to observe.
  const toolbarDensityPref = "browser.uidensity";
  const caretBrowsingModePref = "accessibility.browsewithcaret";
-@@ -102,8 +104,7 @@ function getDOMWindow(aChannel, aPrincipal) {
+@@ -98,8 +100,7 @@ function getDOMWindow(aChannel, aPrincipal) {
  
  function getActor(window) {
    try {
@@ -21,7 +21,7 @@ index 2ff845c35866..3476eee498b2 100644
      return window.windowGlobalChild.getActor(actorName);
    } catch (ex) {
      return null;
-@@ -775,7 +776,7 @@ class ChromeActions {
+@@ -729,7 +730,7 @@ class ChromeActions {
    }
  
    isMobile() {

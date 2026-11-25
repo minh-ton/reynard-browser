@@ -1,8 +1,8 @@
 diff --git a/dom/ipc/ContentChild.cpp b/dom/ipc/ContentChild.cpp
-index 379bb105d93a..7d0341bc2244 100644
+index 58bfa448ca2d..8dc9d2f4cdef 100644
 --- a/dom/ipc/ContentChild.cpp
 +++ b/dom/ipc/ContentChild.cpp
-@@ -146,6 +146,10 @@
+@@ -148,6 +148,10 @@
  #include "nsSandboxFlags.h"
  #include "nsXPLookAndFeel.h"
  
@@ -13,7 +13,7 @@ index 379bb105d93a..7d0341bc2244 100644
  #if defined(MOZ_SANDBOX)
  #  if defined(XP_WIN)
  #    include "mozilla/sandboxTarget.h"
-@@ -690,6 +694,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
+@@ -692,6 +696,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
    LookAndFeel::EnsureInit();
    InitSharedUASheets(std::move(aSharedUASheetHandle), aSharedUASheetAddress);
    InitXPCOM(aXPCOMInit, aInitialData, aIsReadyForBackgroundProcessing);
@@ -21,7 +21,7 @@ index 379bb105d93a..7d0341bc2244 100644
    InitGraphicsDeviceData(aXPCOMInit.contentDeviceData());
    RefPtr<net::ChildDNSService> dnsServiceChild =
        dont_AddRef(net::ChildDNSService::GetSingleton());
-@@ -1597,7 +1602,7 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
+@@ -1607,7 +1612,7 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
      Endpoint<PImageBridgeChild>&& aImageBridge,
      Endpoint<PVRManagerChild>&& aVRBridge,
      Endpoint<PRemoteMediaManagerChild>&& aVideoManager,
@@ -30,7 +30,7 @@ index 379bb105d93a..7d0341bc2244 100644
    MOZ_ASSERT(namespaces.Length() == 4);
    LAYERTREE_LOG("Initializing rendering, compositor manager namespace {}",
                  namespaces[0]);
-@@ -1613,8 +1618,8 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
+@@ -1623,8 +1628,8 @@ mozilla::ipc::IPCResult ContentChild::RecvInitRendering(
    // should crash itself (because we are actually talking to the UI process). If
    // there are localized failures (e.g. failed to spawn a thread), then it
    // should MOZ_RELEASE_ASSERT or MOZ_CRASH as necessary instead.
@@ -41,7 +41,7 @@ index 379bb105d93a..7d0341bc2244 100644
      return GetResultForRenderingInitFailure(aCompositor.OtherChildID());
    }
    if (!CompositorManagerChild::CreateContentCompositorBridge(
-@@ -1648,7 +1653,7 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
+@@ -1658,7 +1663,7 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
      Endpoint<PImageBridgeChild>&& aImageBridge,
      Endpoint<PVRManagerChild>&& aVRBridge,
      Endpoint<PRemoteMediaManagerChild>&& aVideoManager,
@@ -50,7 +50,7 @@ index 379bb105d93a..7d0341bc2244 100644
    MOZ_ASSERT(namespaces.Length() == 4);
    LAYERTREE_LOG("Reinitializing rendering, compositor manager namespace {}",
                  namespaces[0]);
-@@ -1660,8 +1665,8 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
+@@ -1670,8 +1675,8 @@ mozilla::ipc::IPCResult ContentChild::RecvReinitRendering(
    nsTArray<RefPtr<BrowserChild>> tabs = BrowserChild::GetAll();
  
    // Re-establish singleton bridges to the compositor.
@@ -61,7 +61,7 @@ index 379bb105d93a..7d0341bc2244 100644
      return GetResultForRenderingInitFailure(aCompositor.OtherChildID());
    }
    if (!CompositorManagerChild::CreateContentCompositorBridge(
-@@ -1771,7 +1776,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetProcessSandbox(
+@@ -1781,7 +1786,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetProcessSandbox(
    sandboxEnabled = (GetEffectiveContentSandboxLevel() >= 1);
    DisconnectWindowServer(sandboxEnabled);
  #  elif defined(XP_IOS)

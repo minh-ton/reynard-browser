@@ -1,8 +1,8 @@
 diff --git a/docshell/shistory/SessionHistoryEntry.cpp b/docshell/shistory/SessionHistoryEntry.cpp
-index 1388a83717e1..cf53cdb24d0b 100644
+index 33291260c192..53ac536841eb 100644
 --- a/docshell/shistory/SessionHistoryEntry.cpp
 +++ b/docshell/shistory/SessionHistoryEntry.cpp
-@@ -1002,8 +1002,9 @@ SessionHistoryEntry::GetShistory(nsISHistory** aShistory) {
+@@ -995,8 +995,9 @@ SessionHistoryEntry::GetShistory(nsISHistory** aShistory) {
  NS_IMETHODIMP
  SessionHistoryEntry::SetShistory(nsISHistory* aShistory) {
    nsWeakPtr shistory = do_GetWeakReference(aShistory);

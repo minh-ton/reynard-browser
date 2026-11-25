@@ -1,8 +1,8 @@
 diff --git a/docshell/base/BrowsingContext.cpp b/docshell/base/BrowsingContext.cpp
-index 76be93386d29..0c0f92e126d0 100644
+index f180edbf249b..8b79fa13a7ea 100644
 --- a/docshell/base/BrowsingContext.cpp
 +++ b/docshell/base/BrowsingContext.cpp
-@@ -3753,6 +3753,54 @@ void BrowsingContext::DidSet(FieldIndex<IDX_PlatformOverride>) {
+@@ -3754,6 +3754,54 @@ void BrowsingContext::DidSet(FieldIndex<IDX_PlatformOverride>) {
    });
  }
  
@@ -57,7 +57,7 @@ index 76be93386d29..0c0f92e126d0 100644
  auto BrowsingContext::LegacyRevertIfNotOwningOrParentProcess(
      ContentParent* aSource) -> CanSetResult {
    if (aSource) {
-@@ -3974,6 +4022,36 @@ auto BrowsingContext::CanSet(FieldIndex<IDX_PlatformOverride>,
+@@ -3975,6 +4023,36 @@ auto BrowsingContext::CanSet(FieldIndex<IDX_PlatformOverride>,
    return LegacyRevertIfNotOwningOrParentProcess(aSource);
  }
  

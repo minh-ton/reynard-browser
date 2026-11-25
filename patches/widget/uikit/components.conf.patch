@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/components.conf b/widget/uikit/components.conf
-index 385ba2f7868b..16b795d33876 100644
+index 452a255c7c70..7fdcc75af7e5 100644
 --- a/widget/uikit/components.conf
 +++ b/widget/uikit/components.conf
 @@ -8,6 +8,13 @@ InitFunc = 'nsWidgetUIKitModuleCtor'

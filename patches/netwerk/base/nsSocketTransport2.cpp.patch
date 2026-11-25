@@ -1,5 +1,5 @@
 diff --git a/netwerk/base/nsSocketTransport2.cpp b/netwerk/base/nsSocketTransport2.cpp
-index 440e4b8dfd0a..24fc6baca649 100644
+index 57cb1a6a1b47..78d270bd165e 100644
 --- a/netwerk/base/nsSocketTransport2.cpp
 +++ b/netwerk/base/nsSocketTransport2.cpp
 @@ -59,6 +59,10 @@

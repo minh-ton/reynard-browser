@@ -1,18 +1,18 @@
 diff --git a/gfx/angle/gn-configs/angle.json b/gfx/angle/gn-configs/angle.json
-index 4c7e753d199c..7d75041e0f7d 100644
+index 31ac73901c47..dc5bb98a8bd6 100644
 --- a/gfx/angle/gn-configs/angle.json
 +++ b/gfx/angle/gn-configs/angle.json
-@@ -5,6 +5,7 @@
-   "mozilla_add_override_dir": "",
+@@ -6,6 +6,7 @@
    "gn_target": {
      "*": "//:translator",
+     "android": "//:libEGL",
 +    "ios": "//:libEGL",
      "mac": "//:libEGL",
      "win": "//:libEGL"
    },
-@@ -31,6 +32,10 @@
-       "use_custom_libcxx": false,
-       "use_sysroot": false
+@@ -37,6 +38,10 @@
+       "angle_build_vulkan_system_info": true,
+       "angle_shared_libvulkan": false
      },
 +    "ios": {
 +      "angle_enable_metal": true,

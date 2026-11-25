@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorManagerChild.cpp b/gfx/layers/ipc/CompositorManagerChild.cpp
-index a168121ce506..692e8fb498a1 100644
+index a42a5d5c2e18..83ab9bd8af20 100644
 --- a/gfx/layers/ipc/CompositorManagerChild.cpp
 +++ b/gfx/layers/ipc/CompositorManagerChild.cpp
 @@ -142,7 +142,7 @@ bool CompositorManagerChild::CreateContentCompositorBridge(

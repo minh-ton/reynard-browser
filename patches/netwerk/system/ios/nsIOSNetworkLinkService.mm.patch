@@ -1,6 +1,6 @@
 diff --git a/netwerk/system/ios/nsIOSNetworkLinkService.mm b/netwerk/system/ios/nsIOSNetworkLinkService.mm
 new file mode 100644
-index 000000000000..441b0e633e44
+index 000000000000..5fc198b8d43e
 --- /dev/null
 +++ b/netwerk/system/ios/nsIOSNetworkLinkService.mm
 @@ -0,0 +1,560 @@
@@ -171,7 +171,7 @@ index 000000000000..441b0e633e44
 +
 +nsCString nsIOSNetworkLinkService::NetworkIDForPath(nw_path_t aPath,
 +                                                    PathState& aState) {
-+  auto hashKeys = MakeUnique<std::vector<nsCString>>();
++  auto hashKeys = std::make_unique<std::vector<nsCString>>();
 +  auto* hashKeysPtr = hashKeys.get();
 +
 +  nw_path_enumerate_interfaces(aPath, ^bool(nw_interface_t aInterface) {

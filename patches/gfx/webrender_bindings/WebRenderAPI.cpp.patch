@@ -1,5 +1,5 @@
 diff --git a/gfx/webrender_bindings/WebRenderAPI.cpp b/gfx/webrender_bindings/WebRenderAPI.cpp
-index fc9b42d34f16..55ea6fea4101 100644
+index e37d11a0bb6e..f537eafb4c68 100644
 --- a/gfx/webrender_bindings/WebRenderAPI.cpp
 +++ b/gfx/webrender_bindings/WebRenderAPI.cpp
 @@ -210,6 +210,12 @@ void TransactionWrapper::AddMinimapData(const wr::ExternalScrollId& aScrollId,
@@ -15,7 +15,7 @@ index fc9b42d34f16..55ea6fea4101 100644
  /*static*/
  RefPtr<WebRenderAPI::CreatePromise> WebRenderAPI::Create(
      RefPtr<layers::CompositorBridgeParent> aBridge,
-@@ -1169,8 +1175,10 @@ void TransactionBuilder::AddRawFont(wr::FontKey aKey, wr::Vec<uint8_t>& aBytes,
+@@ -1179,8 +1185,10 @@ void TransactionBuilder::AddRawFont(wr::FontKey aKey, wr::Vec<uint8_t>& aBytes,
  
  void TransactionBuilder::AddFontDescriptor(wr::FontKey aKey,
                                             wr::Vec<uint8_t>& aBytes,

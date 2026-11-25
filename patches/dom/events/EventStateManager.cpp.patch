@@ -1,8 +1,8 @@
 diff --git a/dom/events/EventStateManager.cpp b/dom/events/EventStateManager.cpp
-index 294b486e9666..6eaaa66b185c 100644
+index b1895c399646..42dc0608257f 100644
 --- a/dom/events/EventStateManager.cpp
 +++ b/dom/events/EventStateManager.cpp
-@@ -295,6 +295,23 @@ static bool HasNativeKeyBindings(nsIContent* aContent,
+@@ -296,6 +296,23 @@ static bool HasNativeKeyBindings(nsIContent* aContent,
    return !commands.IsEmpty();
  }
  
@@ -26,7 +26,7 @@ index 294b486e9666..6eaaa66b185c 100644
  LazyLogModule sMouseBoundaryLog("MouseBoundaryEvents");
  LazyLogModule sPointerBoundaryLog("PointerBoundaryEvents");
  
-@@ -1336,6 +1353,14 @@ nsresult EventStateManager::PreHandleEvent(nsPresContext* aPresContext,
+@@ -1337,6 +1354,14 @@ nsresult EventStateManager::PreHandleEvent(nsPresContext* aPresContext,
        break;
      }
      case eDrop: {
@@ -41,7 +41,7 @@ index 294b486e9666..6eaaa66b185c 100644
        if (aEvent->mFlags.mIsSynthesizedForTests && allowSynthesisForTests()) {
          MOZ_ASSERT(aEvent->AsDragEvent());
          aEvent->AsDragEvent()->InitDropEffectForTests();
-@@ -2806,6 +2831,33 @@ bool EventStateManager::IsEventOutsideDragThreshold(
+@@ -2810,6 +2835,33 @@ bool EventStateManager::IsEventOutsideDragThreshold(
           Abs(distance.y) > sPixelThresholdY;
  }
  
@@ -75,7 +75,7 @@ index 294b486e9666..6eaaa66b185c 100644
  //
  // GenerateDragGesture
  //
-@@ -2813,8 +2865,8 @@ bool EventStateManager::IsEventOutsideDragThreshold(
+@@ -2817,8 +2869,8 @@ bool EventStateManager::IsEventOutsideDragThreshold(
  // position of the mouse in relation to the old one. If we've moved a sufficient
  // amount from the mouse down, then fire off a drag gesture event.
  void EventStateManager::GenerateDragGesture(
@@ -86,7 +86,7 @@ index 294b486e9666..6eaaa66b185c 100644
    NS_ASSERTION(aPresContext, "This shouldn't happen.");
    MOZ_ASSERT_IF(aMouseOrTouchOrPointerEvent.AsMouseEvent(),
                  aMouseOrTouchOrPointerEvent.AsMouseEvent()->IsReal());
-@@ -2864,7 +2916,8 @@ void EventStateManager::GenerateDragGesture(
+@@ -2868,7 +2920,8 @@ void EventStateManager::GenerateDragGesture(
      return;
    }
  
@@ -96,7 +96,7 @@ index 294b486e9666..6eaaa66b185c 100644
      // To keep the old behavior, flush layout even if we don't start dnd.
      FlushLayout(aPresContext);
      return;
-@@ -4696,6 +4749,21 @@ nsresult EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
+@@ -4704,6 +4757,21 @@ nsresult EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
          // No one called preventDefault(), so handle drop only in chrome.
          dragSession->SetOnlyChromeDrop(true);
        }

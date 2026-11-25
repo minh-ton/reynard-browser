@@ -1,5 +1,5 @@
 diff --git a/dom/html/nsGenericHTMLElement.cpp b/dom/html/nsGenericHTMLElement.cpp
-index 76d8ef056f5d..b8024f3e7aa3 100644
+index 1468292a1ec7..1c6e4f1cf5eb 100644
 --- a/dom/html/nsGenericHTMLElement.cpp
 +++ b/dom/html/nsGenericHTMLElement.cpp
 @@ -947,15 +947,30 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
@@ -48,7 +48,7 @@ index 76d8ef056f5d..b8024f3e7aa3 100644
                      {IMEStateManager::UpdateIMEStateOption::ForceUpdate,
                       IMEStateManager::UpdateIMEStateOption::
                           DontCommitComposition});
-@@ -2606,12 +2621,23 @@ EditorBase* nsGenericHTMLElement::GetAssociatedExtantEditor() const {
+@@ -2611,12 +2626,23 @@ EditorBase* nsGenericHTMLElement::GetAssociatedExtantEditor() const {
  void nsGenericHTMLElement::SyncSpellCheckerStateOfExtantEditorsOnSubtree(
      nsIContent& aContent) {
    /* Sync this node */

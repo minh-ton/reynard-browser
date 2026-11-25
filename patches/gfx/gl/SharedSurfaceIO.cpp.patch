@@ -1,5 +1,5 @@
 diff --git a/gfx/gl/SharedSurfaceIO.cpp b/gfx/gl/SharedSurfaceIO.cpp
-index 081138b5acc3..d8573620fb7e 100644
+index c51b34ea75d0..73d62616fb23 100644
 --- a/gfx/gl/SharedSurfaceIO.cpp
 +++ b/gfx/gl/SharedSurfaceIO.cpp
 @@ -4,14 +4,16 @@

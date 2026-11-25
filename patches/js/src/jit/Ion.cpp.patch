@@ -1,5 +1,5 @@
 diff --git a/js/src/jit/Ion.cpp b/js/src/jit/Ion.cpp
-index 0483a6c2ce06..6975b5098084 100644
+index d614b439aed6..94d78f1e0b89 100644
 --- a/js/src/jit/Ion.cpp
 +++ b/js/src/jit/Ion.cpp
 @@ -45,6 +45,7 @@
@@ -10,7 +10,7 @@ index 0483a6c2ce06..6975b5098084 100644
  #include "jit/RangeAnalysis.h"
  #include "jit/ScalarReplacement.h"
  #include "jit/ScriptFromCalleeToken.h"
-@@ -154,7 +155,11 @@ bool JitRuntime::initialize(JSContext* cx) {
+@@ -155,7 +156,11 @@ bool JitRuntime::initialize(JSContext* cx) {
  
  bool JitRuntime::generateTrampolines(JSContext* cx) {
    TempAllocator temp(&cx->tempLifoAlloc());
@@ -23,7 +23,7 @@ index 0483a6c2ce06..6975b5098084 100644
    PerfSpewerRangeRecorder rangeRecorder(masm);
  
    Label bailoutTail;
-@@ -640,16 +645,21 @@ template JitCode* JitCode::New<NoGC>(JSContext* cx, uint8_t* code,
+@@ -626,16 +631,21 @@ template JitCode* JitCode::New<NoGC>(JSContext* cx, uint8_t* code,
  void JitCode::copyFrom(MacroAssembler& masm) {
    // Store the JitCode pointer in the JitCodeHeader so we can recover the
    // gcthing from relocation tables.

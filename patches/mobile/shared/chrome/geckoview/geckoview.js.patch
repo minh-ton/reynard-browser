@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/chrome/geckoview/geckoview.js b/mobile/shared/chrome/geckoview/geckoview.js
-index da3a49598a5d..a96f93c271d1 100644
+index 8cd517c0b30f..c3fad687c5d3 100644
 --- a/mobile/shared/chrome/geckoview/geckoview.js
 +++ b/mobile/shared/chrome/geckoview/geckoview.js
 @@ -633,6 +633,7 @@ function startup() {

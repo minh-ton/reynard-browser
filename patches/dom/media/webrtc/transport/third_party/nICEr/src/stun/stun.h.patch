@@ -1,5 +1,5 @@
 diff --git a/dom/media/webrtc/transport/third_party/nICEr/src/stun/stun.h b/dom/media/webrtc/transport/third_party/nICEr/src/stun/stun.h
-index 905105c4a271..9efda1d1f348 100644
+index 86f42540a102..a05172f0d217 100644
 --- a/dom/media/webrtc/transport/third_party/nICEr/src/stun/stun.h
 +++ b/dom/media/webrtc/transport/third_party/nICEr/src/stun/stun.h
 @@ -52,8 +52,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

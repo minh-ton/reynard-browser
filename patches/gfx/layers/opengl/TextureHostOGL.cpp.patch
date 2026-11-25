@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/opengl/TextureHostOGL.cpp b/gfx/layers/opengl/TextureHostOGL.cpp
-index 87abde53c32a..9e65b74ca25d 100644
+index 6ebe13f8e39f..8eb21b460924 100644
 --- a/gfx/layers/opengl/TextureHostOGL.cpp
 +++ b/gfx/layers/opengl/TextureHostOGL.cpp
 @@ -21,7 +21,7 @@

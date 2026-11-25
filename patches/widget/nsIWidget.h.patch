@@ -1,8 +1,8 @@
 diff --git a/widget/nsIWidget.h b/widget/nsIWidget.h
-index 2d06d7b7ddaf..3de5cd56c04b 100644
+index 5b806f2a3712..8cba3076c766 100644
 --- a/widget/nsIWidget.h
 +++ b/widget/nsIWidget.h
-@@ -1604,8 +1604,8 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -1613,8 +1613,8 @@ class nsIWidget : public nsSupportsWeakReference {
      NUMERIC_KEY_PAD = 0x01000000,  // when the key is coming from the keypad
  
      ALL_BITS = CAPS_LOCK | NUM_LOCK | SHIFT_L | SHIFT_R | CTRL_L | CTRL_R |
@@ -13,7 +13,7 @@ index 2d06d7b7ddaf..3de5cd56c04b 100644
    };
  
    /**
-@@ -2315,6 +2315,8 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -2331,6 +2331,8 @@ class nsIWidget : public nsSupportsWeakReference {
    virtual void NotifyCompositorScrollUpdates(
        const nsTArray<mozilla::layers::CompositorScrollUpdate>& aUpdates) {}
  
@@ -22,7 +22,7 @@ index 2d06d7b7ddaf..3de5cd56c04b 100644
  #if defined(MOZ_WIDGET_ANDROID)
    /**
     * RecvToolbarAnimatorMessageFromCompositor receive message from compositor
-@@ -2323,12 +2325,16 @@ class nsIWidget : public nsSupportsWeakReference {
+@@ -2339,12 +2341,16 @@ class nsIWidget : public nsSupportsWeakReference {
     * @param aMessage message being sent to Android UI thread.
     */
    virtual void RecvToolbarAnimatorMessageFromCompositor(int32_t aMessage) {}
@@ -40,3 +40,30 @@ index 2d06d7b7ddaf..3de5cd56c04b 100644
  
    void EnsureLocalesChangedObserver();
    virtual void LocalesChanged() {}
+@@ -2463,7 +2469,7 @@ class nsIWidget : public nsSupportsWeakReference {
+   // consumes the event.
+   struct TouchSwipeState {
+     // Nothing until Start() records the first touch point.
+-    mozilla::Maybe<ScreenIntPoint> previousTouchPoint;
++    mozilla::Maybe<mozilla::ScreenPoint> previousTouchPoint;
+     mozilla::SideBits swipableDirections = mozilla::SideBits::eLeftRight;
+     enum class Phase {
+       // Wait for touchstart to determine the swipable directions.
+@@ -2493,7 +2499,7 @@ class nsIWidget : public nsSupportsWeakReference {
+     }
+ 
+     void Start(mozilla::SideBits aSwipableDirections,
+-               const ScreenIntPoint& aTouchPoint) {
++               const mozilla::ScreenPoint& aTouchPoint) {
+       MOZ_ASSERT(phase == Phase::Idle &&
+                      swipableDirections == mozilla::SideBits::eLeftRight,
+                  "This is the start point of touch swipe-to-nav. "
+@@ -2505,7 +2511,7 @@ class nsIWidget : public nsSupportsWeakReference {
+ 
+     void Reset() { *this = TouchSwipeState{}; }
+ 
+-    ScreenIntPoint GetDelta(const ScreenIntPoint& point) {
++    mozilla::ScreenPoint GetDelta(const mozilla::ScreenPoint& point) {
+       MOZ_ASSERT(previousTouchPoint.isSome());
+       return point - *previousTouchPoint;
+     }

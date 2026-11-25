@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/ipc/ImageBridgeParent.cpp b/gfx/layers/ipc/ImageBridgeParent.cpp
-index c785017ce651..ac64d39a8c77 100644
+index 06f844200f72..b07a7a795598 100644
 --- a/gfx/layers/ipc/ImageBridgeParent.cpp
 +++ b/gfx/layers/ipc/ImageBridgeParent.cpp
-@@ -327,7 +327,7 @@ already_AddRefed<PTextureParent> ImageBridgeParent::AllocPTextureParent(
+@@ -328,7 +328,7 @@ already_AddRefed<PTextureParent> ImageBridgeParent::AllocPTextureParent(
  #ifdef MOZ_WIDGET_ANDROID
      case SurfaceDescriptor::TSurfaceTextureDescriptor:
        break;

@@ -1,8 +1,8 @@
 diff --git a/gfx/layers/apz/src/InputQueue.cpp b/gfx/layers/apz/src/InputQueue.cpp
-index b0dfba215a35..9a700064025c 100644
+index 4d2b2d2e0b4c..294107734ed7 100644
 --- a/gfx/layers/apz/src/InputQueue.cpp
 +++ b/gfx/layers/apz/src/InputQueue.cpp
-@@ -530,6 +530,7 @@ APZEventResult InputQueue::ReceivePanGestureInput(
+@@ -568,6 +568,7 @@ APZEventResult InputQueue::ReceivePanGestureInput(
      }
  
      mActivePanGestureBlock = block;

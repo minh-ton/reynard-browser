@@ -1,5 +1,5 @@
 diff --git a/gfx/2d/RecordedEventImpl.h b/gfx/2d/RecordedEventImpl.h
-index f3bc1c0badaa..5141f8eb45e5 100644
+index 06f20d575107..f69ffe82f250 100644
 --- a/gfx/2d/RecordedEventImpl.h
 +++ b/gfx/2d/RecordedEventImpl.h
 @@ -1531,6 +1531,9 @@ class RecordedFontDescriptor
@@ -22,7 +22,7 @@ index f3bc1c0badaa..5141f8eb45e5 100644
    ReferencePtr mRefPtr;
  
    template <class S>
-@@ -4322,8 +4328,17 @@ RecordedFontData::RecordedFontData(S& aStream)
+@@ -4323,8 +4329,17 @@ RecordedFontData::RecordedFontData(S& aStream)
  inline RecordedFontDescriptor::~RecordedFontDescriptor() = default;
  
  inline bool RecordedFontDescriptor::PlayEvent(Translator* aTranslator) const {
@@ -41,7 +41,7 @@ index f3bc1c0badaa..5141f8eb45e5 100644
    if (!font) {
      gfxCriticalNote << "Failed creating UnscaledFont of type " << int(mType)
                      << " from font descriptor";
-@@ -4340,6 +4355,8 @@ void RecordedFontDescriptor::Record(S& aStream) const {
+@@ -4341,6 +4356,8 @@ void RecordedFontDescriptor::Record(S& aStream) const {
    WriteElement(aStream, mType);
    WriteElement(aStream, mRefPtr);
    WriteElement(aStream, mIndex);
@@ -50,7 +50,7 @@ index f3bc1c0badaa..5141f8eb45e5 100644
    WriteElement(aStream, mData.size());
    mData.Write(aStream);
  }
-@@ -4362,6 +4379,8 @@ RecordedFontDescriptor::RecordedFontDescriptor(S& aStream)
+@@ -4363,6 +4380,8 @@ RecordedFontDescriptor::RecordedFontDescriptor(S& aStream)
    ReadElementConstrained(aStream, mType, FontType::DWRITE, FontType::UNKNOWN);
    ReadElement(aStream, mRefPtr);
    ReadElement(aStream, mIndex);

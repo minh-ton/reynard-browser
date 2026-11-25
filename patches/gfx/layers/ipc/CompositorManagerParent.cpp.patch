@@ -1,5 +1,5 @@
 diff --git a/gfx/layers/ipc/CompositorManagerParent.cpp b/gfx/layers/ipc/CompositorManagerParent.cpp
-index db5602bdb40d..4681ad9f0201 100644
+index 243c68b3a7ab..be55e58268fc 100644
 --- a/gfx/layers/ipc/CompositorManagerParent.cpp
 +++ b/gfx/layers/ipc/CompositorManagerParent.cpp
 @@ -16,6 +16,7 @@

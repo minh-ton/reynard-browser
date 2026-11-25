@@ -1,5 +1,5 @@
 diff --git a/uriloader/base/nsDocLoader.cpp b/uriloader/base/nsDocLoader.cpp
-index 524451a83e03..b44cadc499a2 100644
+index e25ac2b962b1..57fcd1a4ca58 100644
 --- a/uriloader/base/nsDocLoader.cpp
 +++ b/uriloader/base/nsDocLoader.cpp
 @@ -1591,7 +1591,7 @@ int64_t nsDocLoader::CalculateMaxProgress() {

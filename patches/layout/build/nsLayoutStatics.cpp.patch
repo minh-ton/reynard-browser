@@ -1,8 +1,8 @@
 diff --git a/layout/build/nsLayoutStatics.cpp b/layout/build/nsLayoutStatics.cpp
-index 71d64d2c4eba..28948762c576 100644
+index 1ccd4f9e139e..26d846dbf15a 100644
 --- a/layout/build/nsLayoutStatics.cpp
 +++ b/layout/build/nsLayoutStatics.cpp
-@@ -65,6 +65,9 @@
+@@ -66,6 +66,9 @@
  #ifdef XP_WIN
  #  include "mozilla/widget/WinAudioSession.h"
  #endif
@@ -12,7 +12,7 @@ index 71d64d2c4eba..28948762c576 100644
  #include "CubebUtils.h"
  #include "DecoderDoctorLogger.h"
  #include "MediaDecoder.h"
-@@ -225,6 +228,10 @@ nsresult nsLayoutStatics::Initialize() {
+@@ -227,6 +230,10 @@ nsresult nsLayoutStatics::Initialize() {
  
    ProcessPriorityManager::Init();
  

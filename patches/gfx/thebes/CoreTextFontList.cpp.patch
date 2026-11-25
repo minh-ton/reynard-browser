@@ -1,5 +1,5 @@
 diff --git a/gfx/thebes/CoreTextFontList.cpp b/gfx/thebes/CoreTextFontList.cpp
-index b6696c70c4b9..fa5d2bb2288b 100644
+index a4ec9ca5f83b..ab16e79d7e8a 100644
 --- a/gfx/thebes/CoreTextFontList.cpp
 +++ b/gfx/thebes/CoreTextFontList.cpp
 @@ -351,6 +351,12 @@ nsresult CTFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {

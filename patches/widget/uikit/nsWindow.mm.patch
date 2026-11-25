@@ -1,5 +1,5 @@
 diff --git a/widget/uikit/nsWindow.mm b/widget/uikit/nsWindow.mm
-index c1c4c3deb341..00afb7443053 100644
+index c1c4c3deb341..077ee40981f6 100644
 --- a/widget/uikit/nsWindow.mm
 +++ b/widget/uikit/nsWindow.mm
 @@ -11,12 +11,15 @@
@@ -1472,7 +1472,7 @@ index c1c4c3deb341..00afb7443053 100644
  EventDispatcher* nsWindow::GetEventDispatcher() const {
    if (mIOSView) {
      return mIOSView->mEventDispatcher;
-@@ -1206,28 +1771,138 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
+@@ -1206,28 +1771,139 @@ - (UIAccessibilityContainerType)accessibilityContainerType {
    return nullptr;
  }
  
@@ -1516,7 +1516,8 @@ index c1c4c3deb341..00afb7443053 100644
 +  MOZ_ASSERT(NS_IsMainThread());
 +
 +  if (mSwipeTracker) {
-+    nsEventStatus status = mSwipeTracker->ProcessEvent(aInput);
++    nsEventStatus status =
++        mSwipeTracker->ProcessEvent(aInput, SwipeInputSource::Touchpad);
 +    if (status == nsEventStatus_eConsumeNoDefault) {
 +      return;
 +    }
@@ -1625,7 +1626,7 @@ index c1c4c3deb341..00afb7443053 100644
  NS_IMPL_ISUPPORTS(IOSView, nsIGeckoViewEventDispatcher, nsIGeckoViewView)
  
  nsresult IOSView::GetInitData(JSContext* aCx,
-@@ -1248,6 +1923,141 @@ - (UIView*)view {
+@@ -1248,6 +1924,141 @@ - (UIView*)view {
    return mWindow ? (UIView*)mWindow->GetNativeData(NS_NATIVE_WIDGET) : nil;
  }
  
@@ -1767,7 +1768,7 @@ index c1c4c3deb341..00afb7443053 100644
  - (void)close {
    if (mWindow) {
      if (IOSView* iosView = mWindow->GetIOSView()) {
-@@ -1261,6 +2071,7 @@ - (void)close {
+@@ -1261,6 +2072,7 @@ - (void)close {
      outerWin->ForceClose();
    }
  }

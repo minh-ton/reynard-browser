@@ -1,8 +1,8 @@
 diff --git a/third_party/angle/angle_gpu_info_util_gn/moz.build b/third_party/angle/angle_gpu_info_util_gn/moz.build
-index b861782d7c18..3e43d7f96d4b 100644
+index c1443e244657..95b3d22f31a2 100644
 --- a/third_party/angle/angle_gpu_info_util_gn/moz.build
 +++ b/third_party/angle/angle_gpu_info_util_gn/moz.build
-@@ -63,15 +63,29 @@ if CONFIG["OS_TARGET"] == "Darwin":
+@@ -98,15 +98,29 @@ if CONFIG["OS_TARGET"] == "Darwin":
      OS_LIBS += [
          "-framework CoreFoundation",
          "-framework CoreGraphics",

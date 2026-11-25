@@ -1,8 +1,8 @@
 diff --git a/media/libcubeb/src/cubeb_resampler_internal.h b/media/libcubeb/src/cubeb_resampler_internal.h
-index 2ad751b37a7d..daef9d5bd1ab 100644
+index d035f27b3b5f..20f1ad305dad 100644
 --- a/media/libcubeb/src/cubeb_resampler_internal.h
 +++ b/media/libcubeb/src/cubeb_resampler_internal.h
-@@ -481,12 +481,22 @@ cubeb_resampler_create_internal(cubeb_stream * stream,
+@@ -462,12 +462,22 @@ cubeb_resampler_create_internal(cubeb_stream * stream,
    }
  
    if (output_params && (output_params->rate != target_rate)) {

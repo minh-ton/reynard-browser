@@ -1,10 +1,10 @@
 diff --git a/parser/htmlparser/nsExpatDriver.cpp b/parser/htmlparser/nsExpatDriver.cpp
-index 2e1253d56914..39bf4811a499 100644
+index 06040b467e07..5c310407e417 100644
 --- a/parser/htmlparser/nsExpatDriver.cpp
 +++ b/parser/htmlparser/nsExpatDriver.cpp
-@@ -1449,7 +1449,8 @@ RLBoxExpatSandboxPool::CreateSandboxData(uint64_t aSize) {
+@@ -1443,7 +1443,8 @@ RLBoxExpatSandboxPool::CreateSandboxData(uint64_t aSize) {
    // Create expat sandbox
-   auto sandbox = mozilla::MakeUnique<rlbox_sandbox_expat>();
+   auto sandbox = std::make_unique<rlbox_sandbox_expat>();
  
 -#ifdef MOZ_WASM_SANDBOXING_EXPAT
 +// Use NOOP sandbox for iOS

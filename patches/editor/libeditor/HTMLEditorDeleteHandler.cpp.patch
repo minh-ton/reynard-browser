@@ -1,8 +1,8 @@
 diff --git a/editor/libeditor/HTMLEditorDeleteHandler.cpp b/editor/libeditor/HTMLEditorDeleteHandler.cpp
-index 97ec593d3936..cac73cb0172e 100644
+index e3502e25fbb4..c564eb2dfb74 100644
 --- a/editor/libeditor/HTMLEditorDeleteHandler.cpp
 +++ b/editor/libeditor/HTMLEditorDeleteHandler.cpp
-@@ -7459,7 +7459,8 @@ nsresult HTMLEditor::AutoDeleteRangesHandler::AutoEmptyBlockAncestorDeleter::
+@@ -7463,7 +7463,8 @@ nsresult HTMLEditor::AutoDeleteRangesHandler::AutoEmptyBlockAncestorDeleter::
      }
      case nsIEditor::eNext:
      case nsIEditor::eNextWord:
@@ -12,7 +12,7 @@ index 97ec593d3936..cac73cb0172e 100644
        EditorRawDOMPoint endPoint =
            HTMLEditUtils::GetNextEditablePoint<EditorRawDOMPoint>(
                *mEmptyInclusiveAncestorBlockElement, &aEditingHost,
-@@ -7562,7 +7563,8 @@ Result<CaretPoint, nsresult> HTMLEditor::AutoDeleteRangesHandler::
+@@ -7566,7 +7567,8 @@ Result<CaretPoint, nsresult> HTMLEditor::AutoDeleteRangesHandler::
    switch (aDirectionAndAmount) {
      case nsIEditor::eNext:
      case nsIEditor::eNextWord:

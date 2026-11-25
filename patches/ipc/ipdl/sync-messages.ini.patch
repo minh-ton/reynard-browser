@@ -1,5 +1,5 @@
 diff --git a/ipc/ipdl/sync-messages.ini b/ipc/ipdl/sync-messages.ini
-index effd3b7bc8dc..9b5b683ab122 100644
+index d228d4e6ca60..4c0e2a6fabe9 100644
 --- a/ipc/ipdl/sync-messages.ini
 +++ b/ipc/ipdl/sync-messages.ini
 @@ -126,6 +126,18 @@ description = legacy sync IPC - please add detailed description

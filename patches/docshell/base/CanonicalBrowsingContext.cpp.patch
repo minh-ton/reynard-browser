@@ -1,5 +1,5 @@
 diff --git a/docshell/base/CanonicalBrowsingContext.cpp b/docshell/base/CanonicalBrowsingContext.cpp
-index b228b691674e..e44b1e52eda5 100644
+index df75dde2810b..9c046a0a4673 100644
 --- a/docshell/base/CanonicalBrowsingContext.cpp
 +++ b/docshell/base/CanonicalBrowsingContext.cpp
 @@ -63,6 +63,7 @@
@@ -21,7 +21,7 @@ index b228b691674e..e44b1e52eda5 100644
    txn.SetSuspendMediaWhenInactive(GetSuspendMediaWhenInactive());
    txn.SetDisplayMode(GetDisplayMode());
    txn.SetForceDesktopViewport(GetForceDesktopViewport());
-@@ -2344,6 +2349,65 @@ void CanonicalBrowsingContext::Stop(uint32_t aStopFlags) {
+@@ -2352,6 +2357,65 @@ void CanonicalBrowsingContext::Stop(uint32_t aStopFlags) {
    }
  }
  

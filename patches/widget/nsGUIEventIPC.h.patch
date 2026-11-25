@@ -1,5 +1,5 @@
 diff --git a/widget/nsGUIEventIPC.h b/widget/nsGUIEventIPC.h
-index 2ecd78035575..a664c20f75b6 100644
+index 41476f14bd09..3ae609d7ac54 100644
 --- a/widget/nsGUIEventIPC.h
 +++ b/widget/nsGUIEventIPC.h
 @@ -16,6 +16,7 @@
@@ -108,7 +108,7 @@ index 2ecd78035575..a664c20f75b6 100644
  
  template <>
  struct ParamTraits<mozilla::widget::InputContextAction::Cause>
-@@ -1028,6 +1073,7 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1030,6 +1075,7 @@ struct ParamTraits<mozilla::PanGestureInput>
      WriteParam(aWriter, aParam.mMayTriggerSwipe);
      WriteParam(aWriter, aParam.mOverscrollBehaviorAllowsSwipe);
      WriteParam(aWriter, aParam.mSimulateMomentum);
@@ -116,7 +116,7 @@ index 2ecd78035575..a664c20f75b6 100644
      WriteParam(aWriter, aParam.mIsNoLineOrPageDelta);
    }
  
-@@ -1051,6 +1097,8 @@ struct ParamTraits<mozilla::PanGestureInput>
+@@ -1053,6 +1099,8 @@ struct ParamTraits<mozilla::PanGestureInput>
                                 &paramType::SetOverscrollBehaviorAllowsSwipe) &&
             ReadBoolForBitfield(aReader, aResult,
                                 &paramType::SetSimulateMomentum) &&

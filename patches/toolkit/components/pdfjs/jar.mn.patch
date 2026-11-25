@@ -1,5 +1,5 @@
 diff --git a/toolkit/components/pdfjs/jar.mn b/toolkit/components/pdfjs/jar.mn
-index c084d6338866..17500da72b25 100644
+index 523c84874696..2519d5d23991 100644
 --- a/toolkit/components/pdfjs/jar.mn
 +++ b/toolkit/components/pdfjs/jar.mn
 @@ -20,7 +20,7 @@ pdfjs.jar:

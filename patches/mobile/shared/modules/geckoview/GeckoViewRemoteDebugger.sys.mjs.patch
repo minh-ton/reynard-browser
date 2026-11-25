@@ -1,5 +1,5 @@
 diff --git a/mobile/shared/modules/geckoview/GeckoViewRemoteDebugger.sys.mjs b/mobile/shared/modules/geckoview/GeckoViewRemoteDebugger.sys.mjs
-index 1afa14af433d..fd620febf612 100644
+index 43a0056e5259..8ea1b1a1babc 100644
 --- a/mobile/shared/modules/geckoview/GeckoViewRemoteDebugger.sys.mjs
 +++ b/mobile/shared/modules/geckoview/GeckoViewRemoteDebugger.sys.mjs
 @@ -2,6 +2,7 @@

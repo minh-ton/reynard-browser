@@ -1,8 +1,8 @@
 diff --git a/third_party/angle/libANGLE_gn/moz.build b/third_party/angle/libANGLE_gn/moz.build
-index 098b90b8861b..97e7b670e5d7 100644
+index 9c6b1ac5cf34..04a6b74b9dfa 100644
 --- a/third_party/angle/libANGLE_gn/moz.build
 +++ b/third_party/angle/libANGLE_gn/moz.build
-@@ -61,15 +61,21 @@ if CONFIG["OS_TARGET"] == "Darwin":
+@@ -83,15 +83,21 @@ if CONFIG["OS_TARGET"] == "Darwin":
      ]
  
      OS_LIBS += [

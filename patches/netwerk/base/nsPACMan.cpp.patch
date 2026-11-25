@@ -1,8 +1,8 @@
 diff --git a/netwerk/base/nsPACMan.cpp b/netwerk/base/nsPACMan.cpp
-index d00eae3f7395..d4a8e18cb2fd 100644
+index 8563ab4d5093..76cfa8e6f4ba 100644
 --- a/netwerk/base/nsPACMan.cpp
 +++ b/netwerk/base/nsPACMan.cpp
-@@ -883,24 +883,24 @@ bool nsPACMan::ProcessPending() {
+@@ -873,24 +873,24 @@ bool nsPACMan::ProcessPending() {
  
    // now try the system proxy settings for this particular url if
    // PAC was not specified

@@ -1,6 +1,6 @@
 diff --git a/widget/uikit/GeckoKeyboardSupport.mm b/widget/uikit/GeckoKeyboardSupport.mm
 new file mode 100644
-index 000000000000..ce52372171d8
+index 000000000000..0885136df59c
 --- /dev/null
 +++ b/widget/uikit/GeckoKeyboardSupport.mm
 @@ -0,0 +1,1099 @@
@@ -625,7 +625,7 @@ index 000000000000..ce52372171d8
 +
 +  WidgetKeyboardEvent keydownEvent(true, eKeyDown, mHandler->mWidget);
 +  InitKeyEvent(aEvent, keydownEvent, 0);
-+  auto heldKey = MakeUnique<HeldKey>();
++  auto heldKey = std::make_unique<HeldKey>();
 +  heldKey->mNativeKeyCode = aEvent.keyCode;
 +  heldKey->mKeyCode = keydownEvent.mKeyCode;
 +  heldKey->mKeyNameIndex = keydownEvent.mKeyNameIndex;
@@ -889,7 +889,7 @@ index 000000000000..ce52372171d8
 +      if (alreadyHeld) {
 +        continue;
 +      }
-+      auto heldKey = MakeUnique<HeldKey>();
++      auto heldKey = std::make_unique<HeldKey>();
 +      heldKey->mNativeKeyCode = transition.mNativeKeyCode;
 +      heldKey->mKeyCode = WidgetKeyboardEvent::ComputeKeyCodeFromKeyNameIndex(
 +          transition.mKeyNameIndex);

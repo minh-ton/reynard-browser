@@ -1,8 +1,8 @@
 diff --git a/dom/base/nsFrameLoader.h b/dom/base/nsFrameLoader.h
-index b2db03bd918f..978100c57cdd 100644
+index ccdc0dbf41eb..9b035df208ac 100644
 --- a/dom/base/nsFrameLoader.h
 +++ b/dom/base/nsFrameLoader.h
-@@ -309,6 +309,8 @@ class nsFrameLoader final : public nsStubMutationObserver,
+@@ -311,6 +311,8 @@ class nsFrameLoader final : public nsStubMutationObserver,
                                       nsFrameLoaderOwner* aThisOwner,
                                       nsFrameLoaderOwner* aOtherOwner);
  
