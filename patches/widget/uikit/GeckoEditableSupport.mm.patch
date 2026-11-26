@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoEditableSupport.mm b/widget/uikit/GeckoEditableSupport.mm
 new file mode 100644
-index 000000000000..7c1312095c8d
+index 000000000000..a639a49638c7
 --- /dev/null
 +++ b/widget/uikit/GeckoEditableSupport.mm
-@@ -0,0 +1,4329 @@
+@@ -0,0 +1,4339 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -71,6 +71,7 @@ index 000000000000..7c1312095c8d
 ++ (instancetype)activeInstance;
 +- (id<UITextInput>)inputDelegate;
 +- (id<GeckoKeyboardDeletionState>)keyboardStateManager;
++- (void)setDelegate:(id<UITextInput>)aDelegate force:(BOOL)aForce;
 +- (void)updateForChangedSelection;
 +- (void)replaceText:(id)aReplacement;
 +- (BOOL)autocorrectSpellingEnabled;
@@ -4243,13 +4244,15 @@ index 000000000000..7c1312095c8d
 +  self.inputDelegate = nil;
 +  [self reloadInputViews];
 +
-+  if (![field[@"acceptsLoginCredentials"] boolValue]) {
-+    return;
-+  }
-+
 +  UIKeyboardImpl* keyboard =
 +      [NSClassFromString(@"UIKeyboardImpl") activeInstance];
 +  if ([keyboard inputDelegate] != self) {
++    return;
++  }
++
++  [keyboard setDelegate:self force:YES];
++
++  if (![field[@"acceptsLoginCredentials"] boolValue]) {
 +    return;
 +  }
 +
@@ -4257,10 +4260,17 @@ index 000000000000..7c1312095c8d
 +      [keyboard respondsToSelector:@selector(keyboardStateManager)]
 +          ? (id<GeckoKeyboardAutofillState>)[keyboard keyboardStateManager]
 +          : (id<GeckoKeyboardAutofillState>)keyboard;
-+  [keyboardState.autofillController.autofillGroup removeObjectsForKeys:@[
-+    UITextContentTypeUsername, UITextContentTypePassword,
-+    UITextContentTypeOneTimeCode
-+  ]];
++  NSDictionary* groupKeys = @{
++    UITextContentTypeUsername : @"UITextContentTypeUsername",
++    UITextContentTypePassword : @"UITextContentTypePassword",
++    UITextContentTypeOneTimeCode : @"UITextContentTypeOneTimeCode",
++  };
++  NSMutableDictionary* group = keyboardState.autofillController.autofillGroup;
++  for (UITextContentType type in groupKeys) {
++    if (![type isEqual:field[@"textContentType"]]) {
++      [group removeObjectsForKeys:@[ type, groupKeys[type] ]];
++    }
++  }
 +}
 +
 +- (UITextContentType)textContentType {
