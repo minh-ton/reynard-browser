@@ -1,9 +1,9 @@
 diff --git a/ipc/glue/NSExtensionUtils.mm b/ipc/glue/NSExtensionUtils.mm
 new file mode 100644
-index 000000000000..723d09eac3bc
+index 000000000000..c144b81c978b
 --- /dev/null
 +++ b/ipc/glue/NSExtensionUtils.mm
-@@ -0,0 +1,479 @@
+@@ -0,0 +1,494 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -33,17 +33,19 @@ index 000000000000..723d09eac3bc
 +- (void)cancelExtensionRequestWithIdentifier:(NSUUID*)requestIdentifier;
 +- (void)setRequestInterruptionBlock:
 +    (void (^_Nonnull)(NSUUID* requestIdentifier))block;
-+- (void)
-+    instantiateViewControllerWithInputItems:(NSArray*)inputItems
-+                          connectionHandler:
-+                              (void (^_Nonnull)(
-+                                  NSUUID* _Nullable requestIdentifier,
-+                                  UIViewController* _Nullable viewController,
-+                                  NSError* _Nullable error))handler;
 +@end
 +
 +@interface NSXPCConnection (Private)
 +- (xpc_connection_t _Nullable)_xpcConnection;
++@end
++
++@interface NSObject (RunningBoardServices)
+++ (id)targetWithPid:(pid_t)pid;
+++ (id)attributeWithDomain:(NSString*)domain name:(NSString*)name;
++- (id)initWithExplanation:(NSString*)explanation
++                   target:(id)target
++               attributes:(NSArray*)attributes;
++- (BOOL)acquireWithError:(NSError* _Nullable*)error;
 +@end
 +
 +@protocol ExtensionBootstrapPing
@@ -118,64 +120,109 @@ index 000000000000..723d09eac3bc
 +  return [[NSBundle bundleWithURL:extensionURL] bundleIdentifier];
 +}
 +
-+static UIWindow* _Nullable ForegroundWindow() {
++static bool HasForegroundScene() {
 +  for (UIScene* scene in UIApplication.sharedApplication.connectedScenes) {
-+    if (scene.activationState != UISceneActivationStateForegroundActive ||
-+        ![scene isKindOfClass:UIWindowScene.class]) {
-+      continue;
-+    }
-+
-+    UIWindow* visibleWindow = nil;
-+    for (UIWindow* window in ((UIWindowScene*)scene).windows) {
-+      if (window.hidden || window.windowLevel != UIWindowLevelNormal) {
-+        continue;
-+      }
-+      if (window.isKeyWindow) {
-+        return window;
-+      }
-+      if (!visibleWindow) {
-+        visibleWindow = window;
-+      }
-+    }
-+
-+    if (visibleWindow) {
-+      return visibleWindow;
++    if (scene.activationState == UISceneActivationStateForegroundActive ||
++        scene.activationState == UISceneActivationStateForegroundInactive) {
++      return true;
 +    }
 +  }
-+  return nil;
++  return false;
 +}
 +
-+static void MoveToForegroundWindow(UIView* view) {
-+  UIWindowScene* windowScene = view.window.windowScene;
-+  if (windowScene && !view.window.hidden &&
-+      windowScene.activationState == UISceneActivationStateForegroundActive) {
++@interface ForegroundAssertion : NSObject {
++ @private
++  pid_t mPid;
++  id mAssertion;
++  NSMutableArray* mObservers;
++}
++
++- (instancetype)initWithPid:(pid_t)aPid;
++- (void)start;
++- (void)stop;
++
++@end
++
++@implementation ForegroundAssertion
++
++- (instancetype)initWithPid:(pid_t)aPid {
++  if ((self = [super init])) {
++    mPid = aPid;
++    mObservers = [[NSMutableArray alloc] init];
++  }
++  return self;
++}
++
++- (void)setForeground:(bool)aForeground {
++  if (aForeground == (mAssertion != nil)) {
 +    return;
 +  }
 +
-+  if (UIWindow* foregroundWindow = ForegroundWindow()) {
-+    [foregroundWindow addSubview:view];
++  if (!aForeground) {
++    [mAssertion invalidate];
++    [mAssertion release];
++    mAssertion = nil;
++    return;
++  }
++
++  NSString* name = @"Workspace-ForegroundFocal";
++  if (__builtin_available(iOS 26.0, *)) {
++    name = @"SuspendableRole-UIFocal";
++  }
++  id attribute = [NSClassFromString(@"RBSDomainAttribute")
++      attributeWithDomain:@"com.apple.frontboard"
++                     name:name];
++  mAssertion = [[NSClassFromString(@"RBSAssertion") alloc]
++      initWithExplanation:@"GPU process"
++                   target:[NSClassFromString(@"RBSTarget") targetWithPid:mPid]
++               attributes:@[ attribute ]];
++  if (![mAssertion acquireWithError:nil]) {
++    [mAssertion release];
++    mAssertion = nil;
 +  }
 +}
 +
-+static void HostView(UIView* view, NSMutableArray* observers) {
-+  view.frame = CGRectMake(0, 0, 1, 1);
-+  view.userInteractionEnabled = NO;
-+  MoveToForegroundWindow(view);
++- (void)start {
++  __block ForegroundAssertion* foregroundAssertion = self;
++  [mObservers
++      addObject:[NSNotificationCenter.defaultCenter
++                    addObserverForName:UISceneWillEnterForegroundNotification
++                                object:nil
++                                 queue:NSOperationQueue.mainQueue
++                            usingBlock:^(NSNotification* notification) {
++                              [foregroundAssertion setForeground:true];
++                            }]];
 +
 +  for (NSNotificationName name in @[
-+         UISceneDidActivateNotification, UISceneDidEnterBackgroundNotification,
-+         UISceneDidDisconnectNotification, UIWindowDidBecomeHiddenNotification
++         UISceneDidEnterBackgroundNotification, UISceneDidDisconnectNotification
 +       ]) {
 +    id observer = [NSNotificationCenter.defaultCenter
 +        addObserverForName:name
 +                    object:nil
 +                     queue:NSOperationQueue.mainQueue
 +                usingBlock:^(NSNotification* notification) {
-+                  MoveToForegroundWindow(view);
++                  [foregroundAssertion setForeground:HasForegroundScene()];
 +                }];
-+    [observers addObject:observer];
++    [mObservers addObject:observer];
 +  }
++
++  [self setForeground:HasForegroundScene()];
 +}
++
++- (void)stop {
++  for (id observer in mObservers) {
++    [NSNotificationCenter.defaultCenter removeObserver:observer];
++  }
++  [mObservers removeAllObjects];
++  [self setForeground:false];
++}
++
++- (void)dealloc {
++  [mObservers release];
++  [super dealloc];
++}
++
++@end
 +
 +@interface ExtensionProcess : NSObject {
 + @private
@@ -184,15 +231,14 @@ index 000000000000..723d09eac3bc
 +  ExtensionConnectionDelegate* mListenerDelegate;
 +  NSXPCConnection* mConnection;
 +  NSUUID* mRequestIdentifier;
-+  UIViewController* mRemoteViewController;
-+  NSMutableArray* mHostObservers;
++  ForegroundAssertion* mForegroundAssertion;
 +  xpc_connection_t mLibXPCConnection;
 +  bool mInvalidated;
 +}
 +
-+- (void)startHostingView:(bool)aHostsView
-+          withCompletion:
-+              (void (^_Nonnull)(NSError* _Nullable error))aCompletion;
++- (void)startInForeground:(bool)aForeground
++           withCompletion:
++               (void (^_Nonnull)(NSError* _Nullable error))aCompletion;
 +- (xpc_connection_t _Nullable)copyLibXPCConnection;
 +- (void)invalidate;
 +
@@ -200,9 +246,9 @@ index 000000000000..723d09eac3bc
 +
 +@implementation ExtensionProcess
 +
-+- (void)startHostingView:(bool)aHostsView
-+          withCompletion:
-+              (void (^_Nonnull)(NSError* _Nullable error))aCompletion {
++- (void)startInForeground:(bool)aForeground
++           withCompletion:
++               (void (^_Nonnull)(NSError* _Nullable error))aCompletion {
 +  void (^completion)(NSError* _Nullable) = [aCompletion copy];
 +
 +  dispatch_async(ExtensionLaunchQueue(), ^{
@@ -258,6 +304,15 @@ index 000000000000..723d09eac3bc
 +            @"Failed to get libxpc connection from NSXPCConnection"));
 +        return;
 +      }
++
++      if (aForeground) {
++        ForegroundAssertion* foregroundAssertion = [[ForegroundAssertion alloc]
++            initWithPid:connection.processIdentifier];
++        process->mForegroundAssertion = foregroundAssertion;
++        dispatch_async(dispatch_get_main_queue(), ^{
++          [foregroundAssertion start];
++        });
++      }
 +    }];
 +
 +    [mListener setDelegate:mListenerDelegate];
@@ -286,40 +341,6 @@ index 000000000000..723d09eac3bc
 +
 +    NSExtensionItem* input = [[[NSExtensionItem alloc] init] autorelease];
 +    [input setUserInfo:@{@"ReynardXPCListenerEndpoint" : [mListener endpoint]}];
-+
-+    if (aHostsView) {
-+      [mExtension
-+          instantiateViewControllerWithInputItems:@[ input ]
-+                                connectionHandler:^(
-+                                    NSUUID* requestIdentifier,
-+                                    UIViewController* viewController,
-+                                    NSError* error) {
-+                                  if (!viewController) {
-+                                    completeOnce(ExtensionLaunchError(
-+                                        @"Failed to host NSExtension view",
-+                                        error));
-+                                    return;
-+                                  }
-+
-+                                  if (mInvalidated) {
-+                                    return;
-+                                  }
-+
-+                                  mRequestIdentifier =
-+                                      [requestIdentifier retain];
-+                                  mRemoteViewController =
-+                                      [viewController retain];
-+                                  mHostObservers =
-+                                      [[NSMutableArray alloc] init];
-+                                  NSMutableArray* hostObservers =
-+                                      mHostObservers;
-+                                  dispatch_async(dispatch_get_main_queue(), ^{
-+                                    HostView(viewController.view,
-+                                             hostObservers);
-+                                  });
-+                                }];
-+      return;
-+    }
 +
 +    NSError* requestError = nil;
 +    mRequestIdentifier =
@@ -372,18 +393,12 @@ index 000000000000..723d09eac3bc
 +    mRequestIdentifier = nil;
 +  }
 +
-+  if (mRemoteViewController) {
-+    UIViewController* viewController = mRemoteViewController;
-+    NSMutableArray* hostObservers = mHostObservers;
-+    mRemoteViewController = nil;
-+    mHostObservers = nil;
++  if (mForegroundAssertion) {
++    ForegroundAssertion* foregroundAssertion = mForegroundAssertion;
++    mForegroundAssertion = nil;
 +    dispatch_async(dispatch_get_main_queue(), ^{
-+      for (id observer in hostObservers) {
-+        [NSNotificationCenter.defaultCenter removeObserver:observer];
-+      }
-+      [hostObservers release];
-+      [viewController.view removeFromSuperview];
-+      [viewController release];
++      [foregroundAssertion stop];
++      [foregroundAssertion release];
 +    });
 +  }
 +
@@ -417,7 +432,7 @@ index 000000000000..723d09eac3bc
 +}
 +
 +void NSExtensionProcess::StartProcess(
-+    bool aHostsView,
++    bool aForeground,
 +    const std::function<void(Result<NSExtensionProcess, LaunchError>&&)>&
 +        aCompletion) {
 +  auto ownedCompletion = std::make_shared<
@@ -426,17 +441,17 @@ index 000000000000..723d09eac3bc
 +
 +  ExtensionProcess* process = [[ExtensionProcess alloc] init];
 +
-+  [process startHostingView:aHostsView
-+             withCompletion:^(NSError* error) {
-+               if (error) {
-+                 [process release];
-+                 (*ownedCompletion)(
-+                     Err(LaunchError("NSExtensionProcess::StartProcess")));
-+                 return;
-+               }
++  [process startInForeground:aForeground
++              withCompletion:^(NSError* error) {
++                if (error) {
++                  [process release];
++                  (*ownedCompletion)(
++                      Err(LaunchError("NSExtensionProcess::StartProcess")));
++                  return;
++                }
 +
-+               (*ownedCompletion)(NSExtensionProcess(process));
-+             }];
++                (*ownedCompletion)(NSExtensionProcess(process));
++              }];
 +}
 +
 +DarwinObjectPtr<xpc_connection_t> NSExtensionProcess::MakeLibXPCConnection() {
