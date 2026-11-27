@@ -10,6 +10,26 @@ Besides providing an **alternative, up-to-date browser engine**[^1], Reynard sup
 
 [^1]: This is particularly useful on older iOS versions. Because WebKit is bundled with the OS, devices that no longer receive iOS updates are also stuck with an older browser engine, which can cause modern websites to break or render incorrectly.
 
+<table>
+  <tr>
+    <td>
+      <img width=150 src="https://github.com/user-attachments/assets/62568ad7-c84c-4623-a560-f679c2a47755"><br>
+    </td>
+    <td>
+      <img width=150 src="https://github.com/user-attachments/assets/4c43cda8-5451-4876-9556-2529a36e0e62"><br>
+    </td>
+    <td>
+      <img width=150 src="https://github.com/user-attachments/assets/d213427d-c207-4129-82b4-a19b091072e0"><br>
+    </td>
+    <td>
+      <img width=150 src="https://github.com/user-attachments/assets/f0e7b590-63be-44cf-87c2-c790c59bd915"><br>
+    </td>
+    <td>
+      <img width=150 src="https://github.com/user-attachments/assets/6015bbc0-727c-4fca-9756-3ec3d256f162"><br>
+    </td>
+  </tr>
+</table>
+
 ## Installation
 
 The latest builds are available for download on the [Releases](https://github.com/minh-ton/reynard-browser/releases) page. Please note that this project is still in beta, so expect bugs and missing features.
@@ -71,94 +91,6 @@ You can also [click here](https://altdirect.app/?url=https://github.com/minh-ton
 > - **LiveContainer is not supported** due to its own limitations.
 > - Sideloading using a distribution certificate for signing is **not supported**.⁠
 > - Other sideloading methods may be **incompatible with Reynard**, and **no support will be provided** for issues arising from them.
-
-## Preview
-
-### iOS 14 (iPhone 6S Plus, 14.1)
-
-These sites are known to break or render incorrectly on iOS 14. The screenshots below compare how they load in Safari versus Reynard.
-
-<table>
-  <tr>
-    <th colspan="2">github.com</th>
-    <th colspan="2">chatgpt.com</th>
-    <th colspan="2">apple.com</th>
-  </tr>
-  <tr>
-    <td align="center">Safari</td>
-    <td align="center">Reynard</td>
-    <td align="center">Safari</td>
-    <td align="center">Reynard</td>
-    <td align="center">Safari</td>
-    <td align="center">Reynard</td>
-  </tr>
-  <tr>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/d89f4385-c478-4aea-aa9d-6c9fca72252b"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/279f8268-b196-415d-9199-66c06989ae7f"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/1a68024e-83d4-489c-a576-26d5ea43011c"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/eb8f0073-04c2-436d-b66c-9ba2af8e56c2"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/0e52fbf1-af5d-4a83-9bba-50c5d1e15d57"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/edbd8e50-a02d-4107-a5e2-f8ab2c6382bb"><br>
-    </td>
-  </tr>
-</table>
-
-### iOS 15 (iPhone 7, 15.8.6)
-
-<table>
-  <tr>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/e716f563-8ab5-4d3c-b49a-4bb66fc78d59"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/33ece0a3-c876-40c5-acdc-26ea3ac9b9b6"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/96ed97e3-aa57-4b80-adee-108699fef90d"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/e9018214-53ef-41b2-a92c-ed03e7d2a366"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/abe83082-1fc6-4ee9-999e-f81e1712ac13"><br>
-    </td>
-  </tr>
-</table>
-
-### iOS 26 (iPhone 13 mini, 26.1)
-
-Reynard also works great on the latest version of iOS!
-
-<table>
-  <tr>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/62568ad7-c84c-4623-a560-f679c2a47755"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/4c43cda8-5451-4876-9556-2529a36e0e62"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/d213427d-c207-4129-82b4-a19b091072e0"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/f0e7b590-63be-44cf-87c2-c790c59bd915"><br>
-    </td>
-    <td>
-      <img width=150 src="https://github.com/user-attachments/assets/6015bbc0-727c-4fca-9756-3ec3d256f162"><br>
-    </td>
-  </tr>
-</table>
 
 ## Building
 
