@@ -137,6 +137,7 @@ final class TabBarCollection: UICollectionView {
     private var needsReload = false
     private var pendingInsertedIndices = Set<Int>()
     private var pendingDeletedIndices = Set<Int>()
+    private var isSettlingDrop = false
     
     init() {
         let layout = TabBarCollectionLayout()
@@ -175,7 +176,7 @@ final class TabBarCollection: UICollectionView {
         let visibleMaxX = min(bounds.maxX, contentSize.width)
         let visibleWidth = visibleMaxX - bounds.minX
         let dragWidth = visibleWidth - UX.reorderEdgeInset * 2
-
+        
         if hasActiveDrag && dragWidth > 0 {
             let stretchedX = bounds.minX + (point.x - bounds.minX - UX.reorderEdgeInset) * visibleWidth / dragWidth
             rowPoint.x = min(max(stretchedX, bounds.minX + 1), visibleMaxX - 1)
@@ -490,8 +491,10 @@ extension TabBarCollection: UICollectionViewDragDelegate {
     }
     
     func collectionView(_ collectionView: UICollectionView, dragSessionDidEnd session: UIDragSession) {
-        clipsToBounds = true
-        tabBar?.clipsToBounds = true
+        if !isSettlingDrop {
+            clipsToBounds = true
+            tabBar?.clipsToBounds = true
+        }
         updateLayout()
         refreshVisibleTabs()
     }
@@ -529,6 +532,23 @@ extension TabBarCollection: UICollectionViewDropDelegate {
             tabBar?.requestMoveTab(from: sourceIndexPath.item, to: destinationItem)
             moveItem(at: sourceIndexPath, to: destinationIndexPath)
         }
-        coordinator.drop(item.dragItem, toItemAt: destinationIndexPath)
+        
+        isSettlingDrop = true
+        coordinator.drop(item.dragItem, toItemAt: destinationIndexPath).addCompletion { [weak self] _ in
+            self?.isSettlingDrop = false
+            self?.clipsToBounds = true
+            self?.tabBar?.clipsToBounds = true
+        }
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        dropPreviewParametersForItemAt indexPath: IndexPath
+    ) -> UIDragPreviewParameters? {
+        let parameters = self.collectionView(collectionView, dragPreviewParametersForItemAt: indexPath)
+        if #available(iOS 14.0, *) {
+            parameters?.shadowPath = UIBezierPath()
+        }
+        return parameters
     }
 }

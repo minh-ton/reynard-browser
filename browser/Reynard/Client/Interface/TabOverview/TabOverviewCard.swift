@@ -14,6 +14,7 @@ final class TabOverviewCard: UICollectionViewCell {
         static let webpagePreviewShadowOpacity: Float = 0.12
         static let webpagePreviewShadowRadius: CGFloat = 8
         static let webpagePreviewShadowOffset = CGSize(width: 0, height: 3)
+        static let dropShadowMaskOutset: CGFloat = 32
         static let cardTransitionSnapshotOutset: CGFloat = 18
         static let closeButtonTopInset: CGFloat = 10
         static let closeButtonTrailingInset: CGFloat = 10
@@ -46,6 +47,12 @@ final class TabOverviewCard: UICollectionViewCell {
     
     private static let fallbackFaviconImage = UIImage(named: "reynard.globe")
     private(set) var previewImage: UIImage?
+    
+    private var isSettlingDrop = false {
+        didSet {
+            webpagePreviewShadowView.isHidden = isSettlingDrop
+        }
+    }
     
     private let webpagePreviewShadowView: UIView = {
         let view = UIView()
@@ -160,12 +167,13 @@ final class TabOverviewCard: UICollectionViewCell {
     
     override func dragStateDidChange(_ dragState: UICollectionViewCell.DragState) {
         super.dragStateDidChange(dragState)
-        webpagePreviewShadowView.isHidden = dragState != .none
+        webpagePreviewShadowView.isHidden = dragState != .none || isSettlingDrop
     }
     
     override func prepareForReuse() {
         super.prepareForReuse()
         tabID = nil
+        isSettlingDrop = false
         previewImage = nil
         webpagePreviewImageView.image = nil
         faviconImageView.image = Self.fallbackFaviconImage
@@ -309,6 +317,27 @@ final class TabOverviewCard: UICollectionViewCell {
         return parameters
     }
     
+    private func makeDropShadowView(in container: UIView) -> UIView {
+        let shadowFrame = webpagePreviewShadowView.convert(webpagePreviewShadowView.bounds, to: container)
+        let view = UIView(frame: shadowFrame)
+        view.isUserInteractionEnabled = false
+        let shadowPath = UIBezierPath(roundedRect: view.bounds, cornerRadius: UX.webpagePreviewCornerRadius)
+        view.layer.shadowPath = shadowPath.cgPath
+        view.layer.shadowOpacity = UX.webpagePreviewShadowOpacity
+        view.layer.shadowRadius = UX.webpagePreviewShadowRadius
+        view.layer.shadowOffset = UX.webpagePreviewShadowOffset
+        view.layer.shadowColor = UIColor.black.cgColor
+        
+        let maskBounds = view.bounds.insetBy(dx: -UX.dropShadowMaskOutset, dy: -UX.dropShadowMaskOutset)
+        let maskPath = UIBezierPath(rect: maskBounds)
+        maskPath.append(shadowPath)
+        let maskLayer = CAShapeLayer()
+        maskLayer.path = maskPath.cgPath
+        maskLayer.fillRule = .evenOdd
+        view.layer.mask = maskLayer
+        return view
+    }
+    
     // MARK: - State Updates
     
     func setTransitionState(_ state: TransitionState) {
@@ -328,6 +357,21 @@ final class TabOverviewCard: UICollectionViewCell {
     func setSwipeOffset(_ offset: CGFloat, progress: CGFloat) {
         transform = CGAffineTransform(translationX: offset, y: 0)
         contentView.alpha = 1 - (min(max(progress, 0), 1) * UX.swipeDismissMaximumFade)
+    }
+    
+    func settleDrop(with animator: UIDragAnimating, in container: UIView) {
+        let dropShadowView = makeDropShadowView(in: container)
+        dropShadowView.alpha = 0
+        container.insertSubview(dropShadowView, at: 0)
+        isSettlingDrop = true
+        
+        animator.addAnimations {
+            dropShadowView.alpha = 1
+        }
+        animator.addCompletion { [weak self] _ in
+            self?.isSettlingDrop = false
+            dropShadowView.removeFromSuperview()
+        }
     }
     
     // MARK: - View Setup

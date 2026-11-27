@@ -175,7 +175,9 @@ extension TabOverviewCollection: UICollectionViewDropDelegate {
             collectionView.moveItem(at: sourceIndexPath, to: destinationIndexPath)
         }
         refreshTabIdentitySnapshot()
-        coordinator.drop(item.dragItem, toItemAt: destinationIndexPath)
+        let animator = coordinator.drop(item.dragItem, toItemAt: destinationIndexPath)
+        let tabCard = collectionView.cellForItem(at: destinationIndexPath) as? TabOverviewCard
+        tabCard?.settleDrop(with: animator, in: collectionView)
     }
     
     func collectionView(
