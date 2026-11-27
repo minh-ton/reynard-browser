@@ -11,6 +11,7 @@ final class AddressBarButton: UIButton {
     private enum UX {
         static let addressBarButtonTouchTargetScale: CGFloat = 2
         static let addressBarButtonSymbolPointSize: CGFloat = 14
+        static let addressBarButtonPointerHighlightDiameter: CGFloat = 34
     }
     
     var horizontalTouchTargetExpansion: CGFloat?
@@ -43,6 +44,21 @@ final class AddressBarButton: UIButton {
             UIImage.SymbolConfiguration(pointSize: UX.addressBarButtonSymbolPointSize, weight: .regular),
             forImageIn: .normal
         )
+        if #available(iOS 13.4, *) {
+            pointerStyleProvider = { button, _, _ in
+                let diameter = UX.addressBarButtonPointerHighlightDiameter
+                let frame = CGRect(
+                    x: button.center.x - diameter / 2,
+                    y: button.center.y - diameter / 2,
+                    width: diameter,
+                    height: diameter
+                )
+                return UIPointerStyle(
+                    effect: .highlight(UITargetedPreview(view: button)),
+                    shape: .roundedRect(frame, radius: diameter / 2)
+                )
+            }
+        }
         if #unavailable(iOS 14.0) {
             let delegate = LegacyContextMenuDelegate(owner: self)
             addInteraction(UIContextMenuInteraction(delegate: delegate))

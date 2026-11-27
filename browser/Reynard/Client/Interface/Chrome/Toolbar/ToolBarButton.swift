@@ -10,6 +10,7 @@ import UIKit
 final class ToolbarButton: UIButton {
     private enum UX {
         static let toolbarButtonCornerRadius: CGFloat = 10
+        static let pointerHighlightSideLength: CGFloat = 40
         static let minimumTouchTargetSideLength: CGFloat = 44
         static let downloadButtonSideLength: CGFloat = 44
         static let downloadIconSize: CGFloat = 24
@@ -69,6 +70,19 @@ final class ToolbarButton: UIButton {
         super.init(frame: .zero)
         if #available(iOS 13.4, *) {
             isPointerInteractionEnabled = true
+            pointerStyleProvider = { button, _, _ in
+                let sideLength = UX.pointerHighlightSideLength
+                let frame = CGRect(
+                    x: button.center.x - sideLength / 2,
+                    y: button.center.y - sideLength / 2,
+                    width: sideLength,
+                    height: sideLength
+                )
+                return UIPointerStyle(
+                    effect: .highlight(UITargetedPreview(view: button)),
+                    shape: .roundedRect(frame, radius: UX.toolbarButtonCornerRadius)
+                )
+            }
         }
         configureAppearance()
         configureImage()
