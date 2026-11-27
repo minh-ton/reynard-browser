@@ -70,16 +70,17 @@ final class ToolbarButton: UIButton {
         super.init(frame: .zero)
         if #available(iOS 13.4, *) {
             isPointerInteractionEnabled = true
-            pointerStyleProvider = { button, _, _ in
+            pointerStyleProvider = { _, proposedEffect, _ in
+                let preview = proposedEffect.preview
                 let sideLength = UX.pointerHighlightSideLength
                 let frame = CGRect(
-                    x: button.center.x - sideLength / 2,
-                    y: button.center.y - sideLength / 2,
+                    x: preview.target.center.x - sideLength / 2,
+                    y: preview.target.center.y - sideLength / 2,
                     width: sideLength,
                     height: sideLength
                 )
                 return UIPointerStyle(
-                    effect: .highlight(UITargetedPreview(view: button)),
+                    effect: .highlight(preview),
                     shape: .roundedRect(frame, radius: UX.toolbarButtonCornerRadius)
                 )
             }
