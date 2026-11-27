@@ -33,7 +33,10 @@ final class HomepageOverlayCoordinator {
     private unowned let browserChrome: BrowserChrome
     private unowned let contentView: ContentView
     private unowned let tabManager: TabManager
-    private let homepageViewController: HomepageViewController
+    private lazy var homepageViewController = HomepageViewController(
+        homepageDelegate: self,
+        isPrivateBrowsing: isPrivateBrowsing
+    )
     private var presentationIntent: HomepagePresentationIntent = .inactive
     
     private struct HomepagePresentation: Equatable {
@@ -58,9 +61,6 @@ final class HomepageOverlayCoordinator {
         self.browserChrome = browserChrome
         self.contentView = contentView
         self.tabManager = tabManager
-        homepageViewController = HomepageViewController()
-        homepageViewController.homepageDelegate = self
-        homepageViewController.setPrivateBrowsing(isPrivateBrowsing)
     }
     
     // MARK: - State

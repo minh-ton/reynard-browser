@@ -8,12 +8,7 @@
 import UIKit
 
 final class HomepageViewController: UINavigationController {
-    weak var homepageDelegate: HomepageSectionDelegate? {
-        didSet {
-            rootViewController.delegate = homepageDelegate
-        }
-    }
-    
+    private weak var homepageDelegate: HomepageSectionDelegate?
     private let rootViewController: HomepageRootViewController
     private let bookmarkStore: BookmarkStore
     private var isPrivateBrowsing: Bool
@@ -30,10 +25,16 @@ final class HomepageViewController: UINavigationController {
         return super.preferredStatusBarStyle
     }
     
-    init(bookmarkStore: BookmarkStore = .shared, isPrivateBrowsing: Bool = false) {
+    init(
+        homepageDelegate: HomepageSectionDelegate?,
+        bookmarkStore: BookmarkStore = .shared,
+        isPrivateBrowsing: Bool = false
+    ) {
+        self.homepageDelegate = homepageDelegate
         self.bookmarkStore = bookmarkStore
         self.isPrivateBrowsing = isPrivateBrowsing
         rootViewController = HomepageRootViewController(
+            delegate: homepageDelegate,
             bookmarkStore: bookmarkStore,
             isPrivateBrowsing: isPrivateBrowsing
         )
@@ -55,7 +56,6 @@ final class HomepageViewController: UINavigationController {
             guard let viewController = viewController as? HomepageRootViewController else {
                 return
             }
-            viewController.delegate = homepageDelegate
             viewController.setVisibleContentInsets(visibleContentInsets)
         }
     }
@@ -110,12 +110,12 @@ final class HomepageViewController: UINavigationController {
     
     func showFolder(_ folder: BookmarkFolderSnapshot) {
         let viewController = HomepageRootViewController(
+            delegate: homepageDelegate,
             bookmarkStore: bookmarkStore,
             folder: folder,
             sections: [.favorites],
             isPrivateBrowsing: isPrivateBrowsing
         )
-        viewController.delegate = homepageDelegate
         viewController.setContentMode(contentMode)
         viewController.setVisibleContentInsets(visibleContentInsets)
         setNavigationBarHidden(false, animated: false)

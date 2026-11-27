@@ -22,8 +22,7 @@ final class HomepageRootViewController: UIViewController {
         static let detachedMaximumWidth: CGFloat = 700
     }
     
-    weak var delegate: HomepageSectionDelegate?
-    
+    private weak var delegate: HomepageSectionDelegate?
     private let bookmarkStore: BookmarkStore
     private let folder: BookmarkFolderSnapshot?
     private let sections: [HomepageSection]
@@ -63,11 +62,13 @@ final class HomepageRootViewController: UIViewController {
     // MARK: - Lifecycle
     
     init(
+        delegate: HomepageSectionDelegate?,
         bookmarkStore: BookmarkStore,
         folder: BookmarkFolderSnapshot? = nil,
         sections: [HomepageSection] = HomepageSection.allCases,
         isPrivateBrowsing: Bool = false
     ) {
+        self.delegate = delegate
         self.bookmarkStore = bookmarkStore
         self.folder = folder
         self.sections = sections
