@@ -1,9 +1,9 @@
 diff --git a/widget/uikit/GeckoVideoFullscreenSupport.mm b/widget/uikit/GeckoVideoFullscreenSupport.mm
 new file mode 100644
-index 000000000000..68b08000db2a
+index 000000000000..3c0be170464f
 --- /dev/null
 +++ b/widget/uikit/GeckoVideoFullscreenSupport.mm
-@@ -0,0 +1,1159 @@
+@@ -0,0 +1,1163 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -179,6 +179,10 @@ index 000000000000..68b08000db2a
 +
 +- (void)updateWithState:(NSDictionary*)state {
 +  double duration = [state[@"duration"] doubleValue];
++  if (duration >= std::exp2(32)) {
++    duration = INFINITY;
++  }
++
 +  self.contentDuration = duration;
 +  self.contentDurationWithinEndTimes = duration;
 +  self.contentDimensions = CGSizeMake([state[@"videoWidth"] doubleValue],

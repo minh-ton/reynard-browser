@@ -33,6 +33,7 @@ final class SystemMediaSession: MediaSessionDelegate {
         var features: MediaSessionFeatures = [.seekForward, .seekBackward, .seekTo]
         var artworkTask: URLSessionDataTask?
         var playbackState = PlaybackState.none
+        var isLiveStream = false
         
         init(session: GeckoSession) {
             self.session = session
@@ -233,12 +234,15 @@ final class SystemMediaSession: MediaSessionDelegate {
     
     func onPositionState(session: GeckoSession, state: MediaSessionPositionState) {
         let sessionState = self.state(for: session)
-        sessionState.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = state.duration
+        sessionState.isLiveStream = state.duration >= exp2(32)
+        sessionState.nowPlayingInfo[MPNowPlayingInfoPropertyIsLiveStream] = sessionState.isLiveStream
+        sessionState.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = sessionState.isLiveStream ? nil : state.duration
         sessionState.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = state.position
         sessionState.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = state.playbackRate
         
         if activeSession === session {
             nowPlayingCenter.nowPlayingInfo = sessionState.nowPlayingInfo
+            apply(sessionState.features)
         }
     }
     
@@ -329,9 +333,9 @@ final class SystemMediaSession: MediaSessionDelegate {
     }
     
     private func apply(_ features: MediaSessionFeatures) {
-        let hasActivePlayback = activeSession.flatMap { session in
-            sessionStates[ObjectIdentifier(session)]?.playbackState
-        }.map { $0 != .none } ?? false
+        let activeState = activeSession.flatMap { sessionStates[ObjectIdentifier($0)] }
+        let hasActivePlayback = activeState.map { $0.playbackState != .none } ?? false
+        let canSeek = !(activeState?.isLiveStream ?? false)
         
         commandCenter.playCommand.isEnabled = hasActivePlayback || features.contains(.play)
         commandCenter.pauseCommand.isEnabled = hasActivePlayback || features.contains(.pause)
@@ -339,11 +343,11 @@ final class SystemMediaSession: MediaSessionDelegate {
         commandCenter.togglePlayPauseCommand.isEnabled = hasActivePlayback || features.contains(.play) || features.contains(.pause)
         commandCenter.nextTrackCommand.isEnabled = features.contains(.nextTrack)
         commandCenter.previousTrackCommand.isEnabled = features.contains(.prevTrack)
-        commandCenter.skipForwardCommand.isEnabled = features.contains(.seekForward)
-        commandCenter.skipBackwardCommand.isEnabled = features.contains(.seekBackward)
-        commandCenter.seekForwardCommand.isEnabled = features.contains(.seekForward)
-        commandCenter.seekBackwardCommand.isEnabled = features.contains(.seekBackward)
-        commandCenter.changePlaybackPositionCommand.isEnabled = features.contains(.seekTo)
+        commandCenter.skipForwardCommand.isEnabled = canSeek && features.contains(.seekForward)
+        commandCenter.skipBackwardCommand.isEnabled = canSeek && features.contains(.seekBackward)
+        commandCenter.seekForwardCommand.isEnabled = canSeek && features.contains(.seekForward)
+        commandCenter.seekBackwardCommand.isEnabled = canSeek && features.contains(.seekBackward)
+        commandCenter.changePlaybackPositionCommand.isEnabled = canSeek && features.contains(.seekTo)
     }
     
     private func registerRemoteCommands() {
