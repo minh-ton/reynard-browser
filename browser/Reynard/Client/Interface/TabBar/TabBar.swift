@@ -18,6 +18,7 @@ final class TabBar: UIView {
     private enum UX {
         static let tabBarHeight: CGFloat = 36
         static let tabBarBottomPadding: CGFloat = 2
+        static let reorderDropVerticalOutset: CGFloat = 100
     }
     
     enum Visibility: Equatable {
@@ -68,6 +69,11 @@ final class TabBar: UIView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let reorderDropBounds = bounds.insetBy(dx: 0, dy: -UX.reorderDropVerticalOutset)
+        if tabCollection.hasActiveDrag && reorderDropBounds.contains(point) {
+            return tabCollection
+        }
+        
         let hitView = super.hitTest(point, with: event)
         return hitView === self && tabCollection.transform.ty < 0 ? nil : hitView
     }
@@ -104,9 +110,9 @@ final class TabBar: UIView {
             return CellLayout(width: equalTabWidth, mode: .expanded)
         }
         
-        let usesExpandedLayout = isExpandedTab(at: index, in: tabs)
+        let usesExpandedLayout = isTabSelected(at: index)
         let expandedTabCount = max(1, tabs.indices.reduce(0) { count, tabIndex in
-            count + (isExpandedTab(at: tabIndex, in: tabs) ? 1 : 0)
+            count + (isTabSelected(at: tabIndex) ? 1 : 0)
         })
         let unselectedTabCount = max(0, layoutTabCount - expandedTabCount)
         
@@ -275,32 +281,6 @@ final class TabBar: UIView {
         if pendingExpandedTabIndex == nil {
             pendingExpandedTabID = nil
         }
-    }
-    
-    private func isExpandedTab(at index: Int, in tabs: [Tab]) -> Bool {
-        guard let tab = displayedTab(at: index, in: tabs) else {
-            return false
-        }
-        return isTabSelected(id: tab.id)
-    }
-    
-    private func displayedTab(at index: Int, in tabs: [Tab]) -> Tab? {
-        guard tabs.indices.contains(index) else {
-            return nil
-        }
-        
-        guard let sourceIndex = tabCollection.dragSourceIndex,
-              let targetIndex = tabCollection.dragDestinationIndex,
-              tabs.indices.contains(sourceIndex),
-              tabs.indices.contains(targetIndex),
-              sourceIndex != targetIndex else {
-            return tabs[index]
-        }
-        
-        var reorderedTabs = tabs
-        let movedTab = reorderedTabs.remove(at: sourceIndex)
-        reorderedTabs.insert(movedTab, at: targetIndex)
-        return reorderedTabs[index]
     }
     
     // MARK: - Presentation Coordination

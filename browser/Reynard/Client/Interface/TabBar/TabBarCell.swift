@@ -18,6 +18,7 @@ final class TabBarCell: UICollectionViewCell {
         static let tabCloseButtonSideLength: CGFloat = 22
         static let tabCloseButtonTrailingInset: CGFloat = 6
         static let tabCloseButtonSymbolPointSize: CGFloat = 14
+        static let tabCloseButtonPointerHighlightDiameter: CGFloat = 26
         static let expandedTabContentLeadingInset: CGFloat = 10
         static let expandedTabContentTrailingInset: CGFloat = 34
         static let collapsedTabContentHorizontalInset: CGFloat = 8
@@ -91,6 +92,19 @@ final class TabBarCell: UICollectionViewCell {
         let button = UIButton(type: .system)
         if #available(iOS 13.4, *) {
             button.isPointerInteractionEnabled = true
+            button.pointerStyleProvider = { button, _, _ in
+                let diameter = UX.tabCloseButtonPointerHighlightDiameter
+                let frame = CGRect(
+                    x: button.center.x - diameter / 2,
+                    y: button.center.y - diameter / 2,
+                    width: diameter,
+                    height: diameter
+                )
+                return UIPointerStyle(
+                    effect: .highlight(UITargetedPreview(view: button)),
+                    shape: .roundedRect(frame, radius: diameter / 2)
+                )
+            }
         }
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(named: "reynard.xmark.circle.fill"), for: .normal)

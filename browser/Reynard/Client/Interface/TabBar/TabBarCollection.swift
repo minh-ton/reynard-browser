@@ -125,6 +125,11 @@ private final class TabBarCollectionLayout: UICollectionViewFlowLayout {
 }
 
 final class TabBarCollection: UICollectionView {
+    private enum UX {
+        static let tabUpdateAnimationDuration: TimeInterval = 0.3
+        static let reorderEdgeInset: CGFloat = 128
+    }
+    
     private weak var tabBar: TabBar?
     private let layout: TabBarCollectionLayout
     private var lastLayoutWidth: CGFloat = 0
@@ -132,9 +137,6 @@ final class TabBarCollection: UICollectionView {
     private var needsReload = false
     private var pendingInsertedIndices = Set<Int>()
     private var pendingDeletedIndices = Set<Int>()
-    
-    private(set) var dragSourceIndex: Int?
-    private(set) var dragDestinationIndex: Int?
     
     init() {
         let layout = TabBarCollectionLayout()
@@ -162,6 +164,24 @@ final class TabBarCollection: UICollectionView {
         updateScrollability()
         refreshVisibleTabs()
         revealSelectedTab()
+    }
+    
+    @objc(_indexPathForItemAtPoint:)
+    private func indexPathForItemInTabRow(at point: CGPoint) -> IndexPath? {
+        let selector = #selector(indexPathForItemInTabRow(at:))
+        typealias IndexPathForItemAtPoint = @convention(c) (AnyObject, Selector, CGPoint) -> Unmanaged<NSIndexPath>?
+        let indexPathForItem = unsafeBitCast(UICollectionView.instanceMethod(for: selector), to: IndexPathForItemAtPoint.self)
+        var rowPoint = CGPoint(x: point.x, y: bounds.midY)
+        let visibleMaxX = min(bounds.maxX, contentSize.width)
+        let visibleWidth = visibleMaxX - bounds.minX
+        let dragWidth = visibleWidth - UX.reorderEdgeInset * 2
+
+        if hasActiveDrag && dragWidth > 0 {
+            let stretchedX = bounds.minX + (point.x - bounds.minX - UX.reorderEdgeInset) * visibleWidth / dragWidth
+            rowPoint.x = min(max(stretchedX, bounds.minX + 1), visibleMaxX - 1)
+        }
+        
+        return indexPathForItem(self, selector, rowPoint)?.takeUnretainedValue() as IndexPath?
     }
     
     // MARK: - Configuration
@@ -209,31 +229,29 @@ final class TabBarCollection: UICollectionView {
         let deletedIndexPaths = deletedIndices.map { IndexPath(item: $0, section: 0) }
         let shouldRevealRightmostTab = insertedIndices.contains(tabCount - 1)
         layout.prepareForInsertion(at: insertedIndexPaths)
-        updateLayout()
         isUpdatingTabs = true
-        performBatchUpdates({
-            if !deletedIndexPaths.isEmpty {
-                deleteItems(at: deletedIndexPaths)
-            }
-            if !insertedIndexPaths.isEmpty {
-                insertItems(at: insertedIndexPaths)
-            }
-        }, completion: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            
-            self.finishTabUpdate()
-        })
+        updateScrollability()
         
-        if shouldRevealRightmostTab {
-            updateScrollability()
-            layoutIfNeeded()
-            scrollToItem(
-                at: IndexPath(item: tabCount - 1, section: 0),
-                at: .right,
-                animated: true
-            )
+        UIView.animate(withDuration: UX.tabUpdateAnimationDuration) {
+            self.performBatchUpdates({
+                if !deletedIndexPaths.isEmpty {
+                    self.deleteItems(at: deletedIndexPaths)
+                }
+                if !insertedIndexPaths.isEmpty {
+                    self.insertItems(at: insertedIndexPaths)
+                }
+            }, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                
+                self.finishTabUpdate()
+            })
+            
+            if shouldRevealRightmostTab {
+                let contentWidth = self.collectionViewLayout.collectionViewContentSize.width
+                self.contentOffset.x = max(0, contentWidth - self.bounds.width)
+            }
         }
     }
     
@@ -450,8 +468,6 @@ extension TabBarCollection: UICollectionViewDragDelegate {
             return []
         }
         
-        dragSourceIndex = indexPath.item
-        dragDestinationIndex = indexPath.item
         clipsToBounds = false
         tabBar?.clipsToBounds = false
         return [UIDragItem(tab: tab)]
@@ -474,8 +490,6 @@ extension TabBarCollection: UICollectionViewDragDelegate {
     }
     
     func collectionView(_ collectionView: UICollectionView, dragSessionDidEnd session: UIDragSession) {
-        dragSourceIndex = nil
-        dragDestinationIndex = nil
         clipsToBounds = true
         tabBar?.clipsToBounds = true
         updateLayout()
@@ -494,23 +508,7 @@ extension TabBarCollection: UICollectionViewDropDelegate {
             return UICollectionViewDropProposal(operation: .forbidden)
         }
         
-        if dragSourceIndex != nil,
-           let destinationIndex = destinationIndexPath?.item,
-           destinationIndex != dragDestinationIndex {
-            dragDestinationIndex = destinationIndex
-            collectionViewLayout.invalidateLayout()
-        }
         return UICollectionViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, dropSessionDidExit session: UIDropSession) {
-        guard dragSourceIndex != nil,
-              dragDestinationIndex != dragSourceIndex else {
-            return
-        }
-        
-        dragDestinationIndex = dragSourceIndex
-        collectionViewLayout.invalidateLayout()
     }
     
     func collectionView(_ collectionView: UICollectionView, performDropWith coordinator: UICollectionViewDropCoordinator) {
@@ -519,9 +517,6 @@ extension TabBarCollection: UICollectionViewDropDelegate {
               let tabCount = tabBar?.dataSource?.activeTabs.count else {
             return
         }
-        
-        dragSourceIndex = nil
-        dragDestinationIndex = nil
         
         guard let sourceIndexPath = item.sourceIndexPath else {
             tabBar?.requestMoveTab(tab, to: coordinator.destinationIndexPath?.item ?? tabCount)
