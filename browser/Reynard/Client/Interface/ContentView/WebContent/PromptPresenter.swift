@@ -376,7 +376,7 @@ final class PromptPresenter: PromptPresenting {
         request: SharePromptRequest
     ) async -> PromptResponse? {
         guard let presenter = UIApplication.shared.topViewController(in: window()) as? BrowserViewController,
-              let sourceView = session.engineView else {
+              let anchor = promptAnchor(for: request.anchor, session: session) else {
             return nil
         }
         
@@ -386,14 +386,10 @@ final class PromptPresenter: PromptPresenting {
             url: request.url
         )
         return await withCheckedContinuation { continuation in
-            let sourcePoint = CGPoint(
-                x: sourceView.bounds.midX,
-                y: sourceView.bounds.midY
-            )
             presenter.presentShareSheet(
                 items: [itemSource],
-                sourceView: sourceView,
-                sourceRect: CGRect(origin: sourcePoint, size: .zero)
+                sourceView: anchor.view,
+                sourceRect: anchor.rect
             ) { completed, error in
                 let result: SharePromptResult
                 if error != nil {

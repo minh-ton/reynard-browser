@@ -98,7 +98,8 @@ func parsePromptRequest(_ data: [String: Any]) -> PromptRequest? {
             id: promptID,
             title: data["title"] as? String ?? "",
             text: data["text"] as? String ?? "",
-            url: data["uri"] as? String
+            url: data["uri"] as? String,
+            anchor: parseAnchor(data["rect"])
         ))
         
     default:

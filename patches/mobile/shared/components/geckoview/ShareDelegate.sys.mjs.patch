@@ -1,0 +1,24 @@
+diff --git a/mobile/shared/components/geckoview/ShareDelegate.sys.mjs b/mobile/shared/components/geckoview/ShareDelegate.sys.mjs
+index 3b7735192849..c01aadc8b3b9 100644
+--- a/mobile/shared/components/geckoview/ShareDelegate.sys.mjs
++++ b/mobile/shared/components/geckoview/ShareDelegate.sys.mjs
+@@ -38,6 +38,19 @@ export class ShareDelegate {
+       uri: aUri ? aUri.displaySpec : null,
+     };
+     const prompt = new lazy.GeckoViewPrompter(this._openerWindow);
++
++    const pointerX = {};
++    const pointerY = {};
++    const windowUtils = prompt.domWin.windowUtils;
++    windowUtils.getLastOverWindowPointerLocationInCSSPixels(pointerX, pointerY);
++    const rect = windowUtils.toScreenRectInCSSUnits(
++      pointerX.value,
++      pointerY.value,
++      0,
++      0
++    );
++    msg.rect = { left: rect.left, top: rect.top, width: 0, height: 0 };
++
+     const result = await new Promise(resolve => {
+       prompt.asyncShowPrompt(msg, resolve);
+     });
