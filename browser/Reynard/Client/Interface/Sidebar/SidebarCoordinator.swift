@@ -12,8 +12,6 @@ protocol SidebarContentController: AnyObject {
     var sidebarContentChrome: BrowserChrome { get }
     var sidebarContentLayout: BrowserLayout { get }
     var sidebarContentIsPrivate: Bool { get }
-    var isCompactPadLayout: Bool { get }
-    var isSidebarOverlayLayout: Bool { get }
     
     func updateBrowserLayout(animated: Bool, duration: TimeInterval)
     func updateBrowserLayoutIfNeeded(animated: Bool, duration: TimeInterval)
@@ -104,7 +102,7 @@ final class SidebarCoordinator {
             return
         }
         
-        let shouldOverrideSidebarSizeClass = !(contentBrowser?.isCompactPadLayout ?? UIApplication.shared.isOneThirdSplitScreenOrSmaller)
+        let shouldOverrideSidebarSizeClass = !BrowserLayout.isCompactPadLayout(in: host.sidebarHostViewController.view)
         guard overridesSidebarSizeClass != shouldOverrideSidebarSizeClass else {
             return
         }

@@ -314,6 +314,10 @@ final class BrowserViewController: UIViewController {
             readerSettings.dismiss(animated: false)
         }
         
+        coordinator.animate(alongsideTransition: { _ in
+            self.sidebarCoordinator.refreshHostVisibility()
+        })
+        
         performContentLifecycle {
             toolbarController.reset(animated: false)
             coordinator.animate { _ in
@@ -778,7 +782,7 @@ final class BrowserViewController: UIViewController {
             topInset: browserTopInset(),
             interfaceIdiom: browserLayout.interfaceIdiom,
             orientation: browserLayout.orientation,
-            isTwoThirdSplitScreenOrSmaller: isSidebarOverlayLayout,
+            isSidebarOverlayLayout: BrowserLayout.isSidebarOverlayLayout(in: view),
             sidebarButtonVisible: sidebarCoordinator.showChromeSidebarButton,
             animatesChromeStateChanges: animated
         ))
@@ -789,8 +793,7 @@ final class BrowserViewController: UIViewController {
             interfaceIdiom: traitCollection.userInterfaceIdiom,
             orientation: currentViewportOrientation(),
             addressBarPosition: Prefs.AppearanceSettings.addressBarPosition,
-            isCompactPadLayout: isCompactPadLayout,
-            isHalfSplitScreenOrSmaller: isHalfSplitScreenOrSmaller
+            in: view
         )
     }
     
@@ -811,48 +814,6 @@ final class BrowserViewController: UIViewController {
         
         NavigationHistoryStore.shared.invalidateThumbnails()
         updateNavigationButtons()
-    }
-    
-    var isCompactPadLayout: Bool {
-        guard let window = view.window else {
-            return UIApplication.shared.isOneThirdSplitScreenOrSmaller
-        }
-        
-        return UIApplication.shared.isOneThirdSplitScreenOrSmaller(
-            forWindowWidth: browserWindowWidth(fallback: window.bounds.width),
-            screen: window.screen
-        )
-    }
-    
-    var isSidebarOverlayLayout: Bool {
-        guard let window = view.window else {
-            return UIApplication.shared.isTwoThirdSplitScreenOrSmaller
-        }
-        
-        return UIApplication.shared.isTwoThirdSplitScreenOrSmaller(
-            forWindowWidth: browserWindowWidth(fallback: window.bounds.width),
-            screen: window.screen
-        )
-    }
-    
-    var isHalfSplitScreenOrSmaller: Bool {
-        guard let window = view.window else {
-            return UIApplication.shared.isHalfSplitScreenOrSmaller
-        }
-        
-        return UIApplication.shared.isHalfSplitScreenOrSmaller(
-            forWindowWidth: browserWindowWidth(fallback: window.bounds.width),
-            screen: window.screen
-        )
-    }
-    
-    private func browserWindowWidth(fallback: CGFloat) -> CGFloat {
-        guard let rootView = view.window?.rootViewController?.view,
-              rootView.bounds.width > 0 else {
-            return fallback
-        }
-        
-        return rootView.bounds.width
     }
     
     private func browserTopInset() -> CGFloat {

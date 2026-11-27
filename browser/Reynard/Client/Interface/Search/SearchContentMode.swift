@@ -23,7 +23,7 @@ enum SearchContentMode: Equatable {
         widthMode: SearchWidthMode = .standard
     ) -> SearchContentMode {
         if layout.interfaceIdiom == .pad,
-           widthMode == .halfSplitScreenOrSmaller {
+           widthMode == .narrow {
             return .embedded
         }
         
@@ -38,5 +38,5 @@ enum SearchContentMode: Equatable {
 
 enum SearchWidthMode: Equatable {
     case standard
-    case halfSplitScreenOrSmaller
+    case narrow
 }

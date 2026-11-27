@@ -53,7 +53,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         let topInset: CGFloat
         let interfaceIdiom: UIUserInterfaceIdiom
         let orientation: BrowserLayout.ViewportOrientation
-        let isTwoThirdSplitScreenOrSmaller: Bool
+        let isSidebarOverlayLayout: Bool
         let sidebarButtonVisible: Bool
         let animatesChromeStateChanges: Bool
     }
@@ -462,7 +462,7 @@ final class BrowserChrome: UIView, UIGestureRecognizerDelegate {
         switch (state.interfaceIdiom, state.orientation) {
         case (.pad, .portrait):
             return .padPortrait
-        case (.pad, .landscape) where state.isTwoThirdSplitScreenOrSmaller:
+        case (.pad, .landscape) where state.isSidebarOverlayLayout:
             return .padConstrained
         case (.pad, .landscape):
             return .padLandscape

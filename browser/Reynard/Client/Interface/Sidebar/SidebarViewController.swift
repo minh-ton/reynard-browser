@@ -276,7 +276,7 @@ final class SidebarViewController: UISplitViewController, UISplitViewControllerD
     private var usesOverlaySplitBehavior: Bool {
         let browserLayout = contentController.sidebarContentLayout
         return browserLayout.orientation == .portrait
-        || (contentController.isSidebarOverlayLayout && browserLayout.chromeMode != .compact)
+        || (BrowserLayout.isSidebarOverlayLayout(in: view) && browserLayout.chromeMode != .compact)
     }
     
     private func updateSplitBehavior() {

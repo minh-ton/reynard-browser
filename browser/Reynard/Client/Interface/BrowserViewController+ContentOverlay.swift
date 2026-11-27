@@ -15,7 +15,7 @@ extension BrowserViewController: SearchOverlayCoordinatorDelegate, HomepageOverl
     }
     
     var searchWidthMode: SearchWidthMode {
-        return isHalfSplitScreenOrSmaller ? .halfSplitScreenOrSmaller : .standard
+        return BrowserLayout.isNarrowPadLayout(in: view) ? .narrow : .standard
     }
     
     func refreshSearchAddressBar() {
@@ -38,11 +38,11 @@ extension BrowserViewController: SearchOverlayCoordinatorDelegate, HomepageOverl
     }
     
     var homepageGridWidth: HomepageGridWidth {
-        if isHalfSplitScreenOrSmaller {
+        if BrowserLayout.isNarrowPadLayout(in: view) {
             return .fourColumn
         }
         
-        if isSidebarOverlayLayout {
+        if BrowserLayout.isSidebarOverlayLayout(in: view) {
             return .sixColumn
         }
         
