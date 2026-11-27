@@ -358,6 +358,14 @@ final class DNSOverHTTPSPreferencesViewController: SettingsTableViewController, 
             cell.textLabel?.text = "Cloudflare"
         case .nextDNS:
             cell.textLabel?.text = "NextDNS"
+        case .quad9:
+            cell.textLabel?.text = "Quad9"
+        case .adGuardDNS:
+            cell.textLabel?.text = "AdGuardDNS"
+        case .foundationForAppliedPrivacy:
+            cell.textLabel?.text = "Foundation For Applied Privacy"
+        case .njalla:
+            cell.textLabel?.text = "Njalla"
         case .custom:
             break
         }
