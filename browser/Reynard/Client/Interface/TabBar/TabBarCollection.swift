@@ -70,10 +70,13 @@ private final class TabBarCollectionLayout: UICollectionViewFlowLayout {
             return super.layoutAttributesForDecorationView(ofKind: elementKind, at: indexPath)
         }
         
-        guard showsSeparator(after: indexPath.item) else {
-            return nil
+        guard showsSeparator(after: indexPath.item),
+              let attributes = separatorAttributes(after: indexPath.item, in: nil) else {
+            let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: elementKind, with: indexPath)
+            attributes.isHidden = true
+            return attributes
         }
-        return separatorAttributes(after: indexPath.item, in: nil)
+        return attributes
     }
     
     private func showsSeparator(after index: Int) -> Bool {
