@@ -132,6 +132,7 @@ final class AddressBar: UIView {
     private var preserveAutocompleteAfterResign = false
     private var addonsMenu: UIMenu?
     private var isReaderActive = false
+    private var isReaderable = false
     
     private var lastEditingText = ""
     private var lastEditWasDelete = false
@@ -190,9 +191,7 @@ final class AddressBar: UIView {
         }
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .secondaryLabel
-        if #available(iOS 14.0, *) {
-            button.showsMenuAsPrimaryAction = true
-        }
+        button.presentsMenuOnTouchUp = true
         button.isUserInteractionEnabled = false
         return button
     }()
@@ -405,6 +404,7 @@ final class AddressBar: UIView {
     
     func updateMenu(url: String?, usesDesktopWebsite: Bool?, readerMode: ReaderModeState) {
         isReaderActive = readerMode.isActive
+        isReaderable = readerMode.isReaderable
         addonsMenu = AddressBarMenu.makeMenu(
             selectedURL: url,
             usesDesktopWebsite: usesDesktopWebsite,
@@ -745,6 +745,7 @@ final class AddressBar: UIView {
         addressBarContent.addInteraction(UIContextMenuInteraction(delegate: self))
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         leadingButton.addTarget(self, action: #selector(handleReaderButtonTap), for: .touchUpInside)
+        leadingButton.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(handleLeadingButtonLongPress)))
         trailingButton.addTarget(self, action: #selector(handleTrailingButtonTap), for: .touchUpInside)
         trailingButton.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(handleTrailingButtonLongPress)))
         autocompleteButton.addTarget(self, action: #selector(handleOverlayButtonTap), for: .touchUpInside)
@@ -892,6 +893,13 @@ final class AddressBar: UIView {
         delegate?.addressBarDidRequestReader(self)
     }
     
+    @objc private func handleLeadingButtonLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began, !isReaderActive else { return }
+        Haptics.rigid()
+        guard isReaderable else { return }
+        delegate?.addressBarDidRequestReader(self)
+    }
+    
     private func applyLeadingButtonState(_ state: LeadingButtonState) {
         leadingButton.isEnabled = state != .disabled
         guard state != .hidden else {
@@ -921,9 +929,6 @@ final class AddressBar: UIView {
         
         leadingButton.tintColor = .label
         leadingButton.setImage(UIImage(named: isReaderActive ? "reynard.text.page" : "reynard.list.bullet.below.rectangle"), for: .normal)
-        if #available(iOS 14.0, *) {
-            leadingButton.showsMenuAsPrimaryAction = !isReaderActive
-        }
         leadingButton.setMenuPreservingPresentation(isReaderActive ? nil : addonsMenu)
         leadingButton.isUserInteractionEnabled = isReaderActive || addonsMenu != nil
     }
@@ -1367,7 +1372,12 @@ extension AddressBar: UIContextMenuInteractionDelegate {
            trailingButton.point(inside: trailingButtonLocation, with: nil) {
             return nil
         }
-        
+
+        let leadingButtonLocation = leadingButton.convert(location, from: interaction.view)
+        if leadingButton.point(inside: leadingButtonLocation, with: nil) {
+            return nil
+        }
+
         let url = delegate?.addressBarShareableURL(self)
         let menuState = PasteAndGoMenuState()
         if #available(iOS 14.0, *) {

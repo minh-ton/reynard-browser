@@ -15,8 +15,17 @@ final class AddressBarButton: UIButton {
     }
     
     var horizontalTouchTargetExpansion: CGFloat?
+    var presentsMenuOnTouchUp = false {
+        didSet {
+            if #available(iOS 14.0, *) {
+                showsMenuAsPrimaryAction = !presentsMenuOnTouchUp
+                addTarget(self, action: #selector(handleTouchUpMenuTap), for: .touchUpInside)
+            }
+        }
+    }
     
     private var isMenuVisible = false
+    private var isMenuRequestedByTap = false
     
     private var pendingMenuAfterDismissal: UIMenu?
     private var pendingMenuDismissalHandlers: [() -> Void] = []
@@ -63,11 +72,11 @@ final class AddressBarButton: UIButton {
             let delegate = LegacyContextMenuDelegate(owner: self)
             addInteraction(UIContextMenuInteraction(delegate: delegate))
             legacyMenuDelegate = delegate
-            addTarget(self, action: #selector(handleLegacyPrimaryTap), for: .touchUpInside)
+            addTarget(self, action: #selector(handleTouchUpMenuTap), for: .touchUpInside)
         }
     }
     
-    @objc private func handleLegacyPrimaryTap() {
+    @objc private func handleTouchUpMenuTap() {
         guard let interaction = interactions.compactMap({ $0 as? UIContextMenuInteraction }).first else {
             return
         }
@@ -76,6 +85,7 @@ final class AddressBarButton: UIButton {
             return
         }
         let center = NSValue(cgPoint: CGPoint(x: bounds.midX, y: bounds.midY))
+        isMenuRequestedByTap = true
         _ = interaction.perform(selector, with: center)
     }
     
@@ -113,6 +123,18 @@ final class AddressBarButton: UIButton {
     }
     
     // MARK: - Context Menu Lifecycle
+    
+    @available(iOS 14.0, *)
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configurationForMenuAtLocation location: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard shouldProvideMenu() else {
+            return nil
+        }
+        
+        return super.contextMenuInteraction(interaction, configurationForMenuAtLocation: location)
+    }
     
     @available(iOS 14.0, *)
     override func contextMenuInteraction(
@@ -164,6 +186,11 @@ final class AddressBarButton: UIButton {
             completion(self?.menuProvider?()?.children ?? [])
         }
         return UIMenu(children: [deferredElement])
+    }
+    
+    fileprivate func shouldProvideMenu() -> Bool {
+        defer { isMenuRequestedByTap = false }
+        return !presentsMenuOnTouchUp || isMenuRequestedByTap
     }
     
     fileprivate func legacyContextMenuWillDisplay() {
@@ -221,7 +248,8 @@ private final class LegacyContextMenuDelegate: NSObject, UIContextMenuInteractio
         _ interaction: UIContextMenuInteraction,
         configurationForMenuAtLocation location: CGPoint
     ) -> UIContextMenuConfiguration? {
-        guard let menu = menuProvider?() ?? menu else {
+        guard owner?.shouldProvideMenu() == true,
+              let menu = menuProvider?() ?? menu else {
             return nil
         }
         
