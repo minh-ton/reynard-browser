@@ -310,6 +310,11 @@ final class BrowserViewController: UIViewController {
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
+        
+        guard isViewLoaded else {
+            return
+        }
+        
         if let readerSettings = presentedViewController as? ReaderSettingsViewController {
             readerSettings.dismiss(animated: false)
         }
