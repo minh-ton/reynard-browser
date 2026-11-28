@@ -1,5 +1,5 @@
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 233832b2af3a..6491a86481c0 100644
+index 233832b2af3a..b43d18201dae 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
 @@ -3436,13 +3436,13 @@
@@ -317,3 +317,18 @@ index 233832b2af3a..6491a86481c0 100644
    value: false
  #else
    value: true
+@@ -21984,6 +22012,14 @@
+   mirror: always
+ #endif
+ 
++#ifdef XP_IOS
++# Whether fullscreen videos play in the native AVKit player.
++- name: widget.uikit.video.native_player
++  type: bool
++  value: true
++  mirror: once
++#endif
++
+ #---------------------------------------------------------------------------
+ # Prefs starting with "zoom."
+ #---------------------------------------------------------------------------
